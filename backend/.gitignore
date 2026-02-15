@@ -1,0 +1,15 @@
+# Spring Boot
+/target/
+*.log
+*.class
+*.jar
+*.war
+*.ear
+.idea/
+*.iml
+.mvn/
+mvnw
+mvnw.cmd
+.env
+application.properties
+application.yml

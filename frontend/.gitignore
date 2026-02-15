@@ -3,6 +3,8 @@ node_modules/
 dist/
 .angular/
 .ng-cache/
+*.log
+.env
 
 # Eclipse/STS
 .metadata/
@@ -12,17 +14,13 @@ dist/
 .factorypath
 sts-4.32.1.RELEASE/
 
-# Maven/Java
-target/
-*.class
-
 # Backups
 xBackupBackend/
 xBackupDeFrontend/
 
-# Logs
-*.log
-
 # Outros
 lombok.jar
-.env
+target/
+*.class
+
+

@@ -1,0 +1,223 @@
+<div class="container">
+  
+  <!-- HEADER -->
+  <div class="header">
+    <button class="btn-voltar" (click)="voltar()">
+      ← Voltar
+    </button>
+    
+    <h1>👥 Gerenciamento de Usuários</h1>
+    
+    <button 
+      *hasPermission="'USUARIO_CRIAR'"
+      class="btn-primary"
+      (click)="abrirModalNovo()">
+      + Novo Usuário
+    </button>
+  </div>
+  
+  <!-- FILTROS -->
+  <div class="filtros">
+    <div class="filtro-grupo">
+      <label>🔍 Buscar:</label>
+      <input 
+        type="text"
+        [(ngModel)]="filtroNome"
+        placeholder="Nome, username ou e-mail..."
+        class="input-filtro">
+    </div>
+    
+    <div class="filtro-grupo">
+      <label>Status:</label>
+      <select [(ngModel)]="filtroAtivo" class="select-filtro">
+        <option value="todos">Todos</option>
+        <option value="ativos">Ativos</option>
+        <option value="inativos">Inativos</option>
+      </select>
+    </div>
+  </div>
+  
+  <!-- LOADING -->
+  <div *ngIf="carregando" class="loading">
+    <div class="spinner"></div>
+    <p>Carregando usuários...</p>
+  </div>
+  
+  <!-- TABELA -->
+  <div *ngIf="!carregando" class="tabela-container">
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nome</th>
+          <th>Username</th>
+          <th>E-mail</th>
+          <th>Perfis</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let usuario of usuariosFiltrados">
+          <td>{{ usuario.id }}</td>
+          <td>{{ usuario.nome }}</td>
+          <td>{{ usuario.username }}</td>
+          <td>{{ usuario.email }}</td>
+          <td>
+            <span 
+             *ngFor="let perfil of usuario.perfis" 
+             class="badge-perfil">
+             {{ perfil.nome }}
+           </span>
+          </td>
+          <td>
+            <span 
+              class="badge-status"
+              [class.ativo]="usuario.ativo"
+              [class.inativo]="!usuario.ativo">
+              {{ usuario.ativo ? 'Ativo' : 'Inativo' }}
+            </span>
+          </td>
+          <td class="acoes">
+            <button 
+              *hasPermission="'USUARIO_EDITAR'"
+              class="btn-editar"
+              (click)="abrirModalEditar(usuario)"
+              title="Editar">
+              ✏️
+            </button>
+            
+            <button 
+              *hasPermission="'USUARIO_EDITAR'"
+              class="btn-toggle"
+              (click)="toggleAtivo(usuario)"
+              [title]="usuario.ativo ? 'Desativar' : 'Ativar'">
+              {{ usuario.ativo ? '🔒' : '🔓' }}
+            </button>
+            
+            <button 
+              *hasPermission="'PERFIL_GERENCIAR'"
+              class="btn-excluir"
+              (click)="excluir(usuario)"
+              title="Excluir">
+              🗑️
+            </button>
+          </td>
+        </tr>
+        
+        <tr *ngIf="usuariosFiltrados.length === 0">
+          <td colspan="7" class="sem-dados">
+            📭 Nenhum usuário encontrado
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" *ngIf="mostrarModal" (click)="fecharModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    
+    <div class="modal-header">
+      <h2>{{ modalTitulo }}</h2>
+      <button class="btn-fechar" (click)="fecharModal()">✕</button>
+    </div>
+    
+    <div class="modal-body">
+      
+      <!-- NOME -->
+      <div class="form-group">
+        <label>Nome Completo: *</label>
+        <input 
+          type="text"
+          [(ngModel)]="formulario.nome"
+          placeholder="Digite o nome completo"
+          class="input">
+      </div>
+      
+      <!-- USERNAME -->
+      <div class="form-group">
+        <label>Username (Login): *</label>
+        <input 
+          type="text"
+          [(ngModel)]="formulario.username"
+          placeholder="Digite o username"
+          class="input"
+          [disabled]="editando">
+        <small *ngIf="editando" class="hint">Username não pode ser alterado</small>
+      </div>
+      
+      <!-- EMAIL -->
+      <div class="form-group">
+        <label>E-mail: *</label>
+        <input 
+          type="email"
+          [(ngModel)]="formulario.email"
+          placeholder="Digite o e-mail"
+          class="input">
+      </div>
+      
+      <!-- SENHA -->
+      <div class="form-group">
+        <label>
+          Senha: 
+          <span *ngIf="!editando">*</span>
+          <span *ngIf="editando">(deixe em branco para não alterar)</span>
+        </label>
+        <input 
+          type="password"
+          [(ngModel)]="formulario.password"
+          placeholder="Digite a senha"
+          class="input">
+      </div>
+      
+      <!-- PERFIS -->
+      <div class="form-group">
+        <label>Perfis: *</label>
+        <div class="perfis-container">
+          <div 
+            *ngFor="let perfil of perfis"
+            class="perfil-checkbox">
+            <input 
+              type="checkbox"
+              [id]="'perfil-' + perfil.id"
+              [checked]="perfilSelecionado(perfil.id!)"
+              (change)="togglePerfil(perfil.id!)">
+            <label [for]="'perfil-' + perfil.id">
+              {{ perfil.nome }}
+              <span class="perfil-descricao">{{ perfil.descricao }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ATIVO -->
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input 
+            type="checkbox"
+            [(ngModel)]="formulario.ativo">
+          <span>Usuário ativo</span>
+        </label>
+      </div>
+      
+    </div>
+    
+    <div class="modal-footer">
+      <button 
+        class="btn btn-cancelar"
+        (click)="fecharModal()">
+        Cancelar
+      </button>
+      
+      <button 
+        class="btn btn-salvar"
+        (click)="salvar()">
+        {{ editando ? 'Atualizar' : 'Criar' }}
+      </button>
+    </div>
+    
+  </div>
+</div>

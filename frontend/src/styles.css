@@ -1,0 +1,326 @@
+/* You can add global styles to this file, and also import other style files */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #f5f5f5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Modal Grande */
+.modal-large {
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Card Resumo */
+.card-resumo {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 25px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  color: white;
+  box-shadow: 0 6px 12px rgba(102, 126, 234, 0.3);
+}
+
+.resumo-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.resumo-row:last-of-type {
+  border-bottom: none;
+}
+
+.resumo-row-total {
+  display: flex;
+  justify-content: space-between;
+  padding: 18px 0 0 0;
+  margin-top: 15px;
+  border-top: 2px solid rgba(255, 255, 255, 0.5);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.text-green {
+  color: #90ee90;
+}
+
+.saldo-valor {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffd700;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Formulário */
+.form-pagamento {
+  padding: 10px 0;
+}
+
+.input-select {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 15px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.input-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-prefix {
+  position: absolute;
+  left: 15px;
+  font-weight: 700;
+  font-size: 18px;
+  color: #666;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.input-valor {
+  width: 100%;
+  padding: 14px 15px 14px 50px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  transition: all 0.3s;
+}
+
+.input-valor:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.input-textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  transition: all 0.3s;
+}
+
+.input-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.input-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+}
+
+/* Botões */
+.btn-secondary,
+.btn-primary {
+  padding: 12px 28px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(40, 167, 69, 0.4);
+}
+
+.btn-primary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-limpeza {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-limpeza:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
+}
+
+/* ========================================
+   ⭐ PADRONIZAÇÃO DE CAMPOS DE VALOR
+   ======================================== */
+
+/* Remover setas (spinners) dos inputs numéricos */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Forçar step decimal em todos os inputs numéricos */
+input[type="number"]:not([step]) {
+  step: 0.01;
+}
+
+/* Estilo melhorado para inputs de valor */
+input[type="number"].input-valor {
+  text-align: right;
+  font-weight: 600;
+  font-size: 1.1em;
+  color: #27ae60;
+}
+
+input[type="number"].input-valor:focus {
+  color: #229954;
+  background: #e8f8f0;
+}
+
+/* Placeholder para inputs de valor */
+input[type="number"].input-valor::placeholder {
+  color: #95a5a6;
+  font-weight: 400;
+}
+
+/* Grupo de input com prefixo R$ */
+.input-group-valor {
+  display: flex;
+  align-items: center;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s;
+  background: white;
+}
+
+.input-group-valor:focus-within {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.input-group-valor .prefixo {
+  background: #f8f9fa;
+  padding: 12px 15px;
+  font-weight: 700;
+  color: #27ae60;
+  border-right: 2px solid #e0e0e0;
+  white-space: nowrap;
+}
+
+.input-group-valor input {
+  flex: 1;
+  border: none !important;
+  padding: 12px 15px;
+  font-size: 1.2em;
+  font-weight: 700;
+  color: #27ae60;
+  text-align: right;
+  background: transparent;
+}
+
+.input-group-valor input:focus {
+  outline: none;
+  background: #e8f8f0;
+}
+
+.input-group-valor input:disabled {
+  background: #f5f5f5;
+  color: #95a5a6;
+  cursor: not-allowed;
+}
+
+/* Estilos de impressão globais */
+@media print {
+  /* Esconder sidebar */
+  app-sidebar,
+  .sidebar {
+    display: none !important;
+  }
+
+  /* Remover margens do conteúdo principal */
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Fundo branco */
+  body, .layout {
+    background: white !important;
+  }
+
+  /* Remover sombras e bordas desnecessárias */
+  * {
+    box-shadow: none !important;
+  }
+}
+
+.status-pre_reserva {
+  background: #d1ecf1;
+  color: #0c5460;
+}

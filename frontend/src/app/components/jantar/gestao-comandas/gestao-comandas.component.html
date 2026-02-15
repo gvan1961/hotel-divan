@@ -1,0 +1,139 @@
+<div class="gestao-container">
+  <div class="header-gestao">
+    <h2>🗂️ Gestão de Comandas</h2>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filtros">
+    <div class="filtros-linha1">
+      <div class="filtro-grupo">
+        <label>Data Início:</label>
+        <input type="date" [(ngModel)]="dataInicio" class="input-data">
+      </div>
+      
+      <div class="filtro-grupo">
+        <label>Data Fim:</label>
+        <input type="date" [(ngModel)]="dataFim" class="input-data">
+      </div>
+      
+      <div class="filtro-grupo">
+        <label>Apartamento:</label>
+        <input type="text" [(ngModel)]="apartamentoFiltro" 
+               (input)="aplicarFiltros()" 
+               placeholder="Ex: 101"
+               class="input-texto">
+      </div>
+      
+      <div class="filtro-grupo">
+        <label>Status:</label>
+        <select [(ngModel)]="statusFiltro" 
+                (change)="aplicarFiltros()" 
+                class="input-select">
+          <option value="TODAS">Todas</option>
+          <option value="ATIVAS">Apenas Ativas</option>
+          <option value="CANCELADAS">Apenas Canceladas</option>
+        </select>
+      </div>
+    </div>
+
+    <button (click)="buscarComandas()" class="btn-buscar">
+      🔍 Buscar Comandas
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div *ngIf="carregando" class="loading">
+    ⏳ Carregando comandas...
+  </div>
+
+  <!-- RESUMO -->
+  <div *ngIf="!carregando && comandas.length > 0" class="resumo">
+    <div class="resumo-card ativas">
+      <h3>✅ Comandas Ativas</h3>
+      <p class="numero-grande">{{ getTotalAtivas() }}</p>
+      <p class="valor-resumo">R$ {{ getValorTotalAtivas().toFixed(2) }}</p>
+    </div>
+    
+    <div class="resumo-card canceladas">
+      <h3>🚫 Comandas Canceladas</h3>
+      <p class="numero-grande">{{ getTotalCanceladas() }}</p>
+    </div>
+    
+    <div class="resumo-card total">
+      <h3>📊 Total de Comandas</h3>
+      <p class="numero-grande">{{ comandas.length }}</p>
+      <p class="info-filtro">{{ comandasFiltradas.length }} exibida(s)</p>
+    </div>
+  </div>
+
+  <!-- LISTA DE COMANDAS -->
+  <div *ngIf="!carregando && comandasFiltradas.length > 0" class="comandas-lista">
+    
+    <div *ngFor="let comanda of comandasFiltradas" 
+         class="comanda-card"
+         [class.cancelada]="isCancelada(comanda)">
+      
+      <!-- STATUS BADGE -->
+      <div class="status-badge" [class.ativa]="!isCancelada(comanda)">
+        {{ isCancelada(comanda) ? '🚫 CANCELADA' : '✅ ATIVA' }}
+      </div>
+
+      <!-- CABEÇALHO -->
+      <div class="comanda-header">
+        <div class="comanda-info">
+          <span class="comanda-numero">Comanda #{{ comanda.notaId }}</span>
+          <span class="comanda-data">{{ comanda.dataHora | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+        <div class="comanda-acoes">
+          <span class="comanda-total">R$ {{ comanda.total.toFixed(2) }}</span>
+          
+          <a [routerLink]="['/comanda-impressao', comanda.notaId]" 
+             target="_blank"
+             class="btn-imprimir-pequeno"
+             title="Imprimir comanda">
+            🖨️
+          </a>
+          
+          <button *ngIf="!isCancelada(comanda)"
+                  (click)="cancelarComanda(comanda)" 
+                  class="btn-cancelar"
+                  title="Cancelar comanda">
+            🚫 Cancelar
+          </button>
+        </div>
+      </div>
+      
+      <!-- CORPO -->
+      <div class="comanda-body">
+        <div class="info-linha">
+          <strong>🏢 Apartamento:</strong> {{ comanda.apartamento }}
+        </div>
+        <div class="info-linha">
+          <strong>👤 Cliente:</strong> {{ comanda.cliente }}
+        </div>
+        <div *ngIf="comanda.observacao" class="info-linha">
+          <strong>📝 Obs:</strong> {{ comanda.observacao }}
+        </div>
+        
+        <!-- ITENS -->
+        <div class="itens-resumo">
+          <strong>Itens:</strong>
+          <div class="itens-lista">
+            <span *ngFor="let item of comanda.itens; let last = last" class="item-tag">
+              {{ item.quantidade }}x {{ item.produto }}<span *ngIf="!last">, </span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MENSAGEM VAZIA -->
+  <div *ngIf="!carregando && comandasFiltradas.length === 0 && comandas.length > 0" class="vazio">
+    😴 Nenhuma comanda encontrada com os filtros selecionados
+  </div>
+
+  <div *ngIf="!carregando && comandas.length === 0" class="vazio">
+    😴 Nenhuma comanda encontrada no período selecionado
+  </div>
+</div>

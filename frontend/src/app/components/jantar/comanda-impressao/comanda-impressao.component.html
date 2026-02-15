@@ -1,0 +1,90 @@
+<div class="impressao-container">
+  
+  <div *ngIf="carregando" class="loading">
+    ⏳ Carregando comanda...
+  </div>
+
+  <div *ngIf="!carregando && !comanda" class="erro">
+    ❌ Comanda não encontrada!
+    <button (click)="voltar()" class="btn-voltar">← Voltar</button>
+  </div>
+
+  <div *ngIf="!carregando && comanda" class="comanda-termica">
+    
+    <!-- CABEÇALHO -->
+    <div class="cabecalho">
+      <h1>🏨 HOTEL DI VAN</h1>
+      <h2>COMANDA RESTAURANTE</h2>
+      <div class="linha-separador"></div>
+    </div>
+
+    <!-- DADOS DA COMANDA -->
+    <div class="dados-comanda">
+      <div class="linha-info">
+        <span class="label">COMANDA Nº:</span>
+        <span class="valor">{{ comanda.notaId }}</span>
+      </div>
+      
+      <div class="linha-info">
+        <span class="label">DATA/HORA:</span>
+        <span class="valor">{{ comanda.dataHora | date:'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+      
+      <div class="linha-separador"></div>
+      
+      <div class="linha-info">
+        <span class="label">APARTAMENTO:</span>
+        <span class="valor">{{ comanda.apartamento }}</span>
+      </div>
+      
+      <div class="linha-info">
+        <span class="label">HÓSPEDE:</span>
+        <span class="valor">{{ comanda.cliente }}</span>
+      </div>
+      
+      <div class="linha-separador-grossa"></div>
+    </div>
+
+    <!-- ITENS -->
+    <div class="itens-comanda">
+      <h3>ITENS CONSUMIDOS</h3>
+      
+      <div *ngFor="let item of comanda.itens" class="item">
+        <div class="item-linha1">
+          <span class="item-qtd">{{ item.quantidade }}x</span>
+          <span class="item-nome">{{ item.produto }}</span>
+        </div>
+        <div class="item-linha2">
+          <span class="item-unitario">R$ {{ item.valorUnitario.toFixed(2) }}</span>
+          <span class="item-total">R$ {{ item.total.toFixed(2) }}</span>
+        </div>
+      </div>
+      
+      <div class="linha-separador-grossa"></div>
+    </div>
+
+    <!-- TOTAL -->
+    <div class="total-comanda">
+      <div class="total-linha">
+        <span class="total-label">TOTAL:</span>
+        <span class="total-valor">R$ {{ comanda.total.toFixed(2) }}</span>
+      </div>
+    </div>
+
+    <div class="linha-separador-grossa"></div>
+
+    <!-- RODAPÉ -->
+    <div class="rodape">
+      <p>Valor será lançado na conta do apartamento</p>
+      <p>Obrigado pela preferência!</p>
+    </div>
+
+  </div>
+
+  <!-- BOTÃO VOLTAR (NÃO IMPRIME) -->
+  <div class="acoes-tela" *ngIf="!carregando && comanda">
+    <button (click)="voltar()" class="btn-voltar">← Voltar ao Relatório</button>
+   <button (click)="imprimir()" class="btn-imprimir">🖨️ Reimprimir</button>
+  </div>
+
+</div>

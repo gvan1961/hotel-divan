@@ -1,0 +1,100 @@
+<div class="relatorio-container">
+  <div class="header-relatorio">
+    <h2>💰 Relatório de Faturamento do Restaurante</h2>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filtros">
+    <div class="filtro-grupo">
+      <label>Data Início:</label>
+      <input type="date" [(ngModel)]="dataInicio" class="input-data">
+    </div>
+    
+    <div class="filtro-grupo">
+      <label>Data Fim:</label>
+      <input type="date" [(ngModel)]="dataFim" class="input-data">
+    </div>
+    
+    <button (click)="gerarRelatorio()" class="btn-gerar">
+      📊 Gerar Relatório
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div *ngIf="carregando" class="loading">
+    ⏳ Gerando relatório...
+  </div>
+
+  <!-- RELATÓRIO -->
+  <div *ngIf="!carregando && relatorio" class="relatorio-content">
+    
+    <!-- RESUMO -->
+    <div class="resumo">
+      <div class="resumo-card destaque">
+        <h3>💰 Faturamento Total</h3>
+        <p class="valor-grande">R$ {{ relatorio.totalGeral.toFixed(2) }}</p>
+      </div>
+      
+      <div class="resumo-card">
+        <h3>📝 Total de Comandas</h3>
+        <p class="numero-grande">{{ relatorio.totalComandas }}</p>
+      </div>
+      
+      <div class="resumo-card">
+        <h3>🎯 Ticket Médio</h3>
+        <p class="valor-medio">R$ {{ relatorio.ticketMedio.toFixed(2) }}</p>
+      </div>
+
+      <div class="resumo-card">
+        <h3>📅 Período</h3>
+        <p>{{ relatorio.periodo.inicio | date:'dd/MM/yyyy' }} até {{ relatorio.periodo.fim | date:'dd/MM/yyyy' }}</p>
+      </div>
+    </div>
+
+    <!-- BOTÃO IMPRIMIR -->
+    <div class="acoes">
+      <button (click)="imprimir()" class="btn-imprimir">
+        🖨️ Imprimir Relatório
+      </button>
+    </div>
+
+    <!-- FATURAMENTO DIÁRIO -->
+    <div class="faturamento-diario">
+      <h3>📈 Faturamento por Dia:</h3>
+      
+      <div class="tabela-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th class="text-center">Comandas</th>
+              <th class="text-right">Faturamento</th>
+              <th class="text-right">Ticket Médio</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let dia of relatorio.faturamentoDiario">
+              <td><strong>{{ dia.data | date:'dd/MM/yyyy (EEE)' }}</strong></td>
+              <td class="text-center">{{ dia.totalComandas }}</td>
+              <td class="text-right valor-destaque">R$ {{ dia.totalVendas.toFixed(2) }}</td>
+              <td class="text-right">R$ {{ (dia.totalVendas / dia.totalComandas).toFixed(2) }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td><strong>TOTAL</strong></td>
+              <td class="text-center"><strong>{{ relatorio.totalComandas }}</strong></td>
+              <td class="text-right"><strong>R$ {{ relatorio.totalGeral.toFixed(2) }}</strong></td>
+              <td class="text-right"><strong>R$ {{ relatorio.ticketMedio.toFixed(2) }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- MENSAGEM SE VAZIO -->
+    <div *ngIf="relatorio.totalComandas === 0" class="vazio">
+      😴 Nenhum faturamento registrado no período selecionado
+    </div>
+  </div>
+</div>

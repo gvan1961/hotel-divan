@@ -1,0 +1,82 @@
+<div class="modal-overlay" *ngIf="isVisible" (click)="fechar()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>🔄 Transferir Hóspede</h2>
+      <button class="btn-fechar" (click)="fechar()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- INFO DO HÓSPEDE -->
+      <div class="info-hospede" *ngIf="hospedeSelecionado">
+        <h3>👤 Hóspede a ser transferido:</h3>
+        <p><strong>Nome:</strong> {{ hospedeSelecionado.cliente.nome }}</p>
+        <p><strong>Apartamento Atual:</strong> {{ hospedeSelecionado.reserva.apartamento.numeroApartamento }}</p>
+        <p *ngIf="hospedeSelecionado.titular" class="badge-titular">
+          ★ TITULAR DA RESERVA
+        </p>
+      </div>
+
+      <!-- LOADING -->
+      <div class="loading" *ngIf="carregando">
+        <div class="spinner"></div>
+        <p>Carregando apartamentos disponíveis...</p>
+      </div>
+
+      <!-- FORMULÁRIO -->
+      <div class="formulario" *ngIf="!carregando">
+        <!-- APARTAMENTO DESTINO -->
+        <div class="campo">
+          <label>Apartamento de Destino *</label>
+          <select [(ngModel)]="apartamentoDestinoId" [disabled]="apartamentosDisponiveis.length === 0">
+            <option [ngValue]="null">Selecione...</option>  <!-- ✅ CORRETO -->
+            <option *ngFor="let apt of apartamentosDisponiveis" [ngValue]="apt.id">
+            {{ obterInfoApartamento(apt) }}
+            </option>
+          </select>
+          <small *ngIf="apartamentosDisponiveis.length === 0" class="text-danger">
+            ⚠️ Nenhum apartamento disponível
+          </small>
+        </div>
+
+        <!-- MOTIVO -->
+        <div class="campo">
+          <label>Motivo da Transferência *</label>
+          <textarea 
+            [(ngModel)]="motivoTransferencia"
+            rows="3"
+            placeholder="Ex: Hóspede solicitou troca, problema no apartamento, etc."
+            maxlength="500"></textarea>
+          <small>Obrigatório - Máximo 500 caracteres</small>
+        </div>
+
+        <!-- EXPLICAÇÃO DA LÓGICA -->
+        <div class="info-box">
+          <p><strong>ℹ️ Como funciona:</strong></p>
+          <ul>
+            <li>Se o apartamento destino estiver <strong>vazio</strong>, uma nova reserva será criada</li>
+            <li>Se o apartamento destino já tiver hóspedes, o hóspede será <strong>adicionado à reserva existente</strong></li>
+            <li>Se este for o último hóspede do apartamento atual, ele será enviado para <strong>LIMPEZA</strong></li>
+            <li>Os valores serão recalculados automaticamente</li>
+          </ul>
+        </div>
+
+        <!-- ERRO -->
+        <div class="alert-erro" *ngIf="erro">
+          ❌ {{ erro }}
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" (click)="fechar()" [disabled]="carregando">
+        Cancelar
+      </button>
+      <button 
+        class="btn-confirmar" 
+         (click)="confirmarTransferencia()" 
+         [disabled]="carregando || !apartamentoDestinoId || !motivoTransferencia">
+         {{ carregando ? 'Transferindo...' : '✅ Confirmar Transferência' }}
+      </button>
+    </div>
+  </div>
+</div>

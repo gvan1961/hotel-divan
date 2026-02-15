@@ -1,0 +1,190 @@
+<div class="container">
+  
+  <!-- HEADER -->
+  <div class="header">
+    <button class="btn-voltar" (click)="voltar()">
+      ← Voltar
+    </button>
+    
+    <h1>🔐 Gestão de Perfis</h1>
+    
+    <button 
+      *hasPermission="'PERFIL_GERENCIAR'"
+      class="btn-primary"
+      (click)="abrirModalNovo()">
+      + Novo Perfil
+    </button>
+  </div>
+  
+  <!-- LOADING -->
+  <div *ngIf="carregando" class="loading">
+    <div class="spinner"></div>
+    <p>Carregando perfis...</p>
+  </div>
+  
+  <!-- TABELA -->
+  <div *ngIf="!carregando" class="tabela-container">
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nome</th>
+          <th>Descrição</th>
+          <th>Permissões</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let perfil of perfis">
+          <td>{{ perfil.id }}</td>
+          <td>
+            <span class="badge-perfil">{{ perfil.nome }}</span>
+          </td>
+          <td>{{ perfil.descricao }}</td>
+          <td>
+            <span class="badge-count">{{ perfil.permissoes?.length || 0 }} permissões</span>
+          </td>
+          <td class="acoes">
+            <button 
+              *hasPermission="'PERFIL_GERENCIAR'"
+              class="btn-editar"
+              (click)="abrirModalEditar(perfil)"
+              title="Editar">
+              ✏️
+            </button>
+            
+            <button 
+               *hasPermission="'PERFIL_GERENCIAR'"
+               class="btn-excluir"
+               (click)="excluir(perfil)"
+               title="Excluir"
+               [disabled]="['ADMIN', 'RECEPCIONISTA', 'FINANCEIRO'].includes(perfil.nome)">  🗑️
+            </button>
+          </td>
+        </tr>
+        
+        <tr *ngIf="perfis.length === 0">
+          <td colspan="5" class="sem-dados">
+            📭 Nenhum perfil encontrado
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" *ngIf="mostrarModal" (click)="fecharModal()">
+  <div class="modal modal-large" (click)="$event.stopPropagation()">
+    
+    <div class="modal-header">
+      <h2>{{ modalTitulo }}</h2>
+      <button class="btn-fechar" (click)="fecharModal()">✕</button>
+    </div>
+    
+    <div class="modal-body">
+      
+      <!-- NOME -->
+      <div class="form-group">
+        <label>Nome do Perfil: *</label>
+        <input 
+          type="text"
+          [(ngModel)]="formulario.nome"
+          placeholder="Ex: GERENTE, OPERADOR, etc"
+          class="input"
+          [disabled]="editando && !!perfilSelecionado && ['ADMIN', 'RECEPCIONISTA', 'FINANCEIRO'].includes(perfilSelecionado.nome)">
+          <small *ngIf="editando && !!perfilSelecionado && ['ADMIN', 'RECEPCIONISTA', 'FINANCEIRO'].includes(perfilSelecionado.nome)" class="hint">
+          Nome de perfis do sistema não pode ser alterado
+        </small>
+      </div>
+      
+      <!-- DESCRIÇÃO -->
+      <div class="form-group">
+        <label>Descrição: *</label>
+        <input 
+          type="text"
+          [(ngModel)]="formulario.descricao"
+          placeholder="Digite uma descrição para o perfil"
+          class="input">
+      </div>
+      
+      <!-- PERMISSÕES -->
+      <div class="form-group">
+        <label>Permissões: * ({{ formulario.permissaoIds.length }} selecionadas)</label>
+        
+        <!-- BUSCA -->
+        <div class="busca-permissoes">
+          <input 
+            type="text"
+            [(ngModel)]="buscaPermissao"
+            placeholder="🔍 Buscar permissões..."
+            class="input-busca">
+        </div>
+        
+        <!-- CATEGORIAS -->
+        <div class="permissoes-container">
+          <div 
+            *ngFor="let grupo of permissoesFiltradas"
+            class="categoria-grupo">
+            
+            <!-- HEADER DA CATEGORIA -->
+            <div class="categoria-header" (click)="toggleCategoria(grupo.categoria)">
+              <div class="categoria-info">
+                <span class="categoria-icone">
+                  {{ categoriaExpandida(grupo.categoria) ? '▼' : '▶' }}
+                </span>
+                <span class="categoria-nome">{{ grupo.categoria }}</span>
+                <span class="categoria-badge">{{ grupo.permissoes.length }}</span>
+              </div>
+              
+              <button 
+                type="button"
+                class="btn-selecionar-todas"
+                (click)="selecionarTodasCategoria(grupo.categoria); $event.stopPropagation()">
+                {{ todasSelecionadasCategoria(grupo.categoria) ? '☑ Desmarcar Todas' : '☐ Marcar Todas' }}
+              </button>
+            </div>
+            
+            <!-- PERMISSÕES DA CATEGORIA -->
+            <div *ngIf="categoriaExpandida(grupo.categoria)" class="categoria-permissoes">
+              <div 
+                *ngFor="let permissao of grupo.permissoes"
+                class="permissao-item">
+                <input 
+                  type="checkbox"
+                  [id]="'permissao-' + permissao.id"
+                  [checked]="permissaoSelecionada(permissao.id)"
+                  (change)="togglePermissao(permissao.id)">
+                <label [for]="'permissao-' + permissao.id">
+                  <span class="permissao-nome">{{ permissao.nome }}</span>
+                  <span class="permissao-descricao">{{ permissao.descricao }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <div *ngIf="permissoesFiltradas.length === 0" class="sem-permissoes">
+            📭 Nenhuma permissão encontrada
+          </div>
+        </div>
+      </div>
+      
+    </div>
+    
+    <div class="modal-footer">
+      <button 
+        class="btn btn-cancelar"
+        (click)="fecharModal()">
+        Cancelar
+      </button>
+      
+      <button 
+        class="btn btn-salvar"
+        (click)="salvar()">
+        {{ editando ? 'Atualizar' : 'Criar' }}
+      </button>
+    </div>
+    
+  </div>
+</div>
