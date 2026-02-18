@@ -221,6 +221,13 @@ excluirPreReserva(id: number): Observable<any> {
   return this.http.delete(`${this.apiUrl}/${id}/pre-reserva`);
 }
 
+/**
+ * ✅ BUSCAR RESERVAS PARA O MAPA (apenas ATIVAS e PRÉ-RESERVAS)
+ */
+buscarParaMapa(): Observable<ReservaResponse[]> {
+  return this.http.get<ReservaResponse[]>(`${this.apiUrl}/mapa`);
+}
+
 }
 
 
