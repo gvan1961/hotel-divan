@@ -132,12 +132,18 @@ export class AuthService {
   }
 
   /**
-   * ✅ OBTER NOME DO USUÁRIO LOGADO
-   */
-  getUsuarioNome(): string {
-    const usuario = this.getCurrentUser();
-    return usuario?.nome || 'Usuário';
+ * ✅ OBTER NOME DO USUÁRIO LOGADO
+ */
+getUsuarioNome(): string {
+  const usuario = this.getCurrentUser();
+  
+  // Tenta pegar o nome, se não tiver usa o username
+  if (usuario) {
+    return usuario.nome || usuario.username || 'Usuário';
   }
+  
+  return 'Usuário';
+}
 
   /**
    * ✅ OBTER EMAIL DO USUÁRIO LOGADO

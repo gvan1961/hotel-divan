@@ -1146,10 +1146,10 @@ isPreReservaAmanha(reserva: ReservaMapa): boolean {
     next: (apartamentos) => {
       console.log('🏢 Apartamentos carregados:', apartamentos.length);
 
-      // 2️⃣ BUSCAR RESERVAS
-      this.http.get<any[]>('http://localhost:8080/api/reservas').subscribe({
+      // 2️⃣ BUSCAR RESERVAS DO MAPA (apenas ATIVAS e PRÉ-RESERVAS)
+      this.http.get<any[]>('http://localhost:8080/api/reservas/mapa').subscribe({
         next: (reservas) => {
-          console.log('📋 Total de reservas:', reservas.length);
+          console.log('📋 Total de reservas no mapa:', reservas.length);
 
           // ✅ LOG DA PRIMEIRA RESERVA PARA VER ESTRUTURA
           if (reservas.length > 0) {
@@ -1174,18 +1174,10 @@ isPreReservaAmanha(reserva: ReservaMapa): boolean {
 
           console.log('🏠 Apartamentos processados:', this.apartamentos.length);
 
-          // 4️⃣ FILTRAR E MAPEAR RESERVAS
-          const reservasAtivas = reservas.filter(r => 
-  r.status === 'ATIVA' || 
-  r.status === 'PRE_RESERVA' ||
-  r.status === 'FINALIZADA' ||
-  r.status === 'CHECKOUT_VENCIDO'
-  // Apenas exclui CANCELADA e NO_SHOW
-);
+          // 4️⃣ PROCESSAR RESERVAS (backend já filtrou, não precisa filtrar aqui)
+          console.log('✅ Reservas do mapa:', reservas.length);
 
-          console.log('✅ Reservas ATIVAS/PRÉ-RESERVA:', reservasAtivas.length);
-
-          reservasAtivas.forEach((reserva, index) => {
+          reservas.forEach((reserva, index) => {
             console.log(`\n📌 Processando reserva ${index + 1}:`);
             console.log('   ID:', reserva.id);
             console.log('   Status:', reserva.status);
@@ -1204,14 +1196,13 @@ isPreReservaAmanha(reserva: ReservaMapa): boolean {
               return;
             }
 
-            // ✅ CONVERTER DATAS COM TIMEZONE CORRETO
+            // ✅ CONVERTER DATAS
             const checkinStr = reserva.dataCheckin;
             const checkoutStr = reserva.dataCheckout;
 
             console.log('   Check-in (original):', checkinStr);
             console.log('   Check-out (original):', checkoutStr);
 
-            // ✅ CRIAR DATAS SEM PROBLEMAS DE TIMEZONE
             const checkin = new Date(checkinStr);
             const checkout = new Date(checkoutStr);
 

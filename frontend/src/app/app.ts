@@ -1,14 +1,18 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { AberturaCaixaComponent } from './components/abertura-caixa/abertura-caixa.component';
-import { FechamentoCaixaComponent } from './components/fechamento-caixa/fechamento-caixa.component';
-import { FechamentoCaixaService } from './services/fechamento-caixa.service';
+import { HeaderComponent } from './components/header.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
-  template: `<router-outlet></router-outlet>`,
+  imports: [RouterOutlet, HeaderComponent],
+  template: `
+    <!-- Header com nome do usuário -->
+    <app-header></app-header>
+    
+    <!-- Conteúdo das páginas -->
+    <router-outlet></router-outlet>
+  `,
   styles: []
 })
 export class App {
