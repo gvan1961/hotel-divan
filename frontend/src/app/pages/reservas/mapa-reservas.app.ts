@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { ReservaService } from '../../services/reserva.service';
 
 interface ReservaMapa {
   id: number;
@@ -120,30 +121,34 @@ interface ApartamentoMapa {
 
             <!-- CORPO COM APARTAMENTOS -->
             <tbody>
-              <tr *ngFor="let apt of apartamentos">
-                <td class="col-apartamento">
-                  <div class="apt-info">
-                    <span class="apt-numero">{{ apt.numeroApartamento }}</span>
-                  </div>
-                </td>
-                
-                <td *ngFor="let data of datas; let i = index" 
-                    class="col-reserva"
-                    [class.hoje]="isHoje(data)"
-                    (click)="clicarCelula(apt, data)">
-                  
-                  <!-- CÉLULA DE RESERVA -->
-                  <div class="celula-reserva" 
-                       [class]="getClasseReserva(apt, data)"
-                       [title]="getTituloReserva(apt, data)">
-                    
-                    <span class="reserva-info" *ngIf="getReservaInfo(apt, data)">
-                      {{ getReservaInfo(apt, data) }}
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
+  <tr *ngFor="let apt of apartamentos">
+    <td class="col-apartamento">
+      <div class="apt-info">
+        <span class="apt-numero">{{ apt.numeroApartamento }}</span>
+      </div>
+    </td>
+    
+    <!-- ✅ NOVA LÓGICA: Processar células com colspan -->
+    <ng-container *ngFor="let data of datas; let i = index">
+      <ng-container *ngIf="!isCelulaOculta(apt, data)">
+        <td [attr.colspan]="getColspan(apt, data)"
+            class="col-reserva"
+            [class.hoje]="isHoje(data)"
+            (click)="clicarCelula(apt, data)">
+          
+          <div class="celula-reserva" 
+               [class]="getClasseReserva(apt, data)"
+               [title]="getTituloReserva(apt, data)">
+            
+            <span class="reserva-info" *ngIf="getReservaInfo(apt, data)">
+              {{ getReservaInfo(apt, data) }}
+            </span>
+          </div>
+        </td>
+      </ng-container>
+    </ng-container>
+  </tr>
+</tbody>
           </table>
         </div>
       </div>
@@ -198,10 +203,17 @@ interface ApartamentoMapa {
                 ✏️ Editar
               </button>
               
-              <!-- EXCLUIR -->
-              <button *ngIf="reservaSelecionada && reservaSelecionada.status === 'PRE_RESERVA'" 
-                      class="btn-excluir" 
-                      (click)="excluirPreReserva()">
+              <!-- CANCELAR (mantém histórico) -->
+                <button *ngIf="reservaSelecionada && reservaSelecionada.status === 'PRE_RESERVA'" 
+                  class="btn-cancelar-reserva" 
+                  (click)="abrirModalCancelar()">
+                  ❌ Cancelar
+              </button>
+
+              <!-- EXCLUIR (remove permanentemente) -->
+                <button *ngIf="reservaSelecionada && reservaSelecionada.status === 'PRE_RESERVA'" 
+                class="btn-excluir" 
+                (click)="excluirPreReserva()">
                 🗑️ Excluir
               </button>
               
@@ -276,691 +288,755 @@ interface ApartamentoMapa {
         </div>
       </div>
 
+      <!-- MODAL CANCELAR PRÉ-RESERVA -->
+<div class="modal-overlay" *ngIf="modalCancelar" (click)="fecharModalCancelar()">
+  <div class="modal-content modal-pequeno" (click)="$event.stopPropagation()">
+    <h2>❌ Cancelar Pré-Reserva</h2>
+    
+    <div class="info-box" *ngIf="reservaSelecionada">
+      <p><strong>Reserva:</strong> #{{ reservaSelecionada.id }}</p>
+      <p><strong>Cliente:</strong> {{ reservaSelecionada.clienteNome }}</p>
+      <p><strong>Check-in:</strong> {{ formatarData(reservaSelecionada.dataCheckin) }}</p>
+    </div>
+
+    <div class="aviso-cancelamento">
+      ⚠️ A reserva será <strong>CANCELADA</strong> mas permanecerá no histórico.
+    </div>
+    
+    <div class="campo">
+      <label>Motivo do Cancelamento *</label>
+      <textarea [(ngModel)]="motivoCancelamento" 
+                rows="3" 
+                placeholder="Informe o motivo do cancelamento..."
+                required></textarea>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" (click)="fecharModalCancelar()">
+        Voltar
+      </button>
+      <button class="btn-confirmar-cancelamento" 
+              (click)="confirmarCancelamento()"
+              [disabled]="!motivoCancelamento || motivoCancelamento.trim() === ''">
+        ❌ Confirmar Cancelamento
+      </button>
+    </div>
+  </div>
+</div>
+
     </div>
   `,
   styles: [`
-    .container {
-      padding: 20px;
-      max-width: 100%;
-      margin: 0 auto;
-      background: #f5f7fa;
-      min-height: 100vh;
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    h1 {
-      margin: 0;
-      color: #2c3e50;
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 10px;
-    }
-
-    .btn-voltar {
-      background: #95a5a6;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .btn-voltar:hover {
-      background: #7f8c8d;
-    }
-
-    /* FILTROS */
-    .filtros {
-      display: flex;
-      gap: 15px;
-      align-items: center;
-      background: white;
-      padding: 15px 20px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      flex-wrap: wrap;
-    }
-
-    .filtro-periodo, .filtro-data {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .filtros label {
-      font-weight: 600;
-      color: #2c3e50;
-    }
-
-    .filtros select,
-    .filtros input[type="date"] {
-      padding: 8px 12px;
-      border: 2px solid #ddd;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-
-    .btn-hoje,
-    .btn-atualizar {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .btn-hoje {
-      background: #3498db;
-      color: white;
-    }
-
-    .btn-hoje:hover {
-      background: #2980b9;
-    }
-
-    .btn-atualizar {
-      background: #27ae60;
-      color: white;
-    }
-
-    .btn-atualizar:hover {
-      background: #229954;
-    }
-
-    /* LEGENDA */
-    .legenda {
-      display: flex;
-      gap: 20px;
-      background: white;
-      padding: 15px 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      flex-wrap: wrap;
-    }
-
-    .legenda-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .legenda-item span:first-child {
-      width: 30px;
-      height: 20px;
-      border-radius: 4px;
-      border: 1px solid #ddd;
-    }
-
-    .cor-disponivel { background: #d4edda; }
-    .cor-ocupado { background: #f8d7da; }
-    .cor-pre-reserva { background: #d1ecf1; }
-    .cor-limpeza { background: #fff3cd; }
-    .cor-manutencao { background: #e2d5f0; }
-
-    /* LOADING */
-    .loading {
-      text-align: center;
-      padding: 60px;
-      background: white;
-      border-radius: 12px;
-    }
-
-    .aviso-pre-reserva {
-      background: #e3f2fd;
-      border-left: 4px solid #2196f3;
-      padding: 12px;
-      border-radius: 6px;
-      margin-top: 15px;
-      color: #1976d2;
-      font-weight: 600;
-    }
-
-    .modal-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      margin-top: 25px;
-      padding-top: 20px;
-      border-top: 1px solid #ecf0f1;
-    }
-
-    .acoes-direita {
-      display: flex;
-      gap: 10px;
-    }
-
-    .btn-cancelar {
-      background: #95a5a6;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .btn-cancelar:hover {
-      background: #7f8c8d;
-    }
-
-    .btn-excluir {
-      background: #e74c3c;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .btn-excluir:hover {
-      background: #c0392b;
-      transform: translateY(-2px);
-    }
-
-    .btn-editar {
-      background: #ff9800;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .btn-editar:hover {
-      background: #f57c00;
-      transform: translateY(-2px);
-    }
-
-    .btn-ver-detalhes {
-      background: #3498db;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .btn-ver-detalhes:hover {
-      background: #2980b9;
-      transform: translateY(-2px);
-    }
-
-    .btn-criar-reserva {
-      background: #27ae60;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .btn-criar-reserva:hover {
-      background: #229954;
-      transform: translateY(-2px);
-    }
-
-    /* BOTÃO PAGAR */
-    .btn-pagar {
-      background: #27ae60;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .btn-pagar:hover {
-      background: #229954;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
-    }
-
-    /* RESPONSIVO */
-    @media (max-width: 768px) {
-      .modal-footer {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      
-      .acoes-direita {
-        flex-direction: column;
-      }
-    }
-
-    .spinner {
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #667eea;
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 20px;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* MAPA */
-    .mapa-container {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      overflow: hidden;
-    }
-
-    .mapa-scroll {
-      overflow-x: auto;
-      overflow-y: auto;
-      max-height: calc(100vh - 350px);
-    }
-
-    .mapa-table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 800px;
-    }
-
-    thead {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: white;
-    }
-
-    th {
-      background: #2c3e50;
-      color: white;
-      padding: 12px 8px;
-      text-align: center;
-      border: 1px solid #34495e;
-      font-weight: 600;
-      font-size: 0.9em;
-    }
-
-    .col-apartamento {
-      position: sticky;
-      left: 0;
-      z-index: 20;
-      background: #2c3e50 !important;
-      min-width: 80px;
-      max-width: 80px;
-    }
-
-    .col-data {
-      min-width: 80px;
-      max-width: 80px;
-    }
-
-    .col-data.hoje {
-      background: #667eea !important;
-    }
-
-    .data-header {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .dia-semana {
-      font-size: 0.75em;
-      opacity: 0.9;
-    }
-
-    .dia-mes {
-      font-size: 1em;
-      font-weight: 700;
-    }
-
-    tbody tr {
-      border-bottom: 1px solid #ecf0f1;
-    }
-
-    tbody tr:hover {
-      background: #f8f9fa;
-    }
-
-    td {
-      padding: 0;
-      border: 1px solid #e0e0e0;
-      text-align: center;
-      vertical-align: middle;
-    }
-
-    td.col-apartamento {
-      position: sticky;
-      left: 0;
-      z-index: 5;
-      background: white;
-      font-weight: 600;
-      color: #2c3e50;
-      border-right: 2px solid #bdc3c7;
-    }
-
-    td.col-reserva {
-      cursor: pointer;
-      transition: all 0.2s;
-      padding: 4px;
-    }
-
-    td.col-reserva:hover {
-      background: #f0f0f0;
-    }
-
-    td.col-reserva.hoje {
-      background: #e3f2fd;
-    }
-
-    .apt-info {
-      padding: 12px 8px;
-    }
-
-    .apt-numero {
-      font-size: 1.1em;
-      font-weight: 700;
-      color: #667eea;
-    }
-
-    /* CÉLULA DE RESERVA */
-    .celula-reserva {
-      min-height: 50px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 4px;
-      font-size: 0.85em;
-      font-weight: 600;
-      padding: 4px;
-      transition: all 0.2s;
-    }
-
-    .alerta-sucesso {
-      background: #d4edda;
-      border-left: 4px solid #28a745;
-      padding: 15px;
-      border-radius: 6px;
-      margin: 15px 0;
-    }
-
-    .texto-info {
-      color: #155724;
-      font-size: 0.95em;
-      margin-top: 8px;
-    }
-
-    .info-adicional {
-      background: #e3f2fd;
-      border-left: 4px solid #2196f3;
-      padding: 12px;
-      border-radius: 6px;
-      margin-top: 10px;
-    }
-
-    .texto-aviso {
-      color: #1976d2;
-      font-size: 0.9em;
-      margin: 0;
-    }
-
-    .celula-reserva:hover {
-      transform: scale(1.05);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
-
-    .celula-disponivel {
-      background: #d4edda;
-      color: #155724;
-    }
-
-    .celula-ocupado {
-      background: #f8d7da;
-      color: #721c24;
-    }
-
-    .celula-pre-reserva {
-      background: #d1ecf1;
-      color: #0c5460;
-    }
-
-    .celula-limpeza {
-      background: #fff3cd;
-      color: #856404;
-    }
-
-    .celula-manutencao {
-      background: #e2d5f0;
-      color: #5a3d7a;
-    }
-
-    .celula-indisponivel {
-      background: #d6d8db;
-      color: #383d41;
-    }
-
-    .reserva-info {
-      font-size: 0.75em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* MODAL */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.6);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      padding: 20px;
-    }
-
-    .modal-content {
-      background: white;
-      border-radius: 12px;
-      padding: 30px;
-      max-width: 500px;
-      width: 100%;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    }
-
-    .modal-content h2 {
-      margin: 0 0 20px 0;
-      color: #2c3e50;
-    }
-
-    .modal-info {
-      margin-bottom: 20px;
-    }
-
-    .modal-info p {
-      margin: 10px 0;
-      color: #2c3e50;
-    }
-
-    .texto-disponivel {
-      color: #27ae60;
-      font-weight: 600;
-      font-size: 1.1em;
-      margin-top: 15px;
-    }
-
-    .badge-ativa {
-      background: #d4edda;
-      color: #155724;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-
-    .badge-pre_reserva {
-      background: #d1ecf1;
-      color: #0c5460;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-
-    .badge-finalizada {
-      background: #cce5ff;
-      color: #004085;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-
-    /* INFO BOX DO MODAL DE PAGAMENTO */
-    .info-box {
-      background: #e3f2fd;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      border-left: 4px solid #2196f3;
-    }
-
-    .info-box p {
-      margin: 5px 0;
-      color: #1976d2;
-      font-size: 0.95em;
-    }
-
-    /* AVISO ATIVAÇÃO */
-    .aviso-ativacao {
-      background: #fff3cd;
-      border-left: 4px solid #ffc107;
-      padding: 15px;
-      margin-bottom: 20px;
-      border-radius: 4px;
-      color: #856404;
-      font-size: 0.95em;
-    }
-
-    .aviso-ativacao strong {
-      color: #856404;
-      font-weight: 700;
-    }
-
-    /* CAMPOS DO FORMULÁRIO */
-    .campo {
-      margin-bottom: 20px;
-    }
-
-    .campo label {
-      display: block;
-      margin-bottom: 8px;
-      color: #2c3e50;
-      font-weight: 600;
-    }
-
-    .campo input[type="number"],
-    .campo select,
-    .campo textarea {
-      width: 100%;
-      padding: 10px;
-      border: 2px solid #e0e0e0;
-      border-radius: 6px;
-      font-size: 1em;
-      transition: all 0.3s;
-      box-sizing: border-box;
-      font-family: inherit;
-    }
-
-    .campo input:focus,
-    .campo select:focus,
-    .campo textarea:focus {
-      outline: none;
-      border-color: #667eea;
-    }
-
-    .campo small {
-      display: block;
-      margin-top: 5px;
-      color: #7f8c8d;
-      font-size: 0.9em;
-    }
-
-    .campo textarea {
-      resize: vertical;
-      min-height: 80px;
-    }
-
-    /* BOTÃO CONFIRMAR PAGAMENTO */
-    .btn-confirmar-pagamento {
-      background: #27ae60;
-      color: white;
-      padding: 12px 24px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-      font-size: 1em;
-    }
-
-    .btn-confirmar-pagamento:hover {
-      background: #229954;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
-    }
-
-    /* RESPONSIVO */
-    @media (max-width: 768px) {
-      .filtros {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .filtro-periodo,
-      .filtro-data {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .legenda {
-        flex-direction: column;
-      }
-
-      .mapa-scroll {
-        max-height: calc(100vh - 450px);
-      }
-
-      @media print {
+/* ═══════════════════════════════════════════════════════════ */
+/* LAYOUT PRINCIPAL */
+/* ═══════════════════════════════════════════════════════════ */
+
+.container {
+  padding: 20px;
+  max-width: 100%;
+  margin: 0 auto;
+  background: #f5f7fa;
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+h1 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* BOTÕES */
+/* ═══════════════════════════════════════════════════════════ */
+
+.btn-voltar,
+.btn-imprimir,
+.btn-hoje,
+.btn-atualizar {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  color: white;
+}
+
+.btn-voltar,
+.btn-imprimir {
+  background: #95a5a6;
+}
+
+.btn-voltar:hover,
+.btn-imprimir:hover {
+  background: #7f8c8d;
+}
+
+.btn-hoje {
+  background: #3498db;
+}
+
+.btn-hoje:hover {
+  background: #2980b9;
+}
+
+.btn-atualizar {
+  background: #27ae60;
+}
+
+.btn-atualizar:hover {
+  background: #229954;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* FILTROS */
+/* ═══════════════════════════════════════════════════════════ */
+
+.filtros {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  background: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  flex-wrap: wrap;
+}
+
+.filtro-periodo,
+.filtro-data {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filtros label {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.filtros select,
+.filtros input[type="date"] {
+  padding: 8px 12px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* LEGENDA */
+/* ═══════════════════════════════════════════════════════════ */
+
+.legenda {
+  display: flex;
+  gap: 20px;
+  background: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  flex-wrap: wrap;
+}
+
+.legenda-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.legenda-item span:first-child {
+  width: 30px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.cor-disponivel { background: #d4edda; }
+.cor-ocupado { background: #f8d7da; }
+.cor-pre-reserva { background: #d1ecf1; }
+.cor-finalizada { background: #cce5ff; }
+.cor-checkout-vencido { background: #d6001c; }
+.cor-limpeza { background: #fff3cd; }
+.cor-manutencao { background: #e2d5f0; }
+
+/* ═══════════════════════════════════════════════════════════ */
+/* LOADING */
+/* ═══════════════════════════════════════════════════════════ */
+
+.loading {
+  text-align: center;
+  padding: 60px;
+  background: white;
+  border-radius: 12px;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* TABELA DO MAPA */
+/* ═══════════════════════════════════════════════════════════ */
+
+.mapa-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.mapa-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 350px);
+}
+
+.mapa-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 800px;
+}
+
+/* CABEÇALHO */
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: white;
+}
+
+th {
+  background: #2c3e50;
+  color: white;
+  padding: 12px 8px;
+  text-align: center;
+  border: 1px solid #34495e;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+.col-apartamento {
+  position: sticky;
+  left: 0;
+  z-index: 20;
+  background: #2c3e50 !important;
+  min-width: 80px;
+  max-width: 80px;
+}
+
+.col-data {
+  min-width: 80px;
+  max-width: 80px;
+}
+
+.col-data.hoje {
+  background: #667eea !important;
+}
+
+.data-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dia-semana {
+  font-size: 0.75em;
+  opacity: 0.9;
+}
+
+.dia-mes {
+  font-size: 1em;
+  font-weight: 700;
+}
+
+/* CORPO DA TABELA */
+tbody tr {
+  border-bottom: 1px solid #ecf0f1;
+}
+
+tbody tr:hover {
+  background: #f8f9fa;
+}
+
+td {
+  padding: 0;
+  margin: 0;
+  text-align: center;
+  vertical-align: middle;
+  height: 50px;
+}
+
+td.col-apartamento {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background: white;
+  font-weight: 600;
+  color: #2c3e50;
+  border-right: 2px solid #bdc3c7;
+  padding: 12px 8px;
+}
+
+.apt-info {
+  padding: 0;
+}
+
+.apt-numero {
+  font-size: 1.1em;
+  font-weight: 700;
+  color: #667eea;
+}
+
+/* CÉLULAS DE RESERVA */
+td.col-reserva {
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0 !important;
+  border: none !important;
+  position: relative;
+}
+
+td.col-reserva.hoje {
+  background: #e3f2fd;
+}
+
+.celula-reserva {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85em;
+  font-weight: 600;
+  transition: all 0.2s;
+  position: relative;
+  margin: 2px;
+}
+
+.celula-reserva:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  z-index: 100;
+}
+
+.reserva-info {
+  font-size: 0.75em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* CORES DAS CÉLULAS */
+/* ═══════════════════════════════════════════════════════════ */
+
+.celula-disponivel {
+  background: #d4edda;
+  color: #155724;
+}
+
+.celula-ocupado {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.celula-pre-reserva {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.celula-pre-reserva-hoje {
+  background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
+  color: white;
+  font-weight: 700;
+  animation: pulseAlert 2s ease-in-out infinite;
+  box-shadow: 0 0 15px rgba(255, 152, 0, 0.6);
+}
+
+.celula-pre-reserva-amanha {
+  background: linear-gradient(135deg, #ffd54f 0%, #ffc107 100%);
+  color: #333;
+  font-weight: 700;
+  animation: pulseAlert 3s ease-in-out infinite;
+}
+
+.celula-finalizada {
+  background: #cce5ff;
+  color: #004085;
+  font-style: italic;
+}
+
+.celula-checkout-vencido {
+  background: #d6001c;
+  color: white;
+  font-weight: 700;
+  animation: pulseAlert 2s ease-in-out infinite;
+}
+
+.celula-limpeza {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.celula-manutencao {
+  background: #e2d5f0;
+  color: #5a3d7a;
+}
+
+.celula-indisponivel {
+  background: #d6d8db;
+  color: #383d41;
+}
+
+@keyframes pulseAlert {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* VISUAL DE RESERVA CONTÍNUA */
+/* ═══════════════════════════════════════════════════════════ */
+
+/* Reserva de dia único - arredondar tudo */
+.reserva-unico {
+  border-radius: 6px;
+  margin: 2px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════ */
+/* MODAIS */
+/* ═══════════════════════════════════════════════════════════ */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.modal-pequeno {
+  max-width: 500px !important;
+}
+
+.modal-content h2 {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
+}
+
+.modal-info {
+  margin-bottom: 20px;
+}
+
+.modal-info p {
+  margin: 10px 0;
+  color: #2c3e50;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #ecf0f1;
+}
+
+.acoes-direita {
+  display: flex;
+  gap: 10px;
+}
+
+/* AVISOS E ALERTAS */
+.aviso-pre-reserva,
+.info-box {
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 15px;
+  color: #1976d2;
+  font-weight: 600;
+}
+
+.aviso-ativacao,
+.aviso-cancelamento {
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  padding: 12px;
+  margin: 15px 0;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #856404;
+}
+
+.aviso-cancelamento strong {
+  color: #d63031;
+}
+
+.alerta-sucesso {
+  background: #d4edda;
+  border-left: 4px solid #28a745;
+  padding: 15px;
+  border-radius: 6px;
+  margin: 15px 0;
+}
+
+.texto-disponivel {
+  color: #27ae60;
+  font-weight: 600;
+  font-size: 1.1em;
+  margin-top: 15px;
+}
+
+.texto-info {
+  color: #155724;
+  font-size: 0.95em;
+  margin-top: 8px;
+}
+
+/* BADGES */
+.badge-ativa {
+  background: #d4edda;
+  color: #155724;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.badge-pre_reserva {
+  background: #d1ecf1;
+  color: #0c5460;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.badge-finalizada {
+  background: #cce5ff;
+  color: #004085;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* CAMPOS DE FORMULÁRIO */
+.campo {
+  margin-bottom: 20px;
+}
+
+.campo label {
+  display: block;
+  margin-bottom: 8px;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.campo input[type="number"],
+.campo select,
+.campo textarea {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 1em;
+  transition: all 0.3s;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.campo small {
+  display: block;
+  margin-top: 5px;
+  color: #7f8c8d;
+  font-size: 0.9em;
+}
+
+.campo textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* BOTÕES DO MODAL */
+.btn-cancelar,
+.btn-excluir,
+.btn-editar,
+.btn-ver-detalhes,
+.btn-criar-reserva,
+.btn-pagar,
+.btn-confirmar-pagamento,
+.btn-cancelar-reserva,
+.btn-confirmar-cancelamento {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  color: white;
+}
+
+.btn-cancelar {
+  background: #95a5a6;
+}
+
+.btn-cancelar:hover {
+  background: #7f8c8d;
+}
+
+.btn-excluir,
+.btn-cancelar-reserva,
+.btn-confirmar-cancelamento {
+  background: #e74c3c;
+}
+
+.btn-excluir:hover,
+.btn-cancelar-reserva:hover,
+.btn-confirmar-cancelamento:hover:not(:disabled) {
+  background: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.btn-confirmar-cancelamento:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-editar {
+  background: #ff9800;
+}
+
+.btn-editar:hover {
+  background: #f57c00;
+  transform: translateY(-2px);
+}
+
+.btn-ver-detalhes {
+  background: #3498db;
+}
+
+.btn-ver-detalhes:hover {
+  background: #2980b9;
+  transform: translateY(-2px);
+}
+
+.btn-criar-reserva,
+.btn-pagar,
+.btn-confirmar-pagamento {
+  background: #27ae60;
+}
+
+.btn-criar-reserva:hover,
+.btn-pagar:hover,
+.btn-confirmar-pagamento:hover {
+  background: #229954;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* RESPONSIVO */
+/* ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .filtros {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filtro-periodo,
+  .filtro-data {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .legenda {
+    flex-direction: column;
+  }
+
+  .mapa-scroll {
+    max-height: calc(100vh - 450px);
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .acoes-direita {
+    flex-direction: column;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* IMPRESSÃO */
+/* ═══════════════════════════════════════════════════════════ */
+
+@media print {
   .header,
   .filtros,
   .legenda,
@@ -981,60 +1057,12 @@ interface ApartamentoMapa {
     overflow: visible;
   }
 }
-
-    /* PRÉ-RESERVA HOJE - LARANJA FORTE */
-.celula-pre-reserva-hoje {
-  background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%) !important;
-  color: white !important;
-  font-weight: 700;
-  animation: pulseAlert 2s ease-in-out infinite;
-  box-shadow: 0 0 15px rgba(255, 152, 0, 0.6);
-}
-
-/* PRÉ-RESERVA AMANHÃ - AMARELO */
-.celula-pre-reserva-amanha {
-  background: linear-gradient(135deg, #ffd54f 0%, #ffc107 100%) !important;
-  color: #333 !important;
-  font-weight: 700;
-  animation: pulseAlert 3s ease-in-out infinite;
-}
-
-/* ANIMAÇÃO DE PULSO */
-@keyframes pulseAlert {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.9;
-  }
-}
-
-   /* FINALIZADA - AZUL CLARO */
-.celula-finalizada {
-  background: #cce5ff;
-  color: #004085;
-  font-style: italic;
-}
-
-/* CHECKOUT VENCIDO - VERMELHO ESCURO */
-.celula-checkout-vencido {
-  background: #d6001c;
-  color: white;
-  font-weight: 700;
-  animation: pulseAlert 2s ease-in-out infinite;
-}
-
-  .cor-finalizada { background: #cce5ff; }
-.cor-checkout-vencido { background: #d6001c; }
-
-    }
-  `]
+`]
 })
 export class MapaReservasApp implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private reservaService = inject(ReservaService);
 
   loading = false;
   apartamentos: ApartamentoMapa[] = [];
@@ -1054,6 +1082,11 @@ export class MapaReservasApp implements OnInit {
   pagPreReservaValor = 0;
   pagPreReservaFormaPagamento = '';
   pagPreReservaObs = '';
+
+  // ✅ ADICIONAR ESTAS LINHAS:
+// Modal Cancelar
+modalCancelar = false;
+motivoCancelamento = '';
 
   mapaReservas: Map<string, ReservaMapa> = new Map();
 
@@ -1267,26 +1300,17 @@ isPreReservaAmanha(reserva: ReservaMapa): boolean {
   if (reserva) {
     if (reserva.status === 'ATIVA') {
       return 'celula-ocupado';
-    }
-    
-    if (reserva.status === 'PRE_RESERVA') {
-      // Verificar se é hoje ou amanhã
+    } else if (reserva.status === 'PRE_RESERVA') {
       if (this.isPreReservaHoje(reserva)) {
         return 'celula-pre-reserva-hoje';
-      }
-      if (this.isPreReservaAmanha(reserva)) {
+      } else if (this.isPreReservaAmanha(reserva)) {
         return 'celula-pre-reserva-amanha';
+      } else {
+        return 'celula-pre-reserva';
       }
-      return 'celula-pre-reserva';
-    }
-    
-    // ✅ NOVO: FINALIZADA
-    if (reserva.status === 'FINALIZADA') {
+    } else if (reserva.status === 'FINALIZADA') {
       return 'celula-finalizada';
-    }
-    
-    // ✅ NOVO: CHECKOUT VENCIDO
-    if (reserva.status === 'CHECKOUT_VENCIDO') {
+    } else if (reserva.status === 'CHECKOUT_VENCIDO') {
       return 'celula-checkout-vencido';
     }
   }
@@ -1339,22 +1363,61 @@ isPreReservaAmanha(reserva: ReservaMapa): boolean {
   const chave = `${apt.id}-${data}`;
   const reserva = this.mapaReservas.get(chave);
 
-  if (reserva) {
-    const primeiroNome = reserva.clienteNome.split(' ')[0];
-    
-    // ✅ ADICIONAR BADGES DE ALERTA
-    if (this.isPreReservaHoje(reserva)) {
-      return '🔔 HOJE';
-    }
-    
-    if (this.isPreReservaAmanha(reserva)) {
-      return '⏰ AMANHÃ';
-    }
-    
-    return primeiroNome;
+  if (!reserva) {
+    return '';
   }
 
-  return '';
+  // Com colspan, só mostramos no primeiro dia (que é a única célula renderizada)
+  const primeiroNome = reserva.clienteNome.split(' ')[0];
+  
+  // Adicionar badges de alerta
+  if (this.isPreReservaHoje(reserva)) {
+    return '🔔 HOJE - ' + primeiroNome;
+  }
+  
+  if (this.isPreReservaAmanha(reserva)) {
+    return '⏰ AMANHÃ - ' + primeiroNome;
+  }
+  
+  return primeiroNome;
+}
+
+/**
+ * ✅ Determina a posição do dia dentro da reserva (inicio, meio, fim)
+ */
+getPosicaoNaReserva(apt: ApartamentoMapa, data: string): string {
+  const chave = `${apt.id}-${data}`;
+  const reserva = this.mapaReservas.get(chave);
+  
+  if (!reserva) return '';
+  
+  const dataAtual = new Date(data + 'T00:00:00');
+  const dataCheckin = new Date(reserva.dataCheckin);
+  const dataCheckout = new Date(reserva.dataCheckout);
+  
+  // Normalizar
+  dataAtual.setHours(0, 0, 0, 0);
+  dataCheckin.setHours(0, 0, 0, 0);
+  dataCheckout.setHours(0, 0, 0, 0);
+  
+  const isPrimeiroDia = dataAtual.getTime() === dataCheckin.getTime();
+  
+  // Calcular último dia (checkout - 1 dia)
+  const ultimoDia = new Date(dataCheckout);
+  ultimoDia.setDate(ultimoDia.getDate() - 1);
+  ultimoDia.setHours(0, 0, 0, 0);
+  
+  const isUltimoDia = dataAtual.getTime() === ultimoDia.getTime();
+  
+  if (isPrimeiroDia && isUltimoDia) {
+    return 'unico'; // Reserva de 1 dia só
+  } else if (isPrimeiroDia) {
+    return 'inicio';
+  } else if (isUltimoDia) {
+    return 'fim';
+  } else {
+    return 'meio';
+  }
 }
 
   clicarCelula(apt: ApartamentoMapa, data: string): void {
@@ -1367,11 +1430,16 @@ isPreReservaAmanha(reserva: ReservaMapa): boolean {
     temReserva: !!reserva
   });
 
-  // ✅ SE TEM RESERVA → ABRIR DETALHES DIRETO
+  // ✅ SE TEM RESERVA → ABRIR MODAL COM OPÇÕES
   if (reserva) {
-    console.log('📋 Abrindo detalhes da reserva #' + reserva.id);
-    this.router.navigate(['/reservas', reserva.id]);
-    return; // ← Sair aqui, não abrir modal
+    console.log('📋 Abrindo modal para reserva #' + reserva.id);
+    
+    this.reservaSelecionada = reserva;
+    this.apartamentoSelecionado = apt;
+    this.dataSelecionada = data;
+    this.modalTitulo = `Reserva #${reserva.id}`;
+    this.modalDetalhes = true;
+    return;
   }
 
   // ✅ SE NÃO TEM RESERVA → ABRIR MODAL PARA CRIAR
@@ -1704,6 +1772,181 @@ isPreReservaAmanha(reserva: ReservaMapa): boolean {
       }
     });
   }
+
+  // ============= CANCELAR PRÉ-RESERVA =============
+abrirModalCancelar(): void {
+  if (!this.reservaSelecionada) {
+    console.error('❌ Nenhuma reserva selecionada');
+    return;
+  }
+
+  console.log('❌ Abrindo modal de cancelamento para reserva:', this.reservaSelecionada.id);
+  
+  this.motivoCancelamento = '';
+  this.modalDetalhes = false;
+  this.modalCancelar = true;
+}
+
+fecharModalCancelar(): void {
+  this.modalCancelar = false;
+  this.motivoCancelamento = '';
+  
+  // Reabrir modal de detalhes
+  setTimeout(() => {
+    this.modalDetalhes = true;
+  }, 100);
+}
+
+confirmarCancelamento(): void {
+  if (!this.reservaSelecionada) {
+    console.error('❌ Nenhuma reserva selecionada');
+    return;
+  }
+
+  if (!this.motivoCancelamento || this.motivoCancelamento.trim() === '') {
+    alert('⚠️ Por favor, informe o motivo do cancelamento');
+    return;
+  }
+
+  const reservaId = this.reservaSelecionada.id;
+  const clienteNome = this.reservaSelecionada.clienteNome;
+  const apartamentoNumero = this.reservaSelecionada.apartamentoNumero;
+  const dataCheckin = this.formatarData(this.reservaSelecionada.dataCheckin);
+  
+  console.log('═══════════════════════════════════════');
+  console.log('❌ CANCELANDO PRÉ-RESERVA');
+  console.log('═══════════════════════════════════════');
+  console.log('   ID:', reservaId);
+  console.log('   Cliente:', clienteNome);
+  console.log('   Motivo:', this.motivoCancelamento);
+  
+  const confirmacao = confirm(
+    `⚠️ CONFIRMA O CANCELAMENTO DESTA PRÉ-RESERVA?\n\n` +
+    `Reserva: #${reservaId}\n` +
+    `Cliente: ${clienteNome}\n` +
+    `Apartamento: ${apartamentoNumero}\n` +
+    `Check-in: ${dataCheckin}\n\n` +
+    `Motivo: ${this.motivoCancelamento}\n\n` +
+    `A reserva será CANCELADA mas permanecerá no histórico.`
+  );
+
+  if (!confirmacao) {
+    console.log('❌ Cancelamento não confirmado pelo usuário');
+    return;
+  }
+
+  console.log('✅ Cancelamento confirmado, enviando requisição...');
+  this.fecharModalCancelar();
+  this.fecharModal();
+
+  this.reservaService.cancelarPreReserva(reservaId, this.motivoCancelamento).subscribe({
+    next: () => {
+      console.log('✅ Pré-reserva cancelada com sucesso');
+      console.log('═══════════════════════════════════════');
+      
+      alert('✅ Pré-reserva cancelada com sucesso!');
+      
+      this.carregarMapa();
+    },
+    error: (err: any) => {
+      console.error('❌ Erro ao cancelar:', err);
+      console.log('═══════════════════════════════════════');
+      
+      let mensagemErro = 'Erro ao cancelar pré-reserva';
+      
+      if (err.error) {
+        if (typeof err.error === 'string') {
+          mensagemErro = err.error;
+        } else if (err.error.message) {
+          mensagemErro = err.error.message;
+        }
+      }
+      
+      alert('❌ ' + mensagemErro);
+    }
+  });
+}
+
+/**
+ * ✅ Calcula quantos dias a reserva ocupa (colspan)
+ */
+/**
+ * ✅ Calcula quantos dias a reserva ocupa (colspan) - CORRIGIDO
+ */
+getColspan(apt: ApartamentoMapa, data: string): number {
+  const chave = `${apt.id}-${data}`;
+  const reserva = this.mapaReservas.get(chave);
+  
+  if (!reserva) {
+    return 1; // Célula vazia = 1 dia
+  }
+  
+  // Verificar se é o primeiro dia VISÍVEL da reserva no mapa
+  const dataAtual = new Date(data + 'T00:00:00');
+  const dataCheckin = new Date(reserva.dataCheckin);
+  const dataCheckout = new Date(reserva.dataCheckout);
+  
+  dataAtual.setHours(0, 0, 0, 0);
+  dataCheckin.setHours(0, 0, 0, 0);
+  dataCheckout.setHours(0, 0, 0, 0);
+  
+  // ✅ VERIFICAR SE É O PRIMEIRO DIA VISÍVEL
+  // Pode não ser o check-in real, mas o primeiro dia que aparece no mapa
+  const isPrimeiroDiaVisivel = this.datas.indexOf(data) === 
+    this.datas.findIndex(d => {
+      const chaveTemp = `${apt.id}-${d}`;
+      return this.mapaReservas.get(chaveTemp)?.id === reserva.id;
+    });
+  
+  if (!isPrimeiroDiaVisivel) {
+    return 0; // Não é primeiro dia visível, célula será ocultada
+  }
+  
+  // ✅ CALCULAR QUANTOS DIAS CONSECUTIVOS A RESERVA OCUPA A PARTIR DESTE DIA
+  let diasConsecutivos = 0;
+  const indexAtual = this.datas.indexOf(data);
+  
+  for (let i = indexAtual; i < this.datas.length; i++) {
+    const dataVista = this.datas[i];
+    const chaveTemp = `${apt.id}-${dataVista}`;
+    const reservaTemp = this.mapaReservas.get(chaveTemp);
+    
+    // Contar apenas enquanto for a MESMA reserva
+    if (reservaTemp && reservaTemp.id === reserva.id) {
+      diasConsecutivos++;
+    } else {
+      break; // Parar quando não for mais a mesma reserva
+    }
+  }
+  
+  console.log(`Colspan para ${data}: ${diasConsecutivos} dias (Reserva #${reserva.id})`);
+  
+  return diasConsecutivos > 0 ? diasConsecutivos : 1;
+}
+
+/**
+ * ✅ Verifica se a célula deve ser ocultada (faz parte de uma reserva mas não é o primeiro dia)
+ */
+/**
+ * ✅ Verifica se a célula deve ser ocultada - CORRIGIDO
+ */
+isCelulaOculta(apt: ApartamentoMapa, data: string): boolean {
+  const chave = `${apt.id}-${data}`;
+  const reserva = this.mapaReservas.get(chave);
+  
+  if (!reserva) {
+    return false; // Célula vazia, não ocultar
+  }
+  
+  // ✅ OCULTAR SE NÃO FOR O PRIMEIRO DIA VISÍVEL DESTA RESERVA
+  const isPrimeiroDiaVisivel = this.datas.indexOf(data) === 
+    this.datas.findIndex(d => {
+      const chaveTemp = `${apt.id}-${d}`;
+      return this.mapaReservas.get(chaveTemp)?.id === reserva.id;
+    });
+  
+  return !isPrimeiroDiaVisivel;
+}
 
   imprimir(): void {
   window.print();

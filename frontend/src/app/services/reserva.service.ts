@@ -200,6 +200,27 @@ export class ReservaService {
     { params }
   );
 }
+
+ /**
+ * ✅ CANCELAR PRÉ-RESERVA (muda status para CANCELADA)
+ */
+cancelarPreReserva(id: number, motivo?: string): Observable<any> {
+  console.log('❌ Cancelando pré-reserva:', id, motivo);
+  let params = new HttpParams();
+  if (motivo) {
+    params = params.set('motivo', motivo);
+  }
+  return this.http.delete(`${this.apiUrl}/${id}/cancelar-pre-reserva`, { params });
+}
+
+/**
+ * ✅ EXCLUIR PRÉ-RESERVA (remove do banco)
+ */
+excluirPreReserva(id: number): Observable<any> {
+  console.log('🗑️ Excluindo pré-reserva:', id);
+  return this.http.delete(`${this.apiUrl}/${id}/pre-reserva`);
+}
+
 }
 
 

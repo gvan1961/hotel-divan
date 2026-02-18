@@ -319,6 +319,27 @@ interface Reserva {
       cursor: not-allowed;
     }
 
+    .error-message {
+  background: #fee;
+  color: #c33;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  border-left: 4px solid #c33;
+  font-weight: 500;
+  animation: shake 0.3s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.field-help.debug {
+  display: none !important; /* Esconder debug em produção */
+}
+
     @media (max-width: 768px) {
       .form-row {
         grid-template-columns: 1fr;
@@ -473,7 +494,6 @@ export class ReservaEditApp implements OnInit {
   const dataCheckin = new Date(this.reserva.dataCheckin);
   const dataCheckout = new Date(this.reserva.dataCheckout);
   
-  // Formato: YYYY-MM-DDTHH:mm:ss (sem milissegundos e sem Z)
   const formatarParaBackend = (data: Date): string => {
     const ano = data.getFullYear();
     const mes = String(data.getMonth() + 1).padStart(2, '0');
@@ -492,50 +512,102 @@ export class ReservaEditApp implements OnInit {
     dataCheckout: formatarParaBackend(dataCheckout)
   };
 
-  console.log('💾 Salvando alterações:', dto);
+  console.log('═══════════════════════════════════════');
+  console.log('💾 SALVANDO ALTERAÇÕES');
+  console.log('═══════════════════════════════════════');
+  console.log('DTO enviado:', dto);
 
   this.http.patch(`http://localhost:8080/api/reservas/${this.reservaId}/editar-pre-reserva`, dto).subscribe({
     next: (response) => {
-      console.log('✅ Pré-reserva atualizada:', response);
+      console.log('✅ Pré-reserva atualizada com sucesso!');
+      console.log('Resposta:', response);
+      console.log('═══════════════════════════════════════');
+      
       alert('✅ Pré-reserva atualizada com sucesso!');
       this.router.navigate(['/reservas/mapa']);
     },
     error: (err) => {
-      console.error('❌ Erro:', err);
-      this.errorMessage = err.error?.message || err.error || 'Erro ao atualizar';
+      console.error('❌ ERRO ao atualizar pré-reserva');
+      console.error('Erro completo:', err);
+      console.log('═══════════════════════════════════════');
+      
+      // ✅ MELHOR TRATAMENTO DE ERRO
+      let mensagem = 'Erro ao atualizar pré-reserva';
+      
+      if (err.error) {
+        if (typeof err.error === 'string') {
+          mensagem = err.error;
+        } else if (err.error.message) {
+          mensagem = err.error.message;
+        } else if (err.error.erro) {
+          mensagem = err.error.erro;
+        }
+      }
+      
+      this.errorMessage = mensagem;
       this.loadingSave = false;
+      
+      // Scroll para o topo para mostrar o erro
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   });
 }
 
   validar(): boolean {
-    if (!this.reserva) return false;
+  if (!this.reserva) return false;
 
-    if (!this.reserva.apartamentoId || this.reserva.apartamentoId === 0) {
-      this.errorMessage = 'Selecione o apartamento';
-      return false;
-    }
-
-    if (this.reserva.quantidadeHospede < 1) {
-      this.errorMessage = 'Quantidade de hóspedes inválida';
-      return false;
-    }
-
-    if (this.apartamentoSelecionado && this.reserva.quantidadeHospede > this.apartamentoSelecionado.capacidade) {
-      this.errorMessage = `Quantidade excede capacidade (${this.apartamentoSelecionado.capacidade})`;
-      return false;
-    }
-
-    const checkin = new Date(this.reserva.dataCheckin);
-    const checkout = new Date(this.reserva.dataCheckout);
-
-    if (checkout <= checkin) {
-      this.errorMessage = 'Check-out deve ser posterior ao check-in';
-      return false;
-    }
-
-    return true;
+  // 1. Validar apartamento selecionado
+  if (!this.reserva.apartamentoId || this.reserva.apartamentoId === 0) {
+    this.errorMessage = '⚠️ Selecione o apartamento';
+    return false;
   }
+
+  // 2. Validar quantidade de hóspedes
+  if (this.reserva.quantidadeHospede < 1) {
+    this.errorMessage = '⚠️ Quantidade de hóspedes deve ser no mínimo 1';
+    return false;
+  }
+
+  // 3. Validar capacidade do apartamento
+  if (this.apartamentoSelecionado && this.reserva.quantidadeHospede > this.apartamentoSelecionado.capacidade) {
+    this.errorMessage = `⚠️ Quantidade de hóspedes (${this.reserva.quantidadeHospede}) excede a capacidade do apartamento (${this.apartamentoSelecionado.capacidade})`;
+    return false;
+  }
+
+  // 4. Validar datas
+  const checkin = new Date(this.reserva.dataCheckin);
+  const checkout = new Date(this.reserva.dataCheckout);
+
+  if (isNaN(checkin.getTime())) {
+    this.errorMessage = '⚠️ Data de check-in inválida';
+    return false;
+  }
+
+  if (isNaN(checkout.getTime())) {
+    this.errorMessage = '⚠️ Data de check-out inválida';
+    return false;
+  }
+
+  if (checkout <= checkin) {
+    this.errorMessage = '⚠️ Check-out deve ser posterior ao check-in';
+    return false;
+  }
+
+  // 5. Validar se check-in é no futuro (pré-reserva só para futuro)
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  
+  const diaCheckin = new Date(checkin);
+  diaCheckin.setHours(0, 0, 0, 0);
+  
+  if (diaCheckin < hoje) {
+    this.errorMessage = '⚠️ Pré-reserva deve ter check-in em data futura';
+    return false;
+  }
+
+  // ✅ Validações básicas OK
+  return true;
+}
 
   voltar(): void {
     this.router.navigate(['/reservas/mapa']);
