@@ -1,28 +1,45 @@
-# Angular
-node_modules/
-dist/
-.angular/
-.ng-cache/
-
 # Eclipse/STS
 .metadata/
 .settings/
 .classpath
 .project
 .factorypath
-sts-4.32.1.RELEASE/
+sts-4.*/
 
-# Maven/Java
-target/
-*.class
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
 
-# Backups
+# Backups e pastas antigas
 xBackupBackend/
 xBackupDeFrontend/
+front/
+Untitled*
+HELP.md
+
+# Build - Backend
+backend/target/
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+
+# Build - Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.nx/
 
 # Logs
 *.log
+logs/
 
-# Outros
-lombok.jar
-.env
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporários
+*.tmp
+*.bak
+*.swp
+*~
