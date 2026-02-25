@@ -333,7 +333,10 @@ interface Apartamento {
                 <td *ngIf="reserva.status === 'ATIVA'">
                   <!-- ✅ BOTÃO ESTORNAR PRODUTO -->
                   <button 
-                    *ngIf="extrato.statusLancamento === 'PRODUTO' && extrato.totalLancamento > 0 && !extrato.estornado"
+                    *ngIf="extrato.statusLancamento === 'PRODUTO' && extrato.totalLancamento > 0"
+                   [disabled]="jaFoiEstornado(extrato)"
+                   [title]="jaFoiEstornado(extrato) ? 'Este produto já foi estornado' : 'Estornar este produto'"
+                   [class.btn-estornado]="jaFoiEstornado(extrato)"
                     class="btn-estornar"
                     (click)="abrirModalEstorno(extrato)"
                     title="Estornar este produto">
@@ -2466,6 +2469,12 @@ interface Apartamento {
 .btn-ativar-reserva:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(39, 174, 96, 0.6);
+}
+
+.btn-estornado {
+  background: #95a5a6 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 
 @keyframes pulse {
@@ -5122,4 +5131,16 @@ podeAtivarPreReserva(): boolean {
             this.reserva?.finalizadoPor || 
             this.reserva?.canceladoPor);
 }
+
+jaFoiEstornado(extrato: any): boolean {
+  if (!this.reserva?.extratos) return false;
+  
+  // Verificar se existe um lançamento de ESTORNO referenciando este extrato
+  return this.reserva.extratos.some(e => 
+    e.statusLancamento === 'ESTORNO' && 
+    e.totalLancamento < 0 &&
+    e.descricao?.includes(extrato.descricao)
+  );
+}
+
 }

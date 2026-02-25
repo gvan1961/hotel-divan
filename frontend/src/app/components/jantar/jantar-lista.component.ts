@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JantarService, HospedeJantar } from '../../services/jantar.service';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-jantar-lista',
@@ -29,34 +30,48 @@ export class JantarListaComponent implements OnInit {
   apartamentoBusca = '';
   resultadoBusca: any = null;
 
-  constructor(private jantarService: JantarService) {}
+  constructor(
+  private jantarService: JantarService,
+  private http: HttpClient
+) {}
 
   ngOnInit() {
     this.carregarApartamentos();
   }
 
   carregarApartamentos() {
-    this.loading = true;
-    this.erro = '';
-    
-    this.jantarService.getApartamentosComHospedes().subscribe({
-      next: (data) => {
-        console.log('✅ Apartamentos carregados:', data);
-        
-        this.apartamentos = Object.keys(data).map(numero => ({
-          numeroApartamento: numero,
-          hospedes: data[numero]
-        }));
-        
-        this.loading = false;
-      },
-      error: (error) => {
-        console.error('❌ Erro:', error);
-        this.erro = 'Erro ao carregar apartamentos';
-        this.loading = false;
-      }
-    });
-  }
+  this.loading = true;
+  this.erro = '';
+
+  this.jantarService.getApartamentosComHospedes().subscribe({
+    next: (data: any[]) => {
+      console.log('✅ Dados do backend:', data);
+
+      // ✅ CONVERTER ARRAY DO BACKEND PARA ESTRUTURA DO FRONTEND
+      this.apartamentos = data.map(apto => ({
+        numeroApartamento: apto.numeroApartamento,
+        hospedes: apto.hospedes.map((h: any) => ({
+  id: h.hospedagemHospedeId,  // ✅ CORRETO!
+  hospedagemHospedeId: h.hospedagemHospedeId,  // ✅ ADICIONAR
+  nomeCompleto: h.nomeCliente,
+  clienteId: h.clienteId,
+  nomeCliente: h.nomeCliente,
+  apartamentoId: apto.reservaId,
+  numeroApartamento: apto.numeroApartamento,
+  titular: h.titular
+}))
+      }));
+
+      console.log('✅ Apartamentos processados:', this.apartamentos);
+      this.loading = false;
+    },
+    error: (error) => {
+      console.error('❌ Erro:', error);
+      this.erro = 'Erro ao carregar apartamentos';
+      this.loading = false;
+    }
+  });
+}
 
   abrirModalComanda(hospede: HospedeJantar, numeroApartamento: string) {
     console.log('🍽️ Abrindo modal para:', hospede.nomeCompleto, '- Apto:', numeroApartamento);
@@ -67,20 +82,21 @@ export class JantarListaComponent implements OnInit {
   }
 
   carregarProdutos() {
-    this.produtosCarregando = true;
-    
-    this.jantarService.getProdutosPorCategoria(2).subscribe({
-      next: (produtos) => {
-        console.log('✅ Produtos carregados:', produtos);
-        this.produtos = produtos;
-        this.produtosCarregando = false;
-      },
-      error: (error) => {
-        console.error('❌ Erro ao carregar produtos:', error);
-        this.produtosCarregando = false;
-      }
-    });
-  }
+  this.produtosCarregando = true;
+
+  // ✅ USAR ENDPOINT QUE JÁ FILTRA ESTOQUE > 0
+  this.http.get<any[]>('http://localhost:8080/api/jantar/produtos-restaurante').subscribe({
+    next: (produtos) => {
+      console.log('✅ Produtos carregados:', produtos);
+      this.produtos = produtos;
+      this.produtosCarregando = false;
+    },
+    error: (error) => {
+      console.error('❌ Erro ao carregar produtos:', error);
+      this.produtosCarregando = false;
+    }
+  });
+}
 
   adicionarProduto(produto: any) {
     const existe = this.produtosSelecionados.find(p => p.produto.id === produto.id);
@@ -114,6 +130,12 @@ export class JantarListaComponent implements OnInit {
   }
 
   confirmarComanda() {
+
+   console.log('🔍 DEBUG - hospedeSelecionado:', this.hospedeSelecionado);
+  console.log('🔍 DEBUG - hospedeSelecionado.id:', this.hospedeSelecionado?.id);
+  console.log('🔍 DEBUG - hospedeSelecionado.hospedagemHospedeId:', this.hospedeSelecionado?.hospedagemHospedeId);
+  
+
   if (this.produtosSelecionados.length === 0) {
     alert('Selecione pelo menos um produto!');
     return;
@@ -141,7 +163,7 @@ export class JantarListaComponent implements OnInit {
     total: this.calcularTotal()
   };
 
-  this.jantarService.salvarComanda(this.hospedeSelecionado.id, itens).subscribe({
+  this.jantarService.salvarComanda(this.hospedeSelecionado.hospedagemHospedeId, itens).subscribe({
     next: (response: any) => {
       console.log('✅ Comanda salva com sucesso:', response);
 
@@ -194,7 +216,19 @@ limparBusca() {
 
 abrirModalComandaBusca(hospede: any) {
   console.log('🍽️ Abrindo modal para hóspede da busca:', hospede);
-  this.hospedeSelecionado = hospede;
+  
+  // ✅ Remapear para o mesmo formato da listagem
+  this.hospedeSelecionado = {
+    id: hospede.hospedagemHospedeId || hospede.id,
+    hospedagemHospedeId: hospede.hospedagemHospedeId || hospede.id,
+    nomeCompleto: hospede.nomeCliente || hospede.nomeCompleto,
+    clienteId: hospede.clienteId,
+    nomeCliente: hospede.nomeCliente || hospede.nomeCompleto,
+    apartamentoId: hospede.reservaId || hospede.apartamentoId,
+    numeroApartamento: hospede.numeroApartamento,
+    titular: hospede.titular
+  };
+  
   this.apartamentoSelecionado = hospede.numeroApartamento;
   this.modalAberto = true;
   this.carregarProdutos();
@@ -456,5 +490,4 @@ abrirModalComandaBusca(hospede: any) {
     }, 300);
   }
 }
-
 }   

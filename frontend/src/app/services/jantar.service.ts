@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 export interface HospedeJantar {
   id: number;
+  hospedagemHospedeId: number;
   nomeCompleto: string;
   clienteId: number;
   nomeCliente: string;
@@ -20,9 +21,9 @@ export class JantarService {
 
   constructor(private http: HttpClient) { }
 
-  getApartamentosComHospedes(): Observable<{ [key: string]: HospedeJantar[] }> {
-    return this.http.get<{ [key: string]: HospedeJantar[] }>(`${this.apiUrl}/apartamentos-autorizados`);
-  }
+ getApartamentosComHospedes(): Observable<any[]> {
+  return this.http.get<any[]>(`${this.apiUrl}/apartamentos-autorizados`);
+}
 
   getProdutosPorCategoria(categoriaId: number): Observable<any[]> {
   return this.http.get<any[]>(`http://localhost:8080/api/produtos/categoria/${categoriaId}`);

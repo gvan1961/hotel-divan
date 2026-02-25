@@ -11,10 +11,8 @@ import java.util.List;
 @Repository
 public interface NotaVendaRepository extends JpaRepository<NotaVenda, Long> {
     
-    List<NotaVenda> findByReservaId(Long reservaId);
-    
-    List<NotaVenda> findByDataHoraVendaBetween(LocalDateTime inicio, LocalDateTime fim);
-    
+    List<NotaVenda> findByReservaId(Long reservaId);    
+      
     List<NotaVenda> findByTipoVendaAndDataHoraVendaBetween(
         NotaVenda.TipoVendaEnum tipoVenda, 
         LocalDateTime inicio, 
@@ -23,5 +21,7 @@ public interface NotaVendaRepository extends JpaRepository<NotaVenda, Long> {
     
     List<NotaVenda> findByReserva(Reserva reserva); 
     
+    List<NotaVenda> findByDataHoraVendaBetween(LocalDateTime inicio, LocalDateTime fim);
     
-}
+    }
+    

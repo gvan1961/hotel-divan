@@ -15,7 +15,7 @@ export class GestaoComandasComponent {
   dataInicio = '';
   dataFim = '';
   apartamentoFiltro = '';
-  statusFiltro = 'TODAS'; // TODAS, ATIVAS, CANCELADAS
+  statusFiltro = 'ATIVAS'; // TODAS, ATIVAS, CANCELADAS
   
   comandas: any[] = [];
   comandasFiltradas: any[] = [];
@@ -43,6 +43,10 @@ export class GestaoComandasComponent {
       next: (resultado) => {
         console.log('✅ Comandas carregadas:', resultado);
         this.comandas = resultado.comandas || [];
+       
+        // ✅ DEBUG
+        this.comandas.forEach(c => console.log(`Comanda #${c.notaId} - status: ${c.status}`));
+
         this.aplicarFiltros();
         this.carregando = false;
       },
@@ -55,25 +59,28 @@ export class GestaoComandasComponent {
   }
 
   aplicarFiltros() {
-    this.comandasFiltradas = this.comandas.filter(comanda => {
-      // Filtro de apartamento
-      if (this.apartamentoFiltro && comanda.apartamento !== this.apartamentoFiltro) {
-        return false;
-      }
+  this.comandasFiltradas = this.comandas.filter(comanda => {
+    if (this.apartamentoFiltro && comanda.apartamento !== this.apartamentoFiltro) {
+      return false;
+    }    
 
-      // Filtro de status
-      if (this.statusFiltro === 'ATIVAS' && comanda.observacao?.includes('[CANCELADA]')) {
-        return false;
-      }
-      if (this.statusFiltro === 'CANCELADAS' && !comanda.observacao?.includes('[CANCELADA]')) {
-        return false;
-      }
+    if (this.statusFiltro === 'ATIVAS' && comanda.reservaStatus !== 'ATIVA') {
+      return false;
+    }   
 
-      return true;
-    });
+    if (this.statusFiltro === 'FINALIZADAS' && comanda.reservaStatus !== 'FINALIZADA') {
+      return false;
+    }
 
-    console.log(`📊 Filtradas: ${this.comandasFiltradas.length} de ${this.comandas.length}`);
-  }
+    if (this.statusFiltro === 'CANCELADAS' && comanda.status !== 'CANCELADA') {
+      return false;
+    }
+
+    return true;
+  });
+
+  console.log(`📊 Filtradas: ${this.comandasFiltradas.length} de ${this.comandas.length}`);
+}
 
   cancelarComanda(comanda: any) {
     // Verificar se já está cancelada
@@ -114,20 +121,20 @@ export class GestaoComandasComponent {
   }
 
   isCancelada(comanda: any): boolean {
-    return comanda.observacao?.includes('[CANCELADA]') || false;
-  }
+  return comanda.status === 'CANCELADA';
+}
 
-  getTotalAtivas(): number {
-    return this.comandas.filter(c => !this.isCancelada(c)).length;
-  }
+ getTotalAtivas(): number {
+  return this.comandas.filter(c => c.reservaStatus === 'ATIVA').length;
+}
 
-  getTotalCanceladas(): number {
-    return this.comandas.filter(c => this.isCancelada(c)).length;
-  }
+getTotalCanceladas(): number {
+  return this.comandas.filter(c => c.status === 'CANCELADA').length;
+}
 
-  getValorTotalAtivas(): number {
-    return this.comandas
-      .filter(c => !this.isCancelada(c))
-      .reduce((sum, c) => sum + c.total, 0);
-  }
+getValorTotalAtivas(): number {
+  return this.comandas
+    .filter(c => c.reservaStatus === 'ATIVA')
+    .reduce((sum, c) => sum + c.total, 0);
+}
 }

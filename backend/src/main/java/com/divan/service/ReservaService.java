@@ -2,7 +2,7 @@ package com.divan.service;
 
 import java.time.temporal.ChronoUnit;
 import java.util.stream.Collectors;
-
+import java.util.Arrays;
 import com.divan.entity.WebhookEvento;
 import java.util.HashMap;
 import java.util.Map;
@@ -1960,7 +1960,9 @@ public class ReservaService {
         Apartamento apartamento = reserva.getApartamento();
         
         // ✅ 1. PRIMEIRO - Excluir todos os hóspedes vinculados
-        System.out.println("🗑️ Removendo hóspedes da reserva...");
+        System.out.println("🗑️ Removendo dependências da reserva...");
+        pagamentoRepository.deleteByReservaId(id);
+        extratoReservaRepository.deleteByReservaId(id);
         hospedagemHospedeRepository.deleteByReserva(reserva);
         
         // ✅ 2. DEPOIS - Excluir a reserva
@@ -3093,5 +3095,18 @@ public Reserva realizarCheckOut(Long reservaId) {
     System.out.println("═══════════════════════════════════════════");
     
     return reservaSalva;
+}
+
+/**
+ * ✅ LISTAR APENAS RESERVAS PARA O MAPA (ATIVAS E PRÉ-RESERVAS)
+ */
+@Transactional(readOnly = true)
+public List<Reserva> listarParaMapa() {
+    return reservaRepository.findByStatusIn(
+        Arrays.asList(
+            Reserva.StatusReservaEnum.ATIVA,
+            Reserva.StatusReservaEnum.PRE_RESERVA
+        )
+    );
 }
 }

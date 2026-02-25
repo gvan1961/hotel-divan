@@ -2041,31 +2041,29 @@ resultadoPesquisaId: any = null;
   // CARREGAR RESERVAS E ESTATÍSTICAS
   // ════════════════════════════════════════════
 
-  carregarReservas(): void {
-    this.loading = true;
-    
-    this.http.get<any[]>('http://localhost:8080/api/reservas').subscribe({
-      next: (data) => {
-        // Ordenar por número de apartamento (crescente)
-        this.reservas = data.sort((a, b) => {
-          const numA = parseInt(a.apartamento?.numeroApartamento) || 0;
-          const numB = parseInt(b.apartamento?.numeroApartamento) || 0;
-          return numA - numB;
-        });
-        
-        // ✅ CALCULAR ESTATÍSTICAS
-        this.calcularEstatisticas();
-        
-        this.aplicarFiltro();
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error('Erro ao carregar reservas:', err);
-        this.loading = false;
-        alert('Erro ao carregar reservas');
-      }
-    });
-  }
+ carregarReservas(): void {
+  this.loading = true;
+  
+  this.reservaService.getAll().subscribe({
+    next: (data) => {
+      // Ordenar por número de apartamento (crescente)
+      this.reservas = data.sort((a: any, b: any) => {  // ✅ Adicionar : any
+        const numA = Number(a.apartamento?.numeroApartamento) || 0;
+        const numB = Number(b.apartamento?.numeroApartamento) || 0;
+        return numA - numB;
+      });
+      
+      this.calcularEstatisticas();
+      this.aplicarFiltro();
+      this.loading = false;
+    },
+    error: (err) => {
+      console.error('Erro ao carregar reservas:', err);
+      this.loading = false;
+      alert('Erro ao carregar reservas');
+    }
+  });
+}
 
   /**
    * Calcula estatísticas (apartamentos ocupados e total de hóspedes)

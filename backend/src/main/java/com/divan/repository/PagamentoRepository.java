@@ -24,6 +24,8 @@ public interface PagamentoRepository extends JpaRepository<Pagamento, Long> {
      */
     List<Pagamento> findByCaixaId(Long caixaId);
     
+    void deleteByReservaId(Long reservaId);
+    
     /**
      * ✅ Buscar pagamentos por objeto FechamentoCaixa
      * IMPORTANTE: Este método é usado pelo FechamentoCaixaService

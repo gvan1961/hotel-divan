@@ -15,6 +15,8 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
     
     List<Produto> findByCategoria(Categoria categoria);
     
+    List<Produto> findByCategoriaId(Long categoriaId);
+    
     @Query("SELECT p FROM Produto p WHERE p.quantidade <= 10")
     List<Produto> findProdutosComEstoqueBaixo();
     

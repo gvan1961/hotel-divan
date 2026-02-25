@@ -14,14 +14,16 @@ public class ApartamentoJantarDTO {
     // CLASSE INTERNA: Info do Hóspede
     // ═══════════════════════════════════════════════════════════
     public static class HospedeJantarInfoDTO {
+        private Long hospedagemHospedeId;  // ✅ ADICIONAR
         private Long clienteId;
         private String nomeCliente;
         private String empresaNome;
         private Boolean titular;
-        
+
         public HospedeJantarInfoDTO() {}
-        
-        public HospedeJantarInfoDTO(Long clienteId, String nomeCliente, String empresaNome, Boolean titular) {
+
+        public HospedeJantarInfoDTO(Long hospedagemHospedeId, Long clienteId, String nomeCliente, String empresaNome, Boolean titular) {
+            this.hospedagemHospedeId = hospedagemHospedeId;  // ✅ ADICIONAR
             this.clienteId = clienteId;
             this.nomeCliente = nomeCliente;
             this.empresaNome = empresaNome;
@@ -29,6 +31,9 @@ public class ApartamentoJantarDTO {
         }
         
         // Getters e Setters
+        
+        
+        
         public Long getClienteId() {
             return clienteId;
         }
@@ -60,6 +65,14 @@ public class ApartamentoJantarDTO {
         public void setTitular(Boolean titular) {
             this.titular = titular;
         }
+
+		public Long getHospedagemHospedeId() {
+			return hospedagemHospedeId;
+		}
+
+		public void setHospedagemHospedeId(Long hospedagemHospedeId) {
+			this.hospedagemHospedeId = hospedagemHospedeId;
+		}                  
     }
     
     // ═══════════════════════════════════════════════════════════
@@ -80,8 +93,8 @@ public class ApartamentoJantarDTO {
     // MÉTODOS AUXILIARES
     // ═══════════════════════════════════════════════════════════
     
-    public void adicionarHospede(Long clienteId, String nomeCliente, String empresaNome, Boolean titular) {
-        this.hospedes.add(new HospedeJantarInfoDTO(clienteId, nomeCliente, empresaNome, titular));
+    public void adicionarHospede(Long hospedagemHospedeId, Long clienteId, String nomeCliente, String empresaNome, Boolean titular) {
+        this.hospedes.add(new HospedeJantarInfoDTO(hospedagemHospedeId, clienteId, nomeCliente, empresaNome, titular));
         this.totalHospedes = this.hospedes.size();
     }
     

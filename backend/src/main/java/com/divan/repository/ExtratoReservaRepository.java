@@ -17,9 +17,15 @@ public interface ExtratoReservaRepository extends JpaRepository<ExtratoReserva, 
     
     List<ExtratoReserva> findByReservaOrderByDataHoraLancamento(Reserva reserva);    
     
-       
+    void deleteByReservaId(Long reservaId); 
+    
     List<ExtratoReserva> findByStatusLancamento(ExtratoReserva.StatusLancamentoEnum status);
     
+    List<ExtratoReserva> findByStatusLancamentoAndDataHoraLancamentoBetween(
+    	    ExtratoReserva.StatusLancamentoEnum status,
+    	    LocalDateTime inicio,
+    	    LocalDateTime fim
+    	);
     
     @Query("SELECT e FROM ExtratoReserva e WHERE e.dataHoraLancamento BETWEEN :inicio AND :fim")
     List<ExtratoReserva> findByPeriodo(LocalDateTime inicio, LocalDateTime fim);

@@ -74,7 +74,7 @@
           </thead>
           <tbody>
             <tr *ngFor="let dia of relatorio.faturamentoDiario">
-              <td><strong>{{ dia.data | date:'dd/MM/yyyy (EEE)' }}</strong></td>
+              <td><strong>{{ dia.data | date:'dd/MM/yyyy (EEE)':'':'pt-BR' }}</strong></td>
               <td class="text-center">{{ dia.totalComandas }}</td>
               <td class="text-right valor-destaque">R$ {{ dia.totalVendas.toFixed(2) }}</td>
               <td class="text-right">R$ {{ (dia.totalVendas / dia.totalComandas).toFixed(2) }}</td>

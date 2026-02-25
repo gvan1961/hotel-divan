@@ -262,6 +262,25 @@ public class ReservaController {
         }
     }
     
+    /**
+     * ✅ ENDPOINT ESPECÍFICO PARA O MAPA DE RESERVAS
+     */
+    @GetMapping("/mapa")
+    public ResponseEntity<List<ReservaResponseDTO>> listarParaMapa() {
+        try {
+            List<Reserva> reservas = reservaService.listarParaMapa();
+            
+            List<ReservaResponseDTO> response = reservas.stream()
+                .map(this::converterParaDTO)
+                .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
     @PostMapping("/transferir-apartamento")
     public ResponseEntity<?> transferirApartamento(@RequestBody TransferenciaApartamentoDTO dto) {
         try {
@@ -364,8 +383,12 @@ public class ReservaController {
     @PatchMapping("/{id}/cancelar")
     public ResponseEntity<?> cancelarReserva(@PathVariable Long id, @RequestParam String motivo) {
         try {
-            Reserva reserva = reservaService.cancelarReserva(id, motivo);
-            return ResponseEntity.ok(reserva);
+            reservaService.cancelarReserva(id, motivo);
+            // ✅ Retornar mensagem simples em vez da entidade
+            return ResponseEntity.ok(Map.of(
+                "mensagem", "Reserva cancelada com sucesso",
+                "reservaId", id
+            ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

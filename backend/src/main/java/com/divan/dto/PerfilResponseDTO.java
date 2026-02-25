@@ -1,9 +1,5 @@
 package com.divan.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.util.List;
 
 
@@ -36,7 +32,6 @@ public class PerfilResponseDTO {
 	}
 	public void setPermissoes(List<PermissaoResponseDTO> permissoes) {
 		this.permissoes = permissoes;
-	}
-    
+	}   
     
 }

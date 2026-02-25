@@ -26,13 +26,14 @@
       
       <div class="filtro-grupo">
         <label>Status:</label>
-        <select [(ngModel)]="statusFiltro" 
-                (change)="aplicarFiltros()" 
-                class="input-select">
-          <option value="TODAS">Todas</option>
-          <option value="ATIVAS">Apenas Ativas</option>
-          <option value="CANCELADAS">Apenas Canceladas</option>
-        </select>
+       <select [(ngModel)]="statusFiltro" 
+        (change)="aplicarFiltros()" 
+        class="input-select">
+  <option value="TODAS">Todas</option>
+  <option value="ATIVAS">Apenas Ativas</option>
+  <option value="FINALIZADAS">Apenas Finalizadas</option>
+  <option value="CANCELADAS">Apenas Canceladas</option>
+</select>
       </div>
     </div>
 
@@ -60,10 +61,10 @@
     </div>
     
     <div class="resumo-card total">
-      <h3>📊 Total de Comandas</h3>
-      <p class="numero-grande">{{ comandas.length }}</p>
-      <p class="info-filtro">{{ comandasFiltradas.length }} exibida(s)</p>
-    </div>
+  <h3>📊 Total de Comandas</h3>
+  <p class="numero-grande">{{ comandas.length }}</p>  <!-- ✅ sempre 42 -->
+  <p class="info-filtro">{{ comandasFiltradas.length }} exibida(s)</p>
+</div>
   </div>
 
   <!-- LISTA DE COMANDAS -->
@@ -81,16 +82,16 @@
       <!-- CABEÇALHO -->
       <div class="comanda-header">
         <div class="comanda-info">
-          <span class="comanda-numero">Comanda #{{ comanda.notaId }}</span>
+          <span class="comanda-numero">Reserva #{{ comanda.notaId }}</span>
           <span class="comanda-data">{{ comanda.dataHora | date:'dd/MM/yyyy HH:mm' }}</span>
         </div>
         <div class="comanda-acoes">
           <span class="comanda-total">R$ {{ comanda.total.toFixed(2) }}</span>
           
-          <a [routerLink]="['/comanda-impressao', comanda.notaId]" 
-             target="_blank"
-             class="btn-imprimir-pequeno"
-             title="Imprimir comanda">
+          <a [href]="'/comanda-impressao/' + comanda.notaId" 
+            target="_blank"
+            class="btn-imprimir-pequeno"
+            title="Imprimir comanda">
             🖨️
           </a>
           

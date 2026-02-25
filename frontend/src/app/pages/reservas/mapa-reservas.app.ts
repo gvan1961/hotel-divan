@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { ReservaService } from '../../services/reserva.service';
+import { ReservaResponse } from '../../models/reserva.model';
 
 interface ReservaMapa {
   id: number;
@@ -1147,8 +1148,8 @@ isPreReservaAmanha(reserva: ReservaMapa): boolean {
       console.log('🏢 Apartamentos carregados:', apartamentos.length);
 
       // 2️⃣ BUSCAR RESERVAS DO MAPA (apenas ATIVAS e PRÉ-RESERVAS)
-      this.http.get<any[]>('http://localhost:8080/api/reservas/mapa').subscribe({
-        next: (reservas) => {
+      this.reservaService.buscarParaMapa().subscribe({
+        next: (reservas: any[]) => {
           console.log('📋 Total de reservas no mapa:', reservas.length);
 
           // ✅ LOG DA PRIMEIRA RESERVA PARA VER ESTRUTURA
@@ -1827,10 +1828,13 @@ confirmarCancelamento(): void {
   }
 
   console.log('✅ Cancelamento confirmado, enviando requisição...');
-  this.fecharModalCancelar();
-  this.fecharModal();
+// ✅ Salvar motivo ANTES de fechar o modal (fechar limpa a variável)
+const motivo = this.motivoCancelamento;
 
-  this.reservaService.cancelarPreReserva(reservaId, this.motivoCancelamento).subscribe({
+this.fecharModalCancelar();
+this.fecharModal();
+
+this.reservaService.cancelarPreReserva(reservaId, motivo).subscribe({
     next: () => {
       console.log('✅ Pré-reserva cancelada com sucesso');
       console.log('═══════════════════════════════════════');

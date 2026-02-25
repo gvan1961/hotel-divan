@@ -15,6 +15,7 @@ import java.util.Objects;
 @Entity
 @Table(name = "produtos")
 
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Produto {
     
     @Id

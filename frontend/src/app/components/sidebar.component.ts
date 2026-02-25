@@ -86,14 +86,7 @@ import { HasPermissionDirective } from '../directives/has-permission.directive';
          <span class="label">Apartamentos</span>
         </a>
 
-        <!-- ✅ CADASTROS - ADMIN/GERENTE -->
-        <a *hasPermission="'USUARIO_VISUALIZAR'" 
-           routerLink="/cadastros" 
-           routerLinkActive="active" 
-           class="nav-item nav-item-cadastros">
-           <span class="icon">📋</span>
-           <span class="label">Cadastros</span>
-        </a>
+       
 
         <!-- ✅ CADASTROS - ADMIN/GERENTE -->
 <a *hasPermission="'USUARIO_VISUALIZAR'" 

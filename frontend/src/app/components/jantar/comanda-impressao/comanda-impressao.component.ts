@@ -58,6 +58,6 @@ export class ComandaImpressaoComponent implements OnInit {
 }
 
   voltar() {
-    this.router.navigate(['/relatorio-comandas']);
-  }
+  this.router.navigate(['/gestao-comandas']); 
+}
 }

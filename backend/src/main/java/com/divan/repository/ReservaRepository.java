@@ -19,6 +19,8 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     // ═══════════════════════════════════════════
     // BUSCAR POR APARTAMENTO
     // ═══════════════════════════════════════════
+	
+	
     
     List<Reserva> findByApartamento(Apartamento apartamento);
     
@@ -57,6 +59,8 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     
     List<Reserva> findByStatusIn(List<Reserva.StatusReservaEnum> statusList);
     
+    
+    
     @Query("SELECT r FROM Reserva r WHERE r.status IN ('ATIVA', 'PRE_RESERVA') " +
            "ORDER BY r.dataCheckin DESC")
     List<Reserva> findReservasAtivasEPreReservas();
@@ -84,6 +88,8 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
         @Param("inicio") LocalDateTime inicio, 
         @Param("fim") LocalDateTime fim
     );
+    
+    
     
     // ═══════════════════════════════════════════
     // VERIFICAR CONFLITOS

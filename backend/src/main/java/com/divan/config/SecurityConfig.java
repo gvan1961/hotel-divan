@@ -79,6 +79,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/test/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/api/jantar/relatorio-impressao").permitAll()
+                .requestMatchers("/api/jantar/relatorio-faturamento").authenticated()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 
                 // ✅ HOSPEDAGEM HÓSPEDES
@@ -95,6 +96,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/fechamento-caixa/**").authenticated()
      
                 .requestMatchers("/api/alertas/**").authenticated()
+                .requestMatchers("/api/produtos/**").authenticated()
                 // ========================================
                 // RESTO - AUTENTICADO
                 // ========================================

@@ -1,26 +1,56 @@
 package com.divan.controller;
 
 import com.divan.dto.ApartamentoJantarDTO;
+import com.divan.dto.ConsumoJantarDTO;
 import com.divan.dto.HospedeJantarDTO;
+import com.divan.entity.HospedagemHospede;
+import com.divan.entity.NotaVenda;
+import com.divan.repository.HospedagemHospedeRepository;
+import com.divan.repository.NotaVendaRepository;
+import com.divan.service.ConsumoJantarService;
 import com.divan.service.JantarService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.math.RoundingMode;
+import java.util.stream.Collectors;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+
+import com.divan.entity.ExtratoReserva;
+import com.divan.repository.ExtratoReservaRepository;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.divan.entity.ItemVenda;
+
+
 @RestController
 @RequestMapping("/api/jantar")
 @CrossOrigin(origins = "*")
 public class JantarController {
+	
+	@Autowired
+	private NotaVendaRepository notaVendaRepository;
 
     @Autowired
     private JantarService jantarService;
+    
+    @Autowired
+    private ConsumoJantarService consumoJantarService;
 
+    @Autowired
+    private HospedagemHospedeRepository hospedagemHospedeRepository;
+
+    @Autowired
+    private ExtratoReservaRepository extratoReservaRepository;
+    
     // ═══════════════════════════════════════════════════════════
     // HEALTH CHECK
     // ═══════════════════════════════════════════════════════════
@@ -262,4 +292,210 @@ public class JantarController {
         
         return ResponseEntity.ok(info);
     }
+    
+ // ═══════════════════════════════════════════════════════════
+ // SALVAR COMANDA (LANÇAR CONSUMO)
+ // ═══════════════════════════════════════════════════════════
+
+ @PostMapping("/salvar-comanda")
+ public ResponseEntity<?> salvarComanda(@RequestBody Map<String, Object> payload) {
+     try {
+         System.out.println("\n📝 POST /api/jantar/salvar-comanda");
+         System.out.println("📦 Payload: " + payload);
+         
+         Long hospedagemHospedeId = Long.valueOf(payload.get("hospedagemHospedeId").toString());
+         
+         System.out.println("🔍 HospedagemHospede ID: " + hospedagemHospedeId);
+         
+         // Buscar hospedagem para pegar a reserva
+         HospedagemHospede hospedagem = hospedagemHospedeRepository.findById(hospedagemHospedeId)
+             .orElseThrow(() -> new RuntimeException("Hospedagem não encontrada"));
+         
+         Long reservaId = hospedagem.getReserva().getId();
+         
+         System.out.println("📋 Reserva ID: " + reservaId);
+         
+         // Montar DTO para o ConsumoJantarService
+         ConsumoJantarDTO dto = new ConsumoJantarDTO();
+         dto.setReservaId(reservaId);
+         
+      // Processar itens
+         @SuppressWarnings("unchecked")
+         List<Map<String, Object>> itensPayload = (List<Map<String, Object>>) payload.get("itens");
+
+         List<ConsumoJantarDTO.ItemConsumo> itens = new ArrayList<>();
+         for (Map<String, Object> item : itensPayload) {
+             ConsumoJantarDTO.ItemConsumo itemDTO = new ConsumoJantarDTO.ItemConsumo();
+             itemDTO.setProdutoId(Long.valueOf(item.get("produtoId").toString()));
+             itemDTO.setQuantidade(Integer.valueOf(item.get("quantidade").toString()));
+             itens.add(itemDTO);
+         }
+         
+         dto.setItens(itens);
+         
+         System.out.println("📦 Lançando " + itens.size() + " itens no consumo");
+         
+         // Lançar consumo
+         consumoJantarService.lancarConsumo(dto);
+         
+         Map<String, Object> response = new HashMap<>();
+         response.put("sucesso", true);
+         response.put("mensagem", "Comanda salva com sucesso!");
+         response.put("notaId", reservaId); // Usando reservaId como referência
+         
+         System.out.println("✅ Comanda salva com sucesso!\n");
+         
+         return ResponseEntity.ok(response);
+         
+     } catch (Exception e) {
+         System.err.println("❌ Erro ao salvar comanda: " + e.getMessage());
+         e.printStackTrace();
+         
+         Map<String, String> erro = new HashMap<>();
+         erro.put("erro", e.getMessage());
+         
+         return ResponseEntity.badRequest().body(erro);
+     }
+ }  
+ 
+ @PostMapping("/relatorio-faturamento")
+ public ResponseEntity<?> gerarRelatorioFaturamento(@RequestBody Map<String, String> payload) {
+     try {
+         LocalDate dataInicio = LocalDate.parse(payload.get("dataInicio"));
+         LocalDate dataFim = LocalDate.parse(payload.get("dataFim"));
+
+         LocalDateTime inicio = dataInicio.atStartOfDay();
+         LocalDateTime fim = dataFim.atTime(23, 59, 59);
+
+         // Buscar extratos de PRODUTO no período
+         List<ExtratoReserva> extratos = extratoReservaRepository
+             .findByStatusLancamentoAndDataHoraLancamentoBetween(
+                 ExtratoReserva.StatusLancamentoEnum.PRODUTO, inicio, fim
+             );
+
+         // Agrupar por dia
+         Map<LocalDate, List<ExtratoReserva>> porDia = extratos.stream()
+             .collect(Collectors.groupingBy(e -> e.getDataHoraLancamento().toLocalDate()));
+
+         List<Map<String, Object>> faturamentoDiario = new ArrayList<>();
+         BigDecimal totalGeral = BigDecimal.ZERO;
+         int totalComandas = 0;
+
+         for (LocalDate dia = dataInicio; !dia.isAfter(dataFim); dia = dia.plusDays(1)) {
+             List<ExtratoReserva> extratosDia = porDia.getOrDefault(dia, new ArrayList<>());
+             
+             BigDecimal totalDia = extratosDia.stream()
+                 .map(ExtratoReserva::getTotalLancamento)
+                 .filter(v -> v != null && v.compareTo(BigDecimal.ZERO) > 0)
+                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+             if (!extratosDia.isEmpty()) {
+                 Map<String, Object> diaMap = new HashMap<>();
+                 diaMap.put("data", dia.toString());
+                 diaMap.put("totalComandas", extratosDia.size());
+                 diaMap.put("totalVendas", totalDia);
+                 faturamentoDiario.add(diaMap);
+
+                 totalGeral = totalGeral.add(totalDia);
+                 totalComandas += extratosDia.size();
+             }
+         }
+
+         BigDecimal ticketMedio = totalComandas > 0
+             ? totalGeral.divide(BigDecimal.valueOf(totalComandas), 2, RoundingMode.HALF_UP)
+             : BigDecimal.ZERO;
+
+         Map<String, Object> periodo = new HashMap<>();
+         periodo.put("inicio", dataInicio.toString());
+         periodo.put("fim", dataFim.toString());
+
+         Map<String, Object> response = new HashMap<>();
+         response.put("totalGeral", totalGeral);
+         response.put("totalComandas", totalComandas);
+         response.put("ticketMedio", ticketMedio);
+         response.put("periodo", periodo);
+         response.put("faturamentoDiario", faturamentoDiario);
+
+         return ResponseEntity.ok(response);
+
+     } catch (Exception e) {
+         return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+     }
+ }
+ 
+ @PostMapping("/relatorio-comandas")
+ public ResponseEntity<?> gerarRelatorioComandas(@RequestBody Map<String, String> payload) {
+     try {
+         LocalDate dataInicio = LocalDate.parse(payload.get("dataInicio"));
+         LocalDate dataFim = LocalDate.parse(payload.get("dataFim"));
+
+         LocalDateTime inicio = dataInicio.atStartOfDay();
+         LocalDateTime fim = dataFim.atTime(23, 59, 59);
+
+         List<NotaVenda> notas = notaVendaRepository.findByDataHoraVendaBetween(inicio, fim);
+         
+
+         List<Map<String, Object>> comandas = new ArrayList<>();
+         BigDecimal totalGeral = BigDecimal.ZERO;
+
+         for (NotaVenda nota : notas) {
+             Map<String, Object> comanda = new HashMap<>();
+             comanda.put("notaId", nota.getId());
+             comanda.put("dataHora", nota.getDataHoraVenda());
+             comanda.put("observacao", nota.getObservacao());
+             comanda.put("status", nota.getStatus() != null ? nota.getStatus().name() : "ABERTA");
+
+             // Apartamento e cliente via reserva
+             if (nota.getReserva() != null) {
+            	    comanda.put("apartamento", nota.getReserva().getApartamento().getNumeroApartamento());
+            	    comanda.put("cliente", nota.getReserva().getCliente().getNome());
+            	    comanda.put("reservaStatus", nota.getReserva().getStatus().name()); // ✅ ADICIONAR
+            	} else {
+            	    comanda.put("apartamento", "-");
+            	    comanda.put("cliente", "-");
+            	    comanda.put("reservaStatus", "-"); // ✅ ADICIONAR
+            	}
+
+             // Itens
+             List<Map<String, Object>> itens = new ArrayList<>();
+             BigDecimal totalNota = BigDecimal.ZERO;
+
+             if (nota.getItens() != null) {
+                 for (ItemVenda item : nota.getItens()) {
+                     Map<String, Object> itemMap = new HashMap<>();
+                     itemMap.put("produto", item.getProduto().getNomeProduto());
+                     itemMap.put("quantidade", item.getQuantidade());
+                     itemMap.put("valorUnitario", item.getValorUnitario());
+                     BigDecimal totalItem = item.getValorUnitario()
+                         .multiply(BigDecimal.valueOf(item.getQuantidade()));
+                     itemMap.put("total", totalItem);
+                     itens.add(itemMap);
+                     totalNota = totalNota.add(totalItem);
+                 }
+             }
+
+             comanda.put("itens", itens);
+             comanda.put("total", totalNota);
+             totalGeral = totalGeral.add(totalNota);
+             comandas.add(comanda);
+         }
+
+         Map<String, Object> periodo = new HashMap<>();
+         periodo.put("inicio", dataInicio.toString());
+         periodo.put("fim", dataFim.toString());
+
+         Map<String, Object> response = new HashMap<>();
+         response.put("periodo", periodo);
+         response.put("totalComandas", comandas.size());
+         response.put("totalGeral", totalGeral);
+         response.put("comandas", comandas);
+
+         return ResponseEntity.ok(response);
+
+     } catch (Exception e) {
+         return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+     }
+ }
+ 
+    
 }

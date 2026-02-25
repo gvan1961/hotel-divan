@@ -53,10 +53,12 @@ public class JantarService {
     // ═══════════════════════════════════════════════════════════
     private List<ApartamentoJantarDTO> processarApartamentosComHospedes(boolean apenasAutorizados) {
         
-        List<HospedagemHospede> todosHospedes = hospedagemHospedeRepository.findAll()
-            .stream()
-            .filter(h -> h.getStatus() == StatusHospedeIndividual.HOSPEDADO)
-            .collect(Collectors.toList());
+    	List<HospedagemHospede> todosHospedes = hospedagemHospedeRepository.findAll()
+    		    .stream()
+    		    .filter(h -> h.getStatus() == StatusHospedeIndividual.HOSPEDADO)
+    		    .filter(h -> h.getReserva() != null && 
+    		                 h.getReserva().getStatus() == Reserva.StatusReservaEnum.ATIVA)
+    		    .collect(Collectors.toList());
         
         System.out.println("👥 Total de registros HOSPEDADOS: " + todosHospedes.size());
         
@@ -128,11 +130,12 @@ public class JantarService {
             Boolean titular = hospede.getTitular() != null ? hospede.getTitular() : false;
             
             apartamentoDTO.adicionarHospede(
-                cliente.getId(),
-                cliente.getNome(),
-                empresaNome,
-                titular
-            );
+            	    hospede.getId(),          // ✅ ADICIONAR hospedagemHospedeId
+            	    cliente.getId(),
+            	    cliente.getNome(),
+            	    empresaNome,
+            	    titular
+            	);
         }
         
         List<ApartamentoJantarDTO> resultado = new ArrayList<>(apartamentosMap.values());
