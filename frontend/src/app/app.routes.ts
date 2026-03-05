@@ -50,6 +50,7 @@ import { ComandaImpressaoComponent } from './components/jantar/comanda-impressao
 import { GestaoComandasComponent } from './components/jantar/gestao-comandas/gestao-comandas.component';
 import { UsuarioListaComponent } from './components/usuario-lista/usuario-lista.component';
 import { PerfilListaComponent } from './components/perfil-lista/perfil-lista.component';
+import { AdministrativoComponent } from './pages/administrativo/administrativo.component';
 
 export const routes: Routes = [
   // LOGIN (sem layout)
@@ -156,7 +157,9 @@ export const routes: Routes = [
       { path: 'perfis', component: PerfilListaComponent },
       // ===== RELATÓRIOS =====
       { path: 'relatorios/ocupacao', component: RelatorioOcupacaoComponent },
-      { path: 'relatorios/checkouts', component: RelatorioCheckoutsComponent }
+      { path: 'relatorios/checkouts', component: RelatorioCheckoutsComponent },
+
+      { path: 'administrativo', component: AdministrativoComponent }
     ]
   },
 

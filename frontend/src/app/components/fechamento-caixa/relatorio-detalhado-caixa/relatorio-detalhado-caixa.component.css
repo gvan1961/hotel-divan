@@ -465,4 +465,29 @@
   .total-geral-grid {
     grid-template-columns: 1fr;
   }
+
+  .titulo-faturadas {
+  color: #8e44ad;
+  margin: 0 0 10px 0;
+  font-size: 1em;
+}
+
+.faturada-card {
+  border-left: 4px solid #8e44ad !important;
+}
+
+.faturado-valor {
+  color: #8e44ad !important;
+}
+
+.sem-faturadas {
+  text-align: center;
+  color: #95a5a6;
+  font-style: italic;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
 }

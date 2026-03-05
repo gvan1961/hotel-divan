@@ -32,6 +32,7 @@ export interface ValeRequest {
 export enum TipoVale {
   ADIANTAMENTO = 'ADIANTAMENTO',
   EMPRESTIMO = 'EMPRESTIMO',
+  DESCONTO_FOLHA = 'DESCONTO_FOLHA',
   OUTROS = 'OUTROS'
 }
 
@@ -45,6 +46,7 @@ export enum StatusVale {
 export const TIPO_VALE_LABELS: { [key in TipoVale]: string } = {
   ADIANTAMENTO: '💰 Adiantamento Salarial',
   EMPRESTIMO: '💵 Empréstimo',
+  DESCONTO_FOLHA: '🛒 Desconto em Folha - PDV',
   OUTROS: '📋 Outros'
 };
 

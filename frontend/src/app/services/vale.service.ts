@@ -3,12 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Vale, ValeRequest, StatusVale } from '../models/vale.model';
 
+import { environment } from '../../environments/environment';
+
 @Injectable({
   providedIn: 'root'
 })
 export class ValeService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/vales';
+  private apiUrl = `${environment.apiUrl}/vales`;
 
   listarTodos(): Observable<Vale[]> {
     return this.http.get<Vale[]>(this.apiUrl);

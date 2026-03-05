@@ -28,6 +28,7 @@
   gap: 20px;
   align-items: end;
   margin-bottom: 30px;
+  flex-wrap: wrap;
 }
 
 .filtro-grupo {
@@ -40,6 +41,8 @@
   font-weight: 500;
   color: #333;
 }
+
+.filtro-produto { flex: 2; }
 
 .input-data {
   padding: 10px;
@@ -61,6 +64,39 @@
 
 .btn-gerar:hover {
   background-color: #0e8577;
+}
+
+/* NAV DE VIEWS */
+.nav-views {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 25px;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.btn-view {
+  padding: 10px 20px;
+  border: 2px solid #11998e;
+  border-radius: 8px;
+  background: white;
+  color: #11998e;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 0.95em;
+}
+
+.btn-view:hover {
+  background: #f0faf8;
+}
+
+.btn-view.ativo {
+  background: linear-gradient(135deg, #11998e, #38ef7d);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(17,153,142,0.4);
 }
 
 /* LOADING */
@@ -93,9 +129,7 @@
   transform: scale(1.05);
 }
 
-.resumo-card.destaque h3 {
-  color: white;
-}
+.resumo-card.destaque h3 { color: white; }
 
 .resumo-card h3 {
   margin: 0 0 10px 0;
@@ -109,9 +143,7 @@
   color: #333;
 }
 
-.resumo-card.destaque p {
-  color: white;
-}
+.resumo-card.destaque p { color: white; }
 
 .numero-grande {
   font-size: 36px !important;
@@ -148,9 +180,7 @@
   font-weight: 500;
 }
 
-.btn-imprimir:hover {
-  background-color: #45a049;
-}
+.btn-imprimir:hover { background-color: #45a049; }
 
 /* FATURAMENTO DIÁRIO */
 .faturamento-diario {
@@ -165,9 +195,8 @@
   color: #333;
 }
 
-.tabela-container {
-  overflow-x: auto;
-}
+/* TABELAS */
+.tabela-container { overflow-x: auto; }
 
 .tabela-container table {
   width: 100%;
@@ -190,9 +219,7 @@
   border-bottom: 1px solid #ddd;
 }
 
-.tabela-container tbody tr:hover {
-  background: #f0f0f0;
-}
+.tabela-container tbody tr:hover { background: #f0f0f0; }
 
 .tabela-container tfoot {
   background: #f5f5f5;
@@ -204,21 +231,77 @@
   padding: 15px;
 }
 
-.text-center {
-  text-align: center !important;
-}
-
-.text-right {
-  text-align: right !important;
-}
+.text-center { text-align: center !important; }
+.text-right  { text-align: right !important; }
 
 .valor-destaque {
   color: #11998e;
   font-weight: 600;
 }
 
-.total-row {
-  background: #e8f5f3;
+.total-row { background: #e8f5f3; }
+
+/* CARD DE APARTAMENTO */
+.apto-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+  overflow: hidden;
+  border-left: 5px solid #11998e;
+}
+
+.apto-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.apto-info { display: flex; flex-direction: column; gap: 4px; }
+.apto-numero { font-size: 1.1em; font-weight: 700; color: #2c3e50; }
+.apto-hospede { font-size: 0.9em; color: #7f8c8d; }
+.apto-total { font-size: 1.4em; font-weight: 700; color: #27ae60; }
+
+/* TABELA INTERNA DO APARTAMENTO */
+.tabela-produtos-apto { width: 100%; border-collapse: collapse; }
+
+.tabela-produtos-apto th {
+  background: #f8f9fa;
+  padding: 10px 15px;
+  text-align: left;
+  font-size: 0.85em;
+  color: #7f8c8d;
+  font-weight: 600;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tabela-produtos-apto td {
+  padding: 10px 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tabela-produtos-apto tfoot td {
+  background: #f8f9fa;
+  padding: 12px 15px;
+  border-top: 2px solid #11998e;
+}
+
+/* SELECT PRODUTO */
+.select-produto {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 1em;
+  background: white;
+}
+
+.select-produto:focus {
+  outline: none;
+  border-color: #11998e;
 }
 
 /* VAZIO */
@@ -235,15 +318,18 @@
 @media print {
   .filtros,
   .acoes,
+  .nav-views,
   .header-relatorio {
     display: none;
   }
-  
-  .relatorio-container {
-    padding: 0;
-  }
-  
-  .resumo-card {
-    page-break-inside: avoid;
-  }
+
+  .relatorio-container { padding: 0; }
+  .resumo-card { page-break-inside: avoid; }
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .nav-views { flex-direction: column; }
+  .apto-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .filtro-produto { flex: unset; width: 100%; }
 }

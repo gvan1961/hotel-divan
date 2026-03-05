@@ -21,6 +21,15 @@ export interface CaixaConsulta {
   status: string;
   turno: string;
   observacoes?: string;
+  vendasFaturadas?: VendaFaturada[];
+}
+
+export interface VendaFaturada {
+  clienteNome: string;
+  clienteCpf?: string;
+  descricao: string;
+  valor: number;
+  dataHora: string;
 }
 
 export interface FiltroCaixa {

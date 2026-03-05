@@ -186,10 +186,10 @@ export class ClienteListaApp implements OnInit {
   carregarClientes(): void {
     this.clienteService.getAll().subscribe({
       next: (data) => {
-        this.clientes = data;
-        this.clientesFiltrados = data;
-        this.loading = false;
-      },
+  this.clientes = data.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  this.clientesFiltrados = [...this.clientes];
+  this.loading = false;
+},
       error: (err) => {
         console.error('Erro ao carregar clientes', err);
         this.loading = false;
@@ -198,13 +198,15 @@ export class ClienteListaApp implements OnInit {
   }
 
   filtrar(): void {
-    const termo = this.filtro.toLowerCase();
-    this.clientesFiltrados = this.clientes.filter(c =>
+  const termo = this.filtro.toLowerCase();
+  this.clientesFiltrados = this.clientes
+    .filter(c =>
       c.nome.toLowerCase().includes(termo) ||
       c.cpf.includes(termo) ||
       c.celular.includes(termo)
-    );
-  }
+    )
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+}
 
   novo(): void {
     this.router.navigate(['/clientes/novo']);

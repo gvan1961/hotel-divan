@@ -535,6 +535,15 @@ interface Apartamento {
   </button>
 </ng-container>
 
+     <!-- DEVOLVER TROCO -->
+<ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
+  <button class="btn-acao btn-troco"
+          *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) < 0"
+          (click)="devolverTroco()">
+    💰 Devolver Troco R$ {{ formatarMoeda((reserva.totalApagar || 0) * -1) }}
+  </button>
+</ng-container>
+
     <!-- FINALIZAR RESERVA -->
     <ng-container *hasPermission="'RESERVA_FINALIZAR'">
   <button class="btn-acao" 
@@ -2485,6 +2494,13 @@ interface Apartamento {
     box-shadow: 0 4px 25px rgba(39, 174, 96, 0.7);
   }
 }
+
+    .btn-troco {
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  color: white;
+  animation: pulse 2s ease-in-out infinite;
+}    
+
     }
   `]
 })
@@ -5141,6 +5157,24 @@ jaFoiEstornado(extrato: any): boolean {
     e.totalLancamento < 0 &&
     e.descricao?.includes(extrato.descricao)
   );
+}
+
+devolverTroco(): void {
+  if (!this.reserva) return;
+  
+  const valorTroco = Math.abs(this.reserva.totalApagar || 0);
+  
+  if (!confirm(`💰 Devolver troco de R$ ${this.formatarMoeda(valorTroco)} ao cliente?\n\nEsta ação será registrada no extrato.`)) return;
+  
+  this.http.patch(`http://localhost:8080/api/reservas/${this.reserva.id}/devolver-troco`, {}).subscribe({
+    next: () => {
+      alert(`✅ Troco de R$ ${this.formatarMoeda(valorTroco)} devolvido!\n\nSaldo zerado. Você já pode finalizar a reserva.`);
+      this.carregarReserva(this.reserva!.id);
+    },
+    error: (err: any) => {
+      alert('❌ Erro: ' + (err.error?.erro || err.message));
+    }
+  });
 }
 
 }

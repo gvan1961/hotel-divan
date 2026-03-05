@@ -1719,7 +1719,11 @@ onDataChange(): void {
     
     this.http.get<any[]>(url).subscribe({
       next: (data) => {
-        this.apartamentos = data;
+  this.apartamentos = data.sort((a, b) => {
+    const numA = parseInt(a.numeroApartamento) || 0;
+    const numB = parseInt(b.numeroApartamento) || 0;
+    return numA - numB;
+  });
         console.log('✅ Apartamentos DISPONÍVEIS carregados:', this.apartamentos.length);
         
         if (data.length === 0) {

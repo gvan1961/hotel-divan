@@ -128,6 +128,47 @@ import { CaixaConsultaService } from '../../services/caixa-consulta.service';
           </div>
         </div>
       </div>
+
+      <!-- VENDAS FATURADAS -->
+<div class="card" *ngIf="caixa.vendasFaturadas && caixa.vendasFaturadas.length > 0">
+  <h3>📄 Vendas Faturadas ({{ caixa.vendasFaturadas.length }})</h3>
+  <table class="tabela-faturadas">
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Descrição</th>
+        <th>Data/Hora</th>
+        <th>Valor</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let venda of caixa.vendasFaturadas">
+        <td>
+          <div class="cliente-nome">{{ venda.clienteNome }}</div>
+          <div class="cliente-cpf" *ngIf="venda.clienteCpf">{{ venda.clienteCpf }}</div>
+        </td>
+        <td>{{ venda.descricao }}</td>
+        <td>{{ formatarDataHora(venda.dataHora) }}</td>
+        <td class="valor-faturado">R$ {{ venda.valor | number:'1.2-2' }}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="total-faturado">
+        <td colspan="3"><strong>Total Faturado:</strong></td>
+        <td class="valor-faturado">
+          <strong>R$ {{ totalFaturado() | number:'1.2-2' }}</strong>
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<div class="card aviso-sem-faturadas" 
+     *ngIf="!caixa.vendasFaturadas || caixa.vendasFaturadas.length === 0">
+  <h3>📄 Vendas Faturadas</h3>
+  <p class="sem-registros">Nenhuma venda faturada neste caixa.</p>
+</div>
+
     </div>
   `,
   styles: [`
@@ -369,6 +410,52 @@ import { CaixaConsultaService } from '../../services/caixa-consulta.service';
       .formas-pagamento {
         grid-template-columns: 1fr;
       }
+
+      .tabela-faturadas {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.tabela-faturadas th {
+  background: #f8f9fa;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.tabela-faturadas td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.tabela-faturadas tr:hover td {
+  background: #f8f9fa;
+}
+
+.cliente-nome { font-weight: 600; color: #2c3e50; }
+.cliente-cpf  { font-size: 0.85em; color: #7f8c8d; }
+
+.valor-faturado {
+  font-weight: 700;
+  color: #8e44ad;
+  text-align: right;
+}
+
+.total-faturado td {
+  background: #f3e5f5;
+  padding: 12px;
+  border-top: 2px solid #8e44ad;
+}
+
+.sem-registros {
+  color: #95a5a6;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+}
     }
   `]
 })
@@ -423,4 +510,9 @@ export class CaixaDetalhesComponent implements OnInit {
       minute: '2-digit'
     });
   }
+
+  totalFaturado(): number {
+  if (!this.caixa?.vendasFaturadas) return 0;
+  return this.caixa.vendasFaturadas.reduce((sum: number, v: any) => sum + (v.valor || 0), 0);
+}
 }

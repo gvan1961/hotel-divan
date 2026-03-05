@@ -491,29 +491,14 @@ interface FiltrosAvancados {
       color: white;
     }
 
-    .btn-filtros {
-      background: #9b59b6;
-    }
+    .btn-filtros { background: #9b59b6; }
+    .btn-filtros:hover { background: #8e44ad; }
 
-    .btn-filtros:hover {
-      background: #8e44ad;
-    }
+    .btn-atualizar { background: #3498db; }
+    .btn-atualizar:hover { background: #2980b9; }
 
-    .btn-atualizar {
-      background: #3498db;
-    }
-
-    .btn-atualizar:hover {
-      background: #2980b9;
-    }
-
-    .btn-criar {
-      background: #27ae60;
-    }
-
-    .btn-criar:hover {
-      background: #229954;
-    }
+    .btn-criar { background: #27ae60; }
+    .btn-criar:hover { background: #229954; }
 
     /* FILTROS ATIVOS */
     .filtros-ativos {
@@ -554,9 +539,7 @@ interface FiltrosAvancados {
       justify-content: center;
     }
 
-    .filtro-tag button:hover {
-      color: #c62828;
-    }
+    .filtro-tag button:hover { color: #c62828; }
 
     .btn-limpar-todos {
       background: #e74c3c;
@@ -569,9 +552,7 @@ interface FiltrosAvancados {
       transition: all 0.3s;
     }
 
-    .btn-limpar-todos:hover {
-      background: #c0392b;
-    }
+    .btn-limpar-todos:hover { background: #c0392b; }
 
     /* RESUMO */
     .resumo {
@@ -592,14 +573,12 @@ interface FiltrosAvancados {
       border-left: 4px solid;
     }
 
-    .card-resumo.verde { border-left-color: #27ae60; }
+    .card-resumo.verde  { border-left-color: #27ae60; }
     .card-resumo.amarelo { border-left-color: #f39c12; }
-    .card-resumo.azul { border-left-color: #3498db; }
-    .card-resumo.roxo { border-left-color: #9b59b6; }
+    .card-resumo.azul   { border-left-color: #3498db; }
+    .card-resumo.roxo   { border-left-color: #9b59b6; }
 
-    .card-resumo .icone {
-      font-size: 2.5em;
-    }
+    .card-resumo .icone { font-size: 2.5em; }
 
     .card-resumo .info {
       display: flex;
@@ -635,7 +614,7 @@ interface FiltrosAvancados {
     }
 
     @keyframes spin {
-      0% { transform: rotate(0deg); }
+      0%   { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
 
@@ -671,9 +650,7 @@ interface FiltrosAvancados {
       transition: all 0.3s;
     }
 
-    .btn-imprimir:hover {
-      background: #8e44ad;
-    }
+    .btn-imprimir:hover { background: #8e44ad; }
 
     .tabela {
       width: 100%;
@@ -695,25 +672,13 @@ interface FiltrosAvancados {
       font-size: 0.9em;
     }
 
-    .tabela tbody tr:hover {
-      background: #f5f5f5;
-    }
+    .tabela tbody tr:hover { background: #f5f5f5; }
 
-    .linha-vencida {
-      background: #ffebee !important;
-    }
+    .linha-vencida { background: #ffebee !important; }
+    .linha-paga    { opacity: 0.7; }
 
-    .linha-paga {
-      opacity: 0.7;
-    }
-
-    .datas {
-      font-size: 0.85em;
-    }
-
-    .datas div {
-      padding: 2px 0;
-    }
+    .datas { font-size: 0.85em; }
+    .datas div { padding: 2px 0; }
 
     .badge-empresa {
       background: #e3f2fd;
@@ -724,9 +689,7 @@ interface FiltrosAvancados {
       font-weight: 600;
     }
 
-    .sem-empresa {
-      color: #bdc3c7;
-    }
+    .sem-empresa { color: #bdc3c7; }
 
     .saldo {
       font-weight: 700;
@@ -740,20 +703,9 @@ interface FiltrosAvancados {
       font-weight: 600;
     }
 
-    .badge-em_aberto {
-      background: #e3f2fd;
-      color: #1976d2;
-    }
-
-    .badge-vencida {
-      background: #ffebee;
-      color: #c62828;
-    }
-
-    .badge-paga {
-      background: #e8f5e9;
-      color: #2e7d32;
-    }
+    .badge-em_aberto  { background: #e3f2fd; color: #1976d2; }
+    .badge-vencida    { background: #ffebee; color: #c62828; }
+    .badge-paga       { background: #e8f5e9; color: #2e7d32; }
 
     .badge-vencido {
       background: #ffebee;
@@ -765,20 +717,14 @@ interface FiltrosAvancados {
       display: inline-block;
     }
 
-    .total-row {
-      background: #f5f5f5;
-      font-weight: 700;
-    }
+    .total-row { background: #f5f5f5; font-weight: 700; }
 
     .total-row td {
       border-top: 2px solid #2c3e50;
       padding: 15px;
     }
 
-    .acoes {
-      display: flex;
-      gap: 5px;
-    }
+    .acoes { display: flex; gap: 5px; }
 
     .btn-acao {
       padding: 8px;
@@ -789,25 +735,11 @@ interface FiltrosAvancados {
       transition: all 0.3s;
     }
 
-    .btn-pagar {
-      background: #27ae60;
-      color: white;
-    }
+    .btn-pagar  { background: #27ae60; color: white; }
+    .btn-pagar:hover  { background: #229954; transform: scale(1.1); }
 
-    .btn-pagar:hover {
-      background: #229954;
-      transform: scale(1.1);
-    }
-
-    .btn-excluir {
-      background: #e74c3c;
-      color: white;
-    }
-
-    .btn-excluir:hover {
-      background: #c0392b;
-      transform: scale(1.1);
-    }
+    .btn-excluir { background: #e74c3c; color: white; }
+    .btn-excluir:hover { background: #c0392b; transform: scale(1.1); }
 
     .vazio {
       text-align: center;
@@ -823,10 +755,7 @@ interface FiltrosAvancados {
     /* MODAL */
     .modal-overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.7);
       display: flex;
       justify-content: center;
@@ -844,9 +773,7 @@ interface FiltrosAvancados {
       overflow-y: auto;
     }
 
-    .modal-grande {
-      min-width: 800px;
-    }
+    .modal-grande { min-width: 800px; }
 
     .modal-content h2 {
       margin: 0 0 10px 0;
@@ -865,9 +792,7 @@ interface FiltrosAvancados {
       margin-bottom: 30px;
     }
 
-    .campo-duplo {
-      grid-column: 1 / -1;
-    }
+    .campo-duplo { grid-column: 1 / -1; }
 
     .info-conta {
       background: #f5f5f5;
@@ -876,13 +801,9 @@ interface FiltrosAvancados {
       margin-bottom: 20px;
     }
 
-    .info-conta p {
-      margin: 8px 0;
-    }
+    .info-conta p { margin: 8px 0; }
 
-    .campo {
-      margin-bottom: 20px;
-    }
+    .campo { margin-bottom: 20px; }
 
     .campo label {
       display: block;
@@ -922,9 +843,7 @@ interface FiltrosAvancados {
       gap: 10px;
     }
 
-    .periodo input {
-      flex: 1;
-    }
+    .periodo input { flex: 1; }
 
     .periodo span {
       color: #7f8c8d;
@@ -984,200 +903,138 @@ interface FiltrosAvancados {
       transition: all 0.3s;
     }
 
-    .btn-cancelar {
-      background: #95a5a6;
-      color: white;
+    .btn-cancelar { background: #95a5a6; color: white; }
+    .btn-cancelar:hover { background: #7f8c8d; }
+
+    .btn-limpar { background: #e74c3c; color: white; }
+    .btn-limpar:hover { background: #c0392b; }
+
+    .btn-confirmar { background: #27ae60; color: white; }
+    .btn-confirmar:hover { background: #229954; }
+
+    /* ─── IMPRESSÃO ──────────────────────────────── */
+    .print-only {
+      display: none;
     }
 
-    .btn-cancelar:hover {
-      background: #7f8c8d;
-    }
-
-    .btn-limpar {
-      background: #e74c3c;
-      color: white;
-    }
-
-    .btn-limpar:hover {
-      background: #c0392b;
-    }
-
-    .btn-confirmar {
-      background: #27ae60;
-      color: white;
-    }
-
-    .btn-confirmar:hover {
-      background: #229954;
-    }
-
-    /* IMPRESSÃO */
     @media print {
-      .header-actions,
-      .filtros-ativos button,
-      .btn-imprimir,
-      .no-print {
+      .container > *:not(.print-only) {
         display: none !important;
       }
 
-      .tabela-container {
-        box-shadow: none;
+      .print-only {
+        display: block !important;
+        padding: 20px;
+      }
+
+      .print-header {
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #2c3e50;
+        padding-bottom: 15px;
+      }
+
+      .print-header h1 {
+        margin: 0 0 10px 0;
+        color: #2c3e50;
+        font-size: 24px;
+      }
+
+      .print-subtitle {
+        margin: 5px 0;
+        color: #7f8c8d;
+        font-size: 14px;
+      }
+
+      .print-date {
+        margin: 5px 0;
+        color: #95a5a6;
+        font-size: 12px;
+      }
+
+      .print-filters {
+        margin-top: 15px;
+        padding: 10px;
+        background: #f5f5f5;
+        border-radius: 6px;
+        font-size: 12px;
+      }
+
+      .print-filters span {
+        display: inline-block;
+        margin: 0 10px;
+      }
+
+      .print-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 11px;
+      }
+
+      .print-table th,
+      .print-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+
+      .print-table th {
+        background-color: #2c3e50;
+        color: white;
+        font-weight: bold;
+        font-size: 10px;
+      }
+
+      .print-table td.valor {
+        text-align: right;
+        font-family: 'Courier New', monospace;
+      }
+
+      .print-table td.destaque {
+        font-weight: bold;
+        background: #f0f0f0;
+      }
+
+      .print-table tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+
+      .print-table tfoot tr {
+        background-color: #e8e8e8;
+        font-weight: bold;
+      }
+
+      .print-table tfoot td {
+        border-top: 2px solid #2c3e50;
+        padding: 12px 8px;
+      }
+
+      .print-footer {
+        margin-top: 30px;
+        text-align: center;
+        font-size: 10px;
+        color: #7f8c8d;
+        border-top: 1px solid #ddd;
+        padding-top: 10px;
       }
 
       body {
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
       }
+
+      @page { margin: 1cm; }
     }
 
+    /* ─── RESPONSIVE ─────────────────────────────── */
     @media (max-width: 768px) {
-      .resumo {
-        grid-template-columns: 1fr;
-      }
-
-      .filtros-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .atalhos-btns {
-        grid-template-columns: 1fr;
-      }
-
-      .modal-content {
-        min-width: 90%;
-      }
-
-      .modal-grande {
-        min-width: 90%;
-      }
-
-      .tabela-container {
-        overflow-x: auto;
-      }
-
-      /* ESTILOS DE IMPRESSÃO */
-.print-only {
-  display: none;
-}
-
-@media print {
-  /* OCULTAR TELA NORMAL */
-  .container > *:not(.print-only) {
-    display: none !important;
-  }
-
-  /* MOSTRAR ÁREA DE IMPRESSÃO */
-  .print-only {
-    display: block !important;
-    padding: 20px;
-  }
-
-  /* CABEÇALHO */
-  .print-header {
-    text-align: center;
-    margin-bottom: 30px;
-    border-bottom: 2px solid #2c3e50;
-    padding-bottom: 15px;
-  }
-
-  .print-header h1 {
-    margin: 0 0 10px 0;
-    color: #2c3e50;
-    font-size: 24px;
-  }
-
-  .print-subtitle {
-    margin: 5px 0;
-    color: #7f8c8d;
-    font-size: 14px;
-  }
-
-  .print-date {
-    margin: 5px 0;
-    color: #95a5a6;
-    font-size: 12px;
-  }
-
-  .print-filters {
-    margin-top: 15px;
-    padding: 10px;
-    background: #f5f5f5;
-    border-radius: 6px;
-    font-size: 12px;
-  }
-
-  .print-filters span {
-    display: inline-block;
-    margin: 0 10px;
-  }
-
-  /* TABELA */
-  .print-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 20px 0;
-    font-size: 11px;
-  }
-
-  .print-table th,
-  .print-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-  }
-
-  .print-table th {
-    background-color: #2c3e50;
-    color: white;
-    font-weight: bold;
-    font-size: 10px;
-  }
-
-  .print-table td.valor {
-    text-align: right;
-    font-family: 'Courier New', monospace;
-  }
-
-  .print-table td.destaque {
-    font-weight: bold;
-    background: #f0f0f0;
-  }
-
-  .print-table tbody tr:nth-child(even) {
-    background-color: #f9f9f9;
-  }
-
-  .print-table tfoot tr {
-    background-color: #e8e8e8;
-    font-weight: bold;
-  }
-
-  .print-table tfoot td {
-    border-top: 2px solid #2c3e50;
-    padding: 12px 8px;
-  }
-
-  /* RODAPÉ */
-  .print-footer {
-    margin-top: 30px;
-    text-align: center;
-    font-size: 10px;
-    color: #7f8c8d;
-    border-top: 1px solid #ddd;
-    padding-top: 10px;
-  }
-
-  /* CONFIGURAÇÕES GERAIS */
-  body {
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
-
-  @page {
-    margin: 1cm;
-  }
-} 
-
+      .resumo               { grid-template-columns: 1fr; }
+      .filtros-grid         { grid-template-columns: 1fr; }
+      .atalhos-btns         { grid-template-columns: 1fr; }
+      .modal-content        { min-width: 90%; }
+      .modal-grande         { min-width: 90%; }
+      .tabela-container     { overflow-x: auto; }
     }
   `]
 })
@@ -1241,7 +1098,6 @@ export class ContasReceberListaApp implements OnInit {
 this.contas.forEach(conta => {
   const reserva = reservas.find(r => r.id === conta.reservaId);
   if (reserva) {
-    // Adicionar dados da reserva na conta
     (conta as any).reserva = reserva;
     (conta as any).numeroApartamento = reserva.apartamento?.numeroApartamento;
     (conta as any).quantidadeHospede = reserva.quantidadeHospede;
@@ -1249,11 +1105,21 @@ this.contas.forEach(conta => {
     (conta as any).totalDiaria = reserva.totalDiaria;
     (conta as any).totalConsumo = reserva.totalProduto;
     (conta as any).totalHospedagem = reserva.totalHospedagem;
-    
-    // ✅ USAR DADOS DA CONTA (não da reserva!)
-    (conta as any).totalRecebido = conta.valorPago; // ← DA CONTA!
+    (conta as any).totalRecebido = conta.valorPago;
     (conta as any).desconto = reserva.desconto || 0;
-    (conta as any).totalApagar = conta.saldo; // ← DA CONTA!
+    (conta as any).totalApagar = conta.saldo;
+  } else {
+    // ✅ PDV FATURADO — sem reserva de hotel
+    (conta as any).reserva = null;
+    (conta as any).numeroApartamento = '-';
+    (conta as any).quantidadeHospede = '-';
+    (conta as any).quantidadeDiaria = '-';
+    (conta as any).totalDiaria = 0;
+    (conta as any).totalConsumo = conta.valor;   // ✅ valor da venda PDV
+    (conta as any).totalHospedagem = conta.valor;
+    (conta as any).totalRecebido = conta.valorPago;
+    (conta as any).desconto = 0;
+    (conta as any).totalApagar = conta.saldo;
   }
 });
           

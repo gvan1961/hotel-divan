@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, NgZone, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FechamentoCaixaService } from '../services/fechamento-caixa.service';
@@ -13,6 +13,7 @@ import { HasPermissionDirective } from '../directives/has-permission.directive';
   selector: 'app-sidebar',
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive, HasPermissionDirective ],
+  
   template: `
     <aside class="sidebar">
       <div class="sidebar-header">
@@ -20,45 +21,47 @@ import { HasPermissionDirective } from '../directives/has-permission.directive';
       </div>
 
       <nav class="sidebar-nav">
-        <!-- ✅ DASHBOARD - TODOS VEEM -->
+        <!-- DASHBOARD -->
         <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
           <span class="icon">📊</span>
           <span class="label">Dashboard</span>
         </a>
 
-        <!-- ✅ ALERTAS - TODOS VEEM -->
+        <!-- ALERTAS -->
         <a routerLink="/alertas" routerLinkActive="active" class="nav-item nav-item-alertas">
           <span class="icon">🚨</span>
           <span class="label">Alertas</span>
           <span *ngIf="totalAlertas > 0" class="badge-alertas">{{ totalAlertas }}</span>
         </a>
 
-        <!-- ✅ RESERVAS - PERMISSÃO NECESSÁRIA -->
-        <a *hasPermission="'RESERVA_VISUALIZAR'" 
-           routerLink="/reservas" 
-           routerLinkActive="active" 
-           class="nav-item">
+        <!-- RESERVAS -->
+        <a *hasPermission="'RESERVA_VISUALIZAR'"
+           routerLink="/reservas" routerLinkActive="active" class="nav-item">
           <span class="icon">📋</span>
           <span class="label">Reservas</span>
-        </a>   
+        </a>
+
+        <!-- MAPA DE RESERVAS -->
+        <a *hasPermission="'RESERVA_VISUALIZAR'"
+           routerLink="/reservas/mapa" routerLinkActive="active" class="nav-item">
+          <span class="icon">📅</span>
+          <span class="label">Mapa de Reservas</span>
+        </a>
 
         <div class="nav-divider"></div>
-        
-        <!-- ✅ CAIXA - ABRIR/FECHAR (RECEPCIONISTA + ADMIN) -->
+
+        <!-- CAIXA -->
         <ng-container *hasPermission="'CAIXA_FECHAMENTO'">
           <div class="nav-item caixa-status" *ngIf="caixaAberto">
             <span class="icon">✅</span>
             <span class="label">Caixa Aberto</span>
           </div>
-
-          <a *ngIf="!caixaAberto" 
-             routerLink="/abertura-caixa" 
-             class="nav-item nav-caixa abrir">
+          <a *ngIf="!caixaAberto"
+             routerLink="/abertura-caixa" class="nav-item nav-caixa abrir">
             <span class="icon">🔓</span>
             <span class="label">Abrir Caixa</span>
           </a>
-
-          <a *ngIf="caixaAberto && caixaAberto.id" 
+          <a *ngIf="caixaAberto && caixaAberto.id"
              [routerLink]="['/fechamento-caixa', caixaAberto.id]"
              class="nav-item nav-caixa visualizar">
             <span class="icon">💰</span>
@@ -68,162 +71,96 @@ import { HasPermissionDirective } from '../directives/has-permission.directive';
 
         <div class="nav-divider"></div>
 
-        <!-- ✅ CLIENTES/HÓSPEDES - PERMISSÃO NECESSÁRIA -->
-        <a *hasPermission="'HOSPEDE_VISUALIZAR'" 
-           routerLink="/clientes" 
-           routerLinkActive="active" 
-           class="nav-item">
+        <!-- CLIENTES -->
+        <a *hasPermission="'HOSPEDE_VISUALIZAR'"
+           routerLink="/clientes" routerLinkActive="active" class="nav-item">
           <span class="icon">👥</span>
           <span class="label">Clientes</span>
         </a>
 
-        <!-- ✅ APARTAMENTOS - PERMISSÃO NECESSÁRIA -->
-        <a *hasPermission="'RESERVA_VISUALIZAR'" 
-           routerLink="/apartamentos" 
-           routerLinkActive="active" 
-           class="nav-item">
-         <span class="icon">🏨</span>
-         <span class="label">Apartamentos</span>
+        <!-- APARTAMENTOS -->
+        <a *hasPermission="'RESERVA_VISUALIZAR'"
+           routerLink="/apartamentos" routerLinkActive="active" class="nav-item">
+          <span class="icon">🏨</span>
+          <span class="label">Apartamentos</span>
         </a>
 
-       
+        <!-- CADASTROS -->
+        <a *hasPermission="'USUARIO_VISUALIZAR'"
+           routerLink="/cadastros" routerLinkActive="active" class="nav-item nav-item-cadastros">
+          <span class="icon">📋</span>
+          <span class="label">Cadastros</span>
+        </a>
 
-        <!-- ✅ CADASTROS - ADMIN/GERENTE -->
-<a *hasPermission="'USUARIO_VISUALIZAR'" 
-   routerLink="/cadastros" 
-   routerLinkActive="active" 
-   class="nav-item nav-item-cadastros">
-   <span class="icon">📋</span>
-   <span class="label">Cadastros</span>
-</a>
-
-<!-- ✅ USUÁRIOS - SÓ ADMIN -->
-<a *hasPermission="'USUARIO_VISUALIZAR'" 
-   routerLink="/usuarios" 
-   routerLinkActive="active" 
-   class="nav-item">
-   <span class="icon">👤</span>
-   <span class="label">Usuários</span>
-</a>
-        
         <div class="nav-divider"></div>
-       
-        <!-- ✅ LIMPEZA - RECEPÇÃO -->
-        <a *hasPermission="'RESERVA_VISUALIZAR'" 
-           routerLink="/apartamentos/limpeza" 
-           routerLinkActive="active" 
-           class="nav-item">
+
+        <!-- LIMPEZA -->
+        <a *hasPermission="'RESERVA_VISUALIZAR'"
+           routerLink="/apartamentos/limpeza" routerLinkActive="active" class="nav-item">
           <span class="icon">🧹</span>
           <span class="label">Limpeza</span>
         </a>
-             
-        <!-- ✅ CONTAGEM ESTOQUE - PERMISSÃO ESPECÍFICA -->
-        <a *hasPermission="'ESTOQUE_CONTAGEM'" 
-           routerLink="/contagem-estoque" 
-           routerLinkActive="active" 
-           class="nav-item nav-item-destaque">
-           <span class="icon">📋</span>
-           <span class="label">Contagem Estoque</span>
-        </a>
-        
-        <!-- ✅ PDV - PERMISSÃO DE PRODUTOS -->
-        <a *hasPermission="'PRODUTO_VISUALIZAR'" 
-           routerLink="/pdv" 
-           routerLinkActive="active" 
-           class="nav-item">
-         <span class="icon">💳</span>
-         <span class="label">PDV - Vendas</span>
+
+        <!-- CONTAGEM ESTOQUE -->
+        <a *hasPermission="'ESTOQUE_CONTAGEM'"
+           routerLink="/contagem-estoque" routerLinkActive="active" class="nav-item nav-item-destaque">
+          <span class="icon">📋</span>
+          <span class="label">Contagem Estoque</span>
         </a>
 
-        <!-- ✅ CONTAS A RECEBER - FINANCEIRO -->
-        <a *hasPermission="'CONTA_RECEBER_VISUALIZAR'" 
-           routerLink="/contas-receber" 
-           routerLinkActive="active" 
-           class="nav-item">
-           <span class="icon">💰</span>
-           <span class="label">Contas a Receber</span>
+        <!-- PDV -->
+        <a *hasPermission="'PRODUTO_VISUALIZAR'"
+           routerLink="/pdv" routerLinkActive="active" class="nav-item">
+          <span class="icon">💳</span>
+          <span class="label">PDV - Vendas</span>
         </a>
 
-        <!-- ✅ CONSULTA DE CAIXAS - SÓ FINANCEIRO/ADMIN -->
-        <a *hasPermission="'CAIXA_VISUALIZAR'" 
-           routerLink="/caixa/consulta" 
-           routerLinkActive="active" 
-           class="nav-item">
-           <span class="icon">🔍</span>
-           <span class="label">Consulta de Caixas</span>
-        </a>
-       
-        <!-- ✅ JANTAR - PERMISSÃO ESPECÍFICA -->
-        <a *hasPermission="'JANTAR_VISUALIZAR'" 
-           routerLink="/jantar" 
-           routerLinkActive="active" 
-           class="nav-item">
+        <!-- JANTAR -->
+        <a *hasPermission="'JANTAR_VISUALIZAR'"
+           routerLink="/jantar" routerLinkActive="active" class="nav-item">
           <span class="icon">🍽️</span>
           <span class="label">Jantar</span>
         </a>
 
-        <!-- ✅ RELATÓRIOS - GERÊNCIA -->
-        <a *hasPermission="'RELATORIO_VISUALIZAR'" 
-           routerLink="/relatorio-comandas" 
-           routerLinkActive="active" 
-           class="nav-item">
-           <span class="icon">📊</span>
-           <span class="label">Relatório Comandas</span>
+        <!-- COMANDAS RÁPIDAS -->
+        <a *hasPermission="'JANTAR_COMANDO'"
+           routerLink="/comandas-rapidas" routerLinkActive="active" class="nav-item"
+           style="color: #ffc107 !important; font-weight: 700;">
+          <span class="icon">🍽️</span>
+          <span class="label">Comandas Rápidas</span>
         </a>
 
-        <!-- ✅ PERFIS - SÓ ADMIN -->
-          <a *hasPermission="'PERFIL_GERENCIAR'" 
-            routerLink="/perfis" 
-            routerLinkActive="active" 
-            class="nav-item">
-            <span class="icon">🔐</span>
-            <span class="label">Perfis</span>
-          </a>
-         
-        <a *hasPermission="'RELATORIO_VISUALIZAR'" 
-           routerLink="/relatorio-faturamento" 
-           routerLinkActive="active" 
-           class="nav-item">
-         <span class="icon">💰</span>
-         <span class="label">Faturamento</span>
-        </a>
-
-        <!-- ✅ GESTÃO DE COMANDAS - JANTAR -->
-        <a *hasPermission="'JANTAR_COMANDO'" 
-           routerLink="/gestao-comandas" 
-           routerLinkActive="active" 
-           class="nav-item">
+        <!-- GESTÃO DE COMANDAS -->
+        <a *hasPermission="'JANTAR_COMANDO'"
+           routerLink="/gestao-comandas" routerLinkActive="active" class="nav-item">
           <span class="icon">🗂️</span>
           <span class="label">Gestão de Comandas</span>
         </a>
 
-        <!-- ✅ MAPA DE RESERVAS - RESERVAS -->
-        <a *hasPermission="'RESERVA_VISUALIZAR'" 
-           routerLink="/reservas/mapa" 
-           routerLinkActive="active" 
-           class="nav-item">
-          <span class="icon">📅</span>
-          <span class="label">Mapa de Reservas</span>
+        <!-- RELATÓRIO COMANDAS -->
+        <a *hasPermission="'RELATORIO_VISUALIZAR'"
+           routerLink="/relatorio-comandas" routerLinkActive="active" class="nav-item">
+          <span class="icon">📊</span>
+          <span class="label">Relatório Comandas</span>
         </a>
 
-        <!-- ✅ COMANDAS RÁPIDAS - JANTAR -->
-        <a *hasPermission="'JANTAR_COMANDO'" 
-           routerLink="/comandas-rapidas" 
-           routerLinkActive="active" 
-           class="nav-item"
-           style="color: #ffc107 !important; font-weight: 700;">
-           <span class="icon">🍽️</span>
-           <span class="label">Comandas Rápidas</span>
+        <!-- FATURAMENTO -->
+        <a *hasPermission="'RELATORIO_VISUALIZAR'"
+           routerLink="/relatorio-faturamento" routerLinkActive="active" class="nav-item">
+          <span class="icon">💰</span>
+          <span class="label">Faturamento</span>
         </a>
 
-        <!-- ✅ VALES - CAIXA -->
-        <a *hasPermission="'CAIXA_VISUALIZAR'" 
-           routerLink="/vales" 
-           routerLinkActive="active" 
-           class="nav-item">
-          <span class="icon">💵</span>
-          <span class="label">Vales</span>
-        </a>
+        <div class="nav-divider"></div>
+
+        <!-- ══════════════════════════════════════ -->
+        <!-- BOTÃO ÁREA ADMINISTRATIVA             -->
+        <!-- ══════════════════════════════════════ -->
+        <a routerLink="/administrativo" routerLinkActive="active" class="nav-item btn-admin-toggle">
+  <span class="icon">⚙️</span>
+  <span class="label">Administrativo</span>
+</a>       
+  
       </nav>
 
       <div class="sidebar-footer">
@@ -475,6 +412,58 @@ import { HasPermissionDirective } from '../directives/has-permission.directive';
         display: none !important;
       }
     }
+
+     /* ── BOTÃO ADMINISTRATIVO ─────────────────── */
+    .btn-admin-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      width: 100%;
+      background: rgba(255, 193, 7, 0.15);
+      border: none;
+      border-left: 3px solid #ffc107;
+      color: rgba(255,255,255,0.9);
+      cursor: pointer;
+      font-size: 0.95em;
+      font-weight: 700;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    .btn-admin-toggle:hover {
+      background: rgba(255, 193, 7, 0.25);
+      color: #ffc107;
+    }
+
+    .btn-admin-toggle .seta {
+      margin-left: auto;
+      font-size: 0.75em;
+      color: #ffc107;
+    }
+
+    /* ── MENU ADMINISTRATIVO COLAPSÁVEL ──────── */
+    .admin-menu {
+      background: rgba(0,0,0,0.2);
+    }
+   
+    .nav-item-admin {
+      padding-left: 30px;
+      font-size: 0.9em;
+      border-left: 2px solid rgba(255, 193, 7, 0.3);
+    }
+
+    .nav-item-admin:hover {
+      border-left-color: #ffc107;
+      color: #ffc107;
+    }
+
+    .nav-item-admin.active {
+      background: rgba(255, 193, 7, 0.15);
+      border-left: 2px solid #ffc107;
+      color: #ffc107;
+    }
+
   `]
 })
 export class SidebarComponent implements OnInit, OnDestroy {
@@ -484,11 +473,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private caixaStateService = inject(CaixaStateService);
   private alertasService = inject(AlertasService);
   private alertasStateService = inject(AlertasStateService); // ✅ NOVO INJECT
-
+  
   caixaAberto: any = null;
   usuarioId: number = 1;
   totalAlertas = 0;
-  
+
+  adminAberto = false;
+   
   private verificandoCaixa = false;
   private subscription?: Subscription;
   private caixaAtualizadoSubscription?: Subscription;
