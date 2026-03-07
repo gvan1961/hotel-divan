@@ -174,7 +174,8 @@ public class ControleDiariaService {
      */
     public List<ControleDiaria> buscarDiariasParaFechar() {
         LocalDateTime agora = LocalDateTime.now();
-        return controleDiariaRepository.findDiariasParaFechar(agora);
+        LocalDateTime limite36h = agora.minusHours(36); // só busca últimas 36 horas
+        return controleDiariaRepository.findDiariasParaFechar(agora, limite36h);
     }
     
     /**
