@@ -9,6 +9,9 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class DiariaRequestDTO {
     
     @NotNull(message = "Tipo de apartamento é obrigatório")
@@ -21,29 +24,4 @@ public class DiariaRequestDTO {
     @DecimalMin(value = "0.01", message = "Valor deve ser maior que zero")
     @NotNull(message = "Valor é obrigatório")
     private BigDecimal valor;
-
-	public Long getTipoApartamentoId() {
-		return tipoApartamentoId;
-	}
-
-	public void setTipoApartamentoId(Long tipoApartamentoId) {
-		this.tipoApartamentoId = tipoApartamentoId;
-	}
-
-	public Integer getQuantidade() {
-		return quantidade;
-	}
-
-	public void setQuantidade(Integer quantidade) {
-		this.quantidade = quantidade;
-	}
-
-	public BigDecimal getValor() {
-		return valor;
-	}
-
-	public void setValor(BigDecimal valor) {
-		this.valor = valor;
-	}    
-    
 }

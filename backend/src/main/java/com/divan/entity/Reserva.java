@@ -5,7 +5,9 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -82,12 +84,11 @@ public class Reserva {
     private BigDecimal desconto = BigDecimal.ZERO;
     
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal totalApagar = BigDecimal.ZERO;    
-       
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 20, nullable = false)
-    private StatusReservaEnum status;
+    private BigDecimal totalApagar = BigDecimal.ZERO;
     
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private StatusReservaEnum status = StatusReservaEnum.ATIVA;
     
     @OneToMany(mappedBy = "reserva", cascade = CascadeType.ALL)
     @JsonIgnoreProperties("reserva")
@@ -99,133 +100,205 @@ public class Reserva {
     
     @OneToMany(mappedBy = "reserva", cascade = CascadeType.ALL)
     @JsonIgnoreProperties("reserva")
-    private List<NotaVenda> notasVenda;     
-         
-    public enum StatusReservaEnum {
-        ATIVA, CANCELADA, FINALIZADA, PRE_RESERVA
-    }
+    private List<NotaVenda> notasVenda;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reserva_pagante_id")
+    private Reserva reservaPagante; // ✅ reserva responsável pelo pagamento
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "responsavel_pagamento_id")
+    @JsonIgnoreProperties({"reservas", "empresa"})
+    private Cliente responsavelPagamento;
 
+
+    @Column(name = "numero_apartamento_responsavel", length = 20)
+    private String numeroApartamentoResponsavel;
+    
+    @Column(name = "assinatura_base64", columnDefinition = "LONGTEXT")
+    private String assinaturaBase64;
     
     
-	public Long getId() {
+    
+    public Long getId() {
 		return id;
 	}
+
+
 
 	public void setId(Long id) {
 		this.id = id;
 	}
 
+
+
 	public Apartamento getApartamento() {
 		return apartamento;
 	}
+
+
 
 	public void setApartamento(Apartamento apartamento) {
 		this.apartamento = apartamento;
 	}
 
+
+
 	public Cliente getCliente() {
 		return cliente;
 	}
+
+
 
 	public void setCliente(Cliente cliente) {
 		this.cliente = cliente;
 	}
 
+
+
 	public Integer getQuantidadeHospede() {
 		return quantidadeHospede;
 	}
+
+
 
 	public void setQuantidadeHospede(Integer quantidadeHospede) {
 		this.quantidadeHospede = quantidadeHospede;
 	}
 
+
+
 	public Diaria getDiaria() {
 		return diaria;
 	}
+
+
 
 	public void setDiaria(Diaria diaria) {
 		this.diaria = diaria;
 	}
 
+
+
 	public LocalDateTime getDataCheckin() {
 		return dataCheckin;
 	}
+
+
 
 	public void setDataCheckin(LocalDateTime dataCheckin) {
 		this.dataCheckin = dataCheckin;
 	}
 
+
+
 	public LocalDateTime getDataCheckout() {
 		return dataCheckout;
 	}
+
+
 
 	public void setDataCheckout(LocalDateTime dataCheckout) {
 		this.dataCheckout = dataCheckout;
 	}
 
+
+
 	public LocalDateTime getDataCheckoutReal() {
 		return dataCheckoutReal;
 	}
+
+
 
 	public void setDataCheckoutReal(LocalDateTime dataCheckoutReal) {
 		this.dataCheckoutReal = dataCheckoutReal;
 	}
 
+
+
 	public Integer getQuantidadeDiaria() {
 		return quantidadeDiaria;
 	}
+
+
 
 	public void setQuantidadeDiaria(Integer quantidadeDiaria) {
 		this.quantidadeDiaria = quantidadeDiaria;
 	}
 
+
+
 	public BigDecimal getTotalDiaria() {
 		return totalDiaria;
 	}
+
+
 
 	public void setTotalDiaria(BigDecimal totalDiaria) {
 		this.totalDiaria = totalDiaria;
 	}
 
+
+
 	public BigDecimal getTotalProduto() {
 		return totalProduto;
 	}
+
+
 
 	public void setTotalProduto(BigDecimal totalProduto) {
 		this.totalProduto = totalProduto;
 	}
 
+
+
 	public String getObservacoes() {
 		return observacoes;
 	}
+
+
 
 	public void setObservacoes(String observacoes) {
 		this.observacoes = observacoes;
 	}
 
+
+
 	public BigDecimal getTotalHospedagem() {
 		return totalHospedagem;
 	}
+
+
 
 	public void setTotalHospedagem(BigDecimal totalHospedagem) {
 		this.totalHospedagem = totalHospedagem;
 	}
 
+
+
 	public BigDecimal getTotalRecebido() {
 		return totalRecebido;
 	}
+
+
 
 	public void setTotalRecebido(BigDecimal totalRecebido) {
 		this.totalRecebido = totalRecebido;
 	}
 
+
+
 	public BigDecimal getDesconto() {
 		return desconto;
 	}
 
+
+
 	public void setDesconto(BigDecimal desconto) {
 		this.desconto = desconto;
 	}
+
+
 
 	public BigDecimal getTotalApagar() {
 		return totalApagar;
@@ -265,13 +338,45 @@ public class Reserva {
 
 	public void setNotasVenda(List<NotaVenda> notasVenda) {
 		this.notasVenda = notasVenda;
-		}
-	
-	
+	}
+
+	public String getAssinaturaBase64() {
+		return assinaturaBase64;
+	}
+
+	public void setAssinaturaBase64(String assinaturaBase64) {
+		this.assinaturaBase64 = assinaturaBase64;
+	}		   
+
+	public Reserva getReservaPagante() {
+		return reservaPagante;
+	}
+
+	public void setReservaPagante(Reserva reservaPagante) {
+		this.reservaPagante = reservaPagante;
+	}
+
+	public Cliente getResponsavelPagamento() {
+		return responsavelPagamento;
+	}
+
+	public void setResponsavelPagamento(Cliente responsavelPagamento) {
+		this.responsavelPagamento = responsavelPagamento;
+	}
+
+	public String getNumeroApartamentoResponsavel() {
+		return numeroApartamentoResponsavel;
+	}
+
+	public void setNumeroApartamentoResponsavel(String numeroApartamentoResponsavel) {
+		this.numeroApartamentoResponsavel = numeroApartamentoResponsavel;
+	}
+
 	@Override
 	public int hashCode() {
 		return Objects.hash(id);
 	}
+
 
 	@Override
 	public boolean equals(Object obj) {
@@ -284,9 +389,10 @@ public class Reserva {
 		Reserva other = (Reserva) obj;
 		return Objects.equals(id, other.id);
 	}
-    
-	
-    
+
+	public enum StatusReservaEnum {
+        ATIVA, CANCELADA, FINALIZADA, PRE_RESERVA
+    }
 }
 
 

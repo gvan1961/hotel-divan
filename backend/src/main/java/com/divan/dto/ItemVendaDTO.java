@@ -9,6 +9,9 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ItemVendaDTO {
     
     private Long id;
@@ -26,54 +29,4 @@ public class ItemVendaDTO {
     
     @DecimalMin(value = "0.01", message = "Total do item deve ser maior que zero")
     private BigDecimal totalItem;
-
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public Long getProdutoId() {
-		return produtoId;
-	}
-
-	public void setProdutoId(Long produtoId) {
-		this.produtoId = produtoId;
-	}
-
-	public String getProdutoNome() {
-		return produtoNome;
-	}
-
-	public void setProdutoNome(String produtoNome) {
-		this.produtoNome = produtoNome;
-	}
-
-	public Integer getQuantidade() {
-		return quantidade;
-	}
-
-	public void setQuantidade(Integer quantidade) {
-		this.quantidade = quantidade;
-	}
-
-	public BigDecimal getValorUnitario() {
-		return valorUnitario;
-	}
-
-	public void setValorUnitario(BigDecimal valorUnitario) {
-		this.valorUnitario = valorUnitario;
-	}
-
-	public BigDecimal getTotalItem() {
-		return totalItem;
-	}
-
-	public void setTotalItem(BigDecimal totalItem) {
-		this.totalItem = totalItem;
-	}
-    
-    
 }

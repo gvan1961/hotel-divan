@@ -66,27 +66,6 @@ public class ProdutoController {
         return ResponseEntity.ok(produtos);
     }
     
-    /**
-     * 🍽️ BUSCAR PRODUTOS POR CATEGORIA (PARA JANTAR)
-     */
-    @GetMapping("/categoria/{categoriaId}")
-    public ResponseEntity<List<Produto>> buscarPorCategoria(@PathVariable Long categoriaId) {
-        try {
-            System.out.println("🔍 Buscando produtos da categoria: " + categoriaId);
-            
-            List<Produto> produtos = produtoService.buscarPorCategoria(categoriaId);
-            
-            System.out.println("✅ Encontrados " + produtos.size() + " produtos");
-            
-            return ResponseEntity.ok(produtos);
-            
-        } catch (Exception e) {
-            System.err.println("❌ Erro ao buscar produtos por categoria: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
     @PutMapping("/{id}")
     public ResponseEntity<Produto> atualizar(@PathVariable Long id, @Valid @RequestBody ProdutoRequestDTO dto) {
         System.out.println("📥 Recebendo requisição para atualizar produto: " + id);

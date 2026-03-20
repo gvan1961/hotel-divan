@@ -7,6 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.validator.constraints.br.CNPJ;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class EmpresaDTO {
     
     private Long id;
@@ -22,45 +25,4 @@ public class EmpresaDTO {
     
     @Pattern(regexp = "\\(\\d{2}\\)\\s\\d{4,5}-\\d{4}", message = "Celular deve estar no formato (XX) XXXXX-XXXX")
     private String celular;
-
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public String getNomeEmpresa() {
-		return nomeEmpresa;
-	}
-
-	public void setNomeEmpresa(String nomeEmpresa) {
-		this.nomeEmpresa = nomeEmpresa;
-	}
-
-	public String getCnpj() {
-		return cnpj;
-	}
-
-	public void setCnpj(String cnpj) {
-		this.cnpj = cnpj;
-	}
-
-	public String getContato() {
-		return contato;
-	}
-
-	public void setContato(String contato) {
-		this.contato = contato;
-	}
-
-	public String getCelular() {
-		return celular;
-	}
-
-	public void setCelular(String celular) {
-		this.celular = celular;
-	}
-    
-    }
+}

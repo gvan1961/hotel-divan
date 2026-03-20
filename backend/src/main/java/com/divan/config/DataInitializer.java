@@ -198,7 +198,7 @@ public class DataInitializer implements CommandLineRunner {
             admin.setNome("Administrador");
             admin.setUsername("admin");
             admin.setEmail("admin@divan.com");
-            admin.setPassword(passwordEncoder.encode("123456"));
+            admin.setPassword(passwordEncoder.encode("admin123"));
             admin.setAtivo(true);
             
             Perfil perfilAdmin = perfilRepository.findByNome("ADMIN").orElse(null);
@@ -210,7 +210,7 @@ public class DataInitializer implements CommandLineRunner {
             }
             
             usuarioRepository.save(admin);
-            System.out.println("✓ Usuário admin criado - Username: admin | Senha: 123456");
+            System.out.println("✓ Usuário admin criado - Username: admin | Senha: admin123");
         }
     }
 }

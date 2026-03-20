@@ -6,8 +6,8 @@ import com.divan.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
-import com.divan.enums.FormaPagamento;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -117,18 +117,18 @@ public class RelatorioService {
         
         // Pagamentos por forma
         List<Pagamento> pagamentos = pagamentoRepository.findPagamentosPorPeriodo(inicio, fim);
-        Map<FormaPagamento, BigDecimal> pagamentosPorForma = pagamentos.stream()
+        Map<Pagamento.FormaPagamentoEnum, BigDecimal> pagamentosPorForma = pagamentos.stream()
             .collect(Collectors.groupingBy(
                 Pagamento::getFormaPagamento,
                 Collectors.reducing(BigDecimal.ZERO, Pagamento::getValor, BigDecimal::add)
             ));
-
-        relatorio.setPagamentoDinheiro(pagamentosPorForma.getOrDefault(FormaPagamento.DINHEIRO, BigDecimal.ZERO));
-        relatorio.setPagamentoPix(pagamentosPorForma.getOrDefault(FormaPagamento.PIX, BigDecimal.ZERO));
-        relatorio.setPagamentoCartaoDebito(pagamentosPorForma.getOrDefault(FormaPagamento.CARTAO_DEBITO, BigDecimal.ZERO));
-        relatorio.setPagamentoCartaoCredito(pagamentosPorForma.getOrDefault(FormaPagamento.CARTAO_CREDITO, BigDecimal.ZERO));
-        relatorio.setPagamentoTransferencia(pagamentosPorForma.getOrDefault(FormaPagamento.TRANSFERENCIA, BigDecimal.ZERO));
-        relatorio.setPagamentoFaturado(pagamentosPorForma.getOrDefault(FormaPagamento.FATURADO, BigDecimal.ZERO));
+        
+        relatorio.setPagamentoDinheiro(pagamentosPorForma.getOrDefault(Pagamento.FormaPagamentoEnum.DINHEIRO, BigDecimal.ZERO));
+        relatorio.setPagamentoPix(pagamentosPorForma.getOrDefault(Pagamento.FormaPagamentoEnum.PIX, BigDecimal.ZERO));
+        relatorio.setPagamentoCartaoDebito(pagamentosPorForma.getOrDefault(Pagamento.FormaPagamentoEnum.CARTAO_DEBITO, BigDecimal.ZERO));
+        relatorio.setPagamentoCartaoCredito(pagamentosPorForma.getOrDefault(Pagamento.FormaPagamentoEnum.CARTAO_CREDITO, BigDecimal.ZERO));
+        relatorio.setPagamentoTransferencia(pagamentosPorForma.getOrDefault(Pagamento.FormaPagamentoEnum.TRANSFERENCIA_BANCARIA, BigDecimal.ZERO));
+        relatorio.setPagamentoFaturado(pagamentosPorForma.getOrDefault(Pagamento.FormaPagamentoEnum.FATURADO, BigDecimal.ZERO));
         
         // Estatísticas
         long checkIns = reservas.stream()
@@ -294,7 +294,7 @@ public class RelatorioService {
         RelatorioFaturamentoDTO faturamentoMes = gerarRelatorioFaturamento(primeiroDiaMes, hoje);
         dashboard.setReceitaMes(faturamentoMes.getReceitaTotal());
         
-        List<Pagamento> pagamentosHoje = pagamentoRepository.findPagamentosDoDia(hoje);
+        List<Pagamento> pagamentosHoje = pagamentoRepository.findPagamentosDoDia(hoje.atStartOfDay());
         BigDecimal pagamentosRecebidos = pagamentosHoje.stream()
             .map(Pagamento::getValor)
             .reduce(BigDecimal.ZERO, BigDecimal::add);

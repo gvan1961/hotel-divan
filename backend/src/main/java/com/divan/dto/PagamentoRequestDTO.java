@@ -1,55 +1,28 @@
 package com.divan.dto;
 
-import com.divan.enums.FormaPagamento;
+import com.divan.entity.Pagamento;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class PagamentoRequestDTO {
-
+    
     @NotNull(message = "Reserva é obrigatória")
     private Long reservaId;
-
+    
     @DecimalMin(value = "0.01", message = "Valor deve ser maior que zero")
     @NotNull(message = "Valor é obrigatório")
     private BigDecimal valor;
-
+    
     @NotNull(message = "Forma de pagamento é obrigatória")
-    private FormaPagamento formaPagamento;
-
+    private Pagamento.FormaPagamentoEnum formaPagamento;
+    
     private String observacao;
-
-    // GETTERS E SETTERS
-
-    public Long getReservaId() {
-        return reservaId;
-    }
-
-    public void setReservaId(Long reservaId) {
-        this.reservaId = reservaId;
-    }
-
-    public BigDecimal getValor() {
-        return valor;
-    }
-
-    public void setValor(BigDecimal valor) {
-        this.valor = valor;
-    }
-
-    public FormaPagamento getFormaPagamento() {
-        return formaPagamento;
-    }
-
-    public void setFormaPagamento(FormaPagamento formaPagamento) {
-        this.formaPagamento = formaPagamento;
-    }
-
-    public String getObservacao() {
-        return observacao;
-    }
-
-    public void setObservacao(String observacao) {
-        this.observacao = observacao;
-    }
 }

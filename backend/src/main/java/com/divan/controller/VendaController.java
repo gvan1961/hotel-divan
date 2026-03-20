@@ -1,26 +1,15 @@
 package com.divan.controller;
 
-import com.divan.dto.ComandaConsumoRequest;
-import com.divan.dto.ComandaConsumoResponse;
-import com.divan.dto.ItemVendaRequestDTO;
-import com.divan.dto.ValeResponse;
-import com.divan.dto.VendaBalcaoRequest;
-import com.divan.dto.VendaBalcaoResponse;
-import com.divan.dto.VendaReservaRequestDTO;
-import com.divan.entity.ItemVenda;
-import com.divan.entity.NotaVenda;
-import com.divan.entity.Produto;
-import com.divan.entity.Vale;
+import com.divan.entity.*;
+import com.divan.repository.*;
 import com.divan.service.VendaService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,130 +18,238 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class VendaController {
 
-    @Autowired
-    private VendaService vendaService;
+    @Autowired private ReservaRepository reservaRepository;
+    @Autowired private ClienteRepository clienteRepository;
+    @Autowired private ProdutoRepository produtoRepository;
+    @Autowired private NotaVendaRepository notaVendaRepository;
+    @Autowired private ItemVendaRepository itemVendaRepository;
+    @Autowired private ExtratoReservaRepository extratoReservaRepository;
+    @Autowired private VendaService vendaService;
 
     @GetMapping("/teste")
     public ResponseEntity<String> teste() {
         return ResponseEntity.ok("VendaController funcionando!");
     }
 
-    @PostMapping("/reserva")
-    public ResponseEntity<?> adicionarVendaParaReserva(@Valid @RequestBody VendaReservaRequestDTO dto) {
+    // ─── COMANDA APARTAMENTO ───────────────────────────────
+    @SuppressWarnings("unchecked")
+    @PostMapping("/comanda-consumo")
+    public ResponseEntity<?> comandaConsumo(@RequestBody Map<String, Object> body) {
         try {
-            List<ItemVenda> itens = new ArrayList<>();
+            Long reservaId = Long.parseLong(body.get("reservaId").toString());
+            String observacao = body.containsKey("observacao") && body.get("observacao") != null
+                ? body.get("observacao").toString() : "";
+            List<Map<String, Object>> itens = (List<Map<String, Object>>) body.get("itens");
 
-            for (ItemVendaRequestDTO itemDto : dto.getItens()) {
-                ItemVenda item = new ItemVenda();
-                Produto produto = new Produto();
-                produto.setId(itemDto.getProdutoId());
-                item.setProduto(produto);
-                item.setQuantidade(itemDto.getQuantidade());
-                itens.add(item);
+            Reserva reserva = reservaRepository.findById(reservaId)
+                .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+
+            if (reserva.getStatus() != Reserva.StatusReservaEnum.ATIVA)
+                throw new RuntimeException("Reserva não está ativa");
+
+            BigDecimal totalNota = BigDecimal.ZERO;
+
+            NotaVenda nota = new NotaVenda();
+            nota.setReserva(reserva);
+            nota.setDataHoraVenda(LocalDateTime.now());
+            nota.setTipoVenda(NotaVenda.TipoVendaEnum.APARTAMENTO);
+            nota.setStatus(NotaVenda.Status.FECHADA);
+            nota.setObservacao("PDV - " + (observacao.isBlank() ? "Consumo apartamento" : observacao));
+            nota.setTotal(BigDecimal.ZERO);
+            nota.setItens(new ArrayList<>());
+            notaVendaRepository.save(nota);
+
+            for (Map<String, Object> itemMap : itens) {
+                Long produtoId = Long.parseLong(itemMap.get("produtoId").toString());
+                int quantidade = Integer.parseInt(itemMap.get("quantidade").toString());
+                BigDecimal valorUnitario = new BigDecimal(itemMap.get("valorUnitario").toString());
+
+                Produto produto = produtoRepository.findById(produtoId)
+                    .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + produtoId));
+
+                if (produto.getQuantidade() < quantidade)
+                    throw new RuntimeException("Estoque insuficiente para: " + produto.getNomeProduto());
+
+                BigDecimal totalItem = valorUnitario.multiply(BigDecimal.valueOf(quantidade));
+
+                ItemVenda itemVenda = new ItemVenda();
+                itemVenda.setNotaVenda(nota);
+                itemVenda.setProduto(produto);
+                itemVenda.setQuantidade(quantidade);
+                itemVenda.setValorUnitario(valorUnitario);
+                itemVenda.setTotalItem(totalItem);
+                itemVendaRepository.save(itemVenda);
+
+                produto.setQuantidade(produto.getQuantidade() - quantidade);
+                produtoRepository.save(produto);
+
+                totalNota = totalNota.add(totalItem);
+
+                ExtratoReserva extrato = new ExtratoReserva();
+                extrato.setReserva(reserva);
+                extrato.setDataHoraLancamento(LocalDateTime.now());
+                extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.PRODUTO);
+                extrato.setDescricao("Consumo: " + produto.getNomeProduto());
+                extrato.setQuantidade(quantidade);
+                extrato.setValorUnitario(valorUnitario);
+                extrato.setTotalLancamento(totalItem);
+                extrato.setNotaVendaId(nota.getId());
+                extratoReservaRepository.save(extrato);
             }
 
-            NotaVenda vendaProcessada = vendaService.adicionarVendaParaReserva(dto.getReservaId(), itens);
-            return ResponseEntity.status(HttpStatus.CREATED).body(vendaProcessada);
+            nota.setTotal(totalNota);
+            notaVendaRepository.save(nota);
 
+            reserva.setTotalProduto(reserva.getTotalProduto().add(totalNota));
+            reserva.setTotalHospedagem(reserva.getTotalHospedagem().add(totalNota));
+            reserva.setTotalApagar(reserva.getTotalApagar().add(totalNota));
+            reservaRepository.save(reserva);
+
+            return ResponseEntity.ok(Map.of(
+                "notaVendaId", nota.getId(),
+                "total", totalNota,
+                "mensagem", "Comanda registrada com sucesso"
+            ));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
 
-    /**
-     * 💵 Realizar venda à vista (balcão)
-     */
+    // ─── VENDA À VISTA (PDV BALCÃO) ────────────────────────
+    @SuppressWarnings("unchecked")
     @PostMapping("/a-vista")
-    public ResponseEntity<?> vendaAVista(@Valid @RequestBody VendaBalcaoRequest request) {
+    public ResponseEntity<?> vendaAVista(@RequestBody Map<String, Object> body) {
         try {
-            System.out.println("═══════════════════════════════════════════");
-            System.out.println("🔵 API - Recebida requisição de venda à vista");
-            System.out.println("   Itens: " + request.getItens().size());
-            System.out.println("   Forma pagamento: " + request.getFormaPagamento());
-            System.out.println("═══════════════════════════════════════════");
-            
-            // ✅ BUSCAR USUÁRIO DO REQUEST OU USAR PADRÃO
-            Long usuarioId = request.getUsuarioId() != null ? request.getUsuarioId() : 1L;
-            
-            VendaBalcaoResponse response = vendaService.realizarVendaAVista(request, usuarioId);
-            
-            System.out.println("✅ Venda à vista processada com sucesso!");
-            System.out.println("   Nota #" + response.getNotaVendaId());
-            System.out.println("═══════════════════════════════════════════");
-            
-            return ResponseEntity.ok(response);
-            
+            String formaPagamentoStr = body.get("formaPagamento").toString();
+            String observacao = body.containsKey("observacao") && body.get("observacao") != null
+                ? body.get("observacao").toString() : "";
+            List<Map<String, Object>> itens = (List<Map<String, Object>>) body.get("itens");
+
+            // ✅ Converter string para enum
+            NotaVenda.FormaPagamentoEnum formaPagamento =
+                NotaVenda.FormaPagamentoEnum.valueOf(formaPagamentoStr);
+
+            BigDecimal totalNota = BigDecimal.ZERO;
+
+            NotaVenda nota = new NotaVenda();
+            nota.setDataHoraVenda(LocalDateTime.now());
+            nota.setTipoVenda(NotaVenda.TipoVendaEnum.VISTA);
+            nota.setFormaPagamento(formaPagamento); // ✅ SALVAR FORMA DE PAGAMENTO
+            nota.setStatus(NotaVenda.Status.FECHADA);
+            nota.setObservacao("PDV À Vista - " + formaPagamentoStr +
+                (observacao.isBlank() ? "" : " - " + observacao));
+            nota.setTotal(BigDecimal.ZERO);
+            nota.setItens(new ArrayList<>());
+            notaVendaRepository.save(nota);
+
+            for (Map<String, Object> itemMap : itens) {
+                Long produtoId = Long.parseLong(itemMap.get("produtoId").toString());
+                int quantidade = Integer.parseInt(itemMap.get("quantidade").toString());
+                BigDecimal valorUnitario = new BigDecimal(itemMap.get("valorUnitario").toString());
+
+                Produto produto = produtoRepository.findById(produtoId)
+                    .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + produtoId));
+
+                if (produto.getQuantidade() < quantidade)
+                    throw new RuntimeException("Estoque insuficiente para: " + produto.getNomeProduto());
+
+                BigDecimal totalItem = valorUnitario.multiply(BigDecimal.valueOf(quantidade));
+
+                ItemVenda itemVenda = new ItemVenda();
+                itemVenda.setNotaVenda(nota);
+                itemVenda.setProduto(produto);
+                itemVenda.setQuantidade(quantidade);
+                itemVenda.setValorUnitario(valorUnitario);
+                itemVenda.setTotalItem(totalItem);
+                itemVendaRepository.save(itemVenda);
+
+                produto.setQuantidade(produto.getQuantidade() - quantidade);
+                produtoRepository.save(produto);
+
+                totalNota = totalNota.add(totalItem);
+            }
+
+            nota.setTotal(totalNota);
+            notaVendaRepository.save(nota);
+
+            return ResponseEntity.ok(Map.of(
+                "notaVendaId", nota.getId(),
+                "total", totalNota,
+                "mensagem", "Venda à vista realizada com sucesso"
+            ));
         } catch (Exception e) {
-            System.err.println("❌ Erro na venda à vista: " + e.getMessage());
             e.printStackTrace();
-            
-            Map<String, String> erro = new HashMap<>();
-            erro.put("erro", e.getMessage());
-            return ResponseEntity.badRequest().body(erro);
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
-    
-    /**
-     * 💳 Realizar venda faturada (a prazo)
-     */
+
+    // ─── VENDA FATURADA (PDV CRÉDITO) ──────────────────────
+    @SuppressWarnings("unchecked")
     @PostMapping("/faturada")
-    public ResponseEntity<?> vendaFaturada(
-            @Valid @RequestBody VendaBalcaoRequest request,
-            @RequestParam Long usuarioId  // ✅ ADICIONAR ESTE PARÂMETRO
-    ) {
+    public ResponseEntity<?> vendaFaturada(@RequestBody Map<String, Object> body,
+                                            @RequestParam(required = false) Long usuarioId) {
         try {
-            System.out.println("═══════════════════════════════════════════");
-            System.out.println("🔵 API - Recebida requisição de venda faturada");
-            System.out.println("   Itens: " + request.getItens().size());
-            System.out.println("   Cliente ID: " + request.getClienteId());
-            System.out.println("   Usuário ID: " + usuarioId);  // ✅ ADICIONAR LOG
-            System.out.println("═══════════════════════════════════════════");
+            Long clienteId = Long.parseLong(body.get("clienteId").toString());
+            String observacao = body.containsKey("observacao") && body.get("observacao") != null
+                ? body.get("observacao").toString() : "";
+            List<Map<String, Object>> itens = (List<Map<String, Object>>) body.get("itens");
 
-            VendaBalcaoResponse response = vendaService.realizarVendaFaturada(request, usuarioId);  // ✅ PASSAR O USUÁRIO
+            Cliente cliente = clienteRepository.findById(clienteId)
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
 
-            System.out.println("✅ Venda faturada processada com sucesso!");
-            System.out.println("   Nota #" + response.getNotaVendaId());
-            System.out.println("   Cliente: " + response.getClienteNome());
-            System.out.println("═══════════════════════════════════════════");
+            BigDecimal totalNota = BigDecimal.ZERO;
 
-            return ResponseEntity.ok(response);
+            NotaVenda nota = new NotaVenda();
+            nota.setDataHoraVenda(LocalDateTime.now());
+            nota.setTipoVenda(NotaVenda.TipoVendaEnum.FATURADO); // ✅ CORRIGIDO (era VISTA)
+            nota.setFormaPagamento(NotaVenda.FormaPagamentoEnum.FATURADO); // ✅ SALVAR FORMA
+            nota.setStatus(NotaVenda.Status.FECHADA);
+            nota.setObservacao("PDV Faturado - " + cliente.getNome() +
+                (observacao.isBlank() ? "" : " - " + observacao));
+            nota.setTotal(BigDecimal.ZERO);
+            nota.setItens(new ArrayList<>());
+            notaVendaRepository.save(nota);
 
+            for (Map<String, Object> itemMap : itens) {
+                Long produtoId = Long.parseLong(itemMap.get("produtoId").toString());
+                int quantidade = Integer.parseInt(itemMap.get("quantidade").toString());
+                BigDecimal valorUnitario = new BigDecimal(itemMap.get("valorUnitario").toString());
+
+                Produto produto = produtoRepository.findById(produtoId)
+                    .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + produtoId));
+
+                if (produto.getQuantidade() < quantidade)
+                    throw new RuntimeException("Estoque insuficiente para: " + produto.getNomeProduto());
+
+                BigDecimal totalItem = valorUnitario.multiply(BigDecimal.valueOf(quantidade));
+
+                ItemVenda itemVenda = new ItemVenda();
+                itemVenda.setNotaVenda(nota);
+                itemVenda.setProduto(produto);
+                itemVenda.setQuantidade(quantidade);
+                itemVenda.setValorUnitario(valorUnitario);
+                itemVenda.setTotalItem(totalItem);
+                itemVendaRepository.save(itemVenda);
+
+                produto.setQuantidade(produto.getQuantidade() - quantidade);
+                produtoRepository.save(produto);
+
+                totalNota = totalNota.add(totalItem);
+            }
+
+            nota.setTotal(totalNota);
+            notaVendaRepository.save(nota);
+
+            return ResponseEntity.ok(Map.of(
+                "notaVendaId", nota.getId(),
+                "total", totalNota,
+                "clienteNome", cliente.getNome(),
+                "mensagem", "Venda faturada registrada com sucesso"
+            ));
         } catch (Exception e) {
-            System.err.println("❌ Erro na venda faturada: " + e.getMessage());
             e.printStackTrace();
-
-            Map<String, String> erro = new HashMap<>();
-            erro.put("erro", e.getMessage());
-            return ResponseEntity.badRequest().body(erro);
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
-    
-    @PostMapping("/comanda-consumo")
-    public ResponseEntity<?> adicionarComandaConsumo(@RequestBody ComandaConsumoRequest request) {
-        try {
-            System.out.println("═══════════════════════════════════════════");
-            System.out.println("🔵 API - Recebida comanda de consumo");
-            System.out.println("   Reserva ID: " + request.getReservaId());
-            System.out.println("   Itens: " + request.getItens().size());
-            System.out.println("═══════════════════════════════════════════");
-            
-            ComandaConsumoResponse response = vendaService.adicionarComandaConsumo(request);
-            
-            System.out.println("✅ Comanda processada com sucesso!");
-            System.out.println("   Nota #" + response.getNotaVendaId());
-            System.out.println("   Apartamento: " + response.getNumeroApartamento());
-            System.out.println("═══════════════════════════════════════════");
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            System.err.println("❌ Erro na comanda de consumo: " + e.getMessage());
-            e.printStackTrace();
-            
-            Map<String, String> erro = new HashMap<>();
-            erro.put("erro", e.getMessage());
-            return ResponseEntity.badRequest().body(erro);
-        }
-    }
-    
 }

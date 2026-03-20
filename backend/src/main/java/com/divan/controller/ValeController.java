@@ -1,109 +1,146 @@
 package com.divan.controller;
 
-import com.divan.dto.ValeRequest;
-import com.divan.dto.ValeResponse;
+import com.divan.entity.Cliente;
 import com.divan.entity.Vale;
+import com.divan.entity.Vale.StatusVale;
+import com.divan.repository.ClienteRepository;
 import com.divan.repository.ValeRepository;
-import com.divan.service.ValeService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/vales")
-@RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class ValeController {
 
-    private final ValeService valeService;
-    private final ValeRepository valeRepository;  // ⭐ ADICIONAR ESTA LINHA
+    @Autowired
+    private ValeRepository valeRepository;
+
+    @Autowired
+    private ClienteRepository clienteRepository;
 
     @GetMapping
-    public ResponseEntity<List<ValeResponse>> listarTodas() {
-        return ResponseEntity.ok(valeService.listarTodas());
+    public ResponseEntity<List<Vale>> listarTodos() {
+        return ResponseEntity.ok(valeRepository.findAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ValeResponse> buscarPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(valeService.buscarPorId(id));
+    public ResponseEntity<?> buscarPorId(@PathVariable Long id) {
+        return valeRepository.findById(id)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/cliente/{clienteId}")
-    public ResponseEntity<List<ValeResponse>> listarPorCliente(@PathVariable Long clienteId) {
-        return ResponseEntity.ok(valeService.listarPorCliente(clienteId));
+    public ResponseEntity<List<Vale>> listarPorCliente(@PathVariable Long clienteId) {
+        return ResponseEntity.ok(valeRepository.findByClienteId(clienteId));
     }
 
     @GetMapping("/pendentes")
-    public ResponseEntity<List<ValeResponse>> listarPendentes() {
-        return ResponseEntity.ok(valeService.listarValesPendentes());
+    public ResponseEntity<List<Vale>> listarPendentes() {
+        return ResponseEntity.ok(valeRepository.findByStatus(StatusVale.PENDENTE));
     }
 
     @GetMapping("/vencidos")
-    public ResponseEntity<List<ValeResponse>> listarVencidos() {
-        return ResponseEntity.ok(valeService.listarValesVencidos());
+    public ResponseEntity<List<Vale>> listarVencidos() {
+        return ResponseEntity.ok(valeRepository.findVencidos());
     }
 
     @GetMapping("/cliente/{clienteId}/total-pendente")
     public ResponseEntity<Map<String, BigDecimal>> calcularTotalPendente(@PathVariable Long clienteId) {
-        BigDecimal total = valeService.calcularTotalPendentePorCliente(clienteId);
+        BigDecimal total = valeRepository.calcularTotalPendentePorCliente(clienteId);
         return ResponseEntity.ok(Map.of("totalPendente", total));
     }
 
     @PostMapping
-    public ResponseEntity<ValeResponse> criar(@RequestBody ValeRequest request) {
-        ValeResponse response = valeService.criar(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    public ResponseEntity<?> criar(@RequestBody Map<String, Object> body) {
+        try {
+            Vale vale = new Vale();
+            preencherVale(vale, body);
+            vale.setDataEmissao(LocalDateTime.now());
+            vale.setStatus(StatusVale.PENDENTE);
+            return ResponseEntity.ok(valeRepository.save(vale));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ValeResponse> atualizar(@PathVariable Long id, @RequestBody ValeRequest request) {
-        return ResponseEntity.ok(valeService.atualizar(id, request));
+    public ResponseEntity<?> atualizar(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        return valeRepository.findById(id).map(vale -> {
+            try {
+                preencherVale(vale, body);
+                return ResponseEntity.ok(valeRepository.save(vale));
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+            }
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @PatchMapping("/{id}/pagar")
-    public ResponseEntity<ValeResponse> marcarComoPago(@PathVariable Long id) {
-        return ResponseEntity.ok(valeService.marcarComoPago(id));
+    public ResponseEntity<?> marcarComoPago(@PathVariable Long id) {
+        return valeRepository.findById(id).map(vale -> {
+            vale.setStatus(StatusVale.PAGO);
+            vale.setDataPagamento(LocalDateTime.now());
+            return ResponseEntity.ok(valeRepository.save(vale));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @PatchMapping("/{id}/cancelar")
-    public ResponseEntity<ValeResponse> cancelar(@PathVariable Long id, @RequestParam String motivo) {
-        return ResponseEntity.ok(valeService.cancelar(id, motivo));
+    public ResponseEntity<?> cancelar(@PathVariable Long id,
+                                       @RequestParam String motivo) {
+        return valeRepository.findById(id).map(vale -> {
+            vale.setStatus(StatusVale.CANCELADO);
+            vale.setMotivoCancelamento(motivo);
+            return ResponseEntity.ok(valeRepository.save(vale));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}/assinar")
+    public ResponseEntity<?> assinar(@PathVariable Long id,
+                                      @RequestBody Map<String, Object> body) {
+        return valeRepository.findById(id).map(vale -> {
+            vale.setAssinaturaBase64(body.get("assinaturaBase64").toString());
+            return ResponseEntity.ok(valeRepository.save(vale));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(@PathVariable Long id) {
-        valeService.excluir(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> excluir(@PathVariable Long id) {
+        if (!valeRepository.existsById(id)) return ResponseEntity.notFound().build();
+        valeRepository.deleteById(id);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/atualizar-vencidos")
     public ResponseEntity<Map<String, String>> atualizarVencidos() {
-        valeService.atualizarValesVencidos();
-        return ResponseEntity.ok(Map.of("mensagem", "Vales vencidos atualizados com sucesso"));
+        List<Vale> vencidos = valeRepository.findVencidos();
+        vencidos.forEach(v -> v.setStatus(StatusVale.VENCIDO));
+        valeRepository.saveAll(vencidos);
+        return ResponseEntity.ok(Map.of("mensagem",
+            vencidos.size() + " vale(s) marcado(s) como vencido(s)"));
     }
 
-    // ⭐ ADICIONAR ESTE MÉTODO
-    @PatchMapping("/{id}/assinar")
-    public ResponseEntity<ValeResponse> assinar(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        String assinaturaBase64 = body.get("assinaturaBase64");
-        
-        if (assinaturaBase64 == null || assinaturaBase64.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-        
-        Vale vale = valeRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Vale não encontrado"));
-        
-        vale.setAssinaturaBase64(assinaturaBase64);
-        vale.setDataAssinatura(LocalDateTime.now());
-        
-        Vale atualizado = valeRepository.save(vale);
-        return ResponseEntity.ok(ValeResponse.fromEntity(atualizado));
+    private void preencherVale(Vale vale, Map<String, Object> body) {
+        Long clienteId = Long.parseLong(body.get("clienteId").toString());
+        Cliente cliente = clienteRepository.findById(clienteId)
+            .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+        vale.setCliente(cliente);
+        vale.setValor(new BigDecimal(body.get("valor").toString()));
+
+        if (body.get("descricao") != null)
+            vale.setDescricao(body.get("descricao").toString());
+        if (body.get("observacao") != null)
+            vale.setObservacao(body.get("observacao").toString());
+        if (body.get("dataVencimento") != null)
+            vale.setDataVencimento(LocalDate.parse(
+                body.get("dataVencimento").toString().substring(0, 10)));
     }
 }

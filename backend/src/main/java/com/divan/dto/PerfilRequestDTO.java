@@ -7,7 +7,9 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class PerfilRequestDTO {
     
     @NotBlank(message = "Nome do perfil é obrigatório")
@@ -16,31 +18,4 @@ public class PerfilRequestDTO {
     private String descricao;
     
     private List<Long> permissoesIds;
-
-	public String getNome() {
-		return nome;
-	}
-
-	public void setNome(String nome) {
-		this.nome = nome;
-	}
-
-	public String getDescricao() {
-		return descricao;
-	}
-
-	public void setDescricao(String descricao) {
-		this.descricao = descricao;
-	}
-
-	public List<Long> getPermissoesIds() {
-		return permissoesIds;
-	}
-
-	public void setPermissoesIds(List<Long> permissoesIds) {
-		this.permissoesIds = permissoesIds;
-	}
-    
-    
-    
 }

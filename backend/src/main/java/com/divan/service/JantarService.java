@@ -1,480 +1,506 @@
 package com.divan.service;
 
-import com.divan.dto.ApartamentoJantarDTO;
-import com.divan.dto.HospedeJantarDTO;
-import com.divan.entity.Apartamento;
-import com.divan.entity.Cliente;
-import com.divan.entity.Empresa;
-import com.divan.entity.HospedagemHospede;
-import com.divan.entity.Reserva;
-import com.divan.entity.HospedagemHospede.StatusHospedeIndividual;
-import com.divan.repository.HospedagemHospedeRepository;
+import com.divan.entity.*;
+import com.divan.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class JantarService {
+	
+	@Autowired
+	private CategoriaRepository categoriaRepository;
 
     @Autowired
     private HospedagemHospedeRepository hospedagemHospedeRepository;
 
-    // ═══════════════════════════════════════════════════════════
-    // LISTAR APARTAMENTOS COM HÓSPEDES AUTORIZADOS
-    // ═══════════════════════════════════════════════════════════
-    @Transactional(readOnly = true)
-    public List<ApartamentoJantarDTO> listarApartamentosComHospedesAutorizados() {
-        System.out.println("\n🍽️ ═══════════════════════════════════════════════════════");
-        System.out.println("   BUSCANDO APARTAMENTOS COM HÓSPEDES AUTORIZADOS");
-        System.out.println("═══════════════════════════════════════════════════════\n");
-        
-        return processarApartamentosComHospedes(true);
-    }
+    @Autowired
+    private ReservaRepository reservaRepository;
 
-    // ═══════════════════════════════════════════════════════════
-    // LISTAR TODOS OS APARTAMENTOS
-    // ═══════════════════════════════════════════════════════════
-    @Transactional(readOnly = true)
-    public List<ApartamentoJantarDTO> listarTodosApartamentosComHospedes() {
-        System.out.println("\n🍽️ ═══════════════════════════════════════════════════════");
-        System.out.println("   BUSCANDO TODOS OS APARTAMENTOS");
-        System.out.println("═══════════════════════════════════════════════════════\n");
-        
-        return processarApartamentosComHospedes(false);
-    }
+    @Autowired
+    private ProdutoRepository produtoRepository;
 
-    // ═══════════════════════════════════════════════════════════
-    // MÉTODO PRINCIPAL DE PROCESSAMENTO
-    // ═══════════════════════════════════════════════════════════
-    private List<ApartamentoJantarDTO> processarApartamentosComHospedes(boolean apenasAutorizados) {
-        
-    	List<HospedagemHospede> todosHospedes = hospedagemHospedeRepository.findAll()
-    		    .stream()
-    		    .filter(h -> h.getStatus() == StatusHospedeIndividual.HOSPEDADO)
-    		    .filter(h -> h.getReserva() != null && 
-    		                 h.getReserva().getStatus() == Reserva.StatusReservaEnum.ATIVA)
-    		    .collect(Collectors.toList());
-        
-        System.out.println("👥 Total de registros HOSPEDADOS: " + todosHospedes.size());
-        
-        // Deduplicar por cliente (pegar o mais recente)
-        Map<Long, HospedagemHospede> clienteUnico = new HashMap<>();
-        
-        for (HospedagemHospede hospede : todosHospedes) {
-            Cliente cliente = hospede.getCliente();
-            if (cliente == null) continue;
-            
-            Long clienteId = cliente.getId();
-            
-            if (clienteUnico.containsKey(clienteId)) {
-                HospedagemHospede existente = clienteUnico.get(clienteId);
-                
-                if (hospede.getDataEntrada() != null && existente.getDataEntrada() != null) {
-                    if (hospede.getDataEntrada().isAfter(existente.getDataEntrada())) {
-                        clienteUnico.put(clienteId, hospede);
-                        System.out.println("🔄 Cliente " + cliente.getNome() + " → Usando registro mais recente");
-                    }
-                } else if (existente.getDataEntrada() == null) {
-                    clienteUnico.put(clienteId, hospede);
-                }
-            } else {
-                clienteUnico.put(clienteId, hospede);
-            }
+    @Autowired
+    private NotaVendaRepository notaVendaRepository;
+
+    @Autowired
+    private ItemVendaRepository itemVendaRepository;
+
+    @Autowired
+    private ExtratoReservaRepository extratoReservaRepository;
+
+    // ✅ LISTAR APARTAMENTOS COM HÓSPEDES AUTORIZADOS PARA JANTAR
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getApartamentosAutorizados() {
+        // Busca todos os hóspedes HOSPEDADOS
+        List<HospedagemHospede> hospedes = hospedagemHospedeRepository
+            .findByStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
+
+        // Filtra apenas os autorizados para jantar
+        List<HospedagemHospede> autorizados = hospedes.stream()
+        	    .filter(h -> h.getCliente() != null &&
+        	                 Boolean.TRUE.equals(h.getCliente().getAutorizadoJantar()) &&
+        	                 h.getReserva() != null &&
+        	                 h.getReserva().getStatus() == Reserva.StatusReservaEnum.ATIVA)
+        	    .collect(Collectors.toList());
+
+        // Agrupa por apartamento
+        Map<Long, List<HospedagemHospede>> porApartamento = autorizados.stream()
+            .collect(Collectors.groupingBy(h -> h.getReserva().getApartamento().getId()));
+
+        List<Map<String, Object>> resultado = new ArrayList<>();
+
+        for (Map.Entry<Long, List<HospedagemHospede>> entry : porApartamento.entrySet()) {
+            List<HospedagemHospede> hospedesApt = entry.getValue();
+            Apartamento apt = hospedesApt.get(0).getReserva().getApartamento();
+            Reserva reserva = hospedesApt.get(0).getReserva();
+
+            List<Map<String, Object>> hospedesInfo = hospedesApt.stream().map(h -> {
+                Map<String, Object> info = new HashMap<>();
+                info.put("id", h.getId());
+                info.put("clienteId", h.getCliente().getId());
+                info.put("nomeCliente", h.getCliente().getNome());
+                info.put("titular", h.isTitular());
+                info.put("autorizadoJantar", h.getCliente().getAutorizadoJantar());
+                return info;
+            }).collect(Collectors.toList());
+
+            Map<String, Object> aptInfo = new HashMap<>();
+            aptInfo.put("apartamentoId", apt.getId());
+            aptInfo.put("numeroApartamento", apt.getNumeroApartamento());
+            aptInfo.put("reservaId", reserva.getId());
+            aptInfo.put("hospedes", hospedesInfo);
+
+            resultado.add(aptInfo);
         }
-        
-        System.out.println("\n✅ Total de clientes únicos: " + clienteUnico.size());
-        
-        // Processar apartamentos
-        Map<String, ApartamentoJantarDTO> apartamentosMap = new LinkedHashMap<>();
-        
-        for (HospedagemHospede hospede : clienteUnico.values()) {
-            Reserva reserva = hospede.getReserva();
-            if (reserva == null) continue;
-            
-            Apartamento apartamento = reserva.getApartamento();
-            if (apartamento == null) continue;
-            
-            String numeroApartamento = apartamento.getNumeroApartamento();
-            Cliente cliente = hospede.getCliente();
-            if (cliente == null) continue;
-            
-            boolean podeJantar = verificarSeClientePodeJantar(cliente);
-            
-            if (apenasAutorizados && !podeJantar) {
-                System.out.println("❌ Apt " + numeroApartamento + " → " + cliente.getNome() + " (NÃO AUTORIZADO)");
-                continue;
-            }
-            
-            String emoji = podeJantar ? "✅" : "⚠️";
-            System.out.println(emoji + " Apt " + numeroApartamento + " → " + cliente.getNome());
-            
-            ApartamentoJantarDTO apartamentoDTO = apartamentosMap.get(numeroApartamento);
-            
-            if (apartamentoDTO == null) {
-                apartamentoDTO = new ApartamentoJantarDTO();
-                apartamentoDTO.setNumeroApartamento(numeroApartamento);
-                apartamentoDTO.setReservaId(reserva.getId());
-                apartamentosMap.put(numeroApartamento, apartamentoDTO);
-            }
-            
-            String empresaNome = null;
-            if (cliente.getEmpresa() != null) {
-                empresaNome = cliente.getEmpresa().getNomeEmpresa();
-            }
-            
-            Boolean titular = hospede.getTitular() != null ? hospede.getTitular() : false;
-            
-            apartamentoDTO.adicionarHospede(
-            	    hospede.getId(),          // ✅ ADICIONAR hospedagemHospedeId
-            	    cliente.getId(),
-            	    cliente.getNome(),
-            	    empresaNome,
-            	    titular
-            	);
-        }
-        
-        List<ApartamentoJantarDTO> resultado = new ArrayList<>(apartamentosMap.values());
-        
-        resultado.sort((a, b) -> {
-            try {
-                int numA = Integer.parseInt(a.getNumeroApartamento().replaceAll("[^0-9]", ""));
-                int numB = Integer.parseInt(b.getNumeroApartamento().replaceAll("[^0-9]", ""));
-                return Integer.compare(numA, numB);
-            } catch (NumberFormatException e) {
-                return a.getNumeroApartamento().compareTo(b.getNumeroApartamento());
-            }
-        });
-        
-        System.out.println("\n📊 RESULTADO:");
-        System.out.println("   🏢 Total de apartamentos: " + resultado.size());
-        
-        int totalHospedes = resultado.stream()
-            .mapToInt(ApartamentoJantarDTO::getTotalHospedes)
-            .sum();
-        System.out.println("   👥 Total de hóspedes: " + totalHospedes);
-        
-        System.out.println("\n📋 LISTA RESUMIDA:");
-        for (ApartamentoJantarDTO apt : resultado) {
-            String nomes = apt.getHospedes().stream()
-                .map(ApartamentoJantarDTO.HospedeJantarInfoDTO::getNomeCliente)
-                .collect(Collectors.joining(", "));
-            System.out.println("   Apt " + apt.getNumeroApartamento() + " → " + nomes + " (" + apt.getTotalHospedes() + " hóspedes)");
-        }
-        
-        System.out.println("═══════════════════════════════════════════════════════\n");
-        
+
+        // Ordena por número do apartamento
+        resultado.sort(Comparator.comparing(m -> m.get("numeroApartamento").toString()));
+
+        System.out.println("🍽️ Apartamentos com jantar autorizado: " + resultado.size());
         return resultado;
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // LISTAR HÓSPEDES AUTORIZADOS (LISTA INDIVIDUAL)
-    // ═══════════════════════════════════════════════════════════
+    // ✅ BUSCAR HÓSPEDE POR NOME OU APARTAMENTO
     @Transactional(readOnly = true)
-    public List<HospedeJantarDTO> listarAutorizados() {
-        return listarHospedesIndividual(true);
-    }
+    public List<Map<String, Object>> buscarHospede(String nome, String numeroApartamento) {
+        List<HospedagemHospede> hospedes = hospedagemHospedeRepository
+            .findByStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
 
-    @Transactional(readOnly = true)
-    public List<HospedeJantarDTO> listarTodos() {
-        return listarHospedesIndividual(false);
-    }
-
-    private List<HospedeJantarDTO> listarHospedesIndividual(boolean apenasAutorizados) {
-        
-        List<HospedagemHospede> hospedes = hospedagemHospedeRepository.findAll()
-            .stream()
-            .filter(h -> h.getStatus() == StatusHospedeIndividual.HOSPEDADO)
+        return hospedes.stream()
+            .filter(h -> h.getCliente() != null &&
+                         Boolean.TRUE.equals(h.getCliente().getAutorizadoJantar()))
+            .filter(h -> {
+                boolean matchNome = nome == null || nome.isBlank() ||
+                    h.getCliente().getNome().toLowerCase().contains(nome.toLowerCase());
+                boolean matchApt = numeroApartamento == null || numeroApartamento.isBlank() ||
+                    h.getReserva().getApartamento().getNumeroApartamento()
+                        .contains(numeroApartamento);
+                return matchNome && matchApt;
+            })
+            .map(h -> {
+                Map<String, Object> info = new HashMap<>();
+                info.put("id", h.getId());
+                info.put("clienteId", h.getCliente().getId());
+                info.put("nomeCliente", h.getCliente().getNome());
+                info.put("apartamentoId", h.getReserva().getApartamento().getId());
+                info.put("numeroApartamento", h.getReserva().getApartamento().getNumeroApartamento());
+                info.put("reservaId", h.getReserva().getId());
+                info.put("titular", h.isTitular());
+                return info;
+            })
             .collect(Collectors.toList());
-        
-        Map<Long, HospedagemHospede> clienteUnico = new HashMap<>();
-        for (HospedagemHospede hospede : hospedes) {
-            Cliente cliente = hospede.getCliente();
-            if (cliente == null) continue;
-            
-            Long clienteId = cliente.getId();
-            if (!clienteUnico.containsKey(clienteId)) {
-                clienteUnico.put(clienteId, hospede);
-            } else {
-                HospedagemHospede existente = clienteUnico.get(clienteId);
-                if (hospede.getDataEntrada() != null && existente.getDataEntrada() != null) {
-                    if (hospede.getDataEntrada().isAfter(existente.getDataEntrada())) {
-                        clienteUnico.put(clienteId, hospede);
-                    }
-                }
-            }
-        }
-        
-        List<HospedeJantarDTO> resultado = new ArrayList<>();
-        
-        for (HospedagemHospede hospede : clienteUnico.values()) {
-            Cliente cliente = hospede.getCliente();
-            if (cliente == null) continue;
-            
-            boolean podeJantar = verificarSeClientePodeJantar(cliente);
-            
-            if (apenasAutorizados && !podeJantar) {
-                continue;
-            }
-            
-            HospedeJantarDTO dto = criarDTO(hospede);
-            if (dto != null) {
-                resultado.add(dto);
-            }
-        }
-        
-        return resultado;
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // VERIFICAR AUTORIZAÇÃO
-    // ═══════════════════════════════════════════════════════════
-    @Transactional(readOnly = true)
-    public Map<String, Object> verificarAutorizacao(Long clienteId) {
-        
-        Map<String, Object> resultado = new HashMap<>();
-        
-        List<HospedagemHospede> hospedes = hospedagemHospedeRepository.findAll()
-            .stream()
-            .filter(h -> h.getStatus() == StatusHospedeIndividual.HOSPEDADO)
-            .filter(h -> h.getCliente() != null && h.getCliente().getId().equals(clienteId))
-            .collect(Collectors.toList());
-        
-        if (hospedes.isEmpty()) {
-            resultado.put("encontrado", false);
-            resultado.put("mensagem", "Cliente não encontrado");
-            return resultado;
-        }
-        
-        HospedagemHospede hospede = hospedes.get(0);
-        if (hospedes.size() > 1) {
-            // Pegar o mais recente
-            for (HospedagemHospede h : hospedes) {
-                if (h.getDataEntrada() != null && hospede.getDataEntrada() != null) {
-                    if (h.getDataEntrada().isAfter(hospede.getDataEntrada())) {
-                        hospede = h;
-                    }
-                }
-            }
-        }
-        
-        Cliente cliente = hospede.getCliente();
-        boolean podeJantar = verificarSeClientePodeJantar(cliente);
-        
-        resultado.put("encontrado", true);
-        resultado.put("clienteId", cliente.getId());
-        resultado.put("nomeCliente", cliente.getNome());
-        resultado.put("podeJantar", podeJantar);
-        
-        if (hospede.getReserva() != null && hospede.getReserva().getApartamento() != null) {
-            resultado.put("numeroApartamento", hospede.getReserva().getApartamento().getNumeroApartamento());
-        }
-        
-        if (cliente.getEmpresa() != null) {
-            resultado.put("empresaNome", cliente.getEmpresa().getNomeEmpresa());
-            resultado.put("empresaAutorizaTodos", cliente.getEmpresa().getAutorizaTodosJantar());
-        }
-        
-        resultado.put("clienteAutorizado", cliente.getAutorizadoJantar());
-        
-        return resultado;
-    }
+    // ✅ SALVAR COMANDA — LANÇA NO EXTRATO DA RESERVA
+    @Transactional
+    public Map<String, Object> salvarComanda(Long hospedagemHospedeId,
+            List<Map<String, Object>> itens) {
 
-    // ═══════════════════════════════════════════════════════════
-    // ESTATÍSTICAS
-    // ═══════════════════════════════════════════════════════════
-    @Transactional(readOnly = true)
-    public Map<String, Object> getEstatisticas() {
-        
-        List<HospedagemHospede> hospedes = hospedagemHospedeRepository.findAll()
-            .stream()
-            .filter(h -> h.getStatus() == StatusHospedeIndividual.HOSPEDADO)
-            .collect(Collectors.toList());
-        
-        Map<Long, HospedagemHospede> clienteUnico = new HashMap<>();
-        for (HospedagemHospede hospede : hospedes) {
-            Cliente cliente = hospede.getCliente();
-            if (cliente == null) continue;
-            
-            Long clienteId = cliente.getId();
-            if (!clienteUnico.containsKey(clienteId)) {
-                clienteUnico.put(clienteId, hospede);
-            } else {
-                HospedagemHospede existente = clienteUnico.get(clienteId);
-                if (hospede.getDataEntrada() != null && existente.getDataEntrada() != null) {
-                    if (hospede.getDataEntrada().isAfter(existente.getDataEntrada())) {
-                        clienteUnico.put(clienteId, hospede);
-                    }
-                }
-            }
-        }
-        
-        int totalHospedes = clienteUnico.size();
-        int totalAutorizados = 0;
-        int semEmpresa = 0;
-        int empresaAutorizaTodos = 0;
-        int empresaSeletiva = 0;
-        
-        for (HospedagemHospede hospede : clienteUnico.values()) {
-            Cliente cliente = hospede.getCliente();
-            if (cliente == null) continue;
-            
-            if (verificarSeClientePodeJantar(cliente)) {
-                totalAutorizados++;
-            }
-            
-            if (cliente.getEmpresa() == null) {
-                semEmpresa++;
-            } else if (Boolean.TRUE.equals(cliente.getEmpresa().getAutorizaTodosJantar())) {
-                empresaAutorizaTodos++;
-            } else {
-                empresaSeletiva++;
-            }
-        }
-        
-        Map<String, Object> resultado = new HashMap<>();
-        resultado.put("totalHospedes", totalHospedes);
-        resultado.put("totalAutorizados", totalAutorizados);
-        resultado.put("totalNaoAutorizados", totalHospedes - totalAutorizados);
-        resultado.put("percentualAutorizados", totalHospedes > 0 ? (totalAutorizados * 100.0 / totalHospedes) : 0);
-        resultado.put("semEmpresa", semEmpresa);
-        resultado.put("empresaAutorizaTodos", empresaAutorizaTodos);
-        resultado.put("empresaSeletiva", empresaSeletiva);
-        
-        return resultado;
-    }
+        HospedagemHospede hospede = hospedagemHospedeRepository.findById(hospedagemHospedeId)
+            .orElseThrow(() -> new RuntimeException("Hóspede não encontrado"));
 
-    // ═══════════════════════════════════════════════════════════
-    // GERAR HTML PARA IMPRESSÃO
-    // ═══════════════════════════════════════════════════════════
-    @Transactional(readOnly = true)
-    public String gerarHtmlRelatorio() {
-
-        List<ApartamentoJantarDTO> apartamentos = listarApartamentosComHospedesAutorizados();
-
-        StringBuilder html = new StringBuilder();
-
-        html.append("<!DOCTYPE html>");
-        html.append("<html lang='pt-BR'>");
-        html.append("<head>");
-        html.append("<meta charset='UTF-8'>");
-        html.append("<title>Relatório de Jantar</title>");
-        html.append("<style>");
-        html.append("* { margin: 0; padding: 0; box-sizing: border-box; }");
-        html.append("body { font-family: Arial, sans-serif; padding: 20px; padding-top: 80px; }");
-        html.append(".btn-voltar { position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.3s; z-index: 1000; }");
-        html.append(".btn-voltar:hover { transform: translateX(-5px); box-shadow: 0 6px 16px rgba(0,0,0,0.4); }");
-        html.append(".btn-imprimir { position: fixed; top: 20px; left: 20px; background: #27ae60; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.3s; z-index: 1000; }");
-        html.append(".btn-imprimir:hover { background: #229954; transform: translateY(-2px); }");
-        html.append(".header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #333; padding-bottom: 15px; }");
-        html.append(".header h1 { font-size: 28px; }");
-        html.append(".header h2 { font-size: 20px; color: #555; }");
-        html.append(".apartamento { margin-bottom: 25px; page-break-inside: avoid; }");
-        html.append(".apt-numero { font-size: 20px; font-weight: bold; background: #f0f0f0; padding: 10px; border-left: 5px solid #333; }");
-        html.append(".hospede { padding-left: 25px; line-height: 2; font-size: 16px; }");
-        html.append(".rodape { margin-top: 30px; text-align: center; border-top: 2px solid #333; padding-top: 15px; font-weight: bold; }");
-        html.append("@media print { .btn-voltar, .btn-imprimir { display: none; } body { padding-top: 20px; } }");
-        html.append("</style>");
-        html.append("</head>");
-        html.append("<body>");
-
-        // ✅ BOTÕES DE AÇÃO
-        html.append("<button class='btn-voltar' onclick='window.close(); if(!window.closed) history.back();'>← Voltar</button>");
-        html.append("<button class='btn-imprimir' onclick='window.print();'>🖨️ Imprimir</button>");
-
-        html.append("<div class='header'>");
-        html.append("<h1>HOTEL DI VAN</h1>");
-        html.append("<h2>Autorizados para Jantar</h2>");
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-        String dataAtual = LocalDate.now().format(formatter);
-        html.append("<div>").append(dataAtual).append("</div>");
-        html.append("</div>");
-
-        int totalHospedes = 0;
-
-        for (ApartamentoJantarDTO apartamento : apartamentos) {
-            html.append("<div class='apartamento'>");
-            html.append("<div class='apt-numero'>Apartamento ").append(apartamento.getNumeroApartamento()).append("</div>");
-
-            for (ApartamentoJantarDTO.HospedeJantarInfoDTO hospede : apartamento.getHospedes()) {
-                html.append("<div class='hospede'>").append(hospede.getNomeCliente()).append("</div>");
-                totalHospedes++;
-            }
-
-            html.append("</div>");
+        if (!Boolean.TRUE.equals(hospede.getCliente().getAutorizadoJantar())) {
+            throw new RuntimeException("Hóspede não autorizado para jantar");
         }
 
-        html.append("<div class='rodape'>");
-        html.append("Total de apartamentos: ").append(apartamentos.size());
-        html.append(" | Total de hóspedes: ").append(totalHospedes);
-        html.append("</div>");
-
-        html.append("</body></html>");
-
-        return html.toString();
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // MÉTODOS AUXILIARES
-    // ═══════════════════════════════════════════════════════════
-    
-    private boolean verificarSeClientePodeJantar(Cliente cliente) {
-        if (cliente == null) {
-            System.out.println("⚠️ Cliente NULL");
-            return false;
-        }
-        
-        Empresa empresa = cliente.getEmpresa();
-        
-        // ✅ ÚNICA EXCEÇÃO: Empresa autoriza TODOS os funcionários
-        if (empresa != null && Boolean.TRUE.equals(empresa.getAutorizaTodosJantar())) {
-            System.out.println("✅ " + cliente.getNome() + " → EMPRESA AUTORIZA TODOS (" + empresa.getNomeEmpresa() + ")");
-            return true;
-        }
-        
-        // ✅ PARA TODOS OS OUTROS CASOS: Verificar campo individual
-        // (Com empresa OU sem empresa → sempre verifica autorizadoJantar)
-        boolean autorizado = Boolean.TRUE.equals(cliente.getAutorizadoJantar());
-        
-        String detalhe = empresa != null 
-            ? " (Empresa: " + empresa.getNomeEmpresa() + " - não autoriza todos)" 
-            : " (SEM EMPRESA)";
-        
-        System.out.println((autorizado ? "✅ " : "❌ ") + cliente.getNome() + 
-                          " → Autorizado individual: " + autorizado + detalhe);
-        
-        return autorizado;
-    }
-    
-    private HospedeJantarDTO criarDTO(HospedagemHospede hospede) {
-        Cliente cliente = hospede.getCliente();
-        if (cliente == null) return null;
-        
         Reserva reserva = hospede.getReserva();
-        if (reserva == null) return null;
-        
-        Apartamento apartamento = reserva.getApartamento();
-        if (apartamento == null) return null;
-        
-        HospedeJantarDTO dto = new HospedeJantarDTO();
-        dto.setClienteId(cliente.getId());
-        dto.setNomeCliente(cliente.getNome());
-        dto.setNumeroApartamento(apartamento.getNumeroApartamento());
-        dto.setReservaId(reserva.getId());
-        dto.setHospedeId(hospede.getId());
-        
-        if (cliente.getEmpresa() != null) {
-            dto.setEmpresaNome(cliente.getEmpresa().getNomeEmpresa());
-            dto.setEmpresaAutorizaTodos(cliente.getEmpresa().getAutorizaTodosJantar());
+        BigDecimal totalComanda = BigDecimal.ZERO;
+
+        // ✅ CRIAR NOTA DE VENDA
+        NotaVenda nota = new NotaVenda();
+        nota.setReserva(reserva);
+        nota.setDataHoraVenda(LocalDateTime.now());
+        nota.setTipoVenda(NotaVenda.TipoVendaEnum.APARTAMENTO);
+        nota.setStatus(NotaVenda.Status.FECHADA);
+        nota.setObservacao("Jantar - " + hospede.getCliente().getNome());
+        nota.setItens(new ArrayList<>());
+        nota.setTotal(BigDecimal.ZERO); // ✅ ADICIONA ESTA LINHA
+        notaVendaRepository.save(nota);
+        // ✅ PROCESSAR ITENS
+        for (Map<String, Object> itemMap : itens) {
+            Long produtoId = Long.parseLong(itemMap.get("produtoId").toString());
+            int quantidade = Integer.parseInt(itemMap.get("quantidade").toString());
+
+            Produto produto = produtoRepository.findById(produtoId)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + produtoId));
+
+            // Verificar estoque
+            if (produto.getQuantidade() < quantidade) {
+                throw new RuntimeException("Estoque insuficiente para: " + produto.getNomeProduto());
+            }
+
+            BigDecimal valorUnitario = produto.getValorVenda();
+            BigDecimal totalItem = valorUnitario.multiply(BigDecimal.valueOf(quantidade));
+
+            // ✅ CRIAR ITEM DE VENDA
+            ItemVenda itemVenda = new ItemVenda();
+            itemVenda.setNotaVenda(nota);
+            itemVenda.setProduto(produto);
+            itemVenda.setQuantidade(quantidade);
+            itemVenda.setValorUnitario(valorUnitario);
+            itemVenda.setTotalItem(totalItem);
+            itemVendaRepository.save(itemVenda);
+
+            // ✅ BAIXAR ESTOQUE
+            produto.setQuantidade(produto.getQuantidade() - quantidade);
+            produtoRepository.save(produto);
+
+            totalComanda = totalComanda.add(totalItem);
+
+            // ✅ LANÇAR NO EXTRATO DA RESERVA
+            ExtratoReserva extrato = new ExtratoReserva();
+            extrato.setReserva(reserva);
+            extrato.setDataHoraLancamento(LocalDateTime.now());
+            extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.PRODUTO);
+            extrato.setDescricao("Jantar: " + produto.getNomeProduto() +
+                " (" + hospede.getCliente().getNome() + ")");
+            extrato.setQuantidade(quantidade);
+            extrato.setValorUnitario(valorUnitario);
+            extrato.setTotalLancamento(totalItem);
+            extrato.setNotaVendaId(nota.getId());
+            extratoReservaRepository.save(extrato);
         }
+
+        // ✅ ATUALIZAR TOTAL DA NOTA
+        nota.setTotal(totalComanda);
+        notaVendaRepository.save(nota);
+
+        // ✅ ATUALIZAR TOTAIS DA RESERVA
+        reserva.setTotalProduto(reserva.getTotalProduto().add(totalComanda));
+        reserva.setTotalHospedagem(reserva.getTotalHospedagem().add(totalComanda));
+        reserva.setTotalApagar(reserva.getTotalApagar().add(totalComanda));
+        reservaRepository.save(reserva);
+
+        System.out.println("🍽️ Comanda salva | Reserva #" + reserva.getId() +
+            " | Hóspede: " + hospede.getCliente().getNome() +
+            " | Total: R$ " + totalComanda);
+
+        return Map.of(
+            "mensagem", "Comanda salva com sucesso",
+            "notaId", nota.getId(),
+            "total", totalComanda,
+            "reservaId", reserva.getId()
+        );
+    }
+
+    // ✅ CANCELAR COMANDA
+    @Transactional
+    public Map<String, Object> cancelarComanda(Long notaId) {
+        NotaVenda nota = notaVendaRepository.findById(notaId)
+            .orElseThrow(() -> new RuntimeException("Comanda não encontrada"));
+
+        Reserva reserva = nota.getReserva();
+        BigDecimal totalNota = nota.getTotal();
+
+        // ✅ DEVOLVER ESTOQUE
+        for (ItemVenda item : nota.getItens()) {
+            Produto produto = item.getProduto();
+            produto.setQuantidade(produto.getQuantidade() + item.getQuantidade());
+            produtoRepository.save(produto);
+        }
+
+        // ✅ LANÇAR ESTORNO NO EXTRATO
+        ExtratoReserva estorno = new ExtratoReserva();
+        estorno.setReserva(reserva);
+        estorno.setDataHoraLancamento(LocalDateTime.now());
+        estorno.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
+        estorno.setDescricao("Cancelamento comanda jantar #" + notaId);
+        estorno.setQuantidade(1);
+        estorno.setValorUnitario(totalNota.negate());
+        estorno.setTotalLancamento(totalNota.negate());
+        estorno.setNotaVendaId(notaId);
+        extratoReservaRepository.save(estorno);
+
+        // ✅ ATUALIZAR TOTAIS DA RESERVA
+        reserva.setTotalProduto(reserva.getTotalProduto().subtract(totalNota));
+        reserva.setTotalHospedagem(reserva.getTotalHospedagem().subtract(totalNota));
+        reserva.setTotalApagar(reserva.getTotalApagar().subtract(totalNota));
+        reservaRepository.save(reserva);
+
+        // ✅ CANCELAR NOTA
+        nota.setStatus(NotaVenda.Status.CANCELADA);
+        notaVendaRepository.save(nota);
+
+        System.out.println("❌ Comanda cancelada #" + notaId +
+            " | Estorno: R$ " + totalNota);
+
+        return Map.of(
+            "mensagem", "Comanda cancelada com sucesso",
+            "estorno", totalNota
+        );
+    }
+    
+ // ✅ PRODUTOS DO RESTAURANTE COM ESTOQUE > 0
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getProdutosRestaurante() {
+        // Busca todos os produtos e filtra pela categoria RESTAURANTE
+        List<Produto> todos = produtoRepository.findAll();
         
-        dto.setClienteAutorizado(cliente.getAutorizadoJantar());
-        
-        return dto;
+        return todos.stream()
+            .filter(p -> p.getCategoria() != null &&
+                         p.getCategoria().getNome().toUpperCase().contains("RESTAURANTE") &&
+                         p.getQuantidade() > 0)
+            .map(p -> {
+                Map<String, Object> info = new HashMap<>();
+                info.put("id", p.getId());
+                info.put("nomeProduto", p.getNomeProduto());
+                info.put("valorVenda", p.getValorVenda());
+                info.put("quantidade", p.getQuantidade());
+                return info;
+            })
+            .sorted(Comparator.comparing(m -> m.get("nomeProduto").toString()))
+            .collect(Collectors.toList());
+    }
+
+    // ✅ BUSCAR HÓSPEDE — retorno no formato que o frontend espera
+    @Transactional(readOnly = true)
+    public Map<String, Object> buscarHospedeFormatado(String nome, String numeroApartamento) {
+        List<HospedagemHospede> hospedes = hospedagemHospedeRepository
+            .findByStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
+
+        List<Map<String, Object>> encontrados = hospedes.stream()
+        	    .filter(h -> h.getCliente() != null)
+        	    .filter(h -> h.getReserva() != null &&
+        	                 h.getReserva().getStatus() == Reserva.StatusReservaEnum.ATIVA)
+        	    .filter(h -> {
+                boolean matchNome = nome == null || nome.isBlank() ||
+                    h.getCliente().getNome().toLowerCase().contains(nome.toLowerCase());
+                boolean matchApt = numeroApartamento == null || numeroApartamento.isBlank() ||
+                    h.getReserva().getApartamento().getNumeroApartamento().contains(numeroApartamento);
+                return matchNome && matchApt;
+            })
+            .map(h -> {
+                Map<String, Object> info = new HashMap<>();
+                info.put("id", h.getId());
+                info.put("hospedagemHospedeId", h.getId());
+                info.put("clienteId", h.getCliente().getId());
+                info.put("nomeCliente", h.getCliente().getNome());
+                info.put("nomeCompleto", h.getCliente().getNome());
+                info.put("apartamentoId", h.getReserva().getApartamento().getId());
+                info.put("numeroApartamento", h.getReserva().getApartamento().getNumeroApartamento());
+                info.put("reservaId", h.getReserva().getId());
+                info.put("titular", h.isTitular());
+                info.put("autorizadoJantar", Boolean.TRUE.equals(h.getCliente().getAutorizadoJantar()));
+                return info;
+            })
+            .collect(Collectors.toList());
+
+        if (encontrados.isEmpty()) {
+            return Map.of(
+                "encontrado", false,
+                "mensagem", "Nenhum hóspede encontrado com os dados informados"
+            );
+        }
+
+        return Map.of(
+            "encontrado", true,
+            "hospedes", encontrados
+        );
+    }
+
+    // ✅ RELATÓRIO DE COMANDAS
+    @Transactional(readOnly = true)
+    public Map<String, Object> gerarRelatorioComandas(String dataInicio, String dataFim) {
+        LocalDateTime inicio = LocalDate.parse(dataInicio).atStartOfDay();
+        LocalDateTime fim = LocalDate.parse(dataFim).atTime(23, 59, 59);
+
+        List<NotaVenda> notas = notaVendaRepository
+            .findByTipoVendaAndDataHoraVendaBetween(NotaVenda.TipoVendaEnum.APARTAMENTO, inicio, fim)
+            .stream()
+            .filter(n -> n.getObservacao() != null && n.getObservacao().startsWith("Jantar"))
+            .filter(n -> n.getStatus() != NotaVenda.Status.CANCELADA)
+            .collect(Collectors.toList());
+
+        BigDecimal totalGeral = notas.stream()
+            .map(NotaVenda::getTotal)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<Map<String, Object>> comandas = notas.stream().map(n -> {
+            Map<String, Object> c = new HashMap<>();
+            c.put("notaId", n.getId());
+            c.put("dataHora", n.getDataHoraVenda());
+            c.put("apartamento", n.getReserva().getApartamento().getNumeroApartamento());
+            c.put("cliente", n.getReserva().getCliente().getNome());
+            c.put("total", n.getTotal());
+            c.put("observacao", n.getObservacao());
+
+            List<Map<String, Object>> itens = n.getItens().stream().map(i -> {
+                Map<String, Object> item = new HashMap<>();
+                item.put("produto", i.getProduto().getNomeProduto());
+                item.put("quantidade", i.getQuantidade());
+                item.put("valorUnitario", i.getValorUnitario());
+                item.put("total", i.getTotalItem());
+                return item;
+            }).collect(Collectors.toList());
+
+            c.put("itens", itens);
+            return c;
+        }).collect(Collectors.toList());
+
+        return Map.of(
+            "totalComandas", notas.size(),
+            "totalGeral", totalGeral,
+            "comandas", comandas,
+            "periodo", Map.of("inicio", dataInicio, "fim", dataFim)
+        );
+    }
+
+    // ✅ RELATÓRIO DE FATURAMENTO
+    @Transactional(readOnly = true)
+    public Map<String, Object> gerarRelatorioFaturamento(String dataInicio, String dataFim) {
+        LocalDateTime inicio = LocalDate.parse(dataInicio).atStartOfDay();
+        LocalDateTime fim = LocalDate.parse(dataFim).atTime(23, 59, 59);
+
+        List<NotaVenda> notas = notaVendaRepository
+            .findByTipoVendaAndDataHoraVendaBetween(NotaVenda.TipoVendaEnum.APARTAMENTO, inicio, fim)
+            .stream()
+            .filter(n -> n.getObservacao() != null && n.getObservacao().startsWith("Jantar"))
+            .filter(n -> n.getStatus() != NotaVenda.Status.CANCELADA)
+            .collect(Collectors.toList());
+
+        BigDecimal totalGeral = notas.stream()
+            .map(NotaVenda::getTotal)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal ticketMedio = notas.isEmpty() ? BigDecimal.ZERO :
+            totalGeral.divide(BigDecimal.valueOf(notas.size()), 2, java.math.RoundingMode.HALF_UP);
+
+        // Agrupar por dia
+        Map<LocalDate, List<NotaVenda>> porDia = notas.stream()
+            .collect(Collectors.groupingBy(n -> n.getDataHoraVenda().toLocalDate()));
+
+        List<Map<String, Object>> faturamentoDiario = porDia.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(e -> {
+                BigDecimal totalDia = e.getValue().stream()
+                    .map(NotaVenda::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+                Map<String, Object> dia = new HashMap<>();
+                dia.put("data", e.getKey().toString());
+                dia.put("totalComandas", e.getValue().size());
+                dia.put("totalVendas", totalDia);
+                return dia;
+            }).collect(Collectors.toList());
+
+        return Map.of(
+            "totalComandas", notas.size(),
+            "totalGeral", totalGeral,
+            "ticketMedio", ticketMedio,
+            "faturamentoDiario", faturamentoDiario,
+            "periodo", Map.of("inicio", dataInicio, "fim", dataFim)
+        );
+    }
+
+    // ✅ RELATÓRIO PRODUTOS POR APARTAMENTO
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> relatorioProdutosPorApartamento(String dataInicio, String dataFim) {
+        LocalDateTime inicio = LocalDate.parse(dataInicio).atStartOfDay();
+        LocalDateTime fim = LocalDate.parse(dataFim).atTime(23, 59, 59);
+
+        List<ExtratoReserva> extratos = extratoReservaRepository
+            .findByStatusLancamentoAndDataHoraLancamentoBetween(
+                ExtratoReserva.StatusLancamentoEnum.PRODUTO, inicio, fim)
+            .stream()
+            .filter(e -> e.getDescricao() != null && e.getDescricao().startsWith("Jantar:"))
+            .collect(Collectors.toList());
+
+        Map<Long, List<ExtratoReserva>> porReserva = extratos.stream()
+            .collect(Collectors.groupingBy(e -> e.getReserva().getId()));
+
+        return porReserva.entrySet().stream().map(entry -> {
+            List<ExtratoReserva> itensReserva = entry.getValue();
+            Reserva reserva = itensReserva.get(0).getReserva();
+            BigDecimal totalGasto = itensReserva.stream()
+                .map(ExtratoReserva::getTotalLancamento)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            List<Map<String, Object>> itens = itensReserva.stream().map(e -> {
+                Map<String, Object> item = new HashMap<>();
+                item.put("nomeProduto", e.getDescricao().replace("Jantar: ", "").split(" \\(")[0]);
+                item.put("dataHora", e.getDataHoraLancamento());
+                item.put("quantidade", e.getQuantidade());
+                item.put("valorUnitario", e.getValorUnitario());
+                item.put("totalItem", e.getTotalLancamento());
+                return item;
+            }).collect(Collectors.toList());
+
+            Map<String, Object> apto = new HashMap<>();
+            apto.put("numeroApartamento", reserva.getApartamento().getNumeroApartamento());
+            apto.put("nomeHospede", reserva.getCliente().getNome());
+            apto.put("totalGasto", totalGasto);
+            apto.put("itens", itens);
+            return apto;
+        })
+        .sorted(Comparator.comparing(m -> m.get("numeroApartamento").toString()))
+        .collect(Collectors.toList());
+    }
+
+    // ✅ RELATÓRIO QUANTIDADE POR PRODUTO
+    @Transactional(readOnly = true)
+    public Map<String, Object> relatorioQuantidadeProduto(Long produtoId, String dataInicio, String dataFim) {
+        LocalDateTime inicio = LocalDate.parse(dataInicio).atStartOfDay();
+        LocalDateTime fim = LocalDate.parse(dataFim).atTime(23, 59, 59);
+
+        Produto produto = produtoRepository.findById(produtoId)
+            .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+        List<ItemVenda> itens = itemVendaRepository.findByProdutoId(produtoId)
+            .stream()
+            .filter(i -> i.getNotaVenda() != null &&
+                         i.getNotaVenda().getDataHoraVenda() != null &&
+                         !i.getNotaVenda().getDataHoraVenda().isBefore(inicio) &&
+                         !i.getNotaVenda().getDataHoraVenda().isAfter(fim) &&
+                         i.getNotaVenda().getObservacao() != null &&
+                         i.getNotaVenda().getObservacao().startsWith("Jantar") &&
+                         i.getNotaVenda().getStatus() != NotaVenda.Status.CANCELADA)
+            .collect(Collectors.toList());
+
+        int quantidadeTotal = itens.stream().mapToInt(ItemVenda::getQuantidade).sum();
+        BigDecimal totalFaturado = itens.stream()
+            .map(ItemVenda::getTotalItem).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<Map<String, Object>> porApartamento = itens.stream().map(i -> {
+            Map<String, Object> info = new HashMap<>();
+            info.put("numeroApartamento", i.getNotaVenda().getReserva().getApartamento().getNumeroApartamento());
+            info.put("nomeHospede", i.getNotaVenda().getReserva().getCliente().getNome());
+            info.put("dataHora", i.getNotaVenda().getDataHoraVenda());
+            info.put("quantidade", i.getQuantidade());
+            info.put("total", i.getTotalItem());
+            return info;
+        }).collect(Collectors.toList());
+
+        return Map.of(
+            "nomeProduto", produto.getNomeProduto(),
+            "quantidadeTotal", quantidadeTotal,
+            "totalFaturado", totalFaturado,
+            "porApartamento", porApartamento
+        );
     }
 }

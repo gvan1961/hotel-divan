@@ -11,9 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,8 +35,8 @@ public class PerfilService {
         perfil.setDescricao(dto.getDescricao());
         
         if (dto.getPermissoesIds() != null && !dto.getPermissoesIds().isEmpty()) {
-            Set<Permissao> permissoes = new HashSet<>(permissaoRepository.findAllById(dto.getPermissoesIds()));
-            perfil.setPermissoes(permissoes);
+            List<Permissao> permissoes = permissaoRepository.findAllById(dto.getPermissoesIds());
+            perfil.setPermissoes(new java.util.HashSet<>(permissoes));
         }
         
         return perfilRepository.save(perfil);
@@ -51,10 +50,11 @@ public class PerfilService {
         perfil.setDescricao(dto.getDescricao());
         
         if (dto.getPermissoesIds() != null) {
-            Set<Permissao> permissoes = new HashSet<>(permissaoRepository.findAllById(dto.getPermissoesIds()));
-            perfil.setPermissoes(permissoes);
+            List<Permissao> permissoes = permissaoRepository.findAllById(dto.getPermissoesIds());
+            perfil.setPermissoes(new java.util.HashSet<>(permissoes));
+
         } else {
-            perfil.setPermissoes(new HashSet<>());
+        	perfil.setPermissoes(new java.util.HashSet<>());
         }
         
         return perfilRepository.save(perfil);

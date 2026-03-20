@@ -4,14 +4,18 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 @Entity
 @Table(name = "extratos_reserva")
-
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ExtratoReserva {
     
     @Id
@@ -49,113 +53,10 @@ public class ExtratoReserva {
     @Column(length = 200)
     private String descricao;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "produto_id")
-    private Produto produto;
-    
     @Column(name = "nota_venda_id")
     private Long notaVendaId;
     
     public enum StatusLancamentoEnum {
-        PRODUTO, DIARIA, PAGAMENTO, ESTORNO, PENDENTE
+        PRODUTO, DIARIA, PAGAMENTO, ESTORNO, TROCO
     }
-
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public Reserva getReserva() {
-		return reserva;
-	}
-
-	public void setReserva(Reserva reserva) {
-		this.reserva = reserva;
-	}
-
-	public LocalDateTime getDataHoraLancamento() {
-		return dataHoraLancamento;
-	}
-
-	public void setDataHoraLancamento(LocalDateTime dataHoraLancamento) {
-		this.dataHoraLancamento = dataHoraLancamento;
-	}
-
-	public StatusLancamentoEnum getStatusLancamento() {
-		return statusLancamento;
-	}
-
-	public void setStatusLancamento(StatusLancamentoEnum statusLancamento) {
-		this.statusLancamento = statusLancamento;
-	}
-
-	public Integer getQuantidade() {
-		return quantidade;
-	}
-
-	public void setQuantidade(Integer quantidade) {
-		this.quantidade = quantidade;
-	}
-
-	public BigDecimal getValorUnitario() {
-		return valorUnitario;
-	}
-
-	public void setValorUnitario(BigDecimal valorUnitario) {
-		this.valorUnitario = valorUnitario;
-	}
-
-	public BigDecimal getTotalLancamento() {
-		return totalLancamento;
-	}
-
-	public void setTotalLancamento(BigDecimal totalLancamento) {
-		this.totalLancamento = totalLancamento;
-	}
-
-	public String getDescricao() {
-		return descricao;
-	}
-
-	public void setDescricao(String descricao) {
-		this.descricao = descricao;
-	}
-
-	public Long getNotaVendaId() {
-		return notaVendaId;
-	}
-
-	public void setNotaVendaId(Long notaVendaId) {
-		this.notaVendaId = notaVendaId;
-	}	
-
-	public Produto getProduto() {
-		return produto;
-	}
-
-	public void setProduto(Produto produto) {
-		this.produto = produto;
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(id);
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		ExtratoReserva other = (ExtratoReserva) obj;
-		return Objects.equals(id, other.id);
-	}
-    
-    
 }

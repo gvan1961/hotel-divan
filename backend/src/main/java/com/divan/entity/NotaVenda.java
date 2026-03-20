@@ -1,19 +1,24 @@
 package com.divan.entity;
 
+import com.divan.entity.Pagamento.FormaPagamentoEnum;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 
 @Entity
 @Table(name = "notas_venda")
-
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class NotaVenda {
     
     @Id
@@ -27,6 +32,10 @@ public class NotaVenda {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TipoVendaEnum tipoVenda;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "forma_pagamento")
+    private FormaPagamentoEnum formaPagamento;
     
     @Column(name = "observacao", length = 500)
     private String observacao;
@@ -43,100 +52,21 @@ public class NotaVenda {
     
     @OneToMany(mappedBy = "notaVenda", cascade = CascadeType.ALL)
     @JsonIgnoreProperties("notaVenda")
-    private List<ItemVenda> itens;
-    
+    private List<ItemVenda> itens;    
+        
     public enum TipoVendaEnum {
-        VISTA, APARTAMENTO, FATURADO, CONSUMO
+        VISTA, APARTAMENTO, FATURADO
     }
     
     public enum Status {
-        ABERTA, FECHADA, CANCELADA,ESTORNADA
+        ABERTA, FECHADA, CANCELADA
     }
     
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private Status status;
-
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public LocalDateTime getDataHoraVenda() {
-		return dataHoraVenda;
-	}
-
-	public void setDataHoraVenda(LocalDateTime dataHoraVenda) {
-		this.dataHoraVenda = dataHoraVenda;
-	}
-
-	public TipoVendaEnum getTipoVenda() {
-		return tipoVenda;
-	}
-
-	public void setTipoVenda(TipoVendaEnum tipoVenda) {
-		this.tipoVenda = tipoVenda;
-	}
-
-	public String getObservacao() {
-		return observacao;
-	}
-
-	public void setObservacao(String observacao) {
-		this.observacao = observacao;
-	}
-
-	public Reserva getReserva() {
-		return reserva;
-	}
-
-	public void setReserva(Reserva reserva) {
-		this.reserva = reserva;
-	}
-
-	public BigDecimal getTotal() {
-		return total;
-	}
-
-	public void setTotal(BigDecimal total) {
-		this.total = total;
-	}
-
-	public List<ItemVenda> getItens() {
-		return itens;
-	}
-
-	public void setItens(List<ItemVenda> itens) {
-		this.itens = itens;
-	}
-
-	public Status getStatus() {
-		return status;
-	}
-
-	public void setStatus(Status status) {
-		this.status = status;
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(id);
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		NotaVenda other = (NotaVenda) obj;
-		return Objects.equals(id, other.id);
-	}
     
-    
+    public enum FormaPagamentoEnum {
+        DINHEIRO, PIX, CARTAO_DEBITO, CARTAO_CREDITO, TRANSFERENCIA_BANCARIA, FATURADO
+    }
 }

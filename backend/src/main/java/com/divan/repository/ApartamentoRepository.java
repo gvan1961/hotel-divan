@@ -1,11 +1,10 @@
 package com.divan.repository;
 
 import com.divan.entity.Apartamento;
+import com.divan.entity.HospedagemHospede;
 import com.divan.entity.TipoApartamento;
-import com.divan.entity.Reserva;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -27,30 +26,15 @@ public interface ApartamentoRepository extends JpaRepository<Apartamento, Long> 
     @Query("SELECT a FROM Apartamento a WHERE a.status = 'OCUPADO'")
     List<Apartamento> findOcupados();
     
-    // QUERY CORRIGIDA - Buscar apartamentos disponíveis para reserva
-    @Query("SELECT a FROM Apartamento a WHERE " +
-    	       "a.status = 'DISPONIVEL' AND " +
-    	       "a.id NOT IN (" +
-    	       "  SELECT r.apartamento.id FROM Reserva r WHERE " +
-    	       "  r.status IN ('ATIVA', 'PRE_RESERVA') AND " +
-    	       "  (r.dataCheckin < :checkout AND r.dataCheckout > :checkin)" +
-    	       ")")
-    	List<Apartamento> findDisponiveisParaReserva(
-    	    @Param("checkin") LocalDateTime checkin,
-    	    @Param("checkout") LocalDateTime checkout
-    	);
+    @Query("SELECT a FROM Apartamento a WHERE a.id NOT IN " +
+           "(SELECT r.apartamento.id FROM Reserva r WHERE " +
+           "r.status = 'ATIVA' AND " +
+           "((r.dataCheckin <= :checkout AND r.dataCheckout >= :checkin)))")
+    List<Apartamento> findDisponiveisParaPeriodo(LocalDateTime checkin, LocalDateTime checkout);
     
-    /**
-     * ✅ Listar apartamentos ordenados por número (crescente)
-     */
-    List<Apartamento> findAllByOrderByNumeroApartamentoAsc();
+    boolean existsByNumeroApartamento(String numeroApartamento);  
     
+    List<HospedagemHospede> findByStatus(HospedagemHospede.StatusEnum status);
+
     
-    
-    // Buscar apartamentos por múltiplos status
-    @Query("SELECT a FROM Apartamento a WHERE a.status IN :statusList")
-    List<Apartamento> findByStatusIn(@Param("statusList") List<Apartamento.StatusEnum> statusList);
-    
-    boolean existsByNumeroApartamento(String numeroApartamento);
-    long countByStatus(Apartamento.StatusEnum status);
 }

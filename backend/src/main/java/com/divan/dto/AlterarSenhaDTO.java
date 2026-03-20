@@ -2,7 +2,13 @@ package com.divan.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class AlterarSenhaDTO {
     
     @NotBlank(message = "Senha atual é obrigatória")
@@ -11,22 +17,4 @@ public class AlterarSenhaDTO {
     @NotBlank(message = "Nova senha é obrigatória")
     @Size(min = 6, message = "Nova senha deve ter no mínimo 6 caracteres")
     private String novaSenha;
-
-	public String getSenhaAtual() {
-		return senhaAtual;
-	}
-
-	public void setSenhaAtual(String senhaAtual) {
-		this.senhaAtual = senhaAtual;
-	}
-
-	public String getNovaSenha() {
-		return novaSenha;
-	}
-
-	public void setNovaSenha(String novaSenha) {
-		this.novaSenha = novaSenha;
-	}
-    
-    
 }

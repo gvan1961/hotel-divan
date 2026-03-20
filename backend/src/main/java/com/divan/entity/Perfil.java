@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 @Entity
@@ -26,7 +25,7 @@ public class Perfil {
     
     @NotBlank(message = "Nome do perfil é obrigatório")
     @Column(unique = true, nullable = false, length = 50)
-    private String nome;
+    private String nome; // ADMIN, RECEPCIONISTA, GERENTE, VENDEDOR
     
     @Column(length = 200)
     private String descricao;
@@ -38,52 +37,10 @@ public class Perfil {
         inverseJoinColumns = @JoinColumn(name = "permissao_id")
     )
     @JsonIgnoreProperties("perfis")
+   // private List<Permissao> permissoes = new ArrayList<>();
     private Set<Permissao> permissoes = new HashSet<>();
     
     @ManyToMany(mappedBy = "perfis")
     @JsonIgnoreProperties({"perfis", "permissoes"})
     private List<Usuario> usuarios = new ArrayList<>();
-    
-    // ✅ GETTERS MANUAIS (caso Lombok não funcione)
-    public Long getId() {
-        return id;
-    }
-    
-    public String getNome() {
-        return nome;
-    }
-    
-    public String getDescricao() {
-        return descricao;
-    }
-    
-    public Set<Permissao> getPermissoes() {
-        return permissoes;
-    }
-    
-    public List<Usuario> getUsuarios() {
-        return usuarios;
-    }
-    
-    // ✅ SETTERS MANUAIS
-    public void setId(Long id) {
-        this.id = id;
-    }
-    
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
-    
-    public void setDescricao(String descricao) {
-        this.descricao = descricao;
-    }
-    
-    public void setPermissoes(Set<Permissao> permissoes) {
-        this.permissoes = permissoes;
-    }
-    
-    public void setUsuarios(List<Usuario> usuarios) {
-        this.usuarios = usuarios;
-    }	  
-    
 }

@@ -1,12 +1,10 @@
 package com.divan.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-
 import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDate;
@@ -53,13 +51,6 @@ public class Cliente {
     @Column(nullable = false)
     private LocalDate dataNascimento;
     
-    @Column(name = "autorizado_jantar")
-    private Boolean autorizadoJantar = true;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_cliente", nullable = false, length = 20)
-    private TipoCliente tipoCliente = TipoCliente.HOSPEDE;
-    
     // IMPORTANTE: JsonIgnoreProperties evita o loop infinito
     @ManyToOne
     @JoinColumn(name = "empresa_id")
@@ -67,8 +58,14 @@ public class Cliente {
     private Empresa empresa;
     
     @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL)
-    @JsonIgnore  // ✅ MUDE PARA ISSO
+    @JsonIgnoreProperties("cliente")
     private List<Reserva> reservas;
+    
+    @Column(name = "tipo_cliente", length = 20)
+    private String tipoCliente; // Ex: FISICO, JURIDICO, VIP
+
+    @Column(name = "autorizado_jantar")
+    private Boolean autorizadoJantar = false;
 
 	public Long getId() {
 		return id;
@@ -149,23 +146,6 @@ public class Cliente {
 	public void setDataNascimento(LocalDate dataNascimento) {
 		this.dataNascimento = dataNascimento;
 	}
-	
-	public Boolean getAutorizadoJantar() {
-		return autorizadoJantar;
-	}
-
-	public void setAutorizadoJantar(Boolean autorizadoJantar) {
-		this.autorizadoJantar = autorizadoJantar;
-	}
-	
-
-	public TipoCliente getTipoCliente() {
-		return tipoCliente;
-	}
-
-	public void setTipoCliente(TipoCliente tipoCliente) {
-		this.tipoCliente = tipoCliente;
-	}
 
 	public Empresa getEmpresa() {
 		return empresa;
@@ -182,23 +162,22 @@ public class Cliente {
 	public void setReservas(List<Reserva> reservas) {
 		this.reservas = reservas;
 	}
-	
-	 @Transient
-	    public boolean podeJantar() {
-	        // REGRA 1: Se não tem empresa, pode jantar
-	        if (this.empresa == null) {
-	            return true;
-	        }
-	        
-	        // REGRA 2: Se empresa autoriza todos, pode jantar
-	        if (this.empresa.getAutorizaTodosJantar() != null && 
-	            this.empresa.getAutorizaTodosJantar()) {
-	            return true;
-	        }
-	        
-	        // REGRA 3: Verificar autorização individual
-	        return this.autorizadoJantar != null && this.autorizadoJantar;
-	    }
+
+	public String getTipoCliente() {
+		return tipoCliente;
+	}
+
+	public void setTipoCliente(String tipoCliente) {
+		this.tipoCliente = tipoCliente;
+	}
+
+	public Boolean getAutorizadoJantar() {
+		return autorizadoJantar;
+	}
+
+	public void setAutorizadoJantar(Boolean autorizadoJantar) {
+		this.autorizadoJantar = autorizadoJantar;
+	}
 
 	@Override
 	public int hashCode() {
@@ -215,21 +194,6 @@ public class Cliente {
 			return false;
 		Cliente other = (Cliente) obj;
 		return Objects.equals(id, other.id);
-	}
-	
-	public enum TipoCliente {
-	    HOSPEDE("Hóspede"),
-	    FUNCIONARIO("Funcionário");
-	    
-	    private final String descricao;
-	    
-	    TipoCliente(String descricao) {
-	        this.descricao = descricao;
-	    }
-	    
-	    public String getDescricao() {
-	        return descricao;
-	    }
 	}
     
     

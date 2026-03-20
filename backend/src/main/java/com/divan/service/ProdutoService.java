@@ -72,26 +72,12 @@ public class ProdutoService {
     public Optional<Produto> buscarPorId(Long id) {
         return produtoRepository.findById(id);
     }
-
-    /**
-     * 🍽️ BUSCAR PRODUTOS POR CATEGORIA (PARA JANTAR)
-     */
-    @Transactional(readOnly = true)
-    public List<Produto> buscarPorCategoria(Long categoriaId) {
-        System.out.println("🔍 Buscando produtos da categoria ID: " + categoriaId);
-        
-        List<Produto> produtos = produtoRepository.findByCategoriaId(categoriaId);
-        
-        System.out.println("✅ Encontrados " + produtos.size() + " produtos");
-        
-        return produtos;
-    }
-
+    
     @Transactional(readOnly = true)
     public List<Produto> listarTodos() {
         return produtoRepository.findAllOrderByNome();
     }
-
+    
     @Transactional(readOnly = true)
     public List<Produto> buscarPorNome(String nome) {
         return produtoRepository.findByNomeProdutoContainingIgnoreCase(nome);

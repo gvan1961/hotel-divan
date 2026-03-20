@@ -23,13 +23,13 @@ public class Permissao {
     
     @NotBlank(message = "Nome da permissão é obrigatório")
     @Column(unique = true, nullable = false, length = 100)
-    private String nome;
+    private String nome; // RESERVA_CREATE, RESERVA_READ, RESERVA_UPDATE, etc.
     
     @Column(length = 200)
     private String descricao;
     
     @Column(length = 50)
-    private String categoria;
+    private String categoria; // RESERVAS, CLIENTES, PRODUTOS, FINANCEIRO, etc.
     
     @ManyToMany(mappedBy = "permissoes")
     @JsonIgnoreProperties("permissoes")
@@ -38,55 +38,4 @@ public class Permissao {
     @ManyToMany(mappedBy = "permissoes")
     @JsonIgnoreProperties({"perfis", "permissoes"})
     private List<Usuario> usuarios = new ArrayList<>();
-    
-    // ✅ GETTERS MANUAIS (caso Lombok não funcione)
-    public Long getId() {
-        return id;
-    }
-    
-    public String getNome() {
-        return nome;
-    }
-    
-    public String getDescricao() {
-        return descricao;
-    }
-    
-    public String getCategoria() {
-        return categoria;
-    }
-    
-    public List<Perfil> getPerfis() {
-        return perfis;
-    }
-    
-    public List<Usuario> getUsuarios() {
-        return usuarios;
-    }
-    
-    // ✅ SETTERS MANUAIS
-    public void setId(Long id) {
-        this.id = id;
-    }
-    
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
-    
-    public void setDescricao(String descricao) {
-        this.descricao = descricao;
-    }
-    
-    public void setCategoria(String categoria) {
-        this.categoria = categoria;
-    }
-    
-    public void setPerfis(List<Perfil> perfis) {
-        this.perfis = perfis;
-    }
-    
-    public void setUsuarios(List<Usuario> usuarios) {
-        this.usuarios = usuarios;
-    }       
-           
 }

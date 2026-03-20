@@ -1,95 +1,88 @@
 package com.divan.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 @Entity
-@Table(name = "hospedagem_hospede")
+@Table(name = "hospedagem_hospedes")
 public class HospedagemHospede {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
+
+    @ManyToOne
     @JoinColumn(name = "reserva_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  // ← ADICIONE
+    @JsonIgnore
     private Reserva reserva;
-    
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "cliente_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "reservas"})  // ← ADICIONE
+
+    @ManyToOne
+    @JoinColumn(name = "cliente_id")
     private Cliente cliente;
-    
-    @Column(name = "nome_completo", length = 200)
-    private String nomeCompleto;
-    
-    @Column(name = "data_entrada", nullable = false)
-    private LocalDateTime dataEntrada;
-    
-    @Column(name = "data_saida")
-    private LocalDateTime dataSaida;
-    
-    @Column(nullable = false)
-    private Boolean titular = false;
-    
+
+    @Column(name = "titular")
+    private boolean titular = false;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private StatusHospedeIndividual status = StatusHospedeIndividual.HOSPEDADO;
-    
-    public enum StatusHospedeIndividual {
+    @Column(name = "status", nullable = false)
+    private StatusEnum status = StatusEnum.HOSPEDADO;
+
+    @Column(name = "data_hora_entrada")
+    private LocalDateTime dataHoraEntrada;
+
+    @Column(name = "data_hora_saida")
+    private LocalDateTime dataHoraSaida;
+
+    @Column(name = "placa_carro", length = 10)
+    private String placaCarro;
+
+    @Column(name = "nome_completo", length = 150)
+    private String nomeCompleto;
+
+    @Column(name = "cpf", length = 14)
+    private String cpf;
+
+    @Column(name = "telefone", length = 20)
+    private String telefone;
+
+    public enum StatusEnum {
         HOSPEDADO,
-        SAIU,
         CHECKOUT_REALIZADO
     }
-    
-    // Getters e Setters (mantenha todos)
+
+    // ============= GETTERS E SETTERS =============
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    
+
     public Reserva getReserva() { return reserva; }
     public void setReserva(Reserva reserva) { this.reserva = reserva; }
-    
+
     public Cliente getCliente() { return cliente; }
     public void setCliente(Cliente cliente) { this.cliente = cliente; }
-    
-    public LocalDateTime getDataEntrada() { return dataEntrada; }
-    public void setDataEntrada(LocalDateTime dataEntrada) { this.dataEntrada = dataEntrada; }
-    
-    public LocalDateTime getDataSaida() { return dataSaida; }
-    public void setDataSaida(LocalDateTime dataSaida) { this.dataSaida = dataSaida; }
-    
-    public Boolean getTitular() { return titular; }
-    public void setTitular(Boolean titular) { this.titular = titular; }
-    
-    public StatusHospedeIndividual getStatus() { return status; }
-    public void setStatus(StatusHospedeIndividual status) { this.status = status; }
-    
-    
-    
-	public String getNomeCompleto() {
-		return nomeCompleto;
-	}
-	public void setNomeCompleto(String nomeCompleto) {
-		this.nomeCompleto = nomeCompleto;
-	}
-	@Override
-	public int hashCode() {
-		return Objects.hash(id);
-	}
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		HospedagemHospede other = (HospedagemHospede) obj;
-		return Objects.equals(id, other.id);
-	}
-    
-    
+
+    public boolean isTitular() { return titular; }
+    public void setTitular(boolean titular) { this.titular = titular; }
+
+    public StatusEnum getStatus() { return status; }
+    public void setStatus(StatusEnum status) { this.status = status; }
+
+    public LocalDateTime getDataHoraEntrada() { return dataHoraEntrada; }
+    public void setDataHoraEntrada(LocalDateTime dataHoraEntrada) { this.dataHoraEntrada = dataHoraEntrada; }
+
+    public LocalDateTime getDataHoraSaida() { return dataHoraSaida; }
+    public void setDataHoraSaida(LocalDateTime dataHoraSaida) { this.dataHoraSaida = dataHoraSaida; }
+
+    public String getPlacaCarro() { return placaCarro; }
+    public void setPlacaCarro(String placaCarro) { this.placaCarro = placaCarro; }
+
+    public String getNomeCompleto() { return nomeCompleto; }
+    public void setNomeCompleto(String nomeCompleto) { this.nomeCompleto = nomeCompleto; }
+
+    public String getCpf() { return cpf; }
+    public void setCpf(String cpf) { this.cpf = cpf; }
+
+    public String getTelefone() { return telefone; }
+    public void setTelefone(String telefone) { this.telefone = telefone; }
 }

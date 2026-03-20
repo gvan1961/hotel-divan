@@ -5,14 +5,18 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Objects;
 
 @Entity
 @Table(name = "diarias", uniqueConstraints = @UniqueConstraint(columnNames = {"tipo_apartamento_id", "quantidade"}))
-
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Diaria {
     
     @Id
@@ -36,63 +40,4 @@ public class Diaria {
     @OneToMany(mappedBy = "diaria", cascade = CascadeType.ALL)
     @JsonIgnoreProperties("diaria")
     private List<Reserva> reservas;
-
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public TipoApartamento getTipoApartamento() {
-		return tipoApartamento;
-	}
-
-	public void setTipoApartamento(TipoApartamento tipoApartamento) {
-		this.tipoApartamento = tipoApartamento;
-	}
-
-	public Integer getQuantidade() {
-		return quantidade;
-	}
-
-	public void setQuantidade(Integer quantidade) {
-		this.quantidade = quantidade;
-	}
-
-	public BigDecimal getValor() {
-		return valor;
-	}
-
-	public void setValor(BigDecimal valor) {
-		this.valor = valor;
-	}
-
-	public List<Reserva> getReservas() {
-		return reservas;
-	}
-
-	public void setReservas(List<Reserva> reservas) {
-		this.reservas = reservas;
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(id);
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		Diaria other = (Diaria) obj;
-		return Objects.equals(id, other.id);
-	}
-    
-    
 }

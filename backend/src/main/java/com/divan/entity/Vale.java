@@ -1,67 +1,69 @@
 package com.divan.entity;
 
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "vales")
+
 public class Vale {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cliente_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Cliente cliente;
+    
+    @Transient
+    public String getClienteNome() {
+        return cliente != null ? cliente.getNome() : null;
+    }
 
-    @Column(nullable = false)
-    private LocalDate dataConcessao;
-
-    @Column(nullable = false)
-    private LocalDate dataVencimento;
-
-    private LocalDate dataPagamento;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private TipoVale tipoVale;
+    @Transient  
+    public String getClienteCpf() {
+        return cliente != null ? cliente.getCpf() : null;
+    }
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal valor;
+
+    @Column(length = 500)
+    private String descricao;
+
+    @Column(name = "data_emissao")
+    private LocalDateTime dataEmissao;
+
+    @Column(name = "data_vencimento")
+    private LocalDate dataVencimento;
+
+    @Column(name = "data_pagamento")
+    private LocalDateTime dataPagamento;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private StatusVale status = StatusVale.PENDENTE;
 
+    @Column(name = "motivo_cancelamento", length = 500)
+    private String motivoCancelamento;
+
+    @Column(name = "assinatura_base64", columnDefinition = "TEXT")
+    private String assinaturaBase64;
+
     @Column(length = 500)
     private String observacao;
 
-    @Column(length = 500)
-    private String motivoCancelamento;
-
-    private LocalDateTime dataCriacao;
-
-    @Column(length = 100)
-    private String criadoPor;
-    
-    @Column(columnDefinition = "LONGTEXT")
-    private String assinaturaBase64;
-
-    private LocalDateTime dataAssinatura;
-
-    @PrePersist
-    protected void onCreate() {
-        this.dataCriacao = LocalDateTime.now();
+    public enum StatusVale {
+        PENDENTE, PAGO, VENCIDO, CANCELADO
     }
-    
-    
 
-    public Long getId() {
+	public Long getId() {
 		return id;
 	}
 
@@ -77,12 +79,28 @@ public class Vale {
 		this.cliente = cliente;
 	}
 
-	public LocalDate getDataConcessao() {
-		return dataConcessao;
+	public BigDecimal getValor() {
+		return valor;
 	}
 
-	public void setDataConcessao(LocalDate dataConcessao) {
-		this.dataConcessao = dataConcessao;
+	public void setValor(BigDecimal valor) {
+		this.valor = valor;
+	}
+
+	public String getDescricao() {
+		return descricao;
+	}
+
+	public void setDescricao(String descricao) {
+		this.descricao = descricao;
+	}
+
+	public LocalDateTime getDataEmissao() {
+		return dataEmissao;
+	}
+
+	public void setDataEmissao(LocalDateTime dataEmissao) {
+		this.dataEmissao = dataEmissao;
 	}
 
 	public LocalDate getDataVencimento() {
@@ -93,28 +111,12 @@ public class Vale {
 		this.dataVencimento = dataVencimento;
 	}
 
-	public LocalDate getDataPagamento() {
+	public LocalDateTime getDataPagamento() {
 		return dataPagamento;
 	}
 
-	public void setDataPagamento(LocalDate dataPagamento) {
+	public void setDataPagamento(LocalDateTime dataPagamento) {
 		this.dataPagamento = dataPagamento;
-	}
-
-	public TipoVale getTipoVale() {
-		return tipoVale;
-	}
-
-	public void setTipoVale(TipoVale tipoVale) {
-		this.tipoVale = tipoVale;
-	}
-
-	public BigDecimal getValor() {
-		return valor;
-	}
-
-	public void setValor(BigDecimal valor) {
-		this.valor = valor;
 	}
 
 	public StatusVale getStatus() {
@@ -125,14 +127,6 @@ public class Vale {
 		this.status = status;
 	}
 
-	public String getObservacao() {
-		return observacao;
-	}
-
-	public void setObservacao(String observacao) {
-		this.observacao = observacao;
-	}
-
 	public String getMotivoCancelamento() {
 		return motivoCancelamento;
 	}
@@ -141,55 +135,26 @@ public class Vale {
 		this.motivoCancelamento = motivoCancelamento;
 	}
 
-	public LocalDateTime getDataCriacao() {
-		return dataCriacao;
-	}
-
-	public void setDataCriacao(LocalDateTime dataCriacao) {
-		this.dataCriacao = dataCriacao;
-	}
-
-	public String getCriadoPor() {
-		return criadoPor;
-	}
-
-	public void setCriadoPor(String criadoPor) {
-		this.criadoPor = criadoPor;
-	}
-	
-	
-    
-	
 	public String getAssinaturaBase64() {
 		return assinaturaBase64;
 	}
-
-
 
 	public void setAssinaturaBase64(String assinaturaBase64) {
 		this.assinaturaBase64 = assinaturaBase64;
 	}
 
-
-
-	public LocalDateTime getDataAssinatura() {
-		return dataAssinatura;
+	public String getObservacao() {
+		return observacao;
 	}
 
-
-
-	public void setDataAssinatura(LocalDateTime dataAssinatura) {
-		this.dataAssinatura = dataAssinatura;
+	public void setObservacao(String observacao) {
+		this.observacao = observacao;
 	}
-
-
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(id);
 	}
-
-
 
 	@Override
 	public boolean equals(Object obj) {
@@ -202,43 +167,5 @@ public class Vale {
 		Vale other = (Vale) obj;
 		return Objects.equals(id, other.id);
 	}
-
-
-
-
-	public enum TipoVale {
-        ADIANTAMENTO("Adiantamento Salarial"),
-        EMPRESTIMO("Empréstimo"),
-        OUTROS("Outros");
-
-        private final String descricao;
-
-        TipoVale(String descricao) {
-            this.descricao = descricao;
-        }
-
-        public String getDescricao() {
-            return descricao;
-        }
-                
-    }
-
-    public enum StatusVale {
-        PENDENTE("Pendente"),
-        PAGO("Pago"),
-        CANCELADO("Cancelado"),
-        VENCIDO("Vencido");
-
-        private final String descricao;
-
-        StatusVale(String descricao) {
-            this.descricao = descricao;
-        }
-
-        public String getDescricao() {
-            return descricao;
-        }        
-        
-    }
         
 }

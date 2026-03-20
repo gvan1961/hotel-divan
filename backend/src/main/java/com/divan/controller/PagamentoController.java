@@ -1,18 +1,20 @@
 package com.divan.controller;
 
 import com.divan.dto.PagamentoRequestDTO;
+import com.divan.dto.ResumoPagamentosDTO;
 import com.divan.entity.Pagamento;
 import com.divan.entity.Reserva;
 import com.divan.service.PagamentoService;
 import com.divan.service.ReservaService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -26,101 +28,55 @@ public class PagamentoController {
     @Autowired
     private ReservaService reservaService;
     
-    /**
-     * ✅ PROCESSAR PAGAMENTO (COM VALIDAÇÃO DE CAIXA ABERTO)
-     */
     @PostMapping
-    public ResponseEntity<?> processarPagamento(
-            @Valid @RequestBody PagamentoRequestDTO dto,
-            @RequestParam Long usuarioId
-    ) {
+    public ResponseEntity<?> processarPagamento(@Valid @RequestBody PagamentoRequestDTO dto) {
         try {
-            System.out.println("═══════════════════════════════════════════");
-            System.out.println("💰 PROCESSANDO PAGAMENTO");
-            System.out.println("   Reserva ID: " + dto.getReservaId());
-            System.out.println("   Valor: " + dto.getValor());
-            System.out.println("   Forma: " + dto.getFormaPagamento());
-            System.out.println("   Usuário ID: " + usuarioId);
-            System.out.println("═══════════════════════════════════════════");
-
             // Buscar reserva
             Optional<Reserva> reservaOpt = reservaService.buscarPorId(dto.getReservaId());
             if (reservaOpt.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                    "sucesso", false,
-                    "erro", "Reserva não encontrada"
-                ));
+                return ResponseEntity.badRequest().body("Reserva não encontrada");
             }
-
+            
             // Criar pagamento
             Pagamento pagamento = new Pagamento();
             pagamento.setReserva(reservaOpt.get());
             pagamento.setValor(dto.getValor());
             pagamento.setFormaPagamento(dto.getFormaPagamento());
-            pagamento.setDescricao(dto.getObservacao());
+            pagamento.setObservacao(dto.getObservacao());
             
-            // ✅ DEFINIR O TIPO COMO HOSPEDAGEM (campo obrigatório)
-            pagamento.setTipo("HOSPEDAGEM");
-
-            // Processar pagamento (valida caixa aberto)
-            Pagamento pagamentoProcessado = pagamentoService.processarPagamento(pagamento, usuarioId);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "sucesso", true,
-                "mensagem", "Pagamento processado com sucesso!",
-                "pagamento", pagamentoProcessado
-            ));
-
-        } catch (RuntimeException e) {
-            System.err.println("❌ Erro: " + e.getMessage());
-
-            // Tratamento específico para caixa fechado
-            if (e.getMessage() != null && e.getMessage().contains("CAIXA FECHADO")) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                    "sucesso", false,
-                    "erro", e.getMessage(),
-                    "tipo", "CAIXA_FECHADO"
-                ));
-            }
-
-            return ResponseEntity.badRequest().body(Map.of(
-                "sucesso", false,
-                "erro", e.getMessage()
-            ));
-
+            Pagamento pagamentoProcessado = pagamentoService.processarPagamento(pagamento);
+            return ResponseEntity.status(HttpStatus.CREATED).body(pagamentoProcessado);
+            
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "sucesso", false,
-                "erro", "Erro interno ao processar pagamento: " + e.getMessage()
-            ));
-        }
-    }
-
-    /**
-     * ✅ BUSCAR PAGAMENTOS POR RESERVA
-     */
-    @GetMapping("/reserva/{reservaId}")
-    public ResponseEntity<?> buscarPorReserva(@PathVariable Long reservaId) {
-        try {
-            var pagamentos = pagamentoService.buscarPorReserva(reservaId);
-            return ResponseEntity.ok(pagamentos);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
     
-    /**
-     * ✅ BUSCAR PAGAMENTOS DO DIA
-     */
-    @GetMapping("/dia")
-    public ResponseEntity<?> buscarPagamentosDoDia() {
-        try {
-            // ✅ CORRIGIDO: Usar LocalDate ao invés de LocalDateTime
-            var pagamentos = pagamentoService.buscarPagamentosDoDia(LocalDate.now());
-            return ResponseEntity.ok(pagamentos);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
-        }
+    @GetMapping("/reserva/{reservaId}")
+    public ResponseEntity<List<Pagamento>> buscarPorReserva(@PathVariable Long reservaId) {
+        List<Pagamento> pagamentos = pagamentoService.buscarPorReserva(reservaId);
+        return ResponseEntity.ok(pagamentos);
+    }
+    
+    @GetMapping("/do-dia")
+    public ResponseEntity<List<Pagamento>> buscarPagamentosDoDia(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime data) {
+        List<Pagamento> pagamentos = pagamentoService.buscarPagamentosDoDia(data);
+        return ResponseEntity.ok(pagamentos);
+    }
+    
+    @GetMapping("/periodo")
+    public ResponseEntity<List<Pagamento>> buscarPagamentosPorPeriodo(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fim) {
+        List<Pagamento> pagamentos = pagamentoService.buscarPagamentosPorPeriodo(inicio, fim);
+        return ResponseEntity.ok(pagamentos);
+    }
+    
+    @GetMapping("/resumo-do-dia")
+    public ResponseEntity<ResumoPagamentosDTO> gerarResumoDoDia(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime data) {
+        ResumoPagamentosDTO resumo = pagamentoService.gerarResumoDoDia(data);
+        return ResponseEntity.ok(resumo);
     }
 }

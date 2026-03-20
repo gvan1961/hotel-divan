@@ -67,26 +67,41 @@ public class ClienteService {
         return dto;
     }
     
-    public Cliente atualizar(Long id, Cliente cliente, Long empresaId) {
-        Optional<Cliente> clienteExistente = clienteRepository.findById(id);
-        if (clienteExistente.isEmpty()) {
-            throw new RuntimeException("Cliente não encontrado");
+    public Cliente atualizar(Long id, Cliente clienteAtualizado, Long empresaId) {
+        Cliente clienteExistente = clienteRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+
+        // ✅ ATUALIZA APENAS OS CAMPOS ENVIADOS — preserva os demais
+        clienteExistente.setNome(clienteAtualizado.getNome());
+        clienteExistente.setCpf(clienteAtualizado.getCpf());
+        clienteExistente.setCelular(clienteAtualizado.getCelular());
+        clienteExistente.setEndereco(clienteAtualizado.getEndereco());
+        clienteExistente.setCep(clienteAtualizado.getCep());
+        clienteExistente.setCidade(clienteAtualizado.getCidade());
+        clienteExistente.setEstado(clienteAtualizado.getEstado());
+        clienteExistente.setDataNascimento(clienteAtualizado.getDataNascimento());
+
+        // ✅ CAMPOS QUE FALTAVAM
+        if (clienteAtualizado.getCreditoAprovado() != null) {
+            clienteExistente.setCreditoAprovado(clienteAtualizado.getCreditoAprovado());
         }
-        
-        cliente.setId(id);
-        
-        // Se foi informado ID da empresa, buscar e vincular
+        if (clienteAtualizado.getTipoCliente() != null) {
+            clienteExistente.setTipoCliente(clienteAtualizado.getTipoCliente());
+        }
+        if (clienteAtualizado.getAutorizadoJantar() != null) {
+            clienteExistente.setAutorizadoJantar(clienteAtualizado.getAutorizadoJantar());
+        }
+
+        // ✅ EMPRESA
         if (empresaId != null) {
-            Optional<Empresa> empresaOpt = empresaRepository.findById(empresaId);
-            if (empresaOpt.isEmpty()) {
-                throw new RuntimeException("Empresa não encontrada");
-            }
-            cliente.setEmpresa(empresaOpt.get());
+            Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new RuntimeException("Empresa não encontrada"));
+            clienteExistente.setEmpresa(empresa);
         } else {
-            cliente.setEmpresa(null);
+            clienteExistente.setEmpresa(null);
         }
-        
-        return clienteRepository.save(cliente);
+
+        return clienteRepository.save(clienteExistente);
     }
     
     public boolean isAniversarianteDoMes(Long clienteId) {

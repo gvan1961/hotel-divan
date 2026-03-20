@@ -1,7 +1,7 @@
 package com.divan.dto;
 
-import java.time.LocalDateTime;
 
+import java.time.LocalDateTime;
 
 public class ReservaMapaDTO {
     
@@ -46,6 +46,7 @@ public class ReservaMapaDTO {
 	}
 	public void setStatus(String status) {
 		this.status = status;
-	}        
+	}
+    
     
 }

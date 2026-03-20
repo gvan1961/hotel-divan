@@ -1,14 +1,10 @@
 package com.divan.controller;
 
-import com.divan.dto.UsuarioRequestDTO;
-import com.divan.dto.UsuarioResponseDTO;
-import com.divan.dto.AlterarSenhaDTO;
 import com.divan.entity.Usuario;
-import com.divan.service.UsuarioService;
+import com.divan.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,155 +14,66 @@ import java.util.Map;
 @RequestMapping("/api/usuarios")
 @CrossOrigin(origins = "*")
 public class UsuarioController {
-    
+
     @Autowired
-    private UsuarioService usuarioService;
-    
-    /**
-     * 📋 LISTAR TODOS OS USUÁRIOS
-     */
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<UsuarioResponseDTO>> listarTodos() {
-        System.out.println("═══════════════════════════════════════════");
-        System.out.println("📋 LISTANDO TODOS OS USUÁRIOS");
-        
-        List<UsuarioResponseDTO> usuarios = usuarioService.listarTodos();
-        
-        System.out.println("✅ Total: " + usuarios.size() + " usuário(s)");
-        System.out.println("═══════════════════════════════════════════");
-        
-        return ResponseEntity.ok(usuarios);
+    public ResponseEntity<List<Usuario>> listarTodos() {
+        return ResponseEntity.ok(usuarioRepository.findAll());
     }
-    
-    /**
-     * 🔍 BUSCAR USUÁRIO POR ID
-     */
+
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UsuarioResponseDTO> buscarPorId(@PathVariable Long id) {
-        System.out.println("🔍 Buscando usuário ID: " + id);
-        
-        UsuarioResponseDTO usuario = usuarioService.buscarPorIdDTO(id);
-        
-        return ResponseEntity.ok(usuario);
+    public ResponseEntity<?> buscarPorId(@PathVariable Long id) {
+        return usuarioRepository.findById(id)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
     }
-    
-    /**
-     * ➕ CRIAR NOVO USUÁRIO
-     */
+
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> criar(@RequestBody UsuarioRequestDTO dto) {
+    public ResponseEntity<?> criar(@RequestBody Map<String, Object> body) {
         try {
-            System.out.println("═══════════════════════════════════════════");
-            System.out.println("➕ CRIANDO NOVO USUÁRIO");
-            System.out.println("   Nome: " + dto.getNome());
-            System.out.println("   Username: " + dto.getUsername());
-            System.out.println("   Email: " + dto.getEmail());
-            
-            Usuario usuario = usuarioService.criar(dto);
-            
-            System.out.println("✅ Usuário criado com sucesso! ID: " + usuario.getId());
-            System.out.println("═══════════════════════════════════════════");
-            
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "sucesso", true,
-                "mensagem", "Usuário criado com sucesso!",
-                "id", usuario.getId()
-            ));
-            
-        } catch (RuntimeException e) {
-            System.err.println("❌ Erro: " + e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of(
-                "sucesso", false,
-                "erro", e.getMessage()
-            ));
+            Usuario u = new Usuario();
+            u.setNome(body.get("nome").toString());
+            u.setUsername(body.get("username").toString());
+            u.setEmail(body.get("email").toString());
+            u.setPassword(passwordEncoder.encode(body.get("password").toString()));
+            u.setAtivo(Boolean.parseBoolean(body.getOrDefault("ativo", true).toString()));
+            return ResponseEntity.ok(usuarioRepository.save(u));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
-    
-    /**
-     * ✏️ ATUALIZAR USUÁRIO
-     */
+
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> atualizar(@PathVariable Long id, @RequestBody UsuarioRequestDTO dto) {
-        try {
-            System.out.println("═══════════════════════════════════════════");
-            System.out.println("✏️ ATUALIZANDO USUÁRIO ID: " + id);
-            
-            Usuario usuario = usuarioService.atualizar(id, dto);
-            
-            System.out.println("✅ Usuário atualizado com sucesso!");
-            System.out.println("═══════════════════════════════════════════");
-            
-            return ResponseEntity.ok(Map.of(
-                "sucesso", true,
-                "mensagem", "Usuário atualizado com sucesso!"
-            ));
-            
-        } catch (RuntimeException e) {
-            System.err.println("❌ Erro: " + e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of(
-                "sucesso", false,
-                "erro", e.getMessage()
-            ));
-        }
+    public ResponseEntity<?> atualizar(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        return usuarioRepository.findById(id).map(u -> {
+            u.setNome(body.get("nome").toString());
+            u.setUsername(body.get("username").toString());
+            u.setEmail(body.get("email").toString());
+            if (body.get("password") != null && !body.get("password").toString().isBlank()) {
+            	u.setPassword(passwordEncoder.encode(body.get("password").toString()));
+            }
+            u.setAtivo(Boolean.valueOf(body.getOrDefault("ativo", "true").toString()));
+            return ResponseEntity.ok(usuarioRepository.save(u));
+        }).orElse(ResponseEntity.notFound().build());
     }
-    
-    /**
-     * 🔐 ALTERAR SENHA
-     */
-    @PutMapping("/{id}/senha")
-    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
-    public ResponseEntity<?> alterarSenha(@PathVariable Long id, @RequestBody AlterarSenhaDTO dto) {
-        try {
-            System.out.println("🔐 Alterando senha do usuário ID: " + id);
-            
-            usuarioService.alterarSenha(id, dto);
-            
-            System.out.println("✅ Senha alterada com sucesso!");
-            
-            return ResponseEntity.ok(Map.of(
-                "sucesso", true,
-                "mensagem", "Senha alterada com sucesso!"
-            ));
-            
-        } catch (RuntimeException e) {
-            System.err.println("❌ Erro: " + e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of(
-                "sucesso", false,
-                "erro", e.getMessage()
-            ));
-        }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deletar(@PathVariable Long id) {
+        if (!usuarioRepository.existsById(id)) return ResponseEntity.notFound().build();
+        usuarioRepository.deleteById(id);
+        return ResponseEntity.ok().build();
     }
-    
-    /**
-     * 🔄 ATIVAR/DESATIVAR USUÁRIO
-     */
-    @PatchMapping("/{id}/ativo")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> ativarDesativar(@PathVariable Long id, @RequestBody Map<String, Boolean> body) {
-        try {
-            Boolean ativo = body.get("ativo");
-            
-            System.out.println("🔄 " + (ativo ? "Ativando" : "Desativando") + " usuário ID: " + id);
-            
-            usuarioService.ativarDesativar(id, ativo);
-            
-            System.out.println("✅ Usuário " + (ativo ? "ativado" : "desativado") + " com sucesso!");
-            
-            return ResponseEntity.ok(Map.of(
-                "sucesso", true,
-                "mensagem", "Usuário " + (ativo ? "ativado" : "desativado") + " com sucesso!"
-            ));
-            
-        } catch (RuntimeException e) {
-            System.err.println("❌ Erro: " + e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of(
-                "sucesso", false,
-                "erro", e.getMessage()
-            ));
-        }
+
+    @PatchMapping("/{id}/ativar-desativar")
+    public ResponseEntity<?> ativarDesativar(@PathVariable Long id) {
+        return usuarioRepository.findById(id).map(u -> {
+        	u.setAtivo(!Boolean.TRUE.equals(u.getAtivo()));
+            return ResponseEntity.ok(usuarioRepository.save(u));
+        }).orElse(ResponseEntity.notFound().build());
     }
 }

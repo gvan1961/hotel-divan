@@ -9,6 +9,9 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class UsuarioRequestDTO {
     
     @NotBlank(message = "Nome é obrigatório")
@@ -30,61 +33,4 @@ public class UsuarioRequestDTO {
     private List<Long> perfisIds;
     
     private List<Long> permissoesIds;
-
-	public String getNome() {
-		return nome;
-	}
-
-	public void setNome(String nome) {
-		this.nome = nome;
-	}
-
-	public String getUsername() {
-		return username;
-	}
-
-	public void setUsername(String username) {
-		this.username = username;
-	}
-
-	public String getEmail() {
-		return email;
-	}
-
-	public void setEmail(String email) {
-		this.email = email;
-	}
-
-	public String getPassword() {
-		return password;
-	}
-
-	public void setPassword(String password) {
-		this.password = password;
-	}
-
-	public Boolean getAtivo() {
-		return ativo;
-	}
-
-	public void setAtivo(Boolean ativo) {
-		this.ativo = ativo;
-	}
-
-	public List<Long> getPerfisIds() {
-		return perfisIds;
-	}
-
-	public void setPerfisIds(List<Long> perfisIds) {
-		this.perfisIds = perfisIds;
-	}
-
-	public List<Long> getPermissoesIds() {
-		return permissoesIds;
-	}
-
-	public void setPermissoesIds(List<Long> permissoesIds) {
-		this.permissoesIds = permissoesIds;
-	}
-    
-  }
+}

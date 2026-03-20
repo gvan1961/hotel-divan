@@ -26,79 +26,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
     
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                  HttpServletResponse response,
-                                  FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, 
+                                    HttpServletResponse response, 
+                                    FilterChain filterChain) throws ServletException, IOException {
         
-        String path = request.getRequestURI();
-        String method = request.getMethod();
-        System.out.println("🔍 Requisição: " + method + " " + path);
-        
-        // ✅ VERIFICAR SE É ENDPOINT PÚBLICO (PULAR AUTENTICAÇÃO)
-        if (isPublicEndpoint(path, method)) {
-            System.out.println("🌐 Endpoint público - pulando autenticação");
-            filterChain.doFilter(request, response);
-            return;
-        }
-        
-        String jwt = getJwtFromRequest(request);
-        System.out.println("🎫 JWT recebido: " + (jwt != null ? "SIM (" + jwt.substring(0, 20) + "...)" : "NÃO"));
-        
-        if (StringUtils.hasText(jwt) && jwtUtil.validateToken(jwt)) {
-            String username = jwtUtil.getUsernameFromToken(jwt);
-            System.out.println("👤 Usuário do token: " + username);
+        try {
+            String jwt = getJwtFromRequest(request);
             
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            System.out.println("🔑 Authorities: " + userDetails.getAuthorities());
-            
-            UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                    userDetails,
-                    null,
-                    userDetails.getAuthorities()
-                );
-            
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            System.out.println("✅ Autenticação configurada");
-        } else {
-            System.out.println("❌ Token inválido ou ausente");
+            if (StringUtils.hasText(jwt) && jwtUtil.validateToken(jwt)) {
+                String username = jwtUtil.getUsernameFromToken(jwt);
+                
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                UsernamePasswordAuthenticationToken authentication = 
+                    new UsernamePasswordAuthenticationToken(
+                        userDetails, 
+                        null, 
+                        userDetails.getAuthorities()
+                    );
+                
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } catch (Exception ex) {
+            logger.error("Não foi possível definir autenticação do usuário no contexto de segurança", ex);
         }
         
         filterChain.doFilter(request, response);
     }
     
-    /**
-     * ✅ VERIFICA SE O ENDPOINT É PÚBLICO (NÃO PRECISA DE JWT)
-     */
-    private boolean isPublicEndpoint(String path, String method) {
-        // Auth
-        if (path.startsWith("/api/auth/")) return true;
-        if (path.startsWith("/api/public/")) return true;
-        
-        // Hospedagem
-        if (path.startsWith("/api/hospedagem-hospedes/")) return true;
-        
-        // ✅ RELATÓRIOS DE CAIXA (GET apenas)
-        if ("GET".equals(method) && path.matches("/api/fechamento-caixa/\\d+/relatorio")) return true;
-        if ("GET".equals(method) && path.matches("/api/fechamento-caixa/\\d+/imprimir")) return true;
-        
-        // Jantar
-        if (path.equals("/api/jantar/relatorio-impressao")) return true;
-        
-        // Checkout parcial
-        if ("POST".equals(method) && path.matches("/api/reservas/\\d+/checkout-parcial")) return true;
-        
-        // Outros
-        if (path.equals("/favicon.ico")) return true;
-        if ("OPTIONS".equals(method)) return true;
-        
-        return false;
-    }
-    
     private String getJwtFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
-        System.out.println("📋 Header Authorization: " + bearerToken);
-        
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }

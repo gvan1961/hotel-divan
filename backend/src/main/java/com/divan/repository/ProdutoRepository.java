@@ -15,8 +15,6 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
     
     List<Produto> findByCategoria(Categoria categoria);
     
-    List<Produto> findByCategoriaId(Long categoriaId);
-    
     @Query("SELECT p FROM Produto p WHERE p.quantidade <= 10")
     List<Produto> findProdutosComEstoqueBaixo();
     
@@ -28,4 +26,6 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
     
     @Query("SELECT p FROM Produto p WHERE p.quantidade > 0 ORDER BY p.nomeProduto")
     List<Produto> findProdutosDisponiveis();
+    
+    List<Produto> findByCategoriaId(Long categoriaId);
 }

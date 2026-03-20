@@ -20,6 +20,9 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/diarias")
 @CrossOrigin(origins = "*")
 public class DiariaController {
+	
+	@Autowired  // ← adicione isto
+	private com.divan.repository.DiariaRepository diariaRepository;
     
     @Autowired
     private DiariaService diariaService;
@@ -29,12 +32,11 @@ public class DiariaController {
     
     @GetMapping("/tipo-apartamento/{tipoApartamentoId}")
     public ResponseEntity<List<Diaria>> buscarPorTipoApartamento(@PathVariable Long tipoApartamentoId) {
-        try {
-            List<Diaria> diarias = diariaService.buscarPorTipo(tipoApartamentoId);
-            return ResponseEntity.ok(diarias);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(null);
-        }
+        TipoApartamento tipoApartamento = tipoApartamentoRepository.findById(tipoApartamentoId)
+            .orElseThrow(() -> new RuntimeException("Tipo de apartamento não encontrado"));
+        
+        List<Diaria> diarias = diariaRepository.findByTipoApartamentoOrderByQuantidadeAsc(tipoApartamento);
+        return ResponseEntity.ok(diarias);
     }
     
     

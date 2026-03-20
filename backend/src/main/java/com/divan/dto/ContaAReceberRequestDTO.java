@@ -10,6 +10,9 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ContaAReceberRequestDTO {
     
     @NotNull(message = "Reserva é obrigatória")
@@ -26,45 +29,4 @@ public class ContaAReceberRequestDTO {
     
     @NotBlank(message = "Descrição é obrigatória")
     private String descricao;
-
-	public Long getReservaId() {
-		return reservaId;
-	}
-
-	public void setReservaId(Long reservaId) {
-		this.reservaId = reservaId;
-	}
-
-	public Long getEmpresaId() {
-		return empresaId;
-	}
-
-	public void setEmpresaId(Long empresaId) {
-		this.empresaId = empresaId;
-	}
-
-	public BigDecimal getValor() {
-		return valor;
-	}
-
-	public void setValor(BigDecimal valor) {
-		this.valor = valor;
-	}
-
-	public LocalDate getDataVencimento() {
-		return dataVencimento;
-	}
-
-	public void setDataVencimento(LocalDate dataVencimento) {
-		this.dataVencimento = dataVencimento;
-	}
-
-	public String getDescricao() {
-		return descricao;
-	}
-
-	public void setDescricao(String descricao) {
-		this.descricao = descricao;
-	}    
-    
 }

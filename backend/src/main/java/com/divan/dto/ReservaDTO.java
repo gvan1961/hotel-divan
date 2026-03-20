@@ -4,10 +4,16 @@ import com.divan.entity.Reserva;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ReservaDTO {
     
     private Long id;
@@ -52,108 +58,4 @@ public class ReservaDTO {
     
     private BigDecimal totalApagar;
     private Reserva.StatusReservaEnum status;
-	public Long getId() {
-		return id;
-	}
-	public void setId(Long id) {
-		this.id = id;
-	}
-	public Long getApartamentoId() {
-		return apartamentoId;
-	}
-	public void setApartamentoId(Long apartamentoId) {
-		this.apartamentoId = apartamentoId;
-	}
-	public String getApartamentoNumero() {
-		return apartamentoNumero;
-	}
-	public void setApartamentoNumero(String apartamentoNumero) {
-		this.apartamentoNumero = apartamentoNumero;
-	}
-	public Long getClienteId() {
-		return clienteId;
-	}
-	public void setClienteId(Long clienteId) {
-		this.clienteId = clienteId;
-	}
-	public String getClienteNome() {
-		return clienteNome;
-	}
-	public void setClienteNome(String clienteNome) {
-		this.clienteNome = clienteNome;
-	}
-	public Integer getQuantidadeHospede() {
-		return quantidadeHospede;
-	}
-	public void setQuantidadeHospede(Integer quantidadeHospede) {
-		this.quantidadeHospede = quantidadeHospede;
-	}
-	public Long getDiariaId() {
-		return diariaId;
-	}
-	public void setDiariaId(Long diariaId) {
-		this.diariaId = diariaId;
-	}
-	public LocalDateTime getDataCheckin() {
-		return dataCheckin;
-	}
-	public void setDataCheckin(LocalDateTime dataCheckin) {
-		this.dataCheckin = dataCheckin;
-	}
-	public LocalDateTime getDataCheckout() {
-		return dataCheckout;
-	}
-	public void setDataCheckout(LocalDateTime dataCheckout) {
-		this.dataCheckout = dataCheckout;
-	}
-	public Integer getQuantidadeDiaria() {
-		return quantidadeDiaria;
-	}
-	public void setQuantidadeDiaria(Integer quantidadeDiaria) {
-		this.quantidadeDiaria = quantidadeDiaria;
-	}
-	public BigDecimal getTotalDiaria() {
-		return totalDiaria;
-	}
-	public void setTotalDiaria(BigDecimal totalDiaria) {
-		this.totalDiaria = totalDiaria;
-	}
-	public BigDecimal getTotalProduto() {
-		return totalProduto;
-	}
-	public void setTotalProduto(BigDecimal totalProduto) {
-		this.totalProduto = totalProduto;
-	}
-	public BigDecimal getTotalHospedagem() {
-		return totalHospedagem;
-	}
-	public void setTotalHospedagem(BigDecimal totalHospedagem) {
-		this.totalHospedagem = totalHospedagem;
-	}
-	public BigDecimal getTotalRecebido() {
-		return totalRecebido;
-	}
-	public void setTotalRecebido(BigDecimal totalRecebido) {
-		this.totalRecebido = totalRecebido;
-	}
-	public BigDecimal getDesconto() {
-		return desconto;
-	}
-	public void setDesconto(BigDecimal desconto) {
-		this.desconto = desconto;
-	}
-	public BigDecimal getTotalApagar() {
-		return totalApagar;
-	}
-	public void setTotalApagar(BigDecimal totalApagar) {
-		this.totalApagar = totalApagar;
-	}
-	public Reserva.StatusReservaEnum getStatus() {
-		return status;
-	}
-	public void setStatus(Reserva.StatusReservaEnum status) {
-		this.status = status;
-	}
-    
-    
 }

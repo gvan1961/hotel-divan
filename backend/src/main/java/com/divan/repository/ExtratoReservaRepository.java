@@ -1,6 +1,7 @@
 package com.divan.repository;
 
 import com.divan.entity.ExtratoReserva;
+import com.divan.entity.HistoricoHospede;
 import com.divan.entity.Reserva;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -17,21 +18,15 @@ public interface ExtratoReservaRepository extends JpaRepository<ExtratoReserva, 
     
     List<ExtratoReserva> findByReservaOrderByDataHoraLancamento(Reserva reserva);    
     
-    void deleteByReservaId(Long reservaId); 
-    
+       
     List<ExtratoReserva> findByStatusLancamento(ExtratoReserva.StatusLancamentoEnum status);
-    
-    List<ExtratoReserva> findByStatusLancamentoAndDataHoraLancamentoBetween(
-    	    ExtratoReserva.StatusLancamentoEnum status,
-    	    LocalDateTime inicio,
-    	    LocalDateTime fim
-    	);
     
     @Query("SELECT e FROM ExtratoReserva e WHERE e.dataHoraLancamento BETWEEN :inicio AND :fim")
     List<ExtratoReserva> findByPeriodo(LocalDateTime inicio, LocalDateTime fim);
     
-    List<ExtratoReserva> findByReservaIdOrderByDataHoraLancamento(Reserva reserva);
-          
+    List<ExtratoReserva> findByReservaIdOrderByDataHoraLancamento(Long reservaId);
+    
+      
  //   List<HistoricoHospede> findByReservaId(Long reservaId);  
     
     
@@ -39,7 +34,9 @@ public interface ExtratoReservaRepository extends JpaRepository<ExtratoReserva, 
     @Query("SELECT e FROM ExtratoReserva e WHERE e.reserva.id = :reservaId")
     List<ExtratoReserva> findByReservaId(@Param("reservaId") Long reservaId);   
    
-    List<ExtratoReserva> findByDataHoraLancamentoBetween(LocalDateTime inicio, LocalDateTime fim);
-    
-    
+    List<ExtratoReserva> findByStatusLancamentoAndDataHoraLancamentoBetween(
+    	    ExtratoReserva.StatusLancamentoEnum status,
+    	    LocalDateTime inicio,
+    	    LocalDateTime fim
+    	);
 }
