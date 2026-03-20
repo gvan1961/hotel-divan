@@ -694,7 +694,7 @@ export class ComandasRapidasComponent implements OnInit {
     this.loading = true;
     
     // Carregar categorias
-    this.http.get<Categoria[]>('http://localhost:8080/api/categorias').subscribe({
+    this.http.get<Categoria[]>('/api/categorias').subscribe({
       next: (categorias) => {
         this.categorias = categorias;
         console.log('✅ Categorias carregadas:', categorias.length);
@@ -708,7 +708,7 @@ export class ComandasRapidasComponent implements OnInit {
   }
 
   carregarReservas(): void {
-    this.http.get<any[]>('http://localhost:8080/api/reservas/ativas').subscribe({
+    this.http.get<any[]>('/api/reservas/ativas').subscribe({
       next: (reservas) => {
         this.reservas = reservas
   .map(r => ({
@@ -739,7 +739,7 @@ export class ComandasRapidasComponent implements OnInit {
   }
 
   carregarProdutos(): void {
-    this.http.get<Produto[]>('http://localhost:8080/api/produtos').subscribe({
+    this.http.get<Produto[]>('/api/produtos').subscribe({
       next: (produtos) => {
         this.produtos = produtos.filter(p => p.quantidade > 0);
         this.produtosFiltrados = this.produtos;
@@ -904,7 +904,7 @@ export class ComandasRapidasComponent implements OnInit {
 
     const payload = { comandas };
 
-    this.http.post<any>('http://localhost:8080/api/reservas/comandas-rapidas', payload)
+    this.http.post<any>('/api/reservas/comandas-rapidas', payload)
       .subscribe({
         next: (resultado) => {
           this.salvando = false;

@@ -62,7 +62,7 @@ export interface ResumoApartamentoDTO {
 })
 export class FechamentoCaixaService {
   
-  private apiUrl = 'http://localhost:8080/api/fechamento-caixa';
+  private apiUrl = '/api/fechamento-caixa';
   
   constructor(private http: HttpClient) {}
   

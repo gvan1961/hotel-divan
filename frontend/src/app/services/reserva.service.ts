@@ -8,7 +8,7 @@ import { Reserva, ReservaRequest, ReservaResponse } from '../models/reserva.mode
 })
 export class ReservaService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/reservas';
+  private apiUrl = '/api/reservas';
 
   getAll(): Observable<ReservaResponse[]> {
     return this.http.get<ReservaResponse[]>(this.apiUrl);
@@ -124,7 +124,7 @@ export class ReservaService {
    * @returns Observable com array de hóspedes
    */
   listarHospedes(reservaId: number): Observable<any[]> {
-    return this.http.get<any[]>(`http://localhost:8080/api/hospedagem-hospedes/reserva/${reservaId}`);
+    return this.http.get<any[]>(`/api/hospedagem-hospedes/reserva/${reservaId}`);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -172,7 +172,7 @@ export class ReservaService {
     motivo: string;
   }): Observable<any> {
     return this.http.post(`${this.apiUrl}/transferir-hospede`, dto);
-    // ✅ URL CORRETA: http://localhost:8080/api/reservas/transferir-hospede
+    // ✅ URL CORRETA: /api/reservas/transferir-hospede
   }
 
   /**
@@ -181,7 +181,7 @@ export class ReservaService {
   buscarApartamentosDisponiveisParaTransferencia(apartamentoOrigemId: number): Observable<any> {
     return this.http.get(
       `${this.apiUrl}/apartamentos-disponiveis-para-transferencia?apartamentoOrigemId=${apartamentoOrigemId}`
-      // ✅ URL CORRETA: http://localhost:8080/api/reservas/apartamentos-disponiveis-para-transferencia
+      // ✅ URL CORRETA: /api/reservas/apartamentos-disponiveis-para-transferencia
     );
   }
 
@@ -226,5 +226,6 @@ buscarParaMapa(): Observable<ReservaResponse[]> {
 }
 
 }
+
 
 

@@ -40,12 +40,13 @@ export class RelatorioFaturamentoComponent implements OnInit {
   }
 
   ngOnInit(): void {
-  // ✅ Carregar apenas produtos da categoria RESTAURANTE (id=2)
-  this.jantarService.getProdutosPorCategoria(2).subscribe({
+  // ✅ USA O ENDPOINT DE PRODUTOS DO RESTAURANTE QUE JÁ FUNCIONA
+  this.http.get<any[]>('/api/jantar/produtos-restaurante').subscribe({
     next: (data) => {
       this.listaProdutos = data.sort((a, b) =>
         a.nomeProduto.localeCompare(b.nomeProduto, 'pt-BR')
       );
+      console.log('✅ Produtos carregados:', this.listaProdutos.length);
     },
     error: (err) => console.error('Erro ao carregar produtos:', err)
   });
@@ -84,7 +85,7 @@ export class RelatorioFaturamentoComponent implements OnInit {
     this.carregandoApartamentos = true;
     this.produtosApartamento = [];
 
-    this.http.post<any[]>('http://localhost:8080/api/jantar/relatorio-produtos-apartamento', {
+    this.http.post<any[]>('/api/jantar/relatorio-produtos-apartamento', {
       dataInicio: this.dataInicio,
       dataFim: this.dataFim
     }).subscribe({
@@ -106,7 +107,7 @@ export class RelatorioFaturamentoComponent implements OnInit {
     this.carregandoProduto = true;
     this.resultadoProduto = null;
 
-    this.http.post<any>('http://localhost:8080/api/jantar/relatorio-quantidade-produto', {
+    this.http.post<any>('/api/jantar/relatorio-quantidade-produto', {
       produtoId: this.produtoSelecionadoId,
       dataInicio: this.dataInicio,
       dataFim: this.dataFim

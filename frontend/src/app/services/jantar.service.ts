@@ -17,7 +17,7 @@ export interface HospedeJantar {
   providedIn: 'root'
 })
 export class JantarService {
-  private apiUrl = 'http://localhost:8080/api/jantar';
+  private apiUrl = '/api/jantar';
 
   constructor(private http: HttpClient) { }
 
@@ -26,7 +26,7 @@ export class JantarService {
 }
 
   getProdutosPorCategoria(categoriaId: number): Observable<any[]> {
-  return this.http.get<any[]>(`http://localhost:8080/api/produtos/categoria/${categoriaId}`);
+  return this.http.get<any[]>(`/api/produtos/categoria/${categoriaId}`);
 }
 
   salvarComanda(hospedagemId: number, itens: { produtoId: number, quantidade: number }[]): Observable<any> {

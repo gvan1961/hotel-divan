@@ -2,7 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
 import { ReservaService } from '../../services/reserva.service';
 import { TransferirHospedeModalComponent } from '../../components/transferir-hospede-modal/transferir-hospede-modal.component';
@@ -29,8 +29,13 @@ interface ReservaDetalhes {
     telefone?: string;
     celular?: string;
     dataNascimento?: string;
-    creditoAprovado?: boolean; 
+    creditoAprovado?: boolean;     
   };
+
+   responsavelPagamentoNome?: string;
+    responsavelPagamentoId?: number;
+    numeroApartamentoResponsavel?: string;
+
   apartamento?: {
     id: number;
     numeroApartamento: string;
@@ -99,7 +104,6 @@ interface Apartamento {
     CurrencyInputDirective, SignaturePadComponent, HasPermissionDirective ],
   
   
-
  template: `
   <div class="container-detalhes">
     <!-- LOADING -->
@@ -130,7 +134,7 @@ interface Apartamento {
         </button>
       </div>
 
-    <!-- ✅ GRID DE 4 CARDS NA HORIZONTAL -->
+      <!-- ✅ GRID DE 4 CARDS NA HORIZONTAL -->
       <div class="grid-quatro-colunas">
         <!-- CLIENTE -->
         <div class="card card-mini">
@@ -181,7 +185,7 @@ interface Apartamento {
               <span class="value-pequeno">{{ formatarData(reserva.dataCheckout) }}</span>
             </div>
             <button 
-              *ngIf="reserva.status === 'ATIVA'"
+              *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
               class="btn-mini"
               (click)="abrirModalAlterarCheckout()"
               title="Alterar checkout">
@@ -198,7 +202,7 @@ interface Apartamento {
           </div>
         </div>
 
-       <!-- FINANCEIRO -->
+        <!-- FINANCEIRO -->
         <div class="card card-mini">
           <h2>💰 Financeiro</h2>
           
@@ -212,13 +216,12 @@ interface Apartamento {
             <span class="value-pequeno">R$ {{ formatarMoeda(reserva.totalProduto || 0) }}</span>
           </div>
           
-          <!-- ✅ TOTAL (Diárias + Consumo) -->
           <div class="info-item-mini separador-mini">
             <span class="label">Total:</span>
             <span class="value-pequeno">R$ {{ formatarMoeda((reserva.totalDiaria || 0) + (reserva.totalProduto || 0)) }}</span>
           </div>
           
-          <!-- ✅ DESCONTO -->
+          <!-- DESCONTO -->
           <div class="info-item-com-botao-mini">
             <div class="info-item-mini">
               <span class="label">Desconto:</span>
@@ -233,13 +236,13 @@ interface Apartamento {
             </button>
           </div>
           
-          <!-- ✅ JÁ RECEBIDO -->
+          <!-- JÁ RECEBIDO -->
           <div class="info-item-mini">
             <span class="label">Recebido:</span>
             <span class="value-pequeno valor-positivo">-R$ {{ formatarMoeda(reserva.totalRecebido || 0) }}</span>
           </div>
           
-          <!-- ✅ SALDO FINAL - AGORA VINDO DO BACKEND -->
+          <!-- SALDO FINAL -->
           <div class="info-item-mini destaque-mini">
             <span class="label">SALDO:</span>
             <span class="value-destaque" [class.valor-negativo]="(reserva.totalApagar || 0) > 0">
@@ -249,58 +252,67 @@ interface Apartamento {
         </div>
       </div>
 
-      <!-- ========================================== -->
-<!-- CARD DE AUDITORIA -->
-<!-- ========================================== -->
-<div class="card card-auditoria" *ngIf="temAuditoria()">
-  <h2>📝 Informações de Auditoria</h2>
-  
-  <div class="auditoria-grid">
-    <!-- CRIADO POR -->
-    <div class="auditoria-item" *ngIf="reserva.criadoPor">
-      <span class="auditoria-icone">✏️</span>
-      <div class="auditoria-info">
-        <span class="auditoria-label">Criado por:</span>
-        <span class="auditoria-valor">{{ reserva.criadoPor }}</span>
-        <span class="auditoria-data" *ngIf="reserva.dataCriacao">
-          {{ formatarDataHora(reserva.dataCriacao) }}
+      <!-- ✅ RESPONSÁVEL PELO PAGAMENTO -->
+      <div class="responsavel-pagamento" *ngIf="reserva.responsavelPagamentoNome">
+        <span class="responsavel-label">💳 Pagamento por conta de:</span>
+        <span class="responsavel-nome">{{ reserva.responsavelPagamentoNome }}</span>
+        <span class="responsavel-apt" *ngIf="reserva.numeroApartamentoResponsavel">
+          — Apt {{ reserva.numeroApartamentoResponsavel }}
         </span>
+        <button class="btn-remover-responsavel" 
+                (click)="removerResponsavel()"
+                title="Remover responsável">✕</button>
       </div>
-    </div>
 
-    <!-- FINALIZADO POR -->
-    <div class="auditoria-item" *ngIf="reserva.finalizadoPor">
-      <span class="auditoria-icone">✅</span>
-      <div class="auditoria-info">
-        <span class="auditoria-label">Finalizado por:</span>
-        <span class="auditoria-valor">{{ reserva.finalizadoPor }}</span>
-        <span class="auditoria-data" *ngIf="reserva.dataFinalizacao">
-          {{ formatarDataHora(reserva.dataFinalizacao) }}
-        </span>
-      </div>
-    </div>
+      <!-- BOTÃO PARA DEFINIR RESPONSÁVEL -->
+      <button class="btn-definir-responsavel" 
+              *ngIf="!reserva.responsavelPagamentoNome && reserva.status === 'ATIVA'"
+              (click)="abrirModalResponsavel()">
+        💳 Definir Responsável pelo Pagamento
+      </button>
 
-    <!-- CANCELADO POR -->
-    <div class="auditoria-item" *ngIf="reserva.canceladoPor">
-      <span class="auditoria-icone">❌</span>
-      <div class="auditoria-info">
-        <span class="auditoria-label">Cancelado por:</span>
-        <span class="auditoria-valor">{{ reserva.canceladoPor }}</span>
-        <span class="auditoria-data" *ngIf="reserva.dataCancelamento">
-          {{ formatarDataHora(reserva.dataCancelamento) }}
-        </span>
-        <span class="auditoria-motivo" *ngIf="reserva.motivoCancelamento">
-          <strong>Motivo:</strong> {{ reserva.motivoCancelamento }}
-        </span>
+      <!-- CARD DE AUDITORIA -->
+      <div class="card card-auditoria" *ngIf="temAuditoria()">
+        <h2>📝 Informações de Auditoria</h2>
+        <div class="auditoria-grid">
+          <div class="auditoria-item" *ngIf="reserva.criadoPor">
+            <span class="auditoria-icone">✏️</span>
+            <div class="auditoria-info">
+              <span class="auditoria-label">Criado por:</span>
+              <span class="auditoria-valor">{{ reserva.criadoPor }}</span>
+              <span class="auditoria-data" *ngIf="reserva.dataCriacao">
+                {{ formatarDataHora(reserva.dataCriacao) }}
+              </span>
+            </div>
+          </div>
+          <div class="auditoria-item" *ngIf="reserva.finalizadoPor">
+            <span class="auditoria-icone">✅</span>
+            <div class="auditoria-info">
+              <span class="auditoria-label">Finalizado por:</span>
+              <span class="auditoria-valor">{{ reserva.finalizadoPor }}</span>
+              <span class="auditoria-data" *ngIf="reserva.dataFinalizacao">
+                {{ formatarDataHora(reserva.dataFinalizacao) }}
+              </span>
+            </div>
+          </div>
+          <div class="auditoria-item" *ngIf="reserva.canceladoPor">
+            <span class="auditoria-icone">❌</span>
+            <div class="auditoria-info">
+              <span class="auditoria-label">Cancelado por:</span>
+              <span class="auditoria-valor">{{ reserva.canceladoPor }}</span>
+              <span class="auditoria-data" *ngIf="reserva.dataCancelamento">
+                {{ formatarDataHora(reserva.dataCancelamento) }}
+              </span>
+              <span class="auditoria-motivo" *ngIf="reserva.motivoCancelamento">
+                <strong>Motivo:</strong> {{ reserva.motivoCancelamento }}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
- 
 
       <!-- GRID NORMAL (EXTRATO) -->
       <div class="grid">
-        <!-- EXTRATO -->
         <div class="card extrato-card" *ngIf="reserva.extratos && reserva.extratos.length > 0">
           <h2>📊 Extrato</h2>
           <table class="tabela-extrato">
@@ -329,35 +341,25 @@ interface Apartamento {
                     [class.valor-positivo]="extrato.totalLancamento > 0">
                   R$ {{ formatarMoeda(extrato.totalLancamento) }}
                 </td>
-                
                 <td *ngIf="reserva.status === 'ATIVA'">
-                  <!-- ✅ BOTÃO ESTORNAR PRODUTO -->
                   <button 
                     *ngIf="extrato.statusLancamento === 'PRODUTO' && extrato.totalLancamento > 0"
-                   [disabled]="jaFoiEstornado(extrato)"
-                   [title]="jaFoiEstornado(extrato) ? 'Este produto já foi estornado' : 'Estornar este produto'"
-                   [class.btn-estornado]="jaFoiEstornado(extrato)"
+                    [disabled]="jaFoiEstornado(extrato)"
+                    [title]="jaFoiEstornado(extrato) ? 'Este produto já foi estornado' : 'Estornar este produto'"
+                    [class.btn-estornado]="jaFoiEstornado(extrato)"
                     class="btn-estornar"
-                    (click)="abrirModalEstorno(extrato)"
-                    title="Estornar este produto">
+                    (click)="abrirModalEstorno(extrato)">
                     ❌ Estornar
                   </button>
-                  
-                 <!-- 🔍 DEBUG: MOSTRAR TODAS AS CONDIÇÕES -->
-
-
-<!-- ✅ BOTÃO REAL -->
-<button 
-  *ngIf="extrato.statusLancamento === 'ESTORNO' && 
-         extrato.descricao?.startsWith('Desconto aplicado') &&
-         !extrato.estornado"
-  class="btn-estornar btn-estornar-desconto"
-  (click)="confirmarEstornoDescontoDoExtrato(extrato)"
-  title="Estornar este desconto">
-  ❌ Estornar
-</button>
-                  
-                  <!-- ✅ INDICADOR DE JÁ ESTORNADO -->
+                  <button 
+                    *ngIf="extrato.statusLancamento === 'ESTORNO' && 
+                           extrato.descricao?.startsWith('Desconto aplicado') &&
+                           !extrato.estornado"
+                    class="btn-estornar btn-estornar-desconto"
+                    (click)="confirmarEstornoDescontoDoExtrato(extrato)"
+                    title="Estornar este desconto">
+                    ❌ Estornar
+                  </button>
                   <span *ngIf="extrato.estornado" class="badge-estornado">
                     ✅ Estornado
                   </span>
@@ -369,11 +371,29 @@ interface Apartamento {
       </div>
 
       <!-- HÓSPEDES -->
-      <div class="secao-hospedes" *ngIf="reserva && hospedes && hospedes.length > 0">
+      <div class="secao-hospedes" *ngIf="reserva && (reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA')">
         <div class="secao-header">
           <h3>👥 Hóspedes da Reserva</h3>
           <span class="badge-hospedes">{{ hospedes.length }}</span>
-          
+
+          <!-- ✅ BUSCA POR PLACA -->
+    <div class="busca-placa-container">
+      <input 
+        type="text"
+        [(ngModel)]="termoBuscaPlaca"
+        placeholder="🚗 Buscar por placa..."
+        class="input-busca-placa"
+        maxlength="8"
+        (input)="buscarPorPlaca()">
+      <div class="resultado-busca-placa" *ngIf="resultadoBuscaPlaca">
+        <span class="placa-encontrada">✅ {{ resultadoBuscaPlaca }}</span>
+      </div>
+      <div class="resultado-busca-placa erro" *ngIf="erroBuscaPlaca">
+        <span>❌ {{ erroBuscaPlaca }}</span>
+      </div>
+    </div>
+
+
           <button 
             *ngIf="reserva.status === 'ATIVA'"
             type="button"
@@ -383,66 +403,56 @@ interface Apartamento {
           </button>
         </div>
 
+        
+
         <div class="lista-hospedes">
           <div class="hospede-item" 
                *ngFor="let hospede of hospedes; let i = index"
                [class.hospede-checkout]="hospede.status === 'CHECKOUT_REALIZADO'">
-            
             <div class="hospede-numero" 
                  [class.checkout]="hospede.status === 'CHECKOUT_REALIZADO'">
               {{ i + 1 }}
             </div>
-            
             <div class="hospede-info">
               <div class="hospede-nome">
                 {{ hospede.cliente?.nome || hospede.nomeCompleto }}
-                
                 <span class="badge-titular" 
                       *ngIf="hospede.titular && hospede.status !== 'CHECKOUT_REALIZADO'">
                   ★ TITULAR
                 </span>
-                
                 <span class="badge-checkout" 
                       *ngIf="hospede.status === 'CHECKOUT_REALIZADO'">
                   🚪 SAIU
                 </span>
               </div>
-              
               <div class="hospede-empresa" *ngIf="hospede.cliente?.empresa?.nomeEmpresa">
                 🏢 {{ hospede.cliente.empresa.nomeEmpresa }}
               </div>
-              
               <div class="hospede-detalhes">
-  CPF: {{ hospede.cliente?.cpf || hospede.cpf || 'Não informado' }} | 
-  Tel: {{ hospede.cliente?.celular || hospede.telefone || 'Não informado' }}
-  
-  <!-- ✅ PLACA COM BOTÃO EDITAR -->
-  <span class="hospede-placa-container">
-    <span *ngIf="hospede.placaCarro" class="hospede-placa">
-      | 🚗 {{ hospede.placaCarro }}
-    </span>
-    <span *ngIf="!hospede.placaCarro" class="hospede-placa sem-placa">
-      | ⚠️ Sem placa
-    </span>
-    
-    <!-- BOTÃO EDITAR/ADICIONAR PLACA -->
-    <button 
-      *ngIf="reserva.status === 'ATIVA' && hospede.status !== 'CHECKOUT_REALIZADO'"
-      class="btn-mini-placa"
-      (click)="editarPlacaHospede(hospede)"
-      [title]="hospede.placaCarro ? 'Editar placa' : 'Adicionar placa'">
-      {{ hospede.placaCarro ? '✏️' : '➕' }}
-    </button>
-  </span>
-</div>
-              
+                CPF: {{ hospede.cliente?.cpf || hospede.cpf || 'Não informado' }} | 
+                Tel: {{ hospede.cliente?.celular || hospede.telefone || 'Não informado' }}
+                <span class="hospede-placa-container">
+                  <span *ngIf="hospede.placaCarro" class="hospede-placa">
+                    | 🚗 {{ hospede.placaCarro }}
+                  </span>
+                  <span *ngIf="!hospede.placaCarro" class="hospede-placa sem-placa">
+                    | ⚠️ Sem placa
+                  </span>
+                  <button 
+                    *ngIf="(reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA') && hospede.status !== 'CHECKOUT_REALIZADO'"
+                    class="btn-mini-placa"
+                    (click)="editarPlacaHospede(hospede)"
+                    [title]="hospede.placaCarro ? 'Editar placa' : 'Adicionar placa'">
+                    {{ hospede.placaCarro ? '✏️' : '➕' }}
+                  </button>
+                </span>
+              </div>
               <div class="hospede-status" *ngIf="hospede.status === 'CHECKOUT_REALIZADO'">
                 <small>
                   Checkout em: {{ hospede.dataHoraSaida ? formatarDataHora(hospede.dataHoraSaida) : 'Não registrado' }}
                 </small>
               </div>
             </div>
-            
             <div class="hospede-acoes" 
                  *ngIf="reserva.status === 'ATIVA' && hospede.status !== 'CHECKOUT_REALIZADO'">
               <button 
@@ -452,7 +462,6 @@ interface Apartamento {
                 title="Transferir para outro apartamento">
                 🔄
               </button>
-              
               <button 
                 type="button"
                 class="btn-acao-hospede btn-checkout-hospede"
@@ -461,7 +470,6 @@ interface Apartamento {
                 🚪
               </button>
             </div>
-            
             <span class="hospede-finalizado" 
                   *ngIf="hospede.status === 'CHECKOUT_REALIZADO'">
               ✅
@@ -470,112 +478,86 @@ interface Apartamento {
         </div>
       </div>
 
-             
-   <!-- ========================================== -->
-<!-- CARD DE AÇÕES -->
-<!-- ========================================== -->
-<div class="card acoes-card">
-  <h2>⚙️ Ações</h2>
-  <div class="botoes-acoes">
-    
-    <!-- ✅ ATIVAR PRÉ-RESERVA (CHECK-IN MANUAL) -->
-   
-   <!-- ✅ CORRETO - Permissão no ng-container, *ngIf no botão -->
-<ng-container *hasPermission="'RESERVA_EDITAR'">
-  <button class="btn-acao btn-ativar-reserva" 
-          *ngIf="reserva.status === 'PRE_RESERVA' && podeAtivarPreReserva()"
-          (click)="ativarPreReserva()">
-    🔓 Fazer Check-in (Ativar Reserva)
-  </button>
-</ng-container>
-
-
-    <!-- IMPRIMIR CHECK-IN -->
-    <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
-  <button class="btn-acao btn-checkin" 
-          *ngIf="reserva.status === 'ATIVA'"
-          (click)="imprimirCheckin()">
-    🖨️ Imprimir Check-in
-  </button>
-</ng-container>
-
-   <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
-  <button class="btn-acao btn-extrato" 
-          *ngIf="reserva.status === 'ATIVA'"
-          (click)="imprimirExtrato()">
-    📊 Imprimir Extrato
-  </button>
-</ng-container>
-
-    <!-- COMANDA DE CONSUMO -->
-    <ng-container *hasPermission="'RESERVA_CRIAR'">
-  <button class="btn-acao btn-comanda" 
-          *ngIf="reserva.status === 'ATIVA'"
-          (click)="abrirComanda()">
-    🏨 Comanda de Consumo
-  </button>
-</ng-container>
-
-    <!-- REGISTRAR PAGAMENTO -->
-    <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
-  <button class="btn-acao btn-pagamento" 
-          *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) > 0"
-          (click)="abrirModalPagamento()">
-    💳 Registrar Pagamento
-  </button>
-</ng-container>
-
-
-    <!-- TRANSFERIR APARTAMENTO -->
-    <ng-container *hasPermission="'RESERVA_EDITAR'">
-  <button class="btn-acao btn-transferir" 
-          *ngIf="reserva.status === 'ATIVA'"
-          (click)="abrirModalTransferencia()">
-    🔄 Transferir Apartamento
-  </button>
-</ng-container>
-
-     <!-- DEVOLVER TROCO -->
-<ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
-  <button class="btn-acao btn-troco"
-          *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) < 0"
-          (click)="devolverTroco()">
-    💰 Devolver Troco R$ {{ formatarMoeda((reserva.totalApagar || 0) * -1) }}
-  </button>
-</ng-container>
-
-    <!-- FINALIZAR RESERVA -->
-    <ng-container *hasPermission="'RESERVA_FINALIZAR'">
-  <button class="btn-acao" 
-          *ngIf="reserva.status === 'ATIVA'"
-          [ngClass]="{
-            'btn-finalizar-paga': (reserva.totalApagar || 0) === 0,
-            'btn-finalizar': (reserva.totalApagar || 0) > 0
-          }"
-          (click)="finalizarCheckout()">
-    {{ (reserva.totalApagar || 0) === 0 ? '💚 Finalizar Paga' : '✅ Finalizar Faturada' }}
-  </button>
-</ng-container>
-
-    <!-- IMPRIMIR RECIBO/FATURA -->
-    <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
-  <button class="btn-acao btn-recibo" 
-          *ngIf="reserva.status === 'FINALIZADA'"
-          (click)="imprimirRecibo()">
-    📄 {{ (reserva.totalApagar || 0) > 0 ? 'Imprimir Fatura' : 'Imprimir Recibo' }}
-  </button>
-</ng-container>
-
-    <!-- CANCELAR RESERVA -->
-    <ng-container *hasPermission="'RESERVA_CANCELAR'">
-  <button class="btn-acao btn-cancelar" 
-          *ngIf="reserva.status === 'ATIVA'"
-          (click)="cancelarReserva()">
-    ❌ Cancelar Reserva
-  </button>
-</ng-container>
-  </div>
-</div>
+      <!-- CARD DE AÇÕES -->
+      <div class="card acoes-card">
+        <h2>⚙️ Ações</h2>
+        <div class="botoes-acoes">
+          <ng-container *hasPermission="'RESERVA_EDITAR'">
+            <button class="btn-acao btn-ativar-reserva" 
+                    *ngIf="reserva.status === 'PRE_RESERVA' && podeAtivarPreReserva()"
+                    (click)="ativarPreReserva()">
+              🔓 Fazer Check-in (Ativar Reserva)
+            </button>
+          </ng-container>
+          <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
+            <button class="btn-acao btn-checkin" 
+                    *ngIf="reserva.status === 'ATIVA'"
+                    (click)="imprimirCheckin()">
+              🖨️ Imprimir Check-in
+            </button>
+          </ng-container>
+          <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
+            <button class="btn-acao btn-extrato" 
+                    *ngIf="reserva.status === 'ATIVA'"
+                    (click)="imprimirExtrato()">
+              📊 Imprimir Extrato
+            </button>
+          </ng-container>
+          <ng-container *hasPermission="'RESERVA_CRIAR'">
+            <button class="btn-acao btn-comanda" 
+                    *ngIf="reserva.status === 'ATIVA'"
+                    (click)="abrirComanda()">
+              🏨 Comanda de Consumo
+            </button>
+          </ng-container>
+          <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
+            <button class="btn-acao btn-pagamento" 
+                    *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) > 0"
+                    (click)="abrirModalPagamento()">
+              💳 Registrar Pagamento
+            </button>
+          </ng-container>
+          <ng-container *hasPermission="'RESERVA_EDITAR'">
+            <button class="btn-acao btn-transferir" 
+                    *ngIf="reserva.status === 'ATIVA'"
+                    (click)="abrirModalTransferencia()">
+              🔄 Transferir Apartamento
+            </button>
+          </ng-container>
+          <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
+            <button class="btn-acao btn-troco"
+                    *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) < 0"
+                    (click)="devolverTroco()">
+              💰 Devolver Troco R$ {{ formatarMoeda((reserva.totalApagar || 0) * -1) }}
+            </button>
+          </ng-container>
+          <ng-container *hasPermission="'RESERVA_FINALIZAR'">
+            <button class="btn-acao" 
+                    *ngIf="reserva.status === 'ATIVA'"
+                    [ngClass]="{
+                      'btn-finalizar-paga': (reserva.totalApagar || 0) <= 0,
+                      'btn-finalizar':      (reserva.totalApagar || 0) > 0
+                    }"
+                    (click)="finalizarCheckout()">
+              {{ (reserva.totalApagar || 0) <= 0 ? '💚 Finalizar Paga' : '✅ Finalizar Faturada' }}
+            </button>
+          </ng-container>
+          <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
+            <button class="btn-acao btn-recibo" 
+                    *ngIf="reserva.status === 'FINALIZADA'"
+                    (click)="imprimirRecibo()">
+              📄 {{ (reserva.totalApagar || 0) > 0 ? 'Imprimir Fatura' : 'Imprimir Recibo' }}
+            </button>
+          </ng-container>
+          <ng-container *hasPermission="'RESERVA_CANCELAR'">
+            <button class="btn-acao btn-cancelar" 
+                    *ngIf="reserva.status === 'ATIVA'"
+                    (click)="cancelarReserva()">
+              ❌ Cancelar Reserva
+            </button>
+          </ng-container>
+        </div>
+      </div>
 
       <!-- HISTÓRICO -->
       <div class="card historico-card" *ngIf="reserva.historicos && reserva.historicos.length > 0">
@@ -599,152 +581,141 @@ interface Apartamento {
       </div>
 
       <!-- ========================================== -->
-<!-- MODAL ADICIONAR HÓSPEDE -->
-<!-- ========================================== -->
-<div class="modal-overlay" *ngIf="modalAdicionarHospede" (click)="fecharModalAdicionarHospede()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
-    <h2>👤 Adicionar Hóspede</h2>
-    
-    <div class="modal-tabs">
-      <button 
-        [class.active]="modoModalHospede === 'buscar'"
-        (click)="alternarModoModal('buscar')">
-        🔍 Buscar Existente
-      </button>
-      <button 
-        [class.active]="modoModalHospede === 'cadastrar'"
-        (click)="alternarModoModal('cadastrar')">
-        ➕ Cadastrar Novo
-      </button>
-    </div>
-
-    <!-- ABA BUSCAR EXISTENTE -->
-    <div *ngIf="modoModalHospede === 'buscar'" class="modal-tab-content">
-      <input 
-        type="text"
-        [(ngModel)]="termoBuscaHospede"
-        (input)="buscarClientesModal()"
-        placeholder="Digite nome ou CPF (mínimo 2 caracteres)"
-        class="input-busca-modal">
-      
-      <div class="resultados-modal" *ngIf="clientesFiltradosModal.length > 0">
-        <div 
-          class="resultado-modal-item"
-          *ngFor="let cliente of clientesFiltradosModal"
-          (click)="selecionarHospedeExistente(cliente)">
-          <div class="resultado-nome">{{ cliente.nome }}</div>
-          <div class="resultado-info">
-            CPF: {{ formatarCPF(cliente.cpf) }} | 
-            Tel: {{ cliente.celular || 'Não informado' }}
+      <!-- MODAL RESPONSÁVEL PELO PAGAMENTO           -->
+      <!-- ========================================== -->
+      <div class="modal-overlay" *ngIf="mostrarModalResponsavel" (click)="fecharModalResponsavel()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <h2>💳 Definir Responsável pelo Pagamento</h2>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Buscar cliente responsável:</label>
+              <input 
+                type="text"
+                [(ngModel)]="responsavelBusca"
+                (input)="buscarResponsavel()"
+                placeholder="Digite o nome do cliente..."
+                class="input-busca" />
+            </div>
+            <div class="lista-responsaveis" *ngIf="responsaveisEncontrados.length > 0">
+              <div class="responsavel-item"
+                   *ngFor="let r of responsaveisEncontrados"
+                   (click)="selecionarResponsavel(r)">
+                <span>👤 {{ r.nome }}</span>
+                <span class="responsavel-cpf" *ngIf="r.cpf">— {{ r.cpf }}</span>
+              </div>
+            </div>
+            <div class="responsavel-selecionado" *ngIf="responsavelSelecionado">
+              ✅ <strong>{{ responsavelSelecionado.nome }}</strong> selecionado
+            </div>
           </div>
+          <div class="modal-footer">
+            <button class="btn-cancelar-modal" (click)="fecharModalResponsavel()">Cancelar</button>
+            <button class="btn-confirmar" 
+                    (click)="salvarResponsavel()"
+                    [disabled]="!responsavelSelecionado">
+              Confirmar
+            </button>
+          </div>
+          <button type="button" class="btn-fechar-modal" (click)="fecharModalResponsavel()">✕</button>
         </div>
       </div>
 
-      <div *ngIf="termoBuscaHospede.length >= 2 && clientesFiltradosModal.length === 0" class="sem-resultado-modal">
-        ❌ Nenhum cliente encontrado
+      <!-- MODAL ADICIONAR HÓSPEDE -->
+      <div class="modal-overlay" *ngIf="modalAdicionarHospede" (click)="fecharModalAdicionarHospede()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <h2>👤 Adicionar Hóspede</h2>
+          <div class="modal-tabs">
+            <button 
+              [class.active]="modoModalHospede === 'buscar'"
+              (click)="alternarModoModal('buscar')">
+              🔍 Buscar Existente
+            </button>
+            <button 
+              [class.active]="modoModalHospede === 'cadastrar'"
+              (click)="alternarModoModal('cadastrar')">
+              ➕ Cadastrar Novo
+            </button>
+          </div>
+          <div *ngIf="modoModalHospede === 'buscar'" class="modal-tab-content">
+            <input 
+              type="text"
+              [(ngModel)]="termoBuscaHospede"
+              (input)="buscarClientesModal()"
+              placeholder="Digite nome ou CPF (mínimo 2 caracteres)"
+              class="input-busca-modal">
+            <div class="resultados-modal" *ngIf="clientesFiltradosModal.length > 0">
+              <button 
+                type="button"
+                class="resultado-modal-item"
+                *ngFor="let cliente of clientesFiltradosModal"
+                (click)="selecionarHospedeExistente(cliente)">
+                <div class="resultado-nome">{{ cliente.nome }}</div>
+                <div class="resultado-info">
+                  CPF: {{ formatarCPF(cliente.cpf) }} | 
+                  Tel: {{ cliente.celular || 'Não informado' }}
+                </div>
+              </button>
+            </div>
+            <div *ngIf="termoBuscaHospede.length >= 2 && clientesFiltradosModal.length === 0" class="sem-resultado-modal">
+              ❌ Nenhum cliente encontrado
+            </div>
+          </div>
+          <div *ngIf="modoModalHospede === 'cadastrar'" class="modal-tab-content">
+            <div class="form-group">
+              <label>Nome Completo *</label>
+              <input type="text" [(ngModel)]="novoHospede.nome" placeholder="Nome completo do hóspede">
+            </div>
+            <div class="form-group">
+              <label>CPF <small>(opcional)</small></label>
+              <input type="text" [(ngModel)]="novoHospede.cpf" placeholder="000.000.000-00">
+            </div>
+            <div class="form-group">
+              <label>Celular</label>
+              <input type="text" [(ngModel)]="novoHospede.celular" placeholder="(00) 00000-0000">
+            </div>
+            <div class="form-group">
+              <label>🚗 Placa do Carro <small>(opcional)</small></label>
+              <input 
+                type="text"
+                [(ngModel)]="novoHospede.placaCarro"
+                (input)="formatarPlaca()"
+                placeholder="ABC-1234"
+                maxlength="8"
+                style="text-transform: uppercase;"
+                class="input-placa">
+              <small class="form-text-hint">Formato: ABC-1234 ou ABC-1D23 (Mercosul)</small>
+            </div>
+            <div class="info-cadastro">
+              ℹ️ Somente o nome é obrigatório. CPF é opcional para menores de idade.
+            </div>
+            <button type="button" class="btn-salvar-hospede" (click)="salvarNovoHospede()">
+              ✅ Adicionar Hóspede
+            </button>
+          </div>
+          <button type="button" class="btn-fechar-modal" (click)="fecharModalAdicionarHospede()">✕</button>
+        </div>
       </div>
-    </div>
 
-    <!-- ABA CADASTRAR NOVO -->
-    <div *ngIf="modoModalHospede === 'cadastrar'" class="modal-tab-content">
-      <div class="form-group">
-        <label>Nome Completo *</label>
-        <input 
-          type="text"
-          [(ngModel)]="novoHospede.nome"
-          placeholder="Nome completo do hóspede">
-      </div>
-
-      <div class="form-group">
-        <label>CPF <small>(opcional)</small></label>
-        <input 
-          type="text"
-          [(ngModel)]="novoHospede.cpf"
-          placeholder="000.000.000-00">
-      </div>
-
-            
-      <!-- ✅ CAMPO PLACA DO CARRO (NOVO) -->
-
-        <div class="form-group">
-  <label>Celular</label>
-  <input 
-    type="text"
-    [(ngModel)]="novoHospede.celular"
-    placeholder="(00) 00000-0000">
-</div>
-
-<!-- ✅ TESTE: ISSO AQUI DEVE APARECER -->
-<div style="background: red; color: white; padding: 10px;">
-  🚨 SE VOCÊ VÊ ISSO, O HTML ESTÁ CARREGANDO!
-</div>
-
-
-
-      <!-- ✅ CAMPO PLACA DO CARRO (NOVO) -->
-      <div class="form-group">
-        <label>
-          🚗 Placa do Carro 
-          <small>(opcional)</small>
-        </label>
-        <input 
-          type="text"
-          [(ngModel)]="novoHospede.placaCarro"
-          (input)="formatarPlaca()"
-          placeholder="ABC-1234"
-          maxlength="8"
-          style="text-transform: uppercase;"
-          class="input-placa">
-        <small class="form-text-hint">
-          Formato: ABC-1234 ou ABC-1D23 (Mercosul)
-        </small>
-      </div>
-
-      <div class="info-cadastro">
-        ℹ️ Somente o nome é obrigatório. CPF é opcional para menores de idade.
-      </div>
-
-      <button 
-        type="button"
-        class="btn-salvar-hospede"
-        (click)="salvarNovoHospede()">
-        ✅ Adicionar Hóspede
-      </button>
-    </div>
-
-    <button type="button" class="btn-fechar-modal" (click)="fecharModalAdicionarHospede()">
-      ✕
-    </button>
-  </div>
-</div>
       <!-- MODAL ALTERAR CHECKOUT -->
       <div class="modal-overlay" *ngIf="modalAlterarCheckout" (click)="fecharModalAlterarCheckout()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <h2>📅 Alterar Data de Check-out</h2>
-          
           <div class="info-box">
             <p><strong>Check-in:</strong> {{ formatarData(reserva.dataCheckin) }}</p>
             <p><strong>Check-out atual:</strong> {{ formatarData(reserva.dataCheckout) }}</p>
           </div>
-
           <div class="campo">
             <label>Nova Data de Check-out *</label>
             <input type="date" [(ngModel)]="novaDataCheckout" [min]="obterDataMinimaCheckout()">
           </div>
-
           <div class="campo">
             <label>Motivo</label>
             <textarea [(ngModel)]="motivoAlteracaoCheckout" rows="3"
                       placeholder="Informe o motivo da alteração..."></textarea>
           </div>
-
           <div class="modal-footer">
-            <button class="btn-cancelar-modal" (click)="fecharModalAlterarCheckout()">
-              Cancelar
-            </button>
-            <button class="btn-confirmar" (click)="confirmarAlteracaoCheckout()">
-              Confirmar Alteração
-            </button>
+            <button class="btn-cancelar-modal" (click)="fecharModalAlterarCheckout()">Cancelar</button>
+            <button class="btn-confirmar" (click)="confirmarAlteracaoCheckout()">Confirmar Alteração</button>
           </div>
         </div>
       </div>
@@ -753,31 +724,23 @@ interface Apartamento {
       <div class="modal-overlay" *ngIf="modalAlterarHospedes" (click)="fecharModalAlterarHospedes()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <h2>👥 Alterar Quantidade de Hóspedes</h2>
-          
           <div class="info-box">
             <p><strong>Quantidade atual:</strong> {{ reserva.quantidadeHospede }} hóspede(s)</p>
             <p><strong>Capacidade do apartamento:</strong> {{ reserva.apartamento?.capacidade }} pessoa(s)</p>
           </div>
-
           <div class="campo">
             <label>Nova Quantidade *</label>
             <input type="number" [(ngModel)]="novaQuantidadeHospedes" 
                    min="1" [max]="reserva.apartamento?.capacidade || 10">
           </div>
-
           <div class="campo">
             <label>Motivo</label>
             <textarea [(ngModel)]="motivoAlteracaoHospedes" rows="3"
                       placeholder="Informe o motivo da alteração..."></textarea>
           </div>
-
           <div class="modal-footer">
-            <button class="btn-cancelar-modal" (click)="fecharModalAlterarHospedes()">
-              Cancelar
-            </button>
-            <button class="btn-confirmar" (click)="confirmarAlteracaoHospedes()">
-              Confirmar Alteração
-            </button>
+            <button class="btn-cancelar-modal" (click)="fecharModalAlterarHospedes()">Cancelar</button>
+            <button class="btn-confirmar" (click)="confirmarAlteracaoHospedes()">Confirmar Alteração</button>
           </div>
         </div>
       </div>
@@ -786,39 +749,25 @@ interface Apartamento {
       <div class="modal-overlay" *ngIf="modalPagamento" (click)="fecharModalPagamento()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <h2>💳 Registrar Pagamento</h2>
-          
           <div class="campo">
             <label>Valor a Pagar *</label>
-            <input 
-              type="text" 
-              [(ngModel)]="pagValor" 
-              appCurrencyInput
-              placeholder="R$ 0,00">
+            <input type="text" [(ngModel)]="pagValor" appCurrencyInput placeholder="R$ 0,00">
             <small>Saldo devedor: R$ {{ formatarMoeda(reserva.totalApagar) }}</small>
           </div>
-
           <div class="campo">
             <label>Forma de Pagamento *</label>
             <select [(ngModel)]="pagFormaPagamento">
               <option value="">Selecione...</option>
-              <option *ngFor="let forma of formasPagamento" [value]="forma.codigo">
-                {{ forma.nome }}
-              </option>
+              <option *ngFor="let forma of formasPagamento" [value]="forma.codigo">{{ forma.nome }}</option>
             </select>
           </div>
-
           <div class="campo">
             <label>Observação</label>
             <textarea [(ngModel)]="pagObs" rows="3"></textarea>
           </div>
-
           <div class="modal-footer">
-            <button class="btn-cancelar-modal" (click)="fecharModalPagamento()">
-              Cancelar
-            </button>
-            <button class="btn-confirmar" (click)="salvarPagamento()">
-              Confirmar Pagamento
-            </button>
+            <button class="btn-cancelar-modal" (click)="fecharModalPagamento()">Cancelar</button>
+            <button class="btn-confirmar" (click)="salvarPagamento()">Confirmar Pagamento</button>
           </div>
         </div>
       </div>
@@ -827,7 +776,6 @@ interface Apartamento {
       <div class="modal-overlay" *ngIf="modalConsumo" (click)="fecharModalConsumo()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <h2>🛒 Adicionar Consumo</h2>
-          
           <div class="campo">
             <label>Produto *</label>
             <select [(ngModel)]="produtoSelecionadoId">
@@ -838,24 +786,17 @@ interface Apartamento {
               </option>
             </select>
           </div>
-
           <div class="campo">
             <label>Quantidade *</label>
             <input type="number" [(ngModel)]="quantidadeConsumo" min="1">
           </div>
-
           <div class="campo">
             <label>Observação</label>
             <textarea [(ngModel)]="observacaoConsumo" rows="3"></textarea>
           </div>
-
           <div class="modal-footer">
-            <button class="btn-cancelar-modal" (click)="fecharModalConsumo()">
-              Cancelar
-            </button>
-            <button class="btn-confirmar" (click)="salvarConsumo()">
-              Adicionar ao Consumo
-            </button>
+            <button class="btn-cancelar-modal" (click)="fecharModalConsumo()">Cancelar</button>
+            <button class="btn-confirmar" (click)="salvarConsumo()">Adicionar ao Consumo</button>
           </div>
         </div>
       </div>
@@ -864,7 +805,6 @@ interface Apartamento {
       <div class="modal-overlay" *ngIf="modalTransferencia" (click)="fecharModalTransferencia()">
         <div class="modal-content modal-grande" (click)="$event.stopPropagation()">
           <h2>🔄 Transferir Apartamento</h2>
-          
           <div class="campo">
             <label>Novo Apartamento *</label>
             <select [(ngModel)]="novoApartamentoId">
@@ -876,7 +816,6 @@ interface Apartamento {
               </option>
             </select>
           </div>
-
           <div class="campo">
             <label>
               <input type="checkbox" [(ngModel)]="transferenciaImediata">
@@ -884,25 +823,18 @@ interface Apartamento {
             </label>
             <small>Se desmarcado, informe a data da transferência</small>
           </div>
-
           <div class="campo" *ngIf="!transferenciaImediata">
             <label>Data da Transferência *</label>
             <input type="date" [(ngModel)]="dataTransferencia" [min]="obterDataMinima()">
           </div>
-
           <div class="campo">
             <label>Motivo *</label>
             <textarea [(ngModel)]="motivoTransferencia" rows="3" 
                       placeholder="Informe o motivo da transferência..."></textarea>
           </div>
-
           <div class="modal-footer">
-            <button class="btn-cancelar-modal" (click)="fecharModalTransferencia()">
-              Cancelar
-            </button>
-            <button class="btn-confirmar" (click)="confirmarTransferencia()">
-              Confirmar Transferência
-            </button>
+            <button class="btn-cancelar-modal" (click)="fecharModalTransferencia()">Cancelar</button>
+            <button class="btn-confirmar" (click)="confirmarTransferencia()">Confirmar Transferência</button>
           </div>
         </div>
       </div>
@@ -911,20 +843,17 @@ interface Apartamento {
       <div class="modal-overlay" *ngIf="modalEstorno" (click)="fecharModalEstorno()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <h2>❌ Estornar Lançamento</h2>
-          
           <div class="info-box info-box-alerta">
             <p><strong>⚠️ ATENÇÃO:</strong></p>
             <p>Esta ação criará um lançamento de estorno negativo no extrato.</p>
             <p>O produto será devolvido ao estoque.</p>
           </div>
-
           <div class="info-box" *ngIf="extratoParaEstornar">
             <p><strong>Lançamento a estornar:</strong></p>
             <p>{{ extratoParaEstornar.descricao }}</p>
             <p><strong>Quantidade:</strong> {{ extratoParaEstornar.quantidade }}</p>
             <p><strong>Valor:</strong> R$ {{ formatarMoeda(extratoParaEstornar.totalLancamento) }}</p>
           </div>
-
           <div class="campo">
             <label>Motivo do Estorno *</label>
             <textarea [(ngModel)]="motivoEstorno" rows="3"
@@ -932,7 +861,6 @@ interface Apartamento {
                       required></textarea>
             <small>Obrigatório - Informe o motivo do estorno para auditoria</small>
           </div>
-
           <div class="campo">
             <label>
               <input type="checkbox" [(ngModel)]="criarLancamentoCorreto">
@@ -940,31 +868,25 @@ interface Apartamento {
             </label>
             <small>Marque se deseja já lançar o produto correto</small>
           </div>
-
           <div *ngIf="criarLancamentoCorreto" class="secao-correcao">
             <h3>📝 Dados do Lançamento Correto</h3>
-            
             <div class="campo">
               <label>Produto Correto *</label>
               <select [(ngModel)]="produtoCorretoId">
                 <option value="0">Selecione um produto...</option>
-                <option *ngFor="let produto of produtos" [value]="produto.id">
+                <option *ngFor="let produto de produtos" [value]="produto.id">
                   {{ produto.nomeProduto }} - R$ {{ formatarMoeda(produto.valorVenda) }} 
                   (Estoque: {{ produto.quantidade }})
                 </option>
               </select>
             </div>
-
             <div class="campo">
               <label>Quantidade Correta *</label>
               <input type="number" [(ngModel)]="quantidadeCorreta" min="1">
             </div>
           </div>
-
           <div class="modal-footer">
-            <button class="btn-cancelar-modal" (click)="fecharModalEstorno()">
-              Cancelar
-            </button>
+            <button class="btn-cancelar-modal" (click)="fecharModalEstorno()">Cancelar</button>
             <button class="btn-confirmar btn-estornar-confirmar" (click)="confirmarEstorno()">
               ✅ Confirmar Estorno
             </button>
@@ -976,67 +898,51 @@ interface Apartamento {
       <div class="modal-overlay" *ngIf="modalDesconto" (click)="fecharModalDesconto()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <h2>💰 Aplicar Desconto</h2>
-          
           <div class="info-box">
             <p><strong>Total da Hospedagem:</strong> R$ {{ formatarMoeda(reserva.totalHospedagem) }}</p>
             <p><strong>Já Recebido:</strong> R$ {{ formatarMoeda(reserva.totalRecebido) }}</p>
             <p><strong>Saldo Atual:</strong> R$ {{ formatarMoeda(reserva.totalApagar) }}</p>
           </div>
-
           <div class="campo">
             <label>Valor do Desconto (R$) *</label>
-            <input 
-              type="text" 
-              [(ngModel)]="valorDesconto" 
-              appCurrencyInput
-              placeholder="R$ 0,00">
+            <input type="text" [(ngModel)]="valorDesconto" appCurrencyInput placeholder="R$ 0,00">
             <small>Máximo: R$ {{ formatarMoeda(reserva.totalHospedagem) }}</small>
           </div>
-
           <div class="campo" *ngIf="valorDesconto > 0">
             <div class="info-box" style="background: #d4edda; border-color: #28a745;">
               <p style="color: #155724;"><strong>Novo Total:</strong> R$ {{ formatarMoeda((reserva.totalHospedagem || 0) - valorDesconto) }}</p>
               <p style="color: #155724;"><strong>Novo Saldo:</strong> R$ {{ formatarMoeda((reserva.totalHospedagem || 0) - valorDesconto - (reserva.totalRecebido || 0)) }}</p>
             </div>
           </div>
-
           <div class="campo">
             <label>Motivo do Desconto</label>
             <textarea [(ngModel)]="motivoDesconto" rows="3"
                       placeholder="Ex: Desconto promocional, cortesia, problema na hospedagem, etc."></textarea>
             <small>Opcional - Informe o motivo do desconto para controle</small>
           </div>
-
           <div class="modal-footer">
-            <button class="btn-cancelar-modal" (click)="fecharModalDesconto()">
-              Cancelar
-            </button>
-            <button class="btn-confirmar" (click)="confirmarDesconto()">
-              💰 Aplicar Desconto
-            </button>
+            <button class="btn-cancelar-modal" (click)="fecharModalDesconto()">Cancelar</button>
+            <button class="btn-confirmar" (click)="confirmarDesconto()">💰 Aplicar Desconto</button>
           </div>
         </div>
       </div>
 
-      <!-- ✨ MODAL CHECKOUT PARCIAL DE HÓSPEDE -->
+      <!-- MODAL CHECKOUT PARCIAL -->
       <div class="modal-overlay" *ngIf="modalCheckoutParcial" (click)="fecharModalCheckoutParcial()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <h2>🚪 Checkout Parcial de Hóspede</h2>
-          
           <div class="info-box info-box-checkout">
             <p><strong>Hóspede:</strong> {{ hospedeParaCheckout?.cliente?.nome || hospedeParaCheckout?.nomeCompleto }}</p>
             <p *ngIf="hospedeParaCheckout?.titular" class="aviso-titular">
               ⚠️ Este é o hóspede TITULAR. O próximo hóspede da lista será automaticamente promovido a titular.
             </p>
           </div>
-
           <div class="info-box">
             <p><strong>📋 Informações da Reserva:</strong></p>
             <p>Reserva #{{ reserva.id }} - Apartamento {{ reserva.apartamento?.numeroApartamento }}</p>
             <p>Hóspedes atuais: {{ reserva.quantidadeHospede }}</p>
             <p>Nova quantidade após checkout: {{ (reserva.quantidadeHospede || 0) - 1 }}</p>
           </div>
-
           <div class="campo">
             <label>Motivo do Checkout *</label>
             <textarea 
@@ -1046,7 +952,6 @@ interface Apartamento {
             </textarea>
             <small>Obrigatório - Este registro será salvo no histórico da reserva</small>
           </div>
-
           <div class="info-box info-box-alerta">
             <p><strong>⚠️ ATENÇÃO:</strong></p>
             <ul>
@@ -1056,11 +961,8 @@ interface Apartamento {
               <li>✅ Esta ação ficará registrada no histórico</li>
             </ul>
           </div>
-
           <div class="modal-footer">
-            <button class="btn-cancelar-modal" (click)="fecharModalCheckoutParcial()">
-              Cancelar
-            </button>
+            <button class="btn-cancelar-modal" (click)="fecharModalCheckoutParcial()">Cancelar</button>
             <button class="btn-confirmar btn-checkout" (click)="confirmarCheckoutParcial()">
               🚪 Confirmar Checkout
             </button>
@@ -1068,98 +970,78 @@ interface Apartamento {
         </div>
       </div>
 
-    </div>
+      <!-- MODAL DE ASSINATURA -->
+      <div class="modal-overlay" *ngIf="modalAssinatura" (click)="cancelarAssinatura()">
+        <div class="modal-content modal-assinatura" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>✍️ Assinatura do Hóspede</h3>
+            <button class="btn-fechar-modal" (click)="cancelarAssinatura()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-info">
+              <strong>Cliente:</strong> {{ reserva?.cliente?.nome }}<br>
+              <strong>Apartamento:</strong> {{ reserva?.apartamento?.numeroApartamento }}<br>
+              <strong>Valor a Pagar:</strong> R$ {{ formatarMoeda(reserva?.totalApagar) }}
+            </p>
+            <p class="modal-info" style="color: #e67e22; font-weight: bold;">
+              Ao assinar, você confirma o valor faturado para pagamento posterior.
+            </p>
+            <app-signature-pad #signaturePad></app-signature-pad>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-cancelar" (click)="cancelarAssinatura()">❌ Cancelar</button>
+            <button class="btn-confirmar" (click)="confirmarAssinaturaFaturada()">✅ Confirmar e Finalizar</button>
+          </div>
+        </div>
+      </div>
 
-    <!-- MODAL DE ASSINATURA - FATURA -->
-<div class="modal-overlay" *ngIf="modalAssinatura" (click)="cancelarAssinatura()">
-  <div class="modal-content modal-assinatura" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h3>✍️ Assinatura do Hóspede</h3>
-      <button class="btn-fechar-modal" (click)="cancelarAssinatura()">&times;</button>
-    </div>
+      <!-- MODAL EDITAR PLACA DO HÓSPEDE -->
+      <div class="modal-overlay" *ngIf="modalEditarPlaca" (click)="fecharModalEditarPlaca()">
+        <div class="modal-content modal-placa" (click)="$event.stopPropagation()">
+          <h2>🚗 {{ hospedeEditandoPlaca?.placaCarro ? 'Editar' : 'Adicionar' }} Placa do Veículo</h2>
+          <div class="info-box">
+            <p><strong>Hóspede:</strong> {{ hospedeEditandoPlaca?.cliente?.nome || hospedeEditandoPlaca?.nomeCompleto }}</p>
+            <p><strong>Apartamento:</strong> {{ reserva?.apartamento?.numeroApartamento }}</p>
+            <p *ngIf="hospedeEditandoPlaca?.placaCarro">
+              <strong>Placa atual:</strong> <span class="placa-destaque">{{ hospedeEditandoPlaca.placaCarro }}</span>
+            </p>
+          </div>
+          <div class="campo">
+            <label>Placa do Veículo *</label>
+            <input 
+              type="text"
+              [(ngModel)]="placaEditando"
+              (input)="formatarPlacaEdicao()"
+              placeholder="ABC-1234 ou ABC-1D23"
+              maxlength="8"
+              class="input-placa-grande"
+              autofocus>
+            <small class="form-text-hint">💡 Formato: ABC-1234 (padrão) ou ABC-1D23 (Mercosul)</small>
+          </div>
+          <div class="info-box info-box-sucesso" *ngIf="placaEditando && placaEditando.length >= 7">
+            <p>✅ Placa válida: <strong>{{ placaEditando }}</strong></p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-cancelar-modal" (click)="fecharModalEditarPlaca()">Cancelar</button>
+            <button 
+              class="btn-confirmar"
+              (click)="salvarPlacaHospede()"
+              [disabled]="!placaEditando || placaEditando.length < 7">
+              💾 Salvar Placa
+            </button>
+          </div>
+          <button type="button" class="btn-fechar-modal" (click)="fecharModalEditarPlaca()">✕</button>
+        </div>
+      </div>
 
-    <div class="modal-body">
-      <p class="modal-info">
-        <strong>Cliente:</strong> {{ reserva?.cliente?.nome }}<br>
-        <strong>Apartamento:</strong> {{ reserva?.apartamento?.numeroApartamento }}<br>
-        <strong>Valor a Pagar:</strong> R$ {{ formatarMoeda(reserva?.totalApagar) }}
-      </p>
-
-      <p class="modal-info" style="color: #e67e22; font-weight: bold;">
-        Ao assinar, você confirma o valor faturado para pagamento posterior.
-      </p>
-
-      <!-- SIGNATURE PAD -->
-      <app-signature-pad #signaturePad></app-signature-pad>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn-cancelar" (click)="cancelarAssinatura()">❌ Cancelar</button>
-      <button class="btn-confirmar" (click)="confirmarAssinaturaFaturada()">✅ Confirmar e Finalizar</button>
-    </div>
+      <!-- COMPONENTE DO MODAL DE TRANSFERÊNCIA -->
+      <app-transferir-hospede-modal 
+        (transferenciaRealizada)="recarregarReserva()">
+      </app-transferir-hospede-modal>    
+    </div> 
   </div>
-</div>
-
-
-    <!-- ========================================== -->
-<!-- MODAL EDITAR PLACA DO HÓSPEDE -->
-<!-- ========================================== -->
-<div class="modal-overlay" *ngIf="modalEditarPlaca" (click)="fecharModalEditarPlaca()">
-  <div class="modal-content modal-placa" (click)="$event.stopPropagation()">
-    <h2>🚗 {{ hospedeEditandoPlaca?.placaCarro ? 'Editar' : 'Adicionar' }} Placa do Veículo</h2>
-    
-    <div class="info-box">
-      <p><strong>Hóspede:</strong> {{ hospedeEditandoPlaca?.cliente?.nome || hospedeEditandoPlaca?.nomeCompleto }}</p>
-      <p><strong>Apartamento:</strong> {{ reserva?.apartamento?.numeroApartamento }}</p>
-      <p *ngIf="hospedeEditandoPlaca?.placaCarro">
-        <strong>Placa atual:</strong> <span class="placa-destaque">{{ hospedeEditandoPlaca.placaCarro }}</span>
-      </p>
-    </div>
-
-    <div class="campo">
-      <label>Placa do Veículo *</label>
-      <input 
-        type="text"
-        [(ngModel)]="placaEditando"
-        (input)="formatarPlacaEdicao()"
-        placeholder="ABC-1234 ou ABC-1D23"
-        maxlength="8"
-        class="input-placa-grande"
-        autofocus>
-      <small class="form-text-hint">
-        💡 Formato: ABC-1234 (padrão) ou ABC-1D23 (Mercosul)
-      </small>
-    </div>
-
-    <div class="info-box info-box-sucesso" *ngIf="placaEditando && placaEditando.length >= 7">
-      <p>✅ Placa válida: <strong>{{ placaEditando }}</strong></p>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn-cancelar-modal" (click)="fecharModalEditarPlaca()">
-        Cancelar
-      </button>
-      <button 
-        class="btn-confirmar"
-        (click)="salvarPlacaHospede()"
-        [disabled]="!placaEditando || placaEditando.length < 7">
-        💾 Salvar Placa
-      </button>
-    </div>
-
-    <button type="button" class="btn-fechar-modal" (click)="fecharModalEditarPlaca()">
-      ✕
-    </button>
-  </div>
-</div>
-
-    <!-- ✅ COMPONENTE DO MODAL DE TRANSFERÊNCIA -->
-    <app-transferir-hospede-modal 
-      (transferenciaRealizada)="recarregarReserva()">
-    </app-transferir-hospede-modal>    
-  </div> 
-
 `,
+
   styles: [`
     /* CONTAINER PRINCIPAL */
     .container-detalhes {
@@ -1875,14 +1757,16 @@ interface Apartamento {
     }
 
     .btn-finalizar {
-      background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
-      color: white;
-    }
+  background-color: #007bff;
+  color: white;
+  display: block;
+}
 
     .btn-finalizar-paga {
-      background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
-      color: white;
-    }
+  background-color: #28a745;
+  color: white;
+  display: block; /* ✅ garante visibilidade */
+}
 
     .btn-recibo {
       background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
@@ -2501,6 +2385,90 @@ interface Apartamento {
   animation: pulse 2s ease-in-out infinite;
 }    
 
+.responsavel-pagamento {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #fff3cd;
+  border-left: 4px solid #f39c12;
+  border-radius: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.responsavel-label { font-weight: 700; color: #b7770d; }
+.responsavel-nome  { font-weight: 600; color: #2c3e50; }
+.responsavel-apt   { color: #7f8c8d; }
+.btn-remover-responsavel {
+  margin-left: auto;
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.btn-definir-responsavel {
+  margin-top: 8px;
+  padding: 8px 16px;
+  background: #f39c12;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  width: 100%;
+}
+.btn-definir-responsavel:hover { background: #d68910; }
+.lista-responsaveis {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 6px;
+}
+.responsavel-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background .15s;
+}
+.responsavel-item:hover { background: #f0f7ff; }
+.responsavel-cpf { color: #888; font-size: 0.85rem; }
+.responsavel-selecionado {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #d5f5e3;
+  border-radius: 6px;
+  color: #1e8449;
+}
+
+   .busca-placa-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.input-busca-placa {
+  padding: 6px 10px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  width: 160px;
+}
+.input-busca-placa:focus {
+  outline: none;
+  border-color: #667eea;
+}
+.resultado-busca-placa {
+  font-size: 0.8rem;
+  color: #27ae60;
+  font-weight: 600;
+}
+.resultado-busca-placa.erro {
+  color: #e74c3c;
+}
     }
   `]
 })
@@ -2514,7 +2482,7 @@ export class ReservaDetalhesApp implements OnInit {
   private reservaService = inject(ReservaService); 
   private alertasStateService = inject(AlertasStateService);
 
-  private apiUrl = 'http://localhost:8080/api';
+  private apiUrl = '/api';
 
    @ViewChild(TransferirHospedeModalComponent, { static: false }) 
 modalTransferirHospede?: TransferirHospedeModalComponent;
@@ -2603,6 +2571,17 @@ hospedes: any[] = [];
   modalAssinatura = false;
   assinaturaCapturada: string | null = null; 
 
+  // Variáveis do modal responsável
+mostrarModalResponsavel = false;
+responsavelBusca = '';
+responsaveisEncontrados: any[] = [];
+responsavelSelecionado: any = null;
+
+termoBuscaPlaca = '';
+resultadoBuscaPlaca = '';
+erroBuscaPlaca = '';
+
+
   @ViewChild('signaturePad') signaturePad!: SignaturePadComponent;
 
   ngOnInit(): void {
@@ -2618,7 +2597,7 @@ hospedes: any[] = [];
  carregarReserva(id: number): void {
   this.loading = true;
   this.erro = '';
-  this.http.get<ReservaDetalhes>(`http://localhost:8080/api/reservas/${id}`).subscribe({
+  this.http.get<ReservaDetalhes>(`/api/reservas/${id}`).subscribe({
     next: (data) => {
       this.reserva = data;
       this.loading = false;
@@ -2666,14 +2645,7 @@ hospedes: any[] = [];
       
       // ✅ CARREGAR HÓSPEDES PARA QUALQUER STATUS
       // (antes só carregava para ATIVA)
-      if (this.reserva.hospedes && this.reserva.hospedes.length > 0) {
-        // ✅ HÓSPEDES JÁ VEM NO DTO
-        this.hospedes = this.reserva.hospedes;
-        console.log('✅ Hóspedes do DTO:', this.hospedes.length);
-      } else {
-        // ✅ FALLBACK: Buscar hóspedes separadamente
-        this.carregarHospedes();
-      }
+      this.carregarHospedes();
     },
     error: (err: any) => {
       console.error('❌ Erro:', err);
@@ -2693,8 +2665,6 @@ hospedes: any[] = [];
     this.carregarReserva(this.reservaId);
   }
 }
-
-
 
   voltar(): void {
     this.router.navigate(['/reservas']);
@@ -3542,7 +3512,7 @@ hospedes: any[] = [];
       params.motivo = this.motivoAlteracaoHospedes;
     }
 
-    this.http.patch(`http://localhost:8080/api/reservas/${this.reserva.id}/alterar-hospedes`, null, { params }).subscribe({
+    this.http.patch(`/api/reservas/${this.reserva.id}/alterar-hospedes`, null, { params }).subscribe({
       next: () => {
         alert('✅ Quantidade de hóspedes alterada com sucesso!');
         this.fecharModalAlterarHospedes();
@@ -3610,28 +3580,18 @@ hospedes: any[] = [];
 
     console.log('📦 DTO preparado:', dto);
 
-    const url = `http://localhost:8080/api/pagamentos?usuarioId=${usuarioId}`;
+    const url = `/api/pagamentos?usuarioId=${usuarioId}`;
     console.log('🌐 URL da requisição:', url);
 
     this.http.post(url, dto).subscribe({
       next: (response: any) => {
-        console.log('═══════════════════════════════════════════');
-        console.log('✅ RESPOSTA DO BACKEND:');
-        console.log('═══════════════════════════════════════════');
-        console.log('📊 Response completo:', response);
-        console.log('✔️ Sucesso:', response.sucesso);
-        console.log('💰 Pagamento:', response.pagamento);
-        
-        if (response.sucesso || response.pagamento) {
-          alert('✅ Pagamento registrado com sucesso!');
-          this.fecharModalPagamento();
-          if (this.reserva) {
-            this.carregarReserva(this.reserva.id);
-          }
-        } else {
-          alert('⚠️ ' + (response.mensagem || 'Pagamento registrado, mas sem confirmação'));
-        }
-      },
+  console.log('✅ Resposta do pagamento:', response);
+  alert('✅ Pagamento registrado com sucesso!');
+  this.fecharModalPagamento();
+  if (this.reserva) {
+    this.carregarReserva(this.reserva.id);
+  }
+},
       error: (err: any) => {
         console.log('═══════════════════════════════════════════');
         console.error('❌ ERRO AO REGISTRAR PAGAMENTO');
@@ -3662,7 +3622,7 @@ hospedes: any[] = [];
         }
         
         if (err.status === 0) {
-          alert('❌ Erro de conexão!\n\nVerifique se o backend está rodando em http://localhost:8080');
+          alert('❌ Erro de conexão!\n\nVerifique se o backend está rodando em ');
           return;
         }
         
@@ -3701,7 +3661,7 @@ hospedes: any[] = [];
   }
 
   carregarProdutosDisponiveis(): void {
-    this.http.get<Produto[]>('http://localhost:8080/api/produtos').subscribe({
+    this.http.get<Produto[]>('/api/produtos').subscribe({
       next: (data) => {
         this.produtos = data.filter(p => p.quantidade > 0);
         if (this.produtos.length === 0) {
@@ -3727,7 +3687,7 @@ hospedes: any[] = [];
   abrirModalTransferencia(): void {
     if (!this.reserva) return;
 
-    this.http.get<Apartamento[]>('http://localhost:8080/api/apartamentos').subscribe({
+    this.http.get<Apartamento[]>('/api/apartamentos').subscribe({
       next: (data) => {
         this.apartamentosDisponiveis = data.filter(
           (apt: Apartamento) => 
@@ -3793,7 +3753,7 @@ hospedes: any[] = [];
       motivo: this.motivoTransferencia
     };
 
-    this.http.post('http://localhost:8080/api/reservas/transferir-apartamento', dto).subscribe({
+    this.http.post('/api/reservas/transferir-apartamento', dto).subscribe({
       next: () => {
         alert('✅ Transferência realizada com sucesso!');
         this.fecharModalTransferencia();
@@ -3832,14 +3792,18 @@ hospedes: any[] = [];
  
 }
 
-  finalizarReservaFaturada(): void {
+ finalizarReservaFaturada(): void {
   if (!this.reserva) return;
-  
+
   const saldoDevedor = this.reserva.totalApagar || 0;
   const cliente = this.reserva.cliente;
+
+  console.log('CLIENTE:', JSON.stringify(cliente));
+
+  // ✅ MESMA LÓGICA DO BACKEND: creditoAprovado OU tem empresa
+  const creditoAprovado = !!cliente?.creditoAprovado;
   
-  // ✅ VERIFICAR CRÉDITO ANTES DE TENTAR FINALIZAR
-  if (!cliente?.creditoAprovado) {
+  if (!creditoAprovado) {
     alert(
       `❌ CLIENTE SEM APROVAÇÃO DE CRÉDITO!\n\n` +
       `Cliente: ${cliente?.nome}\n` +
@@ -3851,7 +3815,7 @@ hospedes: any[] = [];
     );
     return;
   }
-  
+
   const confirmacao = confirm(
     `⚠️ FINALIZAR FATURADA?\n\n` +
     `Cliente: ${cliente?.nome}\n` +
@@ -3861,8 +3825,8 @@ hospedes: any[] = [];
     `💳 Valor será enviado para Contas a Receber`
   );
   if (!confirmacao) return;
-  
-  // ✅ ABRIR MODAL DE ASSINATURA (ao invés de finalizar diretamente)
+
+  // ✅ ABRIR MODAL DE ASSINATURA
   this.modalAssinatura = true;
   this.assinaturaCapturada = null;
 }
@@ -3884,32 +3848,23 @@ confirmarAssinaturaFaturada(): void {
   this.modalAssinatura = false;
 
   // ✅ FINALIZAR RESERVA NO BACKEND
-  this.http.patch(`http://localhost:8080/api/reservas/${this.reserva!.id}/finalizar`, {}).subscribe({
+  this.http.patch(`/api/reservas/${this.reserva!.id}/finalizar`, {}).subscribe({
     next: () => {
-      // ✅ SALVAR ASSINATURA
       this.salvarAssinatura();
-
-      // ✅ NOTIFICAR SIDEBAR
       this.alertasStateService.notificarAlertasAtualizados();
-
       alert('✅ Reserva finalizada! Valor enviado para Contas a Receber.');
-
       this.carregarReserva(this.reserva!.id);
-
-      // ✅ IMPRIMIR FATURA COM ASSINATURA
       setTimeout(() => {
         this.gerarFatura();
       }, 800);
     },
     error: (err: any) => {
       let mensagemErro = 'Erro ao finalizar reserva';
-      
       if (err.error && err.error.erro) {
         mensagemErro = err.error.erro;
       } else if (err.error && err.error.message) {
         mensagemErro = err.error.message;
       }
-      
       alert(mensagemErro);
     }
   });
@@ -3919,7 +3874,7 @@ confirmarAssinaturaFaturada(): void {
 private salvarAssinatura(): void {
   if (!this.assinaturaCapturada || !this.reserva) return;
 
-  this.http.post(`http://localhost:8080/api/reservas/${this.reserva.id}/assinatura`, {
+  this.http.post(`/api/reservas/${this.reserva.id}/assinatura`, {
     assinatura: this.assinaturaCapturada
   }).subscribe({
     next: () => console.log('✅ Assinatura salva'),
@@ -3945,7 +3900,7 @@ cancelarAssinatura(): void {
   );
   if (!confirmacao) return;
   
-  this.http.patch(`http://localhost:8080/api/reservas/${this.reserva.id}/finalizar-paga`, {}).subscribe({
+  this.http.patch(`/api/reservas/${this.reserva.id}/finalizar-paga`, {}).subscribe({
     next: () => {
       alert('✅ Reserva finalizada com sucesso!');
       
@@ -4006,7 +3961,7 @@ cancelarAssinatura(): void {
     const confirmacao = confirm(`❌ Confirma o cancelamento da reserva?\n\nMotivo: ${motivo}\n\nO apartamento será liberado.`);
     if (!confirmacao) return;
 
-    this.http.patch(`http://localhost:8080/api/reservas/${this.reserva.id}/cancelar`, null, { params: { motivo } }).subscribe({
+    this.http.patch(`/api/reservas/${this.reserva.id}/cancelar`, null, { params: { motivo } }).subscribe({
       next: () => {
         alert('✅ Reserva cancelada!');
         this.alertasStateService.notificarAlertasAtualizados();
@@ -4045,7 +4000,7 @@ cancelarAssinatura(): void {
     observacao: this.observacaoConsumo
   };
 
-  const url = `http://localhost:8080/api/reservas/${this.reserva.id}/consumo`;
+  const url = `/api/reservas/${this.reserva.id}/consumo`;
   
   console.log('📤 FRONTEND - Enviando requisição:');
   console.log('   URL:', url);
@@ -4131,7 +4086,7 @@ cancelarAssinatura(): void {
       };
     }
 
-    this.http.post('http://localhost:8080/api/estornos/consumo-apartamento', request).subscribe({
+    this.http.post('/api/estornos/consumo-apartamento', request).subscribe({
       next: (response: any) => {
         alert('✅ Estorno realizado com sucesso!');
         this.fecharModalEstorno();
@@ -4202,7 +4157,7 @@ cancelarAssinatura(): void {
       usuarioId: usuarioId
     };
 
-    this.http.post(`http://localhost:8080/api/descontos`, dto).subscribe({
+    this.http.post(`/api/descontos`, dto).subscribe({
       next: (response: any) => {
         alert('✅ Desconto aplicado com sucesso!');
         this.fecharModalDesconto();
@@ -4236,7 +4191,7 @@ cancelarAssinatura(): void {
     const usuarioId = this.authService.getUsuarioId();
 
     this.http.delete(
-      `http://localhost:8080/api/descontos/${descontoId}?usuarioId=${usuarioId}`
+      `/api/descontos/${descontoId}?usuarioId=${usuarioId}`
     ).subscribe({
       next: (response: any) => {
         alert('✅ Desconto removido com sucesso!');
@@ -4256,17 +4211,10 @@ cancelarAssinatura(): void {
   // ============================================
 
  carregarHospedes(): void {
-  this.http.get<any[]>(`http://localhost:8080/api/hospedagem-hospedes/reserva/${this.reserva!.id}`).subscribe({
+  this.http.get<any[]>(`/api/reservas/${this.reserva!.id}/hospedes`).subscribe({
     next: (data) => {
-      // ✅ CARREGAR TODOS OS HÓSPEDES (sem filtrar por status)
       this.hospedes = data;
-      
       console.log('✅ Hóspedes carregados:', this.hospedes.length);
-      
-      // Debug: Mostrar todos os status
-      data.forEach(h => {
-        console.log(`   - ${h.cliente?.nome || h.nomeCompleto}: ${h.status}`);
-      });
     },
     error: (err) => {
       console.error('❌ Erro ao carregar hóspedes:', err);
@@ -4315,7 +4263,7 @@ cancelarAssinatura(): void {
       return;
     }
 
-    this.http.get<any[]>(`http://localhost:8080/api/clientes/buscar?termo=${busca}`).subscribe({
+    this.http.get<any[]>(`/api/clientes/buscar?termo=${busca}`).subscribe({
       next: (data) => {
         this.clientesFiltradosModal = data;
       },
@@ -4327,6 +4275,8 @@ cancelarAssinatura(): void {
   }
 
   selecionarHospedeExistente(cliente: any): void {
+    console.log('🎯 CLICOU! selecionarHospedeExistente:', cliente);
+  console.log('📋 this.reserva:', this.reserva?.id);
     if (!this.reserva) return;
     
     const request = {
@@ -4334,7 +4284,7 @@ cancelarAssinatura(): void {
       cadastrarNovo: false
     };
     
-    this.http.post(`http://localhost:8080/api/reservas/${this.reserva.id}/hospedes`, request).subscribe({
+    this.http.post(`/api/reservas/${this.reserva.id}/hospedes`, request).subscribe({
       next: (response: any) => {
         alert('✅ Hóspede adicionado com sucesso!');
         this.fecharModalAdicionarHospede();
@@ -4390,7 +4340,7 @@ cancelarAssinatura(): void {
   };
   
   // ✅ CORRIGIDO: Adicionar ( depois de post
-  this.http.post(`http://localhost:8080/api/reservas/${this.reserva.id}/hospedes`, request).subscribe({
+  this.http.post(`/api/reservas/${this.reserva.id}/hospedes`, request).subscribe({
     next: (response: any) => {
       alert('✅ Hóspede adicionado com sucesso!');
       this.fecharModalAdicionarHospede();
@@ -4597,7 +4547,7 @@ estornoDescontoDoExtrato(extrato: any): void {
   }
 
   // Buscar o desconto pela reserva e encontrar pelo valor e data
-  this.http.get<any[]>(`http://localhost:8080/api/descontos/reserva/${this.reserva.id}`)
+  this.http.get<any[]>(`/api/descontos/reserva/${this.reserva.id}`)
     .subscribe({
       next: (descontos) => {
         // Encontrar o desconto pelo valor e data próxima
@@ -4624,7 +4574,7 @@ estornarDesconto(descontoId: number): void {
   // ✅ PEGAR usuarioId DO AuthService
   const usuarioId = this.authService.getUsuarioId();
 
-  this.http.delete(`http://localhost:8080/api/descontos/${descontoId}?usuarioId=${usuarioId}`)
+  this.http.delete(`/api/descontos/${descontoId}?usuarioId=${usuarioId}`)
     .subscribe({
       next: () => {
         alert('Desconto estornado com sucesso!');
@@ -5061,7 +5011,7 @@ salvarPlacaHospede(): void {
   console.log('   Placa:', this.placaEditando);
 
   this.http.patch(
-    `http://localhost:8080/api/reservas/hospedes/${this.hospedeEditandoPlaca.id}/atualizar-placa`,
+    `/api/reservas/hospedes/${this.hospedeEditandoPlaca.id}/atualizar-placa`,
     null,
     { params: { placa: this.placaEditando } }
   ).subscribe({
@@ -5101,8 +5051,8 @@ ativarPreReserva(): void {
   console.log('🔓 ATIVANDO PRÉ-RESERVA #' + this.reserva?.id);
   console.log('═══════════════════════════════════════════');
 
-  this.http.patch(
-    `http://localhost:8080/api/reservas/${this.reserva?.id}/ativar-pre-reserva`,
+  this.http.post(
+    `/api/reservas/${this.reserva?.id}/ativar-pre-reserva`,
     {}
   ).subscribe({
     next: (response: any) => {
@@ -5166,13 +5116,99 @@ devolverTroco(): void {
   
   if (!confirm(`💰 Devolver troco de R$ ${this.formatarMoeda(valorTroco)} ao cliente?\n\nEsta ação será registrada no extrato.`)) return;
   
-  this.http.patch(`http://localhost:8080/api/reservas/${this.reserva.id}/devolver-troco`, {}).subscribe({
+  this.http.patch(`/api/reservas/${this.reserva.id}/devolver-troco`, {}).subscribe({
     next: () => {
       alert(`✅ Troco de R$ ${this.formatarMoeda(valorTroco)} devolvido!\n\nSaldo zerado. Você já pode finalizar a reserva.`);
       this.carregarReserva(this.reserva!.id);
     },
     error: (err: any) => {
       alert('❌ Erro: ' + (err.error?.erro || err.message));
+    }
+  });
+}
+
+abrirModalResponsavel(): void {
+  this.mostrarModalResponsavel = true;
+  this.responsavelBusca = '';
+  this.responsaveisEncontrados = [];
+  this.responsavelSelecionado = null;
+}
+
+fecharModalResponsavel(): void {
+  this.mostrarModalResponsavel = false;
+}
+
+buscarResponsavel(): void {
+  if (!this.responsavelBusca || this.responsavelBusca.length < 2) return;
+  const token = localStorage.getItem('token');
+  const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+  this.http.get<any[]>(`/api/clientes/buscar?nome=${this.responsavelBusca}`, { headers })
+    .subscribe({
+      next: (res) => this.responsaveisEncontrados = res,
+      error: (err) => console.error('Erro ao buscar:', err)
+    });
+}
+
+selecionarResponsavel(responsavel: any): void {
+  this.responsavelSelecionado = responsavel;
+  this.responsavelBusca = responsavel.nome;
+  this.responsaveisEncontrados = [];
+}
+
+salvarResponsavel(): void {
+  if (!this.responsavelSelecionado || !this.reserva) return;
+  const token = localStorage.getItem('token');
+const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+  this.http.patch(`/api/reservas/${this.reserva.id}/responsavel-pagamento`, {
+    responsavelId: this.responsavelSelecionado.id,
+    numeroApartamento: this.responsavelSelecionado.apartamento || ''
+  }, { headers }).subscribe({
+    next: () => {
+      this.fecharModalResponsavel();
+      if (this.reserva) this.carregarReserva(this.reserva.id);
+    },
+    error: (err) => alert('Erro: ' + (err.error?.erro || err.message))
+  });
+}
+
+removerResponsavel(): void {
+  if (!confirm('Remover responsável pelo pagamento?')) return;
+  if (!this.reserva) return;
+  const token = localStorage.getItem('token');
+const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+  this.http.patch(`/api/reservas/${this.reserva.id}/responsavel-pagamento`,
+    { responsavelId: null, numeroApartamento: null }, { headers })
+    .subscribe({
+      next: () => { if (this.reserva) this.carregarReserva(this.reserva.id); },
+      error: (err) => alert('Erro: ' + (err.error?.erro || err.message))
+    });
+}
+
+buscarPorPlaca(): void {
+  this.resultadoBuscaPlaca = '';
+  this.erroBuscaPlaca = '';
+  
+  if (!this.termoBuscaPlaca || this.termoBuscaPlaca.length < 7) return;
+
+  const token = localStorage.getItem('token');
+  const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+
+  this.http.get<any[]>(
+    `/api/apartamentos/painel/buscar?placa=${this.termoBuscaPlaca}`, 
+    { headers }
+  ).subscribe({
+    next: (res) => {
+      if (res && res.length > 0) {
+        const h = res[0];
+        this.resultadoBuscaPlaca = 
+          `${h.hospedeNome} — Apt ${h.apartamento} (Reserva #${h.reservaId})`;
+        this.erroBuscaPlaca = '';
+      } else {
+        this.erroBuscaPlaca = `Nenhum hóspede encontrado com a placa: ${this.termoBuscaPlaca}`;
+      }
+    },
+    error: () => {
+      this.erroBuscaPlaca = 'Erro ao buscar placa';
     }
   });
 }

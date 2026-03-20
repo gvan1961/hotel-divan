@@ -2,9 +2,9 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../app/services/auth.service';
-
+ 
 interface Produto {
   id: number;
   nomeProduto: string;
@@ -36,7 +36,9 @@ interface ItemCarrinho {
     <!-- HEADER -->
     <div class="header">
       <h1>🛒 PDV - Ponto de Venda</h1>
-      <button class="btn-voltar" (click)="voltar()">← Voltar</button>
+      <button class="btn-voltar" (click)="voltar()">
+  ← Voltar ao Painel
+</button>
     </div>
 
     <div class="grid-pdv">
@@ -688,15 +690,23 @@ export class PDVComponent implements OnInit {
   reservaSelecionadaId = 0;
   apartamentoNomeVenda = '';
 
+  origem: string = '';
+
+  constructor(private route: ActivatedRoute) {}
 
   ngOnInit(): void {
+
+    this.route.queryParams.subscribe(params => {
+    this.origem = params['origem'] || '';
+  });
+
     this.carregarProdutos();
     this.carregarClientesComCredito();
     this.carregarReservasAtivas();
   }
 
   carregarProdutos(): void {
-    this.http.get<Produto[]>('http://localhost:8080/api/produtos').subscribe({
+    this.http.get<Produto[]>('/api/produtos').subscribe({
       next: (data) => {
         this.produtos = data.filter(p => p.quantidade > 0);
         this.produtosFiltrados = this.produtos;
@@ -709,7 +719,7 @@ export class PDVComponent implements OnInit {
   }
 
   carregarClientesComCredito(): void {
-  this.http.get<Cliente[]>('http://localhost:8080/api/clientes').subscribe({
+  this.http.get<Cliente[]>('/api/clientes').subscribe({
     next: (data) => {
       console.log('🔍 Clientes carregados:', data); // ← ver o que vem da API
       
@@ -874,7 +884,7 @@ export class PDVComponent implements OnInit {
       }))
     };
 
-    this.http.post<any>('http://localhost:8080/api/vendas/a-vista', request).subscribe({
+    this.http.post<any>('/api/vendas/a-vista', request).subscribe({
       next: (response) => {
         this.notaVendaId = response.notaVendaId;
         
@@ -903,7 +913,7 @@ export class PDVComponent implements OnInit {
   }
 
   carregarReservasAtivas(): void {
-  this.http.get<any[]>('http://localhost:8080/api/reservas/ativas').subscribe({
+  this.http.get<any[]>('/api/reservas/ativas').subscribe({
     next: (data) => {
       this.reservas = data;
       console.log('🏨 Reservas ativas:', this.reservas.length);
@@ -928,7 +938,7 @@ export class PDVComponent implements OnInit {
 
   // ✅ ADICIONAR usuarioId COMO QUERY PARAMETER
   this.http.post<any>(
-    `http://localhost:8080/api/vendas/faturada?usuarioId=${usuarioId}`,
+    `/api/vendas/faturada?usuarioId=${usuarioId}`,
     request
   ).subscribe({
     next: (response) => {
@@ -981,7 +991,7 @@ export class PDVComponent implements OnInit {
     }))
   };
 
-  this.http.post<any>('http://localhost:8080/api/vendas/comanda-consumo', request).subscribe({
+  this.http.post<any>('/api/vendas/comanda-consumo', request).subscribe({
     next: (response) => {
       this.notaVendaId = response.notaVendaId;
       this.ultimosItensVendidos = [...this.carrinho];
@@ -1229,6 +1239,10 @@ export class PDVComponent implements OnInit {
   }
 
   voltar(): void {
-    this.router.navigate(['/']);
+  if (this.origem === 'painel-recepcao') {
+    this.router.navigate(['/painel-recepcao']);
+  } else {
+    this.router.navigate(['/dashboard']);
   }
+}
 }

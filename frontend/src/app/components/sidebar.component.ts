@@ -48,6 +48,13 @@ import { HasPermissionDirective } from '../directives/has-permission.directive';
           <span class="label">Mapa de Reservas</span>
         </a>
 
+        <!-- PAINEL DE RECEPÇÃO -->
+<a *hasPermission="'RESERVA_VISUALIZAR'"
+   routerLink="/painel-recepcao" routerLinkActive="active" class="nav-item">
+  <span class="icon">🏨</span>
+  <span class="label">Painel Recepção</span>
+</a>
+
         <div class="nav-divider"></div>
 
         <!-- CAIXA -->

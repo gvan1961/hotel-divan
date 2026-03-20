@@ -10,7 +10,7 @@ import { Diaria, DiariaRequest, DiariaResponse } from '../models/diaria.model';
 })
 export class DiariaService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/diarias';
+  private apiUrl = '/api/diarias';
 
   //constructor(private http: HttpClient) {}
 

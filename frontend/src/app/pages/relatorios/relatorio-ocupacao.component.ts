@@ -624,14 +624,14 @@ export class RelatorioOcupacaoComponent implements OnInit {
   carregarReservas(): void {
     this.loading = true;
 
-    this.http.get<any[]>('http://localhost:8080/api/reservas').subscribe({
+    this.http.get<any[]>('/api/reservas').subscribe({
       next: (reservas) => {
         // Filtrar apenas reservas ATIVAS
         const reservasAtivas = reservas.filter(r => r.status === 'ATIVA');
 
         // Para cada reserva, buscar os hóspedes
         const requests = reservasAtivas.map(reserva => 
-          this.http.get<any[]>(`http://localhost:8080/api/hospedagem-hospedes/reserva/${reserva.id}`)
+          this.http.get<any[]>(`/api/hospedagem-hospedes/reserva/${reserva.id}`)
             .toPromise()
             .then(hospedes => ({
               id: reserva.id,

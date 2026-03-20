@@ -26,7 +26,7 @@ export interface PerfilRequest {
   providedIn: 'root'
 })
 export class PerfilService {
-  private apiUrl = 'http://localhost:8080/api/perfis';
+  private apiUrl = '/api/perfis';
 
   constructor(private http: HttpClient) {}
 

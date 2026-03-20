@@ -13,7 +13,7 @@ export interface Permissao {
   providedIn: 'root'
 })
 export class PermissaoService {
-  private apiUrl = 'http://localhost:8080/api/permissoes';
+  private apiUrl = '/api/permissoes';
 
   constructor(private http: HttpClient) {}
 

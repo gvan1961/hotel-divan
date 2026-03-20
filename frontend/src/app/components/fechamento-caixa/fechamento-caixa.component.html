@@ -342,6 +342,13 @@
                     <span class="venda-id">📋 Venda #{{ venda.notaVendaId }}</span>
                     <span class="venda-data">{{ venda.dataHora | date:'dd/MM/yyyy HH:mm' }}</span>
                     <span class="venda-tipo">({{ venda.tipoVenda }})</span>
+
+                     <span class="venda-reserva" *ngIf="venda.reservaId">
+  🏨 Apt {{ venda.apartamento }} — Reserva #{{ venda.reservaId }}
+  <span *ngIf="venda.clienteNome"> ({{ venda.clienteNome }})</span>
+</span>
+                    
+
                     <span class="venda-total">{{ venda.valorTotal | currency:'BRL' }}</span>
                   </div>
                   

@@ -567,7 +567,7 @@ export class RelatorioCheckoutsComponent implements OnInit {
     this.loading = true;
     this.checkouts = [];
 
-    this.http.get<any[]>('http://localhost:8080/api/reservas').subscribe({
+    this.http.get<any[]>('/api/reservas').subscribe({
       next: (reservas) => {
         // Filtrar reservas que fazem checkout na data selecionada
         const reservasCheckout = reservas.filter(r => {
@@ -578,7 +578,7 @@ export class RelatorioCheckoutsComponent implements OnInit {
 
         // Para cada reserva, buscar os hóspedes
         const requests = reservasCheckout.map(reserva =>
-          this.http.get<any[]>(`http://localhost:8080/api/hospedagem-hospedes/reserva/${reserva.id}`)
+          this.http.get<any[]>(`/api/hospedagem-hospedes/reserva/${reserva.id}`)
             .toPromise()
             .then(hospedes => ({
               reservaId: reserva.id,

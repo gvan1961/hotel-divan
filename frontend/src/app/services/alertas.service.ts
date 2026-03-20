@@ -52,7 +52,7 @@ export interface TodosAlertasResponse {
 })
 export class AlertasService {
   
-  private apiUrl = 'http://localhost:8080/api/alertas';
+  private apiUrl = '/api/alertas';
 
   constructor(private http: HttpClient) {}
 

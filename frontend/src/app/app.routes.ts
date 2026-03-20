@@ -51,6 +51,7 @@ import { GestaoComandasComponent } from './components/jantar/gestao-comandas/ges
 import { UsuarioListaComponent } from './components/usuario-lista/usuario-lista.component';
 import { PerfilListaComponent } from './components/perfil-lista/perfil-lista.component';
 import { AdministrativoComponent } from './pages/administrativo/administrativo.component';
+import { PainelRecepcaoApp } from './pages/painel-recepcao/painel-recepcao.app';
 
 export const routes: Routes = [
   // LOGIN (sem layout)
@@ -105,6 +106,7 @@ export const routes: Routes = [
       { path: 'reservas/:id/editar', component: ReservaEditApp },
       { path: 'reservas/:id', component: ReservaDetalhesApp },
       { path: 'reservas', component: ReservaListaApp },
+      { path: 'painel-recepcao', component: PainelRecepcaoApp },
 
       // ===== CATEGORIAS =====
       { path: 'categorias/novo', component: CategoriaFormApp },

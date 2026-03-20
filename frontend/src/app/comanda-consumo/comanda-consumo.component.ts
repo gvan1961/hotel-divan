@@ -649,7 +649,7 @@ export class ComandaConsumoComponent implements OnInit {
   }
 
   carregarReserva(): void {
-    this.http.get<Reserva>(`http://localhost:8080/api/reservas/${this.reservaId}`).subscribe({
+    this.http.get<Reserva>(`/api/reservas/${this.reservaId}`).subscribe({
       next: (data) => {
         this.reserva = data;
       },
@@ -662,7 +662,7 @@ export class ComandaConsumoComponent implements OnInit {
   }
 
   carregarProdutos(): void {
-    this.http.get<Produto[]>('http://localhost:8080/api/produtos').subscribe({
+    this.http.get<Produto[]>('/api/produtos').subscribe({
       next: (data) => {
         this.produtos = data.filter(p => p.quantidade > 0);
         this.produtosFiltrados = this.produtos;
@@ -768,7 +768,7 @@ export class ComandaConsumoComponent implements OnInit {
       }))
     };
 
-    this.http.post<any>('http://localhost:8080/api/vendas/comanda-consumo', request).subscribe({
+    this.http.post<any>('/api/vendas/comanda-consumo', request).subscribe({
       next: (response) => {
         this.notaVendaId = response.notaVendaId;
         

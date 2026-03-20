@@ -52,7 +52,7 @@ export interface PagamentoConta {
 })
 export class ContaReceberService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/contas-receber';
+  private apiUrl = '/api/contas-receber';
 
   listarTodas(): Observable<ContaAReceber[]> {
     return this.http.get<ContaAReceber[]>(this.apiUrl);

@@ -1652,16 +1652,15 @@ onDataChange(): void {
 }
 
   setDatasPadrao(): void {
-    const hoje = new Date();
-    hoje.setHours(14, 0, 0, 0);
-    
-    const amanha = new Date(hoje);
-    amanha.setDate(amanha.getDate() + 1);
-    amanha.setHours(13, 0, 0, 0);
-    
-    this.reserva.dataCheckin = this.formatDateTimeLocal(hoje);
-    this.reserva.dataCheckout = this.formatDateTimeLocal(amanha);
-  }
+  const agora = new Date(); // ← hora real do momento
+
+  const checkout = new Date(agora);
+  checkout.setDate(checkout.getDate() + 1);
+  checkout.setHours(12, 0, 0, 0); // ← checkout sempre 12:00
+
+  this.reserva.dataCheckin = this.formatDateTimeLocal(agora);
+  this.reserva.dataCheckout = this.formatDateTimeLocal(checkout);
+}
 
   definirDataMinima(): void {
     const agora = new Date();
@@ -1699,13 +1698,11 @@ onDataChange(): void {
     const checkinDate = new Date(this.reserva.dataCheckin);
     const checkoutDate = new Date(this.reserva.dataCheckout);
     
-    const checkinISO = new Date(checkinDate.getTime() - (checkinDate.getTimezoneOffset() * 60000))
-      .toISOString();
-    const checkoutISO = new Date(checkoutDate.getTime() - (checkoutDate.getTimezoneOffset() * 60000))
-      .toISOString();
+    const checkinISO = this.reserva.dataCheckin + ':00';
+    const checkoutISO = this.reserva.dataCheckout + ':00';
     
     // ✅ USAR NOVO ENDPOINT COM FILTROS
-    const url = `http://localhost:8080/api/apartamentos/disponiveis?dataInicio=${checkinISO}&dataFim=${checkoutISO}`;
+    const url = `/api/apartamentos/disponiveis?dataInicio=${checkinISO}&dataFim=${checkoutISO}`;
     
     console.log('═══════════════════════════════════════');
     console.log('🔍 BUSCANDO APARTAMENTOS DISPONÍVEIS');
@@ -1829,7 +1826,7 @@ onDataCheckoutChange(): void {
       return;
     }
 
-    this.http.get<any[]>(`http://localhost:8080/api/clientes/buscar?termo=${busca}`).subscribe({
+    this.http.get<any[]>(`/api/clientes/buscar?termo=${busca}`).subscribe({
       next: (data) => {
         this.clientesFiltrados = data;
         this.mostrarResultados = true;
@@ -1854,7 +1851,7 @@ onDataCheckoutChange(): void {
       dataCheckout: new Date(this.reserva.dataCheckout).toISOString()
     };
     
-    this.http.post<any>('http://localhost:8080/api/reservas/validar-hospede', payload).subscribe({
+    this.http.post<any>('/api/reservas/validar-hospede', payload).subscribe({
       next: (resposta) => {
         if (!resposta.disponivel) {
           this.mostrarBannerErro(`❌ CLIENTE INDISPONÍVEL!\n\n${resposta.mensagem}`);
@@ -1872,7 +1869,7 @@ onDataCheckoutChange(): void {
 
   private adicionarClientePrincipal(cliente: any): void {
     if (cliente.empresaId) {
-      this.http.get<any>(`http://localhost:8080/api/empresas/${cliente.empresaId}`).subscribe({
+      this.http.get<any>(`/api/empresas/${cliente.empresaId}`).subscribe({
         next: (empresa) => {
           cliente.empresa = empresa;
           this.clienteSelecionado = cliente;
@@ -2007,7 +2004,7 @@ onDataCheckoutChange(): void {
       return;
     }
 
-    this.http.get<any[]>(`http://localhost:8080/api/clientes/buscar?termo=${busca}`).subscribe({
+    this.http.get<any[]>(`/api/clientes/buscar?termo=${busca}`).subscribe({
       next: (data) => {
         this.clientesFiltradosModal = data;
       },
@@ -2040,7 +2037,7 @@ onDataCheckoutChange(): void {
       dataCheckout: new Date(this.reserva.dataCheckout).toISOString()
     };
     
-    this.http.post<any>('http://localhost:8080/api/reservas/validar-hospede', payload).subscribe({
+    this.http.post<any>('/api/reservas/validar-hospede', payload).subscribe({
       next: (resposta) => {
         if (!resposta.disponivel) {
           this.mostrarBannerErro(`❌ HÓSPEDE INDISPONÍVEL!\n\n${resposta.mensagem}`);
@@ -2150,15 +2147,14 @@ onDataCheckoutChange(): void {
   this.loading = true;
   this.errorMessage = '';
 
-  // ✅ CORRIGIR: Converter datas para ISO sem adicionar timezone
   const checkinDate = new Date(this.reserva.dataCheckin);
   const checkoutDate = new Date(this.reserva.dataCheckout);
   
-  // ✅ Remover offset de timezone
   const checkinISO = new Date(checkinDate.getTime() - (checkinDate.getTimezoneOffset() * 60000))
     .toISOString();
   const checkoutISO = new Date(checkoutDate.getTime() - (checkoutDate.getTimezoneOffset() * 60000))
     .toISOString();
+
 
   console.log('═══════════════════════════════════════');
   console.log('📤 ENVIANDO RESERVA PARA BACKEND');
@@ -2168,24 +2164,25 @@ onDataCheckoutChange(): void {
   console.log('🕐 Check-out digitado:', this.reserva.dataCheckout);
   console.log('📤 Check-out enviado:', checkoutISO);
 
-  // ✅ Atualizar placa do titular se foi informada
-if (this.placaTitular && this.hospedes.length > 0) {
-  // Validar placa do titular
-  if (!this.validarPlaca(this.placaTitular)) {
-    this.loading = false;
-    this.mostrarBannerErro('❌ Placa do titular inválida!\n\nFormato correto: ABC-1234 ou ABC-1D23');
-    return;
+  if (this.placaTitular && this.hospedes.length > 0) {
+    if (!this.validarPlaca(this.placaTitular)) {
+      this.loading = false;
+      this.mostrarBannerErro('❌ Placa do titular inválida!\n\nFormato correto: ABC-1234 ou ABC-1D23');
+      return;
+    }
+    this.hospedes[0].placaCarro = this.placaTitular;
   }
-  this.hospedes[0].placaCarro = this.placaTitular;
-}
 
-const reservaRequest: any = {
+  const reservaRequest: any = {
   clienteId: Number(this.reserva.clienteId),
   apartamentoId: Number(this.reserva.apartamentoId),
   quantidadeHospede: Number(this.reserva.quantidadeHospede),
   dataCheckin: checkinISO,
   dataCheckout: checkoutISO,
-  hospedes: this.hospedes
+  hospedes: this.hospedes,
+  hospedesAdicionaisIds: this.hospedes
+  .filter((h: any) => h.clienteId && Number(h.clienteId) !== Number(this.reserva.clienteId))
+  .map((h: any) => Number(h.clienteId))
 };
 
   console.log('📦 Request completo:', reservaRequest);
@@ -2194,7 +2191,8 @@ const reservaRequest: any = {
   this.reservaService.create(reservaRequest).subscribe({
     next: (response) => {
       console.log('✅ Reserva criada com sucesso:', response);
-      
+      this.loading = false;
+
       if (this.voltarParaMapa) {
         this.router.navigate(['/reservas/mapa']);
       } else {
@@ -2204,6 +2202,18 @@ const reservaRequest: any = {
     error: (err) => {
       console.error('❌ Erro ao criar reserva:', err);
       this.loading = false;
+
+      // ✅ Reserva foi criada mas resposta causou erro de parse
+      if (err.status === 201 || err.status === 200) {
+        console.log('⚠️ Reserva criada mas resposta deu erro de parse — navegando...');
+        if (this.voltarParaMapa) {
+          this.router.navigate(['/reservas/mapa']);
+        } else {
+          this.router.navigate(['/reservas']);
+        }
+        return;
+      }
+
       this.errorMessage = err.error?.message || err.error || 'Erro ao criar reserva';
     }
   });
@@ -2409,7 +2419,7 @@ selecionarClienteParaPlaca(cliente: any): void {
     dataCheckout: new Date(this.reserva.dataCheckout).toISOString()
   };
   
-  this.http.post<any>('http://localhost:8080/api/reservas/validar-hospede', payload).subscribe({
+  this.http.post<any>('/api/reservas/validar-hospede', payload).subscribe({
     next: (resposta) => {
       if (!resposta.disponivel) {
         this.mostrarBannerErro(`❌ HÓSPEDE INDISPONÍVEL!\n\n${resposta.mensagem}`);

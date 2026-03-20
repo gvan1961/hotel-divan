@@ -34,7 +34,8 @@ formasPagamentoVendas = [
   { key: 'CARTAO_DEBITO', nome: 'Cartão de Débito', icone: '💳' },
   { key: 'CARTAO_CREDITO', nome: 'Cartão de Crédito', icone: '💳' },
   { key: 'TRANSFERENCIA', nome: 'Transferência', icone: '🏦' },
-  { key: 'FATURADO', nome: 'Faturado', icone: '📄' }
+  { key: 'FATURADO', nome: 'Faturado', icone: '📄' },
+  { key: 'APARTAMENTO',    nome: 'Apartamento',      icone: '🏨' },
 ];
   
   // Abas

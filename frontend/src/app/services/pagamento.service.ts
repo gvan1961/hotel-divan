@@ -24,7 +24,7 @@ export interface PagamentoResponse {
 })
 export class PagamentoService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/pagamentos';
+  private apiUrl = '/api/pagamentos';
 
   
   listarPorReserva(reservaId: number): Observable<PagamentoResponse[]> {

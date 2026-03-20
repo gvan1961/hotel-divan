@@ -398,7 +398,7 @@ export class ReservaEditApp implements OnInit {
 
   carregarReserva(): void {
   this.loading = true;
-  this.http.get<any>(`http://localhost:8080/api/reservas/${this.reservaId}`).subscribe({
+  this.http.get<any>(`/api/reservas/${this.reservaId}`).subscribe({
     next: (data) => {
       console.log('📋 Dados recebidos da API:', data);
       
@@ -449,7 +449,7 @@ export class ReservaEditApp implements OnInit {
   carregarApartamentos(): void {
   console.log('📋 Carregando apartamentos disponíveis...');
   
-  this.http.get<Apartamento[]>('http://localhost:8080/api/apartamentos').subscribe({
+  this.http.get<Apartamento[]>('/api/apartamentos').subscribe({
     next: (data) => {
       this.apartamentos = data;
       console.log('✅ Apartamentos carregados:', data.length);
@@ -517,7 +517,7 @@ export class ReservaEditApp implements OnInit {
   console.log('═══════════════════════════════════════');
   console.log('DTO enviado:', dto);
 
-  this.http.patch(`http://localhost:8080/api/reservas/${this.reservaId}/editar-pre-reserva`, dto).subscribe({
+  this.http.patch(`/api/reservas/${this.reservaId}/editar-pre-reserva`, dto).subscribe({
     next: (response) => {
       console.log('✅ Pré-reserva atualizada com sucesso!');
       console.log('Resposta:', response);

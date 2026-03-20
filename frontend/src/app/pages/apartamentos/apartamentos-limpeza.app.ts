@@ -532,10 +532,10 @@ export class ApartamentosLimpezaApp implements OnInit {
   this.apartamentos = [];
 
   // Buscar apartamentos
-  this.http.get<any[]>('http://localhost:8080/api/apartamentos').subscribe({
+  this.http.get<any[]>('/api/apartamentos').subscribe({
     next: (apartamentos) => {
       // Buscar TODAS as reservas (ativas e finalizadas)
-      this.http.get<any[]>('http://localhost:8080/api/reservas').subscribe({
+      this.http.get<any[]>('/api/reservas').subscribe({
         next: (todasReservas) => {
           console.log('📋 Total de reservas:', todasReservas.length);
           
@@ -690,7 +690,7 @@ calcularTotalHospedes(): number {
     
     if (confirmacao) {
       // Chamar endpoint para liberar limpeza
-      this.http.patch(`http://localhost:8080/api/apartamentos/${apt.apartamentoId}/liberar-limpeza`, {})
+      this.http.patch(`/api/apartamentos/${apt.apartamentoId}/liberar-limpeza`, {})
         .subscribe({
           next: () => {
             console.log('✅ Limpeza liberada no backend!');

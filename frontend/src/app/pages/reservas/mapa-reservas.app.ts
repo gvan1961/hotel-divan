@@ -1096,10 +1096,14 @@ motivoCancelamento = '';
   }
 
   voltarParaHoje(): void {
-    const hoje = new Date();
-    this.dataInicio = hoje.toISOString().split('T')[0];
-    this.carregarMapa();
-  }
+  // ✅ Usar data LOCAL (não UTC)
+  const agora = new Date();
+  const ano = agora.getFullYear();
+  const mes = String(agora.getMonth() + 1).padStart(2, '0');
+  const dia = String(agora.getDate()).padStart(2, '0');
+  this.dataInicio = `${ano}-${mes}-${dia}`;
+  this.carregarMapa();
+}
 
   mudarPeriodo(): void {
     this.carregarMapa();
@@ -1143,7 +1147,7 @@ isPreReservaAmanha(reserva: ReservaMapa): boolean {
   console.log('═══════════════════════════════════════');
 
   // 1️⃣ BUSCAR APARTAMENTOS
-  this.http.get<any[]>('http://localhost:8080/api/apartamentos').subscribe({
+  this.http.get<any[]>('/api/apartamentos').subscribe({
     next: (apartamentos) => {
       console.log('🏢 Apartamentos carregados:', apartamentos.length);
 
@@ -1196,7 +1200,7 @@ isPreReservaAmanha(reserva: ReservaMapa): boolean {
               console.error('   ❌ APARTAMENTO ID NÃO ENCONTRADO!');
               return;
             }
-
+           
             // ✅ CONVERTER DATAS
             const checkinStr = reserva.dataCheckin;
             const checkoutStr = reserva.dataCheckout;
@@ -1204,8 +1208,8 @@ isPreReservaAmanha(reserva: ReservaMapa): boolean {
             console.log('   Check-in (original):', checkinStr);
             console.log('   Check-out (original):', checkoutStr);
 
-            const checkin = new Date(checkinStr);
-            const checkout = new Date(checkoutStr);
+            const checkin = new Date(checkinStr.substring(0, 10) + 'T00:00:00');
+            const checkout = new Date(checkoutStr.substring(0, 10) + 'T00:00:00');
 
             console.log('   Check-in (Date):', checkin.toISOString());
             console.log('   Check-out (Date):', checkout.toISOString());
@@ -1656,7 +1660,7 @@ getPosicaoNaReserva(apt: ApartamentoMapa, data: string): string {
     console.log('✅ Exclusão confirmada, enviando requisição...');
     this.fecharModal();
 
-    this.http.delete(`http://localhost:8080/api/reservas/${reservaId}/pre-reserva`).subscribe({
+    this.http.delete(`/api/reservas/${reservaId}/pre-reserva`).subscribe({
       next: () => {
         console.log('✅ Pré-reserva excluída com sucesso');
         alert('✅ Pré-reserva excluída com sucesso!');
@@ -1670,18 +1674,10 @@ getPosicaoNaReserva(apt: ApartamentoMapa, data: string): string {
   }
 
   editarPreReserva(): void {
-    if (!this.reservaSelecionada) {
-      console.error('❌ Nenhuma reserva selecionada');
-      return;
-    }
-
-    const reservaId = this.reservaSelecionada.id;
-    
-    console.log('✏️ Editando pré-reserva:', reservaId);
-    
-    this.fecharModal();
-    this.router.navigate(['/reservas', reservaId, 'editar']);
-  }
+  if (!this.reservaSelecionada) return;
+  this.fecharModal();
+  this.router.navigate(['/reservas', this.reservaSelecionada.id]);
+}
 
   // ============= PAGAMENTO PRÉ-RESERVA =============
   abrirModalPagamento(): void {
@@ -1689,7 +1685,7 @@ getPosicaoNaReserva(apt: ApartamentoMapa, data: string): string {
     
     console.log('💳 Abrindo modal de pagamento para reserva:', this.reservaSelecionada.id);
     
-    this.http.get<any>(`http://localhost:8080/api/reservas/${this.reservaSelecionada.id}`).subscribe({
+    this.http.get<any>(`/api/reservas/${this.reservaSelecionada.id}`).subscribe({
       next: (reserva) => {
         this.pagPreReservaValor = reserva.totalHospedagem;
         this.pagPreReservaFormaPagamento = '';
@@ -1734,7 +1730,7 @@ getPosicaoNaReserva(apt: ApartamentoMapa, data: string): string {
 
     console.log('💳 Processando pagamento de pré-reserva:', dto);
 
-    this.http.post('http://localhost:8080/api/pagamentos/pre-reserva', dto).subscribe({
+    this.http.post('/api/pagamentos/pre-reserva', dto).subscribe({
       next: () => {
         alert('✅ Pagamento registrado! Reserva ativada com sucesso!');
         this.fecharModalPagamento();

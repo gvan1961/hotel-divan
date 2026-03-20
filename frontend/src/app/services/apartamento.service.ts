@@ -7,7 +7,7 @@ import { Apartamento, ApartamentoRequest } from '../models/apartamento.model';
   providedIn: 'root'
 })
 export class ApartamentoService {
-  private apiUrl = 'http://localhost:8080/api/apartamentos';
+  private apiUrl = '/api/apartamentos';
 
   constructor(private http: HttpClient) {}
 

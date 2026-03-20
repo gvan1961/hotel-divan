@@ -8,7 +8,7 @@ import { Cliente, ClienteRequest } from '../models/cliente.model';
 })
 export class ClienteService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/clientes';
+  private apiUrl = '/api/clientes';
 
   getAll(): Observable<Cliente[]> {
     return this.http.get<Cliente[]>(this.apiUrl);

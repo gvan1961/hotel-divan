@@ -51,8 +51,8 @@ export class JantarListaComponent implements OnInit {
       this.apartamentos = data.map(apto => ({
         numeroApartamento: apto.numeroApartamento,
         hospedes: apto.hospedes.map((h: any) => ({
-  id: h.hospedagemHospedeId,  // ✅ CORRETO!
-  hospedagemHospedeId: h.hospedagemHospedeId,  // ✅ ADICIONAR
+  id: h.id,
+  hospedagemHospedeId: h.id,
   nomeCompleto: h.nomeCliente,
   clienteId: h.clienteId,
   nomeCliente: h.nomeCliente,
@@ -85,7 +85,7 @@ export class JantarListaComponent implements OnInit {
   this.produtosCarregando = true;
 
   // ✅ USAR ENDPOINT QUE JÁ FILTRA ESTOQUE > 0
-  this.http.get<any[]>('http://localhost:8080/api/jantar/produtos-restaurante').subscribe({
+  this.http.get<any[]>('/api/jantar/produtos-restaurante').subscribe({
     next: (produtos) => {
       console.log('✅ Produtos carregados:', produtos);
       this.produtos = produtos;
@@ -490,4 +490,4 @@ abrirModalComandaBusca(hospede: any) {
     }, 300);
   }
 }
-}   
+}

@@ -22,7 +22,7 @@ export class CaixaService {
 
     const usuario = JSON.parse(usuarioStr);
     
-    this.http.get<any>(`http://localhost:8080/api/caixa/usuario/${usuario.id}/aberto`).subscribe({
+    this.http.get<any>(`/api/caixa/usuario/${usuario.id}/aberto`).subscribe({
       next: (response) => {
         if (response.id) {
           this.caixaAbertoSubject.next(response);

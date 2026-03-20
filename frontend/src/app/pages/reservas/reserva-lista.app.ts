@@ -19,6 +19,7 @@ interface ReservaLista {
   apartamento?: {
     id: number;
     numeroApartamento: string;
+    tipoApartamentoNome?: string;
   };
   quantidadeHospede: number;
   dataCheckin: string;
@@ -405,8 +406,13 @@ interface ReservaLista {
               <td>{{ reserva.id }}</td>
               <td>{{ reserva.cliente?.nome || 'N/A' }}</td>
               <td>
-                <span class="numero-apt">{{ reserva.apartamento?.numeroApartamento || 'N/A' }}</span>
-              </td>
+  <span class="numero-apt">
+  {{ reserva.apartamento?.numeroApartamento || 'N/A' }}
+  <span *ngIf="reserva.apartamento?.tipoApartamentoNome" class="tipo-apt">
+    {{ reserva.apartamento?.tipoApartamentoNome }}
+  </span>
+</span>
+</td>
               <td class="coluna-hospedes">
                 <span class="badge-hospedes">👥 {{ reserva.quantidadeHospede }}</span>
               </td>              
@@ -2147,7 +2153,7 @@ resultadoPesquisaId: any = null;
     console.log('🔍 PESQUISANDO CLIENTE: ' + this.pesquisaCliente);
     console.log('═══════════════════════════════════════════');
 
-    this.http.get<any>('http://localhost:8080/api/reservas/pesquisar-cliente', {
+    this.http.get<any>('/api/reservas/pesquisar-cliente', {
       params: { nome: this.pesquisaCliente }
     }).subscribe({
       next: (resultado) => {
@@ -2197,7 +2203,7 @@ resultadoPesquisaId: any = null;
     console.log('🏢 PESQUISANDO EMPRESA: ' + this.pesquisaEmpresa);
     console.log('═══════════════════════════════════════════');
 
-    this.http.get<any>('http://localhost:8080/api/reservas/pesquisar-empresa', {
+    this.http.get<any>('/api/reservas/pesquisar-empresa', {
       params: { nomeEmpresa: this.pesquisaEmpresa }
     }).subscribe({
       next: (resultado) => {
@@ -2236,7 +2242,7 @@ pesquisarPorId(): void {
   console.log('🔍 PESQUISANDO RESERVA POR ID: ' + this.idReservaPesquisa);
   console.log('═══════════════════════════════════════════');
 
-  this.http.get<any>(`http://localhost:8080/api/reservas/${this.idReservaPesquisa}`).subscribe({
+  this.http.get<any>(`/api/reservas/${this.idReservaPesquisa}`).subscribe({
     next: (reserva) => {
       console.log('✅ Reserva encontrada:', reserva);
       
@@ -2367,7 +2373,7 @@ limparResultadoPesquisaId(): void {
     if (!this.reservaParaFinalizar) return;
 
     this.http.patch(
-      `http://localhost:8080/api/reservas/${this.reservaParaFinalizar.id}/finalizar`,
+      `/api/reservas/${this.reservaParaFinalizar.id}/finalizar`,
       {}
     ).subscribe({
       next: () => {
@@ -2407,7 +2413,7 @@ limparResultadoPesquisaId(): void {
     }
 
     this.http.patch(
-      `http://localhost:8080/api/reservas/${this.reservaParaCancelar.id}/cancelar`,
+      `/api/reservas/${this.reservaParaCancelar.id}/cancelar`,
       {},
       { params: { motivo: this.motivoCancelamento } }
     ).subscribe({
@@ -2530,7 +2536,7 @@ buscarPorPlaca(): void {
   this.buscandoPlaca = true;
   this.resultadosBuscaPlaca = null;
 
-  this.http.get<any>(`http://localhost:8080/api/reservas/buscar-por-placa/${this.placaBusca}`)
+  this.http.get<any>(`/api/reservas/buscar-por-placa/${this.placaBusca}`)
     .subscribe({
       next: (resultado) => {
         this.buscandoPlaca = false;

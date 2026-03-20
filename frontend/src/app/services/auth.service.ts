@@ -13,7 +13,7 @@ export class AuthService {
   private router = inject(Router);
   private permissionService = inject(PermissionService); // ✅ ADICIONAR
   
-  private apiUrl = 'http://localhost:8080/api/auth';
+  private apiUrl = '/api/auth';
   
   private currentUserSubject = new BehaviorSubject<LoginResponse | null>(this.getUserFromStorage());
   public currentUser$ = this.currentUserSubject.asObservable();

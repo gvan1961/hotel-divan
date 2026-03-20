@@ -166,6 +166,7 @@ interface FiltrosAvancados {
                   {{ obterTextoStatus(conta.status) }}
                 </span>
               </td>
+
               <td class="acoes no-print">
                 <button 
                   *hasPermission="'CONTA_RECEBER_PAGAMENTO'"
@@ -173,7 +174,7 @@ interface FiltrosAvancados {
                   class="btn-acao btn-pagar"
                   (click)="abrirModalPagamento(conta)"
                   title="Registrar pagamento">
-  💳
+                  💳
                 </button>
                 <button 
                   *hasPermission="'CONTA_RECEBER_PAGAMENTO'"
@@ -182,6 +183,14 @@ interface FiltrosAvancados {
                   (click)="excluir(conta)"
                   title="Excluir">
                   🗑️
+                </button>
+                <!-- ✅ IMPRIMIR FATURA INDIVIDUAL -->
+                <button 
+                  *ngIf="temReserva(conta)"
+                  class="btn-acao btn-fatura"
+                  (click)="imprimirFatura(conta)"
+                  title="Imprimir fatura">
+                  🖨️
                 </button>
               </td>
             </tr>
@@ -972,6 +981,9 @@ interface FiltrosAvancados {
         font-size: 11px;
       }
 
+      .btn-fatura { background: #2980b9; color: white; }
+      .btn-fatura:hover { background: #2471a3; transform: scale(1.1); }
+
       .print-table th,
       .print-table td {
         border: 1px solid #ddd;
@@ -1081,74 +1093,67 @@ export class ContasReceberListaApp implements OnInit {
   }
 
   carregarDados(): void {
-  this.loading = true;
+    this.loading = true;
 
-  // 1️⃣ Carregar contas
-  this.contaReceberService.listarTodas().subscribe({
-    next: (contas) => {
-      this.contas = contas;
-      
-      // 2️⃣ Carregar TODAS as reservas
-      this.http.get<any[]>('http://localhost:8080/api/reservas').subscribe({
-        next: (reservas) => {
-          this.reservas = reservas;
-          
-          // 3️⃣ ✅ ASSOCIAR RESERVA COMPLETA A CADA CONTA
-          // 3️⃣ ✅ ASSOCIAR RESERVA COMPLETA A CADA CONTA
-this.contas.forEach(conta => {
-  const reserva = reservas.find(r => r.id === conta.reservaId);
-  if (reserva) {
-    (conta as any).reserva = reserva;
-    (conta as any).numeroApartamento = reserva.apartamento?.numeroApartamento;
-    (conta as any).quantidadeHospede = reserva.quantidadeHospede;
-    (conta as any).quantidadeDiaria = reserva.quantidadeDiaria;
-    (conta as any).totalDiaria = reserva.totalDiaria;
-    (conta as any).totalConsumo = reserva.totalProduto;
-    (conta as any).totalHospedagem = reserva.totalHospedagem;
-    (conta as any).totalRecebido = conta.valorPago;
-    (conta as any).desconto = reserva.desconto || 0;
-    (conta as any).totalApagar = conta.saldo;
-  } else {
-    // ✅ PDV FATURADO — sem reserva de hotel
-    (conta as any).reserva = null;
-    (conta as any).numeroApartamento = '-';
-    (conta as any).quantidadeHospede = '-';
-    (conta as any).quantidadeDiaria = '-';
-    (conta as any).totalDiaria = 0;
-    (conta as any).totalConsumo = conta.valor;   // ✅ valor da venda PDV
-    (conta as any).totalHospedagem = conta.valor;
-    (conta as any).totalRecebido = conta.valorPago;
-    (conta as any).desconto = 0;
-    (conta as any).totalApagar = conta.saldo;
+    this.contaReceberService.listarTodas().subscribe({
+      next: (contas) => {
+        this.contas = contas;
+
+        this.http.get<any[]>('/api/reservas').subscribe({
+          next: (reservas) => {
+            this.reservas = reservas;
+
+            this.contas.forEach(conta => {
+              const reserva = reservas.find(r => r.id === conta.reservaId);
+              if (reserva) {
+                (conta as any).reserva = reserva;
+                (conta as any).numeroApartamento = reserva.apartamento?.numeroApartamento;
+                (conta as any).quantidadeHospede = reserva.quantidadeHospede;
+                (conta as any).quantidadeDiaria = reserva.quantidadeDiaria;
+                (conta as any).totalDiaria = reserva.totalDiaria;
+                (conta as any).totalConsumo = reserva.totalProduto;
+                (conta as any).totalHospedagem = reserva.totalHospedagem;
+                (conta as any).totalRecebido = conta.valorPago;
+                (conta as any).desconto = reserva.desconto || 0;
+                (conta as any).totalApagar = conta.saldo;
+              } else {
+                (conta as any).reserva = null;
+                (conta as any).numeroApartamento = '-';
+                (conta as any).quantidadeHospede = '-';
+                (conta as any).quantidadeDiaria = '-';
+                (conta as any).totalDiaria = 0;
+                (conta as any).totalConsumo = conta.valor;
+                (conta as any).totalHospedagem = conta.valor;
+                (conta as any).totalRecebido = conta.valorPago;
+                (conta as any).desconto = 0;
+                (conta as any).totalApagar = conta.saldo;
+              }
+            });
+
+            this.aplicarFiltros();
+            this.loading = false;
+          },
+          error: (err) => {
+            console.error('❌ Erro ao carregar reservas:', err);
+            this.loading = false;
+          }
+        });
+      },
+      error: (err) => {
+        console.error('❌ Erro ao carregar contas:', err);
+        this.loading = false;
+        alert('Erro ao carregar contas');
+      }
+    });
+
+    this.http.get<any[]>('/api/empresas').subscribe({
+      next: (data) => this.empresas = data
+    });
+
+    this.http.get<any[]>('/api/clientes').subscribe({
+      next: (data) => this.clientes = data
+    });
   }
-});
-          
-          this.aplicarFiltros();
-          this.loading = false;
-        },
-        error: (err) => {
-          console.error('❌ Erro ao carregar reservas:', err);
-          this.loading = false;
-        }
-      });
-    },
-    error: (err) => {
-      console.error('❌ Erro ao carregar contas:', err);
-      this.loading = false;
-      alert('Erro ao carregar contas');
-    }
-  });
-
-  // Carregar empresas
-  this.http.get<any[]>('http://localhost:8080/api/empresas').subscribe({
-    next: (data) => this.empresas = data
-  });
-
-  // Carregar clientes
-  this.http.get<any[]>('http://localhost:8080/api/clientes').subscribe({
-    next: (data) => this.clientes = data
-  });
-}
 
   // ========== FILTROS ==========
 
@@ -1165,67 +1170,57 @@ this.contas.forEach(conta => {
     this.filtrosAplicados = { ...this.filtrosTemp };
     this.aplicarFiltros();
     this.fecharModalFiltros();
-    console.log('🔍 Filtros aplicados:', this.filtrosAplicados);
   }
 
   aplicarFiltros(): void {
     let resultado = [...this.contas];
 
-    // Filtro por Empresa
     if (this.filtrosAplicados.empresaId) {
       const empresaSelecionada = this.empresas.find(e => e.id === this.filtrosAplicados.empresaId);
       resultado = resultado.filter(c => c.empresaNome === empresaSelecionada?.nomeEmpresa);
     }
 
-    // Filtro por Cliente
     if (this.filtrosAplicados.clienteId) {
       const clienteSelecionado = this.clientes.find(c => c.id === this.filtrosAplicados.clienteId);
       resultado = resultado.filter(c => c.clienteNome === clienteSelecionado?.nome);
     }
 
-    // Filtro por Status
     if (this.filtrosAplicados.status) {
-  const status = this.filtrosAplicados.status;
+      const status = this.filtrosAplicados.status;
+      if (status === 'EM_ABERTO') {
+        resultado = resultado.filter(c =>
+          c.status === 'PENDENTE' || c.status === 'PARCIAL' || c.status === 'ATRASADA'
+        );
+      } else if (status === 'VENCIDAS') {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        resultado = resultado.filter(c => {
+          const vencimento = new Date(c.dataVencimento);
+          vencimento.setHours(0, 0, 0, 0);
+          return vencimento < hoje &&
+            (c.status === 'PENDENTE' || c.status === 'PARCIAL' || c.status === 'ATRASADA');
+        });
+      } else {
+        resultado = resultado.filter(c => c.status === status);
+      }
+    }
 
-  if (status === 'EM_ABERTO') {
-    // Em Aberto = não paga e não cancelada
-    resultado = resultado.filter(c =>
-      c.status === 'PENDENTE' || c.status === 'PARCIAL' || c.status === 'ATRASADA'
-    );
-  } else if (status === 'VENCIDAS') {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    resultado = resultado.filter(c => {
-      const vencimento = new Date(c.dataVencimento);
-      vencimento.setHours(0, 0, 0, 0);
-      console.log('📅 Conta', c.id, '| Vencimento:', vencimento, '| Hoje:', hoje, '| Vencida:', vencimento < hoje, '| Status:', c.status);
-      return vencimento < hoje &&
-        (c.status === 'PENDENTE' || c.status === 'PARCIAL' || c.status === 'ATRASADA');
-    });
-} else {
-    // Status específico do backend (PENDENTE, PARCIAL, PAGA, ATRASADA)
-    resultado = resultado.filter(c => c.status === status);
-  }
-}
-
-    // Filtro por Check-in
     if (this.filtrosAplicados.dataCheckInInicio && this.filtrosAplicados.dataCheckInFim) {
       resultado = resultado.filter(c => {
         const reserva = (c as any).reserva;
         if (!reserva) return false;
         const dataCheckin = new Date(reserva.dataCheckin).toISOString().split('T')[0];
-        return dataCheckin >= this.filtrosAplicados.dataCheckInInicio! && 
+        return dataCheckin >= this.filtrosAplicados.dataCheckInInicio! &&
                dataCheckin <= this.filtrosAplicados.dataCheckInFim!;
       });
     }
 
-    // Filtro por Check-out
     if (this.filtrosAplicados.dataCheckOutInicio && this.filtrosAplicados.dataCheckOutFim) {
       resultado = resultado.filter(c => {
         const reserva = (c as any).reserva;
         if (!reserva) return false;
         const dataCheckout = new Date(reserva.dataCheckout).toISOString().split('T')[0];
-        return dataCheckout >= this.filtrosAplicados.dataCheckOutInicio! && 
+        return dataCheckout >= this.filtrosAplicados.dataCheckOutInicio! &&
                dataCheckout <= this.filtrosAplicados.dataCheckOutFim!;
       });
     }
@@ -1234,7 +1229,7 @@ this.contas.forEach(conta => {
   }
 
   temFiltrosAtivos(): boolean {
-    return Object.keys(this.filtrosAplicados).length > 0 && 
+    return Object.keys(this.filtrosAplicados).length > 0 &&
            Object.values(this.filtrosAplicados).some(v => v !== undefined);
   }
 
@@ -1267,7 +1262,6 @@ this.contas.forEach(conta => {
     const hoje = new Date();
     const primeiro = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
     const ultimo = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
-    
     this.filtrosTemp.dataCheckOutInicio = primeiro.toISOString().split('T')[0];
     this.filtrosTemp.dataCheckOutFim = ultimo.toISOString().split('T')[0];
   }
@@ -1276,14 +1270,13 @@ this.contas.forEach(conta => {
     const hoje = new Date();
     const primeiro = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
     const ultimo = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
-    
     this.filtrosTemp.dataCheckOutInicio = primeiro.toISOString().split('T')[0];
     this.filtrosTemp.dataCheckOutFim = ultimo.toISOString().split('T')[0];
   }
 
   atalhoVencidas(): void {
-  this.filtrosTemp.status = 'VENCIDAS';
-}
+    this.filtrosTemp.status = 'VENCIDAS';
+  }
 
   atalhoPagas(): void {
     this.filtrosTemp.status = 'PAGA';
@@ -1304,12 +1297,12 @@ this.contas.forEach(conta => {
   }
 
   contarVencidas(): number {
-  const hoje = new Date().toISOString().split('T')[0];
-  return this.contas.filter(c =>
-    c.dataVencimento < hoje &&
-    (c.status === 'PENDENTE' || c.status === 'PARCIAL' || c.status === 'ATRASADA')
-  ).length;
-}
+    const hoje = new Date().toISOString().split('T')[0];
+    return this.contas.filter(c =>
+      c.dataVencimento < hoje &&
+      (c.status === 'PENDENTE' || c.status === 'PARCIAL' || c.status === 'ATRASADA')
+    ).length;
+  }
 
   calcularTotalFiltrado(): number {
     return this.contasFiltradas.filter(c => c.status !== 'PAGA').reduce((sum, c) => sum + c.saldo, 0);
@@ -1333,18 +1326,17 @@ this.contas.forEach(conta => {
   }
 
   obterTextoStatus(status: string): string {
-  const textos: any = {
-    'PENDENTE': 'Pendente',
-    'PARCIAL': 'Parcial',
-    'PAGA': 'Paga',
-    'ATRASADA': 'Atrasada',
-    'CANCELADA': 'Cancelada',
-    // Filtros de UI (agrupamentos)
-    'EM_ABERTO': 'Em Aberto',
-    'VENCIDAS': 'Vencidas'
-  };
-  return textos[status] || status;
-}
+    const textos: any = {
+      'PENDENTE': 'Pendente',
+      'PARCIAL': 'Parcial',
+      'PAGA': 'Paga',
+      'ATRASADA': 'Atrasada',
+      'CANCELADA': 'Cancelada',
+      'EM_ABERTO': 'Em Aberto',
+      'VENCIDAS': 'Vencidas'
+    };
+    return textos[status] || status;
+  }
 
   imprimirRelatorio(): void {
     window.print();
@@ -1360,10 +1352,204 @@ this.contas.forEach(conta => {
     });
   }
 
+  // ========== IMPRIMIR FATURA INDIVIDUAL ==========
+
+  imprimirFatura(conta: ContaAReceber): void {
+  const reserva = (conta as any).reserva;
+  if (!reserva) {
+    alert('Esta conta não possui reserva vinculada.');
+    return;
+  }
+
+  // Buscar detalhes + assinatura em paralelo
+  this.http.get<any>(`/api/reservas/${reserva.id}`).subscribe({
+    next: (detalhes) => {
+      this.http.get<any>(`/api/reservas/${reserva.id}/assinatura`).subscribe({
+        next: (resp) => this.gerarHTMLFatura(conta, detalhes, resp?.assinatura || null),
+        error: () => this.gerarHTMLFatura(conta, detalhes, null)
+      });
+    },
+    error: () => this.gerarHTMLFatura(conta, reserva, null)
+  });
+}
+
+  private gerarHTMLFatura(conta: ContaAReceber, reserva: any, assinatura: string | null): void {
+    const extratos: any[] = reserva.extratos || [];
+    const totalDiaria = (conta as any).totalDiaria || 0;
+    const totalConsumo = (conta as any).totalConsumo || 0;
+    const desconto = (conta as any).desconto || 0;
+    const totalHospedagem = (conta as any).totalHospedagem || 0;
+    const totalRecebido = conta.valorPago || 0;
+    const saldo = conta.saldo || 0;
+
+    const linhasExtrato = extratos.length > 0 ? `
+      <div class="separador">- - - - - - - - - - - - - - - -</div>
+      <div class="secao">
+        <h3>CONSUMO DETALHADO</h3>
+        ${extratos.map(e => `
+          <div class="linha-valor">
+            <span>${e.descricao} (${e.quantidade}x)</span>
+            <span>R$ ${this.fmt(e.totalLancamento)}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : '';
+
+    const htmlImpressao = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Fatura - Reserva #${reserva.id}</title>
+        <style>
+          @page { size: 80mm auto; margin: 0; }
+          body { font-family: 'Courier New', monospace; font-size: 10px; width: 80mm; margin: 0; padding: 5mm; }
+          .cabecalho { text-align: left; margin-bottom: 8px; }
+          .cabecalho h1 { font-size: 14px; margin: 0; letter-spacing: 2px; }
+          .cnpj, .endereco { font-size: 9px; margin: 2px 0; }
+          .separador { text-align: center; margin: 6px 0; }
+          .titulo-documento h2 { font-size: 11px; margin: 0; }
+          .numero-reserva { font-size: 10px; font-weight: bold; margin: 4px 0; }
+          .data-emissao { font-size: 8px; margin: 2px 0; }
+          .secao { margin: 8px 0; }
+          .secao h3 { font-size: 10px; margin: 0 0 6px 0; text-decoration: underline; }
+          .secao p { margin: 3px 0; font-size: 9px; }
+          .linha-valor { display: flex; justify-content: space-between; margin: 4px 0; font-size: 9px; }
+          .linha-valor.subtotal { font-weight: bold; margin-top: 6px; }
+          .linha-valor.total { font-size: 11px; font-weight: bold; margin: 6px 0; }
+          .destaque-apagar { background: #000; color: #fff; padding: 6px; text-align: center; margin: 8px 0; }
+          .declaracao { margin: 12px 0; font-size: 9px; }
+          .declaracao p { margin: 2px 0; }
+          .assinatura { margin-top: 15px; text-align: center; }
+          .linha-assinatura { border-top: 1px solid #000; margin: 12px 15px 4px 15px; }
+          .label-assinatura { font-size: 8px; margin: 2px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="cabecalho">
+          <h1>HOTEL DI VAN</h1>
+          <p class="cnpj">CNPJ: 07.757.726/0001-12</p>
+          <p class="endereco">Arapiraca - AL</p>
+          <div class="separador">================================</div>
+        </div>
+
+        <div class="titulo-documento">
+          <h2>FATURA - PAGAMENTO FATURADO</h2>
+          <p class="numero-reserva">Reserva Nº ${reserva.id}</p>
+          <p class="data-emissao">Emitida em: ${new Date().toLocaleString('pt-BR')}</p>
+          <p class="data-emissao">Status: ${this.obterTextoStatus(conta.status)}</p>
+        </div>
+
+        <div class="separador">================================</div>
+
+        <div class="secao">
+          <h3>DADOS DO HÓSPEDE</h3>
+          <p><strong>Nome:</strong> ${conta.clienteNome}</p>
+          ${conta.empresaNome ? `<p><strong>Empresa:</strong> ${conta.empresaNome}</p>` : ''}
+        </div>
+
+        <div class="separador">- - - - - - - - - - - - - - - -</div>
+
+        <div class="secao">
+          <h3>PERÍODO DA HOSPEDAGEM</h3>
+          <p><strong>Apartamento:</strong> ${(conta as any).numeroApartamento || '-'}</p>
+          <p><strong>Check-in:</strong> ${this.formatarData(reserva.dataCheckin)}</p>
+          <p><strong>Check-out:</strong> ${this.formatarData(reserva.dataCheckout)}</p>
+          <p><strong>Diárias:</strong> ${(conta as any).quantidadeDiaria || '-'}</p>
+          <p><strong>Hóspedes:</strong> ${(conta as any).quantidadeHospede || '-'}</p>
+        </div>
+
+        <div class="separador">================================</div>
+
+        <div class="secao">
+          <h3>DISCRIMINAÇÃO DE VALORES</h3>
+          <div class="linha-valor">
+            <span>Diárias (${(conta as any).quantidadeDiaria || 0}x):</span>
+            <span>R$ ${this.fmt(totalDiaria)}</span>
+          </div>
+          ${totalConsumo > 0 ? `
+          <div class="linha-valor">
+            <span>Consumo:</span>
+            <span>R$ ${this.fmt(totalConsumo)}</span>
+          </div>` : ''}
+          ${desconto > 0 ? `
+          <div class="linha-valor">
+            <span>Desconto:</span>
+            <span>- R$ ${this.fmt(desconto)}</span>
+          </div>` : ''}
+          <div class="separador">- - - - - - - - - - - - - - - -</div>
+          <div class="linha-valor subtotal">
+            <span>Total Hospedagem:</span>
+            <span>R$ ${this.fmt(totalHospedagem)}</span>
+          </div>
+          ${totalRecebido > 0 ? `
+          <div class="linha-valor">
+            <span>Já Recebido:</span>
+            <span>- R$ ${this.fmt(totalRecebido)}</span>
+          </div>` : ''}
+          <div class="separador">================================</div>
+          <div class="linha-valor total">
+            <span>SALDO A PAGAR:</span>
+            <span>R$ ${this.fmt(saldo)}</span>
+          </div>
+        </div>
+
+        ${linhasExtrato}
+
+        <div class="destaque-apagar">
+          <p style="margin:0;font-size:10px;font-weight:bold;">
+            SALDO A PAGAR: R$ ${this.fmt(saldo)}
+          </p>
+        </div>
+
+        <div class="separador">================================</div>
+
+        <div class="declaracao">
+          <p>O(A) Sr(a). ${conta.clienteNome}</p>
+          <p>deverá pagar a importância de</p>
+          <p><strong>R$ ${this.fmt(saldo)}</strong></p>
+          <p>referente à hospedagem no período citado.</p>
+          <p>Vencimento: ${this.formatarData(conta.dataVencimento)}</p>
+        </div>
+
+        <div class="assinatura">
+  ${assinatura ? `
+    <img src="${assinatura}" style="max-width:200px; max-height:80px; display:block; margin:0 auto;">
+  ` : `
+    <div class="linha-assinatura"></div>
+  `}
+  <p class="label-assinatura">Assinatura do Hóspede</p>
+  <div class="linha-assinatura"></div>
+  <p class="label-assinatura">Hotel Di Van</p>
+  <p class="label-assinatura">Data: ${new Date().toLocaleDateString('pt-BR')}</p>
+</div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() { window.close(); };
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    const janela = window.open('', '_blank', 'width=800,height=600');
+    if (janela) {
+      janela.document.write(htmlImpressao);
+      janela.document.close();
+    }
+  }
+
+  private fmt(valor: number): string {
+    if (!valor) return '0,00';
+    return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   // ========== MODAL CRIAR ==========
 
   abrirModalCriar(): void {
-    this.http.get<any[]>('http://localhost:8080/api/reservas').subscribe({
+    this.http.get<any[]>('/api/reservas').subscribe({
       next: (data) => {
         this.reservasDisponiveis = data.filter(r => r.status === 'ATIVA' && r.totalApagar > 0);
         this.modalCriar = true;
@@ -1407,22 +1593,10 @@ this.contas.forEach(conta => {
   }
 
   validarNovaConta(): boolean {
-    if (this.novaConta.reservaId === 0) {
-      alert('Selecione uma reserva');
-      return false;
-    }
-    if (this.novaConta.valor <= 0) {
-      alert('Valor inválido');
-      return false;
-    }
-    if (!this.novaConta.dataVencimento) {
-      alert('Informe a data de vencimento');
-      return false;
-    }
-    if (!this.novaConta.descricao.trim()) {
-      alert('Informe a descrição');
-      return false;
-    }
+    if (this.novaConta.reservaId === 0) { alert('Selecione uma reserva'); return false; }
+    if (this.novaConta.valor <= 0) { alert('Valor inválido'); return false; }
+    if (!this.novaConta.dataVencimento) { alert('Informe a data de vencimento'); return false; }
+    if (!this.novaConta.descricao.trim()) { alert('Informe a descrição'); return false; }
     return true;
   }
 
@@ -1458,22 +1632,10 @@ this.contas.forEach(conta => {
   }
 
   validarPagamento(): boolean {
-    if (this.pagamento.valorPago <= 0) {
-      alert('Valor inválido');
-      return false;
-    }
-    if (this.pagamento.valorPago > this.contaSelecionada!.saldo) {
-      alert('Valor maior que o saldo');
-      return false;
-    }
-    if (!this.pagamento.dataPagamento) {
-      alert('Informe a data do pagamento');
-      return false;
-    }
-    if (!this.pagamento.formaPagamento) {
-      alert('Selecione a forma de pagamento');
-      return false;
-    }
+    if (this.pagamento.valorPago <= 0) { alert('Valor inválido'); return false; }
+    if (this.pagamento.valorPago > this.contaSelecionada!.saldo) { alert('Valor maior que o saldo'); return false; }
+    if (!this.pagamento.dataPagamento) { alert('Informe a data do pagamento'); return false; }
+    if (!this.pagamento.formaPagamento) { alert('Selecione a forma de pagamento'); return false; }
     return true;
   }
 
@@ -1490,51 +1652,54 @@ this.contas.forEach(conta => {
     });
   }
 
+  // ========== CABEÇALHO / RELATÓRIO ==========
+
   obterTituloCabecalho(): string {
-  if (this.filtrosAplicados.empresaId) {
-    const empresa = this.empresas.find(e => e.id === this.filtrosAplicados.empresaId);
-    return empresa ? empresa.nomeEmpresa : 'Relatório de Contas a Receber';
+    if (this.filtrosAplicados.empresaId) {
+      const empresa = this.empresas.find(e => e.id === this.filtrosAplicados.empresaId);
+      return empresa ? empresa.nomeEmpresa : 'Relatório de Contas a Receber';
+    }
+    if (this.filtrosAplicados.clienteId) {
+      const cliente = this.clientes.find(c => c.id === this.filtrosAplicados.clienteId);
+      return cliente ? cliente.nome : 'Relatório de Contas a Receber';
+    }
+    return 'Relatório de Contas a Receber';
   }
-  
-  if (this.filtrosAplicados.clienteId) {
-    const cliente = this.clientes.find(c => c.id === this.filtrosAplicados.clienteId);
-    return cliente ? cliente.nome : 'Relatório de Contas a Receber';
+
+  obterDataHoraRelatorio(): string {
+    return new Date().toLocaleString('pt-BR');
   }
-  
-  return 'Relatório de Contas a Receber';
-}
 
-obterDataHoraRelatorio(): string {
-  return new Date().toLocaleString('pt-BR');
-}
+  formatarMoeda(valor?: number): string {
+    if (!valor) return 'R$ 0,00';
+    return 'R$ ' + valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
 
-formatarMoeda(valor?: number): string {
-  if (!valor) return 'R$ 0,00';
-  return 'R$ ' + valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+  calcularTotalGeralDiarias(): number {
+    return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).totalDiaria || 0), 0);
+  }
 
-calcularTotalGeralDiarias(): number {
-  return this.contasFiltradas.reduce((sum, c) => sum + (c.totalDiaria || 0), 0);
-}
+  calcularTotalGeralConsumo(): number {
+    return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).totalConsumo || 0), 0);
+  }
 
-calcularTotalGeralConsumo(): number {
-  return this.contasFiltradas.reduce((sum, c) => sum + (c.totalConsumo || 0), 0);
-}
+  calcularTotalGeralHospedagem(): number {
+    return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).totalHospedagem || 0), 0);
+  }
 
-calcularTotalGeralHospedagem(): number {
-  return this.contasFiltradas.reduce((sum, c) => sum + (c.totalHospedagem || 0), 0);
-}
+  calcularTotalGeralRecebido(): number {
+    return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).totalRecebido || 0), 0);
+  }
 
-calcularTotalGeralRecebido(): number {
-  return this.contasFiltradas.reduce((sum, c) => sum + (c.totalRecebido || 0), 0);
-}
+  calcularTotalGeralDesconto(): number {
+    return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).desconto || 0), 0);
+  }
 
-calcularTotalGeralDesconto(): number {
-  return this.contasFiltradas.reduce((sum, c) => sum + (c.desconto || 0), 0);
-}
+  calcularTotalGeralAPagar(): number {
+    return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).totalApagar || 0), 0);
+  }
 
-calcularTotalGeralAPagar(): number {
-  return this.contasFiltradas.reduce((sum, c) => sum + (c.totalApagar || 0), 0);
+  temReserva(conta: ContaAReceber): boolean {
+  return !!(conta as any).reserva;
 }
-
-}
+} 

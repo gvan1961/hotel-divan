@@ -8,7 +8,7 @@ import { Empresa, EmpresaRequest } from '../models/empresa.model';
 })
 export class EmpresaService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/empresas';
+  private apiUrl = '/api/empresas';
 
   getAll(): Observable<Empresa[]> {
     return this.http.get<Empresa[]>(this.apiUrl);

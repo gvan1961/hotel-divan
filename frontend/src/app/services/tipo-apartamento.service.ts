@@ -8,7 +8,7 @@ import { TipoApartamento, TipoApartamentoRequest } from '../models/tipo-apartame
 })
 export class TipoApartamentoService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/tipos-apartamento';
+  private apiUrl = '/api/tipos-apartamento';
 
   getAll(): Observable<TipoApartamento[]> {
     return this.http.get<TipoApartamento[]>(this.apiUrl);

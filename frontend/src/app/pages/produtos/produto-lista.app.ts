@@ -348,7 +348,7 @@ export class ProdutoListaApp implements OnInit {
   }
 
   carregarCategorias(): void {
-    this.http.get<any[]>('http://localhost:8080/api/categorias').subscribe({
+    this.http.get<any[]>('/api/categorias').subscribe({
       next: (data) => {
         this.categorias = data.map(c => ({
           id: c.id,
