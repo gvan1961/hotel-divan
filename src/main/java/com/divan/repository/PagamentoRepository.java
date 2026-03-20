@@ -24,4 +24,6 @@ public interface PagamentoRepository extends JpaRepository<Pagamento, Long> {
     
     @Query("SELECT p.formaPagamento, SUM(p.valor) FROM Pagamento p WHERE DATE(p.dataHoraPagamento) = DATE(:data) GROUP BY p.formaPagamento")
     List<Object[]> findTotalPorFormaPagamentoNoDia(LocalDateTime data);
+    
+    List<Pagamento> findByDataHoraPagamentoBetween(LocalDateTime inicio, LocalDateTime fim);
 }

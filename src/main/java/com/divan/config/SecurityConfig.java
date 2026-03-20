@@ -65,7 +65,8 @@ public class SecurityConfig {
                 // ========== ENDPOINTS PÚBLICOS ==========
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
-                
+                .requestMatchers("/api/alertas/**").authenticated()
+                .requestMatchers("/error").permitAll() 
                 // ✅ CRÍTICO: Permitir OPTIONS para CORS Preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 

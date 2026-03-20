@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+
 @Service
 @Transactional
 public class ApartamentoService {
@@ -160,9 +161,34 @@ public class ApartamentoService {
     }
     
     public List<Apartamento> buscarDisponiveisParaPeriodo(LocalDateTime checkin, LocalDateTime checkout) {
-        // TODO: Implementar lógica para verificar reservas no período
-        // Por enquanto, retorna todos disponíveis
-        return buscarDisponiveis();
+        List<Apartamento> todos = apartamentoRepository.findAll();
+        
+        return todos.stream().filter(apt -> {
+            // Bloqueado/manutenção: nunca disponível
+            if (apt.getStatus() == Apartamento.StatusEnum.MANUTENCAO ||
+                apt.getStatus() == Apartamento.StatusEnum.INDISPONIVEL) {
+                return false;
+            }
+
+            // Verificar se existe reserva ativa ou pré-reserva que conflite com o período
+            List<Reserva> reservas = reservaRepository.findByApartamentoId(apt.getId());
+
+            for (Reserva r : reservas) {
+                if (r.getStatus() == Reserva.StatusReservaEnum.CANCELADA ||
+                    r.getStatus() == Reserva.StatusReservaEnum.FINALIZADA) {
+                    continue;
+                }
+
+                // ✅ Comparar apenas datas (sem hora) para permitir mesmo dia
+                boolean semConflito =
+                    !checkin.toLocalDate().isBefore(r.getDataCheckout().toLocalDate()) ||
+                    !checkout.toLocalDate().isAfter(r.getDataCheckin().toLocalDate());
+
+                if (!semConflito) return false;
+            }
+
+            return true;
+        }).collect(Collectors.toList());
     }
     
     public List<Apartamento> buscarPorStatus(Apartamento.StatusEnum status) {

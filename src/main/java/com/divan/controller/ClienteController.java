@@ -109,7 +109,6 @@ public class ClienteController {
     @PutMapping("/{id}")
     public ResponseEntity<Cliente> atualizar(@PathVariable Long id, @Valid @RequestBody ClienteRequestDTO dto) {
         try {
-            // Converter DTO para Entity
             Cliente cliente = new Cliente();
             cliente.setNome(dto.getNome());
             cliente.setCpf(dto.getCpf());
@@ -119,7 +118,18 @@ public class ClienteController {
             cliente.setCidade(dto.getCidade());
             cliente.setEstado(dto.getEstado());
             cliente.setDataNascimento(dto.getDataNascimento());
-            
+
+            // ✅ CAMPOS QUE FALTAVAM
+            if (dto.getCreditoAprovado() != null) {
+                cliente.setCreditoAprovado(dto.getCreditoAprovado());
+            }
+            if (dto.getTipoCliente() != null) {
+                cliente.setTipoCliente(dto.getTipoCliente());
+            }
+            if (dto.getAutorizadoJantar() != null) {
+                cliente.setAutorizadoJantar(dto.getAutorizadoJantar());
+            }
+
             Cliente clienteAtualizado = clienteService.atualizar(id, cliente, dto.getEmpresaId());
             return ResponseEntity.ok(clienteAtualizado);
         } catch (Exception e) {

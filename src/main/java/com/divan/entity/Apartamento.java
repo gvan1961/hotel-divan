@@ -5,17 +5,13 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(name = "apartamentos")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+
 public class Apartamento {
     
     @Id
@@ -63,4 +59,87 @@ public class Apartamento {
         MANUTENCAO,
         INDISPONIVEL        
     }
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public String getNumeroApartamento() {
+		return numeroApartamento;
+	}
+
+	public void setNumeroApartamento(String numeroApartamento) {
+		this.numeroApartamento = numeroApartamento;
+	}
+
+	public TipoApartamento getTipoApartamento() {
+		return tipoApartamento;
+	}
+
+	public void setTipoApartamento(TipoApartamento tipoApartamento) {
+		this.tipoApartamento = tipoApartamento;
+	}
+
+	public Integer getCapacidade() {
+		return capacidade;
+	}
+
+	public void setCapacidade(Integer capacidade) {
+		this.capacidade = capacidade;
+	}
+
+	public String getCamasDoApartamento() {
+		return camasDoApartamento;
+	}
+
+	public void setCamasDoApartamento(String camasDoApartamento) {
+		this.camasDoApartamento = camasDoApartamento;
+	}
+
+	public String getTv() {
+		return tv;
+	}
+
+	public void setTv(String tv) {
+		this.tv = tv;
+	}
+
+	public StatusEnum getStatus() {
+		return status;
+	}
+
+	public void setStatus(StatusEnum status) {
+		this.status = status;
+	}
+
+	public List<Reserva> getReservas() {
+		return reservas;
+	}
+
+	public void setReservas(List<Reserva> reservas) {
+		this.reservas = reservas;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Apartamento other = (Apartamento) obj;
+		return Objects.equals(id, other.id);
+	}
+    
+    
 }

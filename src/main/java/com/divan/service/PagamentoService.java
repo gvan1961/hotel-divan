@@ -97,77 +97,17 @@ public class PagamentoService {
         System.out.println("   Total A Pagar: R$ " + reserva.getTotalApagar());
         
         // ✅✅✅ FINALIZAR AUTOMATICAMENTE SE ZEROU O SALDO ✅✅✅
-        if (reserva.getTotalApagar().compareTo(BigDecimal.ZERO) == 0) {
-            System.out.println("═══════════════════════════════════════════");
-            System.out.println("✅ PAGAMENTO TOTAL EFETUADO!");
-            System.out.println("🔄 FINALIZANDO RESERVA AUTOMATICAMENTE...");
-            System.out.println("═══════════════════════════════════════════");
-            
-            finalizarReservaAutomaticamente(reserva);
-            
-            System.out.println("✅ Reserva finalizada automaticamente!");
-            System.out.println("🧹 Apartamento liberado para LIMPEZA");
-            System.out.println("═══════════════════════════════════════════");
-        } else {
-            System.out.println("⚠️ Pagamento PARCIAL - Saldo restante: R$ " + reserva.getTotalApagar());
-            System.out.println("   Reserva continua ATIVA");
-            System.out.println("═══════════════════════════════════════════");
-        }
+        System.out.println("✅ Pagamento registrado com sucesso!");
+        System.out.println("   Saldo restante: R$ " + reserva.getTotalApagar());
+        System.out.println("   Reserva continua ATIVA — checkout será feito pelo recepcionista");
+        System.out.println("═══════════════════════════════════════════");
         
         return pagamentoSalvo;
     }
     
- // ✅ NOVO MÉTODO - FINALIZAR AUTOMATICAMENTE
-    private void finalizarReservaAutomaticamente(Reserva reserva) {
-        // Finalizar reserva
-        reserva.setStatus(Reserva.StatusReservaEnum.FINALIZADA);
-        
-        // Liberar apartamento para limpeza
-        Apartamento apartamento = reserva.getApartamento();
-        apartamento.setStatus(Apartamento.StatusEnum.LIMPEZA);
-        apartamentoRepository.save(apartamento);
-        
-        // Salvar reserva
-        reservaRepository.save(reserva);
-        
-        // ✅ CRIAR REGISTRO EM CONTAS A RECEBER (PAGA)
-        criarRegistroReservaPaga(reserva);
-        
-        System.out.println("   Status da Reserva: " + reserva.getStatus());
-        System.out.println("   Status do Apartamento " + apartamento.getNumeroApartamento() + ": " + apartamento.getStatus());
-    }
+ 
 
-    // ✅ NOVO MÉTODO - CRIAR REGISTRO DE RESERVA PAGA
-    private void criarRegistroReservaPaga(Reserva reserva) {
-        try {
-            ContaAReceber conta = new ContaAReceber();
-            
-            conta.setReserva(reserva);
-            conta.setCliente(reserva.getCliente());
-            conta.setValor(reserva.getTotalHospedagem());
-            conta.setValorPago(reserva.getTotalRecebido());
-            conta.setSaldo(BigDecimal.ZERO);
-            conta.setStatus(ContaAReceber.StatusContaEnum.PAGA);
-            conta.setDataPagamento(LocalDate.now());
-            conta.setDataVencimento(LocalDate.now());
-            conta.setDataCriacao(LocalDateTime.now());
-            conta.setDescricao("Reserva PAGA #" + reserva.getId() + 
-                              " - Apt " + reserva.getApartamento().getNumeroApartamento());
-            conta.setObservacao("Pagamento efetuado durante a hospedagem");
-            
-            if (reserva.getCliente().getEmpresa() != null) {
-                conta.setEmpresa(reserva.getCliente().getEmpresa());
-            }
-            
-            contaAReceberRepository.save(conta);
-            
-            System.out.println("💚 Registro de reserva PAGA criado!");
-            
-        } catch (Exception e) {
-            System.err.println("⚠️ Erro ao criar registro de reserva paga: " + e.getMessage());
-            // Não lança exceção para não bloquear a finalização
-        }
-    }
+   
     
     private void atualizarTotalRecebidoReserva(Long reservaId, BigDecimal valorPago) {
         Optional<Reserva> reservaOpt = reservaRepository.findById(reservaId);

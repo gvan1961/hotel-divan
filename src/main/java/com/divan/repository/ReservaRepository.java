@@ -16,6 +16,8 @@ import java.util.Optional;
 @Repository
 public interface ReservaRepository extends JpaRepository<Reserva, Long> {
 	
+	long countByStatus(Reserva.StatusReservaEnum status);
+	
 	List<Reserva> findByApartamentoId(Long apartamentoId);
     
     List<Reserva> findByCliente(Cliente cliente);
@@ -59,4 +61,19 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     
     Optional<Reserva> findByApartamentoAndStatus(Apartamento apartamento, Reserva.StatusReservaEnum status);
     
+    List<Reserva> findByStatusAndDataCheckoutBefore(Reserva.StatusReservaEnum status, LocalDateTime dataCheckout);
+    List<Reserva> findByStatusAndDataCheckinBefore(Reserva.StatusReservaEnum status, LocalDateTime dataCheckin);
+    @Query("SELECT r.apartamento.id FROM Reserva r WHERE r.status = :status " +
+           "GROUP BY r.apartamento.id HAVING COUNT(r) > 1")
+    List<Long> findApartamentosComConflito(@Param("status") Reserva.StatusReservaEnum status);
+    
+    List<Reserva> findByClienteIdAndStatusIn(Long clienteId, List<Reserva.StatusReservaEnum> status);
+    
+    List<Reserva> findByApartamentoIdAndStatus(Long apartamentoId, Reserva.StatusReservaEnum status);
+    
+    List<Reserva> findByApartamentoIdAndStatusIn(
+    	    Long apartamentoId,
+    	    List<Reserva.StatusReservaEnum> statuses
+    	);  
+        
 }

@@ -1,6 +1,7 @@
 package com.divan.repository;
 
 import com.divan.entity.Apartamento;
+import com.divan.entity.HospedagemHospede;
 import com.divan.entity.TipoApartamento;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -32,6 +33,8 @@ public interface ApartamentoRepository extends JpaRepository<Apartamento, Long> 
     List<Apartamento> findDisponiveisParaPeriodo(LocalDateTime checkin, LocalDateTime checkout);
     
     boolean existsByNumeroApartamento(String numeroApartamento);  
+    
+    List<HospedagemHospede> findByStatus(HospedagemHospede.StatusEnum status);
 
     
 }

@@ -36,7 +36,7 @@ public class PerfilService {
         
         if (dto.getPermissoesIds() != null && !dto.getPermissoesIds().isEmpty()) {
             List<Permissao> permissoes = permissaoRepository.findAllById(dto.getPermissoesIds());
-            perfil.setPermissoes(permissoes);
+            perfil.setPermissoes(new java.util.HashSet<>(permissoes));
         }
         
         return perfilRepository.save(perfil);
@@ -51,9 +51,10 @@ public class PerfilService {
         
         if (dto.getPermissoesIds() != null) {
             List<Permissao> permissoes = permissaoRepository.findAllById(dto.getPermissoesIds());
-            perfil.setPermissoes(permissoes);
+            perfil.setPermissoes(new java.util.HashSet<>(permissoes));
+
         } else {
-            perfil.setPermissoes(new ArrayList<>());
+        	perfil.setPermissoes(new java.util.HashSet<>());
         }
         
         return perfilRepository.save(perfil);

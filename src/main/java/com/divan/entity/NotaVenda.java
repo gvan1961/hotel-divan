@@ -1,5 +1,6 @@
 package com.divan.entity;
 
+import com.divan.entity.Pagamento.FormaPagamentoEnum;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -32,6 +33,10 @@ public class NotaVenda {
     @Column(nullable = false)
     private TipoVendaEnum tipoVenda;
     
+    @Enumerated(EnumType.STRING)
+    @Column(name = "forma_pagamento")
+    private FormaPagamentoEnum formaPagamento;
+    
     @Column(name = "observacao", length = 500)
     private String observacao;
     
@@ -47,10 +52,10 @@ public class NotaVenda {
     
     @OneToMany(mappedBy = "notaVenda", cascade = CascadeType.ALL)
     @JsonIgnoreProperties("notaVenda")
-    private List<ItemVenda> itens;
-    
+    private List<ItemVenda> itens;    
+        
     public enum TipoVendaEnum {
-        VISTA, APARTAMENTO
+        VISTA, APARTAMENTO, FATURADO
     }
     
     public enum Status {
@@ -60,4 +65,8 @@ public class NotaVenda {
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private Status status;
+    
+    public enum FormaPagamentoEnum {
+        DINHEIRO, PIX, CARTAO_DEBITO, CARTAO_CREDITO, TRANSFERENCIA_BANCARIA, FATURADO
+    }
 }

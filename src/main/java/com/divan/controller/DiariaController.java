@@ -20,6 +20,9 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/diarias")
 @CrossOrigin(origins = "*")
 public class DiariaController {
+	
+	@Autowired  // ← adicione isto
+	private com.divan.repository.DiariaRepository diariaRepository;
     
     @Autowired
     private DiariaService diariaService;

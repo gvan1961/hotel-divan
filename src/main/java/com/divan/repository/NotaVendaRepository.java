@@ -1,6 +1,8 @@
 package com.divan.repository;
 import com.divan.entity.NotaVenda;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -17,5 +19,12 @@ public interface NotaVendaRepository extends JpaRepository<NotaVenda, Long> {
         NotaVenda.TipoVendaEnum tipoVenda, 
         LocalDateTime inicio, 
         LocalDateTime fim
+    );       
+    
+    @Query("SELECT n FROM NotaVenda n WHERE n.tipoVenda IN (:tipos) AND n.dataHoraVenda BETWEEN :inicio AND :fim")
+    List<NotaVenda> findByTipoVendaInAndPeriodo(
+        @Param("tipos") List<NotaVenda.TipoVendaEnum> tipos,
+        @Param("inicio") LocalDateTime inicio,
+        @Param("fim") LocalDateTime fim
     );
 }

@@ -65,6 +65,6 @@ public class ContaAReceber {
     private String descricao;
     
     public enum StatusContaEnum {
-        EM_ABERTO, PAGA, VENCIDA
+        EM_ABERTO, PAGA, VENCIDA, ATRASADA, PENDENTE, CANCELADA, PARCIAL
     }
 }

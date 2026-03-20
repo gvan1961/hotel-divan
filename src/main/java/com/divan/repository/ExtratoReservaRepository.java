@@ -34,5 +34,9 @@ public interface ExtratoReservaRepository extends JpaRepository<ExtratoReserva, 
     @Query("SELECT e FROM ExtratoReserva e WHERE e.reserva.id = :reservaId")
     List<ExtratoReserva> findByReservaId(@Param("reservaId") Long reservaId);   
    
-        
+    List<ExtratoReserva> findByStatusLancamentoAndDataHoraLancamentoBetween(
+    	    ExtratoReserva.StatusLancamentoEnum status,
+    	    LocalDateTime inicio,
+    	    LocalDateTime fim
+    	);
 }

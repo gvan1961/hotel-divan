@@ -22,4 +22,6 @@ public interface ItemVendaRepository extends JpaRepository<ItemVenda, Long> {
     
     @Query("SELECT i.produto, SUM(i.quantidade) FROM ItemVenda i WHERE i.notaVenda.dataHoraVenda BETWEEN :inicio AND :fim GROUP BY i.produto ORDER BY SUM(i.quantidade) DESC")
     List<Object[]> findProdutosMaisVendidosPorPeriodo(LocalDateTime inicio, LocalDateTime fim);
+    
+    List<ItemVenda> findByProdutoId(Long produtoId);
 }
