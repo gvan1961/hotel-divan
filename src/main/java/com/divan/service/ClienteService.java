@@ -36,6 +36,10 @@ public class ClienteService {
                 throw new RuntimeException("Empresa não encontrada");
             }
             cliente.setEmpresa(empresaOpt.get());
+            // ✅ CRÉDITO APROVADO AUTOMATICAMENTE POR VÍNCULO COM EMPRESA
+            cliente.setCreditoAprovado(true);
+            System.out.println("✅ Crédito aprovado automaticamente — empresa: " 
+                + empresaOpt.get().getNomeEmpresa());
         }
         
         return clienteRepository.save(cliente);
@@ -97,8 +101,13 @@ public class ClienteService {
             Empresa empresa = empresaRepository.findById(empresaId)
                 .orElseThrow(() -> new RuntimeException("Empresa não encontrada"));
             clienteExistente.setEmpresa(empresa);
+            // ✅ CRÉDITO APROVADO AUTOMATICAMENTE POR VÍNCULO COM EMPRESA
+            clienteExistente.setCreditoAprovado(true);
+            System.out.println("✅ Crédito aprovado automaticamente — empresa: " 
+                + empresa.getNomeEmpresa());
         } else {
             clienteExistente.setEmpresa(null);
+            // ✅ SEM EMPRESA — MANTER CRÉDITO COMO ESTÁ (não revogar automaticamente)
         }
 
         return clienteRepository.save(clienteExistente);

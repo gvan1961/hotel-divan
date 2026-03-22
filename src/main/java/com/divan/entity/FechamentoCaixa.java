@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
 @Table(name = "fechamentos_caixa")
 @Data
@@ -14,7 +16,8 @@ public class FechamentoCaixa {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_id", nullable = false)
+    @JoinColumn(name = "usuario_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Usuario usuario;
 
     @Column(name = "data_hora_abertura", nullable = false)

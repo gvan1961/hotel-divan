@@ -329,38 +329,57 @@ public class ReservaController {
                 return ResponseEntity.badRequest().body("clienteId é obrigatório");
             }
 
-            Long clienteId;
-            try {
-                clienteId = Long.parseLong(clienteIdObj.toString());
-            } catch (NumberFormatException e) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("disponivel", false, "mensagem", "clienteId inválido: " + clienteIdObj));
-            }
-
-            // ✅ Pegar datas enviadas pelo Angular
+            Long clienteId = Long.parseLong(clienteIdObj.toString());
             LocalDateTime dataCheckin = LocalDateTime.parse(body.get("dataCheckin").toString().substring(0, 19));
             LocalDateTime dataCheckout = LocalDateTime.parse(body.get("dataCheckout").toString().substring(0, 19));
 
-            // ✅ Buscar reservas ATIVAS ou PRE_RESERVA do cliente
-            List<Reserva> reservasDoCliente = reservaRepository.findByClienteIdAndStatusIn(
-                clienteId,
-                List.of(Reserva.StatusReservaEnum.ATIVA, Reserva.StatusReservaEnum.PRE_RESERVA)
-            );
+            // ✅ VERIFICAR SE CLIENTE JÁ ESTÁ HOSPEDADO (titular OU adicional)
+            List<HospedagemHospede> hospedesAtivos = hospedagemHospedeRepository
+                .findByClienteIdAndStatus(clienteId, HospedagemHospede.StatusEnum.HOSPEDADO);
 
-            // ✅ Verificar sobreposição de datas
-            for (Reserva r : reservasDoCliente) {
-                boolean temConflito =
-                    dataCheckin.isBefore(r.getDataCheckout()) &&
-                    dataCheckout.isAfter(r.getDataCheckin());
+            for (HospedagemHospede hAtivo : hospedesAtivos) {
+                Reserva rAtiva = hAtivo.getReserva();
+                if (rAtiva == null) continue;
+                if (rAtiva.getStatus() != Reserva.StatusReservaEnum.ATIVA) continue;
 
-                if (temConflito) {
+                boolean conflito =
+                    dataCheckin.isBefore(rAtiva.getDataCheckout()) &&
+                    dataCheckout.isAfter(rAtiva.getDataCheckin());
+
+                if (conflito) {
                     return ResponseEntity.ok(Map.of(
                         "disponivel", false,
                         "mensagem", String.format(
-                            "Cliente já possui reserva no período %s a %s (Apt %s)",
+                            "Cliente já está hospedado no apartamento %s (Reserva #%d) de %s a %s.",
+                            rAtiva.getApartamento().getNumeroApartamento(),
+                            rAtiva.getId(),
+                            rAtiva.getDataCheckin().toLocalDate(),
+                            rAtiva.getDataCheckout().toLocalDate()
+                        )
+                    ));
+                }
+            }
+
+            // ✅ VERIFICAR PRÉ-RESERVAS COMO TITULAR
+            List<Reserva> preReservas = reservaRepository.findByClienteIdAndStatusIn(
+                clienteId,
+                List.of(Reserva.StatusReservaEnum.PRE_RESERVA)
+            );
+
+            for (Reserva r : preReservas) {
+                boolean conflito =
+                    dataCheckin.isBefore(r.getDataCheckout()) &&
+                    dataCheckout.isAfter(r.getDataCheckin());
+
+                if (conflito) {
+                    return ResponseEntity.ok(Map.of(
+                        "disponivel", false,
+                        "mensagem", String.format(
+                            "Cliente já possui pré-reserva no apartamento %s (Reserva #%d) de %s a %s.",
+                            r.getApartamento().getNumeroApartamento(),
+                            r.getId(),
                             r.getDataCheckin().toLocalDate(),
-                            r.getDataCheckout().toLocalDate(),
-                            r.getApartamento().getNumeroApartamento()
+                            r.getDataCheckout().toLocalDate()
                         )
                     ));
                 }

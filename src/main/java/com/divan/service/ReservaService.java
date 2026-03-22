@@ -79,8 +79,8 @@ public class ReservaService {
 
             // ✅ Conflito real: períodos se sobrepõem
             // Não há conflito se: novo checkout <= checkout existente OU novo checkin >= checkout existente
-            boolean semConflito = !checkin.toLocalDate().isBefore(r.getDataCheckout().toLocalDate())
-                    || !checkout.toLocalDate().isAfter(r.getDataCheckin().toLocalDate());
+            boolean semConflito = !checkin.isBefore(r.getDataCheckout())
+                    || !checkout.isAfter(r.getDataCheckin());
             if (!semConflito) {
                 System.out.println("❌ Conflito encontrado com reserva #" + r.getId());
                 System.out.println("   Reserva existente: " + r.getDataCheckin() + " a " + r.getDataCheckout());
