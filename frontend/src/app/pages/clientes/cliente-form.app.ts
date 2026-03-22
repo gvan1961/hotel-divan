@@ -102,17 +102,21 @@ import { HttpClient } from '@angular/common/http';
           </div>
 
           <!-- CHECKBOX DE CRÉDITO - SÓ PARA HÓSPEDES -->
-          <div class="form-group checkbox-group" *ngIf="cliente.tipoCliente === TipoCliente.HOSPEDE">
-            <label class="checkbox-label">
-              <input type="checkbox" 
-                     [(ngModel)]="cliente.creditoAprovado" 
-                     name="creditoAprovado">
-              <span class="checkbox-text">✅ Aprovar Crédito (permite reservas faturadas)</span>
-            </label>
-            <small class="field-help">
-              Cliente poderá fazer check-out sem pagar (gera conta a receber)
-            </small>
-          </div>
+         <div class="form-group checkbox-group" *ngIf="cliente.tipoCliente === TipoCliente.HOSPEDE">
+  <label class="checkbox-label">
+    <input type="checkbox" 
+           [(ngModel)]="cliente.creditoAprovado" 
+           name="creditoAprovado"
+           [disabled]="!!selectedEmpresaId">
+    <span class="checkbox-text">✅ Aprovar Crédito (permite reservas faturadas)</span>
+  </label>
+  <small class="field-help" *ngIf="!selectedEmpresaId">
+    Cliente poderá fazer check-out sem pagar (gera conta a receber)
+  </small>
+  <small class="field-help" *ngIf="selectedEmpresaId" style="color: #27ae60;">
+    ✅ Crédito aprovado automaticamente por vínculo com empresa
+  </small>
+</div>
 
           <!-- CHECKBOX DE JANTAR - SÓ PARA HÓSPEDES -->
           <div class="form-group checkbox-group checkbox-jantar" *ngIf="cliente.tipoCliente === TipoCliente.HOSPEDE">
@@ -543,12 +547,15 @@ export class ClienteFormApp implements OnInit {
   }
 
   onEmpresaChange(): void {
-    if (this.selectedEmpresaId === null || this.selectedEmpresaId === '' || !this.selectedEmpresaId) {
-      this.cliente.empresaId = undefined;
-    } else {
-      this.cliente.empresaId = Number(this.selectedEmpresaId);
-    }
+  if (this.selectedEmpresaId === null || this.selectedEmpresaId === '' || !this.selectedEmpresaId) {
+    this.cliente.empresaId = undefined;
+    // ✅ SEM EMPRESA — não altera o crédito
+  } else {
+    this.cliente.empresaId = Number(this.selectedEmpresaId);
+    // ✅ COM EMPRESA — aprovar crédito automaticamente
+    this.cliente.creditoAprovado = true;
   }
+}
 
   voltar(): void {
     this.router.navigate(['/clientes']);

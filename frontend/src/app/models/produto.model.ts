@@ -4,6 +4,7 @@ export interface Produto {
   quantidade: number;
   valorVenda: number;
   valorCompra: number;
+  codigoBarras?: string;
   categoria?: {
     id: number;
     nome: string;
@@ -17,6 +18,7 @@ export interface ProdutoRequest {
   valorVenda: number;
   valorCompra: number;
   categoriaId?: number;
+  codigoBarras?: string;
 }
 
 

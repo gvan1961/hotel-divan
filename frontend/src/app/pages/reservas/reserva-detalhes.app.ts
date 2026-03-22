@@ -376,24 +376,7 @@ interface Apartamento {
           <h3>👥 Hóspedes da Reserva</h3>
           <span class="badge-hospedes">{{ hospedes.length }}</span>
 
-          <!-- ✅ BUSCA POR PLACA -->
-    <div class="busca-placa-container">
-      <input 
-        type="text"
-        [(ngModel)]="termoBuscaPlaca"
-        placeholder="🚗 Buscar por placa..."
-        class="input-busca-placa"
-        maxlength="8"
-        (input)="buscarPorPlaca()">
-      <div class="resultado-busca-placa" *ngIf="resultadoBuscaPlaca">
-        <span class="placa-encontrada">✅ {{ resultadoBuscaPlaca }}</span>
-      </div>
-      <div class="resultado-busca-placa erro" *ngIf="erroBuscaPlaca">
-        <span>❌ {{ erroBuscaPlaca }}</span>
-      </div>
-    </div>
-
-
+  
           <button 
             *ngIf="reserva.status === 'ATIVA'"
             type="button"

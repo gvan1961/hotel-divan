@@ -53,6 +53,22 @@ import { Categoria } from '../../models/categoria.model';
               <input type="number" [(ngModel)]="produto.valorVenda" name="valorVenda" required min="0" step="0.01" />
             </div>
           </div>
+            
+          <!-- ✅ CÓDIGO DE BARRAS -->
+<div class="form-group">
+  <label>🔍 Código de Barras <small>(opcional)</small></label>
+  <div class="input-codigo-container">
+    <input 
+      type="text" 
+      [(ngModel)]="produto.codigoBarras" 
+      name="codigoBarras"
+      placeholder="Digite ou escaneie o código de barras"
+      class="input-codigo-barras-cadastro" />
+    <small class="hint-codigo">
+      💡 Com leitor USB: clique no campo e escaneie o produto
+    </small>
+  </div>
+</div>
 
           <div *ngIf="errorMessage" class="error-message">
             {{ errorMessage }}
@@ -202,7 +218,8 @@ export class ProdutoFormApp implements OnInit {
     nomeProduto: '',
     quantidade: 0,
     valorVenda: 0,
-    valorCompra: 0
+    valorCompra: 0,
+    codigoBarras: ''
   };
 
   categorias: Categoria[] = [];

@@ -578,30 +578,27 @@ interface ReservaLista {
                   *ngFor="let hospedagem of resultadosBuscaPlaca.hospedagens">
                   
                   <div class="resultado-placa-principal">
-                    <div class="hospede-placa-info">
-                      <div class="hospede-placa-nome">
-                        👤 {{ hospedagem.hospedeNome }}
-                      </div>
-                      <div class="hospede-placa-cpf">
-                        📄 CPF: {{ formatarCPF(hospedagem.hospedeCpf) }}
-                      </div>
-                      <div class="hospede-placa-carro">
-                        🚗 Placa: <strong>{{ hospedagem.placaCarro }}</strong>
-                      </div>
-                    </div>
-
-                    <div class="reserva-placa-info">
-                      <div class="reserva-placa-badge" [class]="'badge-' + hospedagem.status.toLowerCase()">
-                        {{ formatarStatus(hospedagem.status) }}
-                      </div>
-                      <div class="apartamento-placa">
-                        🏨 Apartamento {{ hospedagem.apartamento }}
-                      </div>
-                      <div class="datas-placa">
-                        📅 {{ formatarData(hospedagem.dataCheckin) }} até {{ formatarData(hospedagem.dataCheckout) }}
-                      </div>
-                    </div>
-                  </div>
+  <div class="hospede-placa-info">
+    <div class="hospede-placa-nome">
+      👤 {{ hospedagem.hospedeNome }}
+    </div>
+    <div class="hospede-placa-carro">
+      🚗 Placa: <strong>{{ hospedagem.placaCarro }}</strong>
+    </div>
+    <div class="apartamento-placa">
+      🏨 Apartamento: <strong>{{ hospedagem.apartamento }}</strong>
+    </div>
+    <div class="datas-placa">
+      📅 Check-in: {{ formatarData(hospedagem.dataCheckin) }}
+    </div>
+    <div class="datas-placa">
+      📅 Check-out: {{ formatarData(hospedagem.dataCheckout) }}
+    </div>
+    <div class="reserva-placa-id">
+      🔢 Reserva: #{{ hospedagem.reservaId }}
+    </div>
+  </div>
+</div>
 
                   <button 
                     class="btn-ver-reserva-placa"

@@ -10,6 +10,7 @@ interface Produto {
   nomeProduto: string;
   valorVenda: number;
   quantidade: number;
+  codigoBarras?: string;
 }
 
 interface Cliente {
@@ -47,11 +48,21 @@ interface ItemCarrinho {
         <h2>📦 Produtos</h2>
         
         <div class="busca">
-          <input type="text" 
-                 [(ngModel)]="termoBusca" 
-                 (input)="filtrarProdutos()"
-                 placeholder="🔍 Buscar produto...">
-        </div>
+  <input type="text" 
+         [(ngModel)]="termoBusca" 
+         (input)="filtrarProdutos()"
+         placeholder="🔍 Buscar produto...">
+  
+  <!-- ✅ LEITOR DE CÓDIGO DE BARRAS/QR CODE -->
+  <input type="text"
+         #inputCodigoBarras
+         [(ngModel)]="codigoBarras"
+         (keydown.enter)="buscarPorCodigo()"
+         placeholder="📷 Código de barras (Enter para buscar)"
+         class="input-codigo-barras"
+         autocomplete="off">
+  <small class="hint-codigo">💡 Com leitor USB: aponte para o produto e escaneie</small>
+</div>
 
         <div class="lista-produtos">
           <div *ngFor="let produto of produtosFiltrados" 
@@ -691,6 +702,7 @@ export class PDVComponent implements OnInit {
   apartamentoNomeVenda = '';
 
   origem: string = '';
+  codigoBarras = '';
 
   constructor(private route: ActivatedRoute) {}
 
@@ -1127,6 +1139,27 @@ export class PDVComponent implements OnInit {
     font-size: 12px;
     font-weight: bold;
   }
+  .input-codigo-barras {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #27ae60;
+  border-radius: 6px;
+  font-size: 1em;
+  margin-top: 8px;
+  background: #f0fff4;
+}
+.input-codigo-barras:focus {
+  outline: none;
+  border-color: #1e8449;
+  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.2);
+}
+.hint-codigo {
+  color: #7f8c8d;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  display: block;
+}
+
 </style>
       </head>
       <body>
@@ -1243,6 +1276,29 @@ export class PDVComponent implements OnInit {
     this.router.navigate(['/painel-recepcao']);
   } else {
     this.router.navigate(['/dashboard']);
+  }  
+}
+
+  buscarPorCodigo(): void {
+  if (!this.codigoBarras || this.codigoBarras.trim() === '') return;
+
+  const codigo = this.codigoBarras.trim();
+  console.log('📷 Buscando código:', codigo);
+
+  // ✅ BUSCAR PRODUTO POR CÓDIGO DE BARRAS
+  const produto = this.produtos.find(p => 
+    p.codigoBarras === codigo || 
+    p.nomeProduto.toLowerCase() === codigo.toLowerCase()
+  );
+
+  if (produto) {
+    this.adicionarAoCarrinho(produto);
+    console.log('✅ Produto encontrado:', produto.nomeProduto);
+  } else {
+    alert(`❌ Produto não encontrado para o código: ${codigo}`);
   }
+
+  // ✅ LIMPAR CAMPO APÓS LEITURA
+  this.codigoBarras = '';
 }
 }

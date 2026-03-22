@@ -1610,7 +1610,7 @@ export class ReservaFormApp implements OnInit {
         
         const dataCheckout = new Date(dataCheckin);
         dataCheckout.setDate(dataCheckout.getDate() + 1);
-        dataCheckout.setHours(13, 0, 0, 0);
+        dataCheckout.setHours(12, 0, 0, 0);
         this.reserva.dataCheckout = this.formatDateTimeLocal(dataCheckout);
         
         console.log('📅 Datas do mapa:', this.reserva.dataCheckin, this.reserva.dataCheckout);
@@ -2150,10 +2150,12 @@ onDataCheckoutChange(): void {
   const checkinDate = new Date(this.reserva.dataCheckin);
   const checkoutDate = new Date(this.reserva.dataCheckout);
   
-  const checkinISO = new Date(checkinDate.getTime() - (checkinDate.getTimezoneOffset() * 60000))
-    .toISOString();
-  const checkoutISO = new Date(checkoutDate.getTime() - (checkoutDate.getTimezoneOffset() * 60000))
-    .toISOString();
+const pad = (n: number) => String(n).padStart(2, '0');
+const formatLocal = (d: Date) => 
+  `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+
+const checkinISO = formatLocal(checkinDate);
+const checkoutISO = formatLocal(checkoutDate);
 
 
   console.log('═══════════════════════════════════════');
@@ -2181,8 +2183,8 @@ onDataCheckoutChange(): void {
   dataCheckout: checkoutISO,
   hospedes: this.hospedes,
   hospedesAdicionaisIds: this.hospedes
-  .filter((h: any) => h.clienteId && Number(h.clienteId) !== Number(this.reserva.clienteId))
-  .map((h: any) => Number(h.clienteId))
+    .filter((h: any) => h.clienteId)
+    .map((h: any) => Number(h.clienteId))
 };
 
   console.log('📦 Request completo:', reservaRequest);
