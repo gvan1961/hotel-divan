@@ -1,0 +1,50 @@
+# Eclipse/STS
+.metadata/
+.settings/
+.classpath
+.project
+.factorypath
+sts-4.*/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+
+# Backups e pastas antigas
+xBackupBackend/
+xBackupDeFrontend/
+front/
+Untitled*
+HELP.md
+
+# Build - Backend
+backend/target/
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+
+# Build - Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.nx/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporários
+*.tmp
+*.bak
+*.swp
+*~
+
+# Backups e bibliotecas
+*.sql
+lombok.jar 
+ 

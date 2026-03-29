@@ -2183,6 +2183,7 @@ const checkoutISO = formatLocal(checkoutDate);
   dataCheckout: checkoutISO,
   hospedes: this.hospedes,
   hospedesAdicionaisIds: this.hospedes
+    .slice(1)
     .filter((h: any) => h.clienteId)
     .map((h: any) => Number(h.clienteId))
 };

@@ -63,7 +63,7 @@ export const routes: Routes = [
     component: LayoutComponent,
     canActivate: [authGuard],
     children: [
-      { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
+      { path: '', redirectTo: '/painel-recepcao', pathMatch: 'full' },
 
       { path: 'teste-reserva/:id', component: ReservaDetalhesTeste },
       
@@ -166,5 +166,5 @@ export const routes: Routes = [
   },
 
   // REDIRECT PARA DASHBOARD
-  { path: '**', redirectTo: '/dashboard' }
+  { path: '**', redirectTo: '/painel-recepcao' }
 ];

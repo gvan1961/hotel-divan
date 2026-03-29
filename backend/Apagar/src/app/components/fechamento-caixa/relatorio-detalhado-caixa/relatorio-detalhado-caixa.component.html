@@ -1,0 +1,290 @@
+<div class="container-relatorio">
+  
+  <!-- LOADING -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Gerando relatório detalhado...</p>
+  </div>
+
+  <!-- ERRO -->
+  <div *ngIf="erro" class="erro-container">
+    <div class="erro-box">
+      <h3>❌ Erro</h3>
+      <p>{{ erro }}</p>
+      <button (click)="voltar()" class="btn-voltar">Voltar</button>
+    </div>
+  </div>
+
+  <!-- RELATÓRIO -->
+  <div *ngIf="relatorio && !loading" class="relatorio">
+
+    <!-- CABEÇALHO -->
+    <div class="cabecalho no-print">
+      <button (click)="voltar()" class="btn-voltar">← Voltar</button>
+      <h1>📊 Relatório Detalhado de Caixa</h1>
+      <div class="acoes">
+        <button (click)="imprimir()" class="btn-imprimir">🖨️ Imprimir</button>
+        <button (click)="exportarPDF()" class="btn-pdf">📄 PDF</button>
+      </div>
+    </div>
+
+    <!-- INFORMAÇÕES DO CAIXA -->
+    <div class="info-caixa">
+      <div class="info-item">
+        <span class="label">Caixa:</span>
+        <span class="valor">#{{ relatorio.caixaId }}</span>
+      </div>
+      <div class="info-item">
+        <span class="label">Recepcionista:</span>
+        <span class="valor">{{ relatorio.recepcionistaNome }}</span>
+      </div>
+      <div class="info-item">
+        <span class="label">Abertura:</span>
+        <span class="valor">{{ formatarData(relatorio.dataHoraAbertura) }}</span>
+      </div>
+      <div class="info-item">
+        <span class="label">Fechamento:</span>
+        <span class="valor">{{ formatarData(relatorio.dataHoraFechamento) }}</span>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- VENDAS DE RESERVAS (POR APARTAMENTO)       -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="secao">
+      <div class="secao-header" (click)="toggleReservas()">
+        <h2>🏨 VENDAS DE RESERVAS (POR APARTAMENTO)</h2>
+        <span class="toggle-icon">{{ mostrarReservas ? '▼' : '▶' }}</span>
+      </div>
+
+      <div *ngIf="mostrarReservas" class="secao-conteudo">
+
+        <div *ngFor="let venda of relatorio.vendasReservas" class="apartamento-card">
+          <div class="apartamento-header">
+            <div class="apartamento-info">
+              <h3>🏠 Apto {{ venda.numeroApartamento }}</h3>
+              <p class="cliente-nome">{{ venda.clienteNome }}</p>
+              <p class="reserva-id">Reserva #{{ venda.reservaId }}</p>
+            </div>
+            <div class="apartamento-total">
+              <span class="total-label">Total</span>
+              <span class="total-valor">{{ formatarMoeda(venda.total) }}</span>
+            </div>
+          </div>
+
+          <div class="pagamentos-grid">
+            <div class="pagamento-item" *ngIf="venda.pagamentos.dinheiro > 0">
+              <span class="pagamento-icon">💵</span>
+              <span class="pagamento-nome">Dinheiro</span>
+              <span class="pagamento-valor">{{ formatarMoeda(venda.pagamentos.dinheiro) }}</span>
+            </div>
+            <div class="pagamento-item" *ngIf="venda.pagamentos.pix > 0">
+              <span class="pagamento-icon">📱</span>
+              <span class="pagamento-nome">PIX</span>
+              <span class="pagamento-valor">{{ formatarMoeda(venda.pagamentos.pix) }}</span>
+            </div>
+            <div class="pagamento-item" *ngIf="venda.pagamentos.cartaoDebito > 0">
+              <span class="pagamento-icon">💳</span>
+              <span class="pagamento-nome">C. Débito</span>
+              <span class="pagamento-valor">{{ formatarMoeda(venda.pagamentos.cartaoDebito) }}</span>
+            </div>
+            <div class="pagamento-item" *ngIf="venda.pagamentos.cartaoCredito > 0">
+              <span class="pagamento-icon">💳</span>
+              <span class="pagamento-nome">C. Crédito</span>
+              <span class="pagamento-valor">{{ formatarMoeda(venda.pagamentos.cartaoCredito) }}</span>
+            </div>
+            <div class="pagamento-item" *ngIf="venda.pagamentos.transferencia > 0">
+              <span class="pagamento-icon">🏦</span>
+              <span class="pagamento-nome">Transferência</span>
+              <span class="pagamento-valor">{{ formatarMoeda(venda.pagamentos.transferencia) }}</span>
+            </div>
+            <div class="pagamento-item" *ngIf="venda.pagamentos.faturado > 0">
+              <span class="pagamento-icon">📄</span>
+              <span class="pagamento-nome">Faturado</span>
+              <span class="pagamento-valor">{{ formatarMoeda(venda.pagamentos.faturado) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUBTOTAL RESERVAS -->
+        <div class="subtotal-box">
+          <h3>📊 SUBTOTAL RESERVAS</h3>
+          <div class="subtotal-grid">
+            <div class="subtotal-item">
+              <span>💵 Dinheiro:</span>
+              <strong>{{ formatarMoeda(relatorio.subtotalReservas.dinheiro) }}</strong>
+            </div>
+            <div class="subtotal-item">
+              <span>📱 PIX:</span>
+              <strong>{{ formatarMoeda(relatorio.subtotalReservas.pix) }}</strong>
+            </div>
+            <div class="subtotal-item">
+              <span>💳 C. Débito:</span>
+              <strong>{{ formatarMoeda(relatorio.subtotalReservas.cartaoDebito) }}</strong>
+            </div>
+            <div class="subtotal-item">
+              <span>💳 C. Crédito:</span>
+              <strong>{{ formatarMoeda(relatorio.subtotalReservas.cartaoCredito) }}</strong>
+            </div>
+            <div class="subtotal-item">
+              <span>🏦 Transferência:</span>
+              <strong>{{ formatarMoeda(relatorio.subtotalReservas.transferencia) }}</strong>
+            </div>
+            <div class="subtotal-item">
+              <span>📄 Faturado:</span>
+              <strong>{{ formatarMoeda(relatorio.subtotalReservas.faturado) }}</strong>
+            </div>
+          </div>
+          <div class="subtotal-total">
+            <span>TOTAL:</span>
+            <strong>{{ formatarMoeda(relatorio.subtotalReservas.total) }}</strong>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- VENDAS AVULSAS (FORA DE RESERVAS)          -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="secao">
+      <div class="secao-header" (click)="toggleAvulsas()">
+        <h2>🛒 VENDAS AVULSAS (FORA DE RESERVAS)</h2>
+        <span class="toggle-icon">{{ mostrarAvulsas ? '▼' : '▶' }}</span>
+      </div>
+
+      <div *ngIf="mostrarAvulsas" class="secao-conteudo">
+
+        <!-- ✅ LISTA DETALHADA DAS FATURADAS COM PRODUTOS -->
+        <div *ngIf="relatorio.vendasAvulsasFaturadas && relatorio.vendasAvulsasFaturadas.length > 0">
+          <h4 class="titulo-faturadas">📄 Vendas Faturadas (PDV)</h4>
+
+          <div *ngFor="let v of relatorio.vendasAvulsasFaturadas" class="apartamento-card faturada-card">
+
+            <!-- CABEÇALHO: CLIENTE + TOTAL -->
+            <div class="apartamento-header">
+              <div class="apartamento-info">
+                <h3>👤 {{ v.clienteNome }}</h3>
+                <p class="reserva-id">Nota PDV #{{ v.notaId }}</p>
+              </div>
+              <div class="apartamento-total">
+                <span class="total-label">Total</span>
+                <span class="total-valor faturado-valor">{{ formatarMoeda(v.valor) }}</span>
+              </div>
+            </div>
+
+            <!-- ✅ LISTA DE PRODUTOS -->
+            <div class="pagamentos-grid" *ngIf="v.produtos && v.produtos.length > 0">
+              <div class="pagamento-item" *ngFor="let p of v.produtos">
+                <span class="pagamento-icon">🛒</span>
+                <span class="pagamento-nome">{{ p.nomeProduto }} x{{ p.quantidade }}</span>
+                <span class="pagamento-valor">{{ formatarMoeda(p.totalItem) }}</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- MENSAGEM QUANDO NÃO HÁ FATURADAS -->
+        <div *ngIf="!relatorio.vendasAvulsasFaturadas || relatorio.vendasAvulsasFaturadas.length === 0"
+             class="sem-faturadas">
+          <p>📭 Nenhuma venda faturada no PDV neste caixa.</p>
+        </div>
+
+        <!-- TOTAIS POR FORMA DE PAGAMENTO -->
+        <div class="subtotal-grid" style="margin-top: 15px;">
+          <div class="subtotal-item">
+            <span>💵 Dinheiro:</span>
+            <strong>{{ formatarMoeda(relatorio.vendasAvulsas.dinheiro) }}</strong>
+          </div>
+          <div class="subtotal-item">
+            <span>📱 PIX:</span>
+            <strong>{{ formatarMoeda(relatorio.vendasAvulsas.pix) }}</strong>
+          </div>
+          <div class="subtotal-item">
+            <span>💳 C. Débito:</span>
+            <strong>{{ formatarMoeda(relatorio.vendasAvulsas.cartaoDebito) }}</strong>
+          </div>
+          <div class="subtotal-item">
+            <span>💳 C. Crédito:</span>
+            <strong>{{ formatarMoeda(relatorio.vendasAvulsas.cartaoCredito) }}</strong>
+          </div>
+          <div class="subtotal-item">
+            <span>🏦 Transferência:</span>
+            <strong>{{ formatarMoeda(relatorio.vendasAvulsas.transferencia) }}</strong>
+          </div>
+          <div class="subtotal-item">
+            <span>📄 Faturado:</span>
+            <strong>{{ formatarMoeda(relatorio.vendasAvulsas.faturado) }}</strong>
+          </div>
+        </div>
+        <div class="subtotal-total">
+          <span>TOTAL:</span>
+          <strong>{{ formatarMoeda(relatorio.vendasAvulsas.total) }}</strong>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- RESUMO GERAL DO CAIXA                      -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="total-geral-box">
+      <h2>💰 RESUMO GERAL DO CAIXA</h2>
+      <p class="alerta-cobranca">⚠️ Valores a cobrar do recepcionista:</p>
+
+      <div class="total-geral-grid">
+        <div class="total-item destaque-dinheiro">
+          <span class="total-icon">💵</span>
+          <div class="total-info">
+            <span class="total-nome">DINHEIRO</span>
+            <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.dinheiro) }}</span>
+          </div>
+        </div>
+        <div class="total-item">
+          <span class="total-icon">📱</span>
+          <div class="total-info">
+            <span class="total-nome">PIX</span>
+            <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.pix) }}</span>
+          </div>
+        </div>
+        <div class="total-item">
+          <span class="total-icon">💳</span>
+          <div class="total-info">
+            <span class="total-nome">CARTÃO DÉBITO</span>
+            <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.cartaoDebito) }}</span>
+          </div>
+        </div>
+        <div class="total-item">
+          <span class="total-icon">💳</span>
+          <div class="total-info">
+            <span class="total-nome">CARTÃO CRÉDITO</span>
+            <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.cartaoCredito) }}</span>
+          </div>
+        </div>
+        <div class="total-item">
+          <span class="total-icon">🏦</span>
+          <div class="total-info">
+            <span class="total-nome">TRANSFERÊNCIA</span>
+            <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.transferencia) }}</span>
+          </div>
+        </div>
+        <div class="total-item">
+          <span class="total-icon">📄</span>
+          <div class="total-info">
+            <span class="total-nome">FATURADO</span>
+            <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.faturado) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="total-final">
+        <span>TOTAL GERAL:</span>
+        <strong>{{ formatarMoeda(relatorio.totalGeral.total) }}</strong>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+

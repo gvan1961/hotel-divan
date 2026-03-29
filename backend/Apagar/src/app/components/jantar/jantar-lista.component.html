@@ -1,0 +1,189 @@
+<div class="jantar-container">
+  <div class="header">
+    <h2>🍽️ Hóspedes Autorizados - Jantar</h2>
+    <button (click)="carregarApartamentos()" class="btn-atualizar">
+      🔄 Atualizar
+    </button>
+  </div>
+
+  <!-- BUSCA DE HÓSPEDE -->
+<div class="busca-hospede">
+  <h3>🔍 Buscar Hóspede</h3>
+  <div class="busca-form">
+  <input 
+    type="text" 
+    [(ngModel)]="nomeBusca" 
+    placeholder="Nome do hóspede (opcional)"
+    class="input-busca">
+  
+  <input 
+    type="text" 
+    [(ngModel)]="apartamentoBusca" 
+    placeholder="Nº Apartamento (opcional)"
+    class="input-busca-apto">
+  
+  <button (click)="buscar()" class="btn-buscar">
+    🔍 Buscar
+  </button>
+  
+  <button (click)="limparBusca()" class="btn-limpar">
+    🗑️ Limpar
+  </button>
+</div>
+
+  <!-- RESULTADO DA BUSCA -->
+  <div *ngIf="resultadoBusca" class="resultado-busca">
+    <div *ngIf="!resultadoBusca.encontrado" class="busca-nao-encontrado">
+      ⚠️ {{ resultadoBusca.mensagem }}
+    </div>
+
+    <div *ngIf="resultadoBusca.encontrado && resultadoBusca.hospedes" class="busca-encontrados">
+      <h4>Hóspedes Encontrados:</h4>
+      <div *ngFor="let hospede of resultadoBusca.hospedes" class="hospede-busca-item">
+        <div class="hospede-busca-info">
+          <div class="info-linha">
+            <span class="nome-destaque">{{ hospede.nomeCompleto }}</span>
+            <span *ngIf="hospede.titular" class="badge-titular">👑 Titular</span>
+          </div>
+          <div class="info-linha">
+            <span>🏢 Apartamento {{ hospede.numeroApartamento }}</span>
+          </div>
+          <div class="info-linha">
+            <span *ngIf="hospede.autorizadoJantar" class="autorizado">
+              ✅ AUTORIZADO - Pode lançar no apartamento
+            </span>
+            <span *ngIf="!hospede.autorizadoJantar" class="nao-autorizado">
+              ❌ NÃO AUTORIZADO - Somente à vista
+            </span>
+          </div>
+        </div>
+        <button 
+          *ngIf="hospede.autorizadoJantar"
+          (click)="abrirModalComandaBusca(hospede)" 
+          class="btn-comanda">
+          📝 Lançar Comanda
+        </button>
+        <button 
+          *ngIf="!hospede.autorizadoJantar"
+          disabled
+          class="btn-comanda-disabled">
+          🚫 Pagamento à Vista
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="separador">
+
+  <div *ngIf="loading" class="loading">
+    Carregando...
+  </div>
+
+  <div *ngIf="erro" class="erro">
+    {{ erro }}
+  </div>
+
+  <div *ngIf="!loading && apartamentos.length === 0" class="vazio">
+    😴 Nenhum apartamento com hóspedes autorizados
+  </div>
+
+  <div class="apartamentos-grid">
+    <div *ngFor="let apto of apartamentos" class="apartamento-card">
+      <div class="apartamento-header">
+        <h3>🏢 Apartamento {{ apto.numeroApartamento }}</h3>
+        <span class="badge">{{ apto.hospedes.length }} hóspede(s)</span>
+      </div>
+      
+      <div class="hospedes-lista">
+        <div *ngFor="let hospede of apto.hospedes" class="hospede-item">
+  <div class="hospede-info">
+    <div class="hospede-dados">
+      <span class="nome">{{ hospede.nomeCompleto }}</span>
+      <span *ngIf="hospede.titular" class="titular">👑 Titular</span>
+    </div>
+    <button (click)="abrirModalComanda(hospede, apto.numeroApartamento)" 
+            class="btn-comanda">
+      📝 Lançar Comanda
+    </button>
+  </div>
+</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE COMANDA -->
+<div *ngIf="modalAberto" class="modal-overlay" (click)="fecharModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>📝 Lançar Comanda</h3>
+      <button class="btn-fechar" (click)="fecharModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="info-hospede">
+        <p><strong>👤 Hóspede:</strong> {{ hospedeSelecionado?.nomeCompleto }}</p>
+        <p><strong>🏢 Apartamento:</strong> {{ apartamentoSelecionado }}</p>
+      </div>
+
+      <!-- PRODUTOS DISPONÍVEIS -->
+      <div class="produtos-section">
+        <h4>Produtos do Restaurante:</h4>
+        
+        <div *ngIf="produtosCarregando" class="temp-message">
+          ⏳ Carregando produtos...
+        </div>
+
+        <div *ngIf="!produtosCarregando" class="produtos-lista">
+          <div *ngFor="let produto of produtos" class="produto-item">
+            <div class="produto-info">
+              <span class="produto-nome">{{ produto.nomeProduto }}</span>
+              <span class="produto-preco">R$ {{ produto.valorVenda.toFixed(2) }}</span>
+            </div>
+            <button (click)="adicionarProduto(produto)" class="btn-adicionar">
+              ➕ Adicionar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRODUTOS SELECIONADOS -->
+      <div *ngIf="produtosSelecionados.length > 0" class="selecionados-section">
+        <h4>Itens da Comanda:</h4>
+        
+        <div class="selecionados-lista">
+          <div *ngFor="let item of produtosSelecionados; let i = index" class="item-selecionado">
+            <div class="item-info">
+              <span class="item-nome">{{ item.produto.nomeProduto }}</span>
+              <div class="item-controles">
+                <input 
+                  type="number" 
+                  [(ngModel)]="item.quantidade"
+                  (change)="alterarQuantidade(i, item.quantidade)"
+                  min="1"
+                  class="input-quantidade">
+                <span class="item-subtotal">
+                  R$ {{ (item.produto.valorVenda * item.quantidade).toFixed(2) }}
+                </span>
+                <button (click)="removerProduto(i)" class="btn-remover">🗑️</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="total-section">
+          <strong>TOTAL:</strong>
+          <span class="total-valor">R$ {{ calcularTotal().toFixed(2) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" (click)="fecharModal()">Cancelar</button>
+      <button class="btn-confirmar" (click)="confirmarComanda()">
+        Confirmar Comanda ({{ produtosSelecionados.length }} item(ns))
+      </button>
+    </div>
+  </div>
+</div>
+</div>

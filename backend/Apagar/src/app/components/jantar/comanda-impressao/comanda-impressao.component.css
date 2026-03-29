@@ -1,0 +1,243 @@
+/* ESTILOS GERAIS */
+.impressao-container {
+  max-width: 80mm;
+  margin: 0 auto;
+  padding: 10mm;
+  background: white;
+}
+
+.loading, .erro {
+  text-align: center;
+  padding: 50px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* COMANDA TÉRMICA */
+.comanda-termica {
+  font-family: 'Courier New', monospace;
+  color: #000;
+  line-height: 1.6;
+}
+
+/* CABEÇALHO */
+.cabecalho {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.cabecalho h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: bold;
+  color: #000;
+}
+
+.cabecalho h2 {
+  margin: 5px 0;
+  font-size: 18px;
+  font-weight: bold;
+  color: #000;
+}
+
+/* SEPARADORES */
+.linha-separador {
+  border-top: 1px dashed #000;
+  margin: 10px 0;
+}
+
+.linha-separador-grossa {
+  border-top: 2px solid #000;
+  margin: 15px 0;
+}
+
+/* DADOS DA COMANDA */
+.dados-comanda {
+  margin-bottom: 15px;
+}
+
+.linha-info {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.linha-info .label {
+  color: #000;
+  font-weight: bold;
+}
+
+.linha-info .valor {
+  color: #000;
+  font-weight: bold;
+  text-align: right;
+}
+
+/* ITENS */
+.itens-comanda {
+  margin-bottom: 15px;
+}
+
+.itens-comanda h3 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  color: #000;
+}
+
+.item {
+  margin-bottom: 12px;
+  padding: 8px 0;
+  border-bottom: 1px dotted #000;
+}
+
+.item-linha1 {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.item-qtd {
+  font-size: 18px;
+  font-weight: bold;
+  color: #000;
+  min-width: 40px;
+}
+
+.item-nome {
+  font-size: 16px;
+  font-weight: bold;
+  color: #000;
+  flex: 1;
+}
+
+.item-linha2 {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 50px;
+  font-size: 14px;
+}
+
+.item-unitario {
+  color: #555;
+  font-weight: bold;
+}
+
+.item-total {
+  color: #000;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* TOTAL */
+.total-comanda {
+  margin: 20px 0;
+}
+
+.total-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.total-label {
+  font-size: 22px;
+  font-weight: bold;
+  color: #000;
+}
+
+.total-valor {
+  font-size: 26px;
+  font-weight: bold;
+  color: #000;
+}
+
+/* RODAPÉ */
+.rodape {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.rodape p {
+  margin: 8px 0;
+  font-size: 14px;
+  font-weight: bold;
+  color: #000;
+}
+
+/* BOTÕES NA TELA (NÃO IMPRIME) */
+.acoes-tela {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+  padding: 20px;
+}
+
+.btn-voltar, .btn-imprimir {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-voltar {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-voltar:hover {
+  background-color: #5a6268;
+}
+
+.btn-imprimir {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.btn-imprimir:hover {
+  background-color: #45a049;
+}
+
+/* IMPRESSÃO */
+@media print {
+  .impressao-container {
+    padding: 0;
+    margin: 0;
+    max-width: 80mm;
+  }
+
+  .acoes-tela {
+    display: none !important;
+  }
+
+  .comanda-termica {
+    font-size: 14px;
+  }
+
+  /* Garantir que tudo fique em preto */
+  * {
+    color: #000 !important;
+    background: white !important;
+  }
+
+  .linha-separador {
+    border-color: #000 !important;
+  }
+
+  .linha-separador-grossa {
+    border-color: #000 !important;
+  }
+}
+
+/* ESCONDER NA TELA NORMAL */
+@media screen {
+  body {
+    background: #f0f0f0;
+  }
+}

@@ -486,11 +486,13 @@ interface Contadores {
       min-height: 40px;
     }
     .card-ocupado    .card-header { background: #c0392b; }
-    .card-atrasado   .card-header { background: #6e2222; }
-    .card-prereserva .card-header { background: #1a5276; }
-    .card-limpeza    .card-header { background: #1e6b45; }
-    .card-disponivel .card-header { background: #117a65; }
-    .card-bloqueado  .card-header { background: #626567; }
+.card-atrasado   .card-header { background: #6e2222; }
+.card-prereserva .card-header { background: #2980b9; }
+.card-limpeza    .card-header { background: #7f8c8d; }
+.card-disponivel .card-header { background: #117a65; }
+.card-bloqueado  .card-header { background: #626567; }
+.card-limpeza    .card-body   { background: #f2f3f4; }
+.card-prereserva .card-body   { background: #d6eaf8; }
 
     .apt-numero { flex: 1; letter-spacing: .5px; font-size: 1rem; }
     .apt-tipo {

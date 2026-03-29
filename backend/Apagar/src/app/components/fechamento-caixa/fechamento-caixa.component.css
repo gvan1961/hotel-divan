@@ -1,0 +1,988 @@
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* CONTAINER PRINCIPAL */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+  background: #f5f7fa;
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* HEADER */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .header {
+  background: white;
+  padding: 20px 30px;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+::ng-deep .btn-voltar {
+  padding: 10px 20px;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+::ng-deep .btn-voltar:hover {
+  background: #e0e0e0;
+  transform: translateX(-5px);
+}
+
+::ng-deep .header-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+}
+
+::ng-deep .header-info h1 {
+  margin: 0;
+  font-size: 1.8em;
+  color: #2c3e50;
+}
+
+::ng-deep .status-badge {
+  padding: 8px 20px;
+  border-radius: 20px;
+  color: white;
+  font-weight: 700;
+  font-size: 0.9em;
+  text-transform: uppercase;
+}
+
+::ng-deep .header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+::ng-deep .btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1em;
+}
+
+::ng-deep .btn-imprimir {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  color: white;
+}
+
+::ng-deep .btn-imprimir:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+}
+
+::ng-deep .btn-fechar {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  color: white;
+}
+
+::ng-deep .btn-fechar:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4);
+}
+
+::ng-deep .btn-relatorio {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+  color: white;
+}
+
+::ng-deep .btn-relatorio:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(23, 162, 184, 0.4);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* INFO CARD */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .info-card {
+  background: white;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+::ng-deep .info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+::ng-deep .info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+::ng-deep .info-item .label {
+  font-weight: 600;
+  color: #555;
+}
+
+::ng-deep .info-item .value {
+  color: #2c3e50;
+  font-weight: 700;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* TABS */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+::ng-deep .tab {
+  padding: 15px 25px;
+  background: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+::ng-deep .tab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+::ng-deep .tab.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* TAB CONTENT */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .tab-content {
+  min-height: 400px;
+}
+
+::ng-deep .card {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+::ng-deep .card h2 {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
+  font-size: 1.5em;
+  border-bottom: 3px solid #667eea;
+  padding-bottom: 10px;
+}
+
+::ng-deep .section-subtitle {
+  color: #666;
+  font-size: 0.9em;
+  margin: -10px 0 15px 0;
+  font-style: italic;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* CARDS ESPECÍFICOS - RESUMO FINANCEIRO */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .card-recebido {
+  border-left: 5px solid #28a745;
+}
+
+::ng-deep .card-faturado {
+  background: #FFF8DC;
+  border-left: 5px solid #FFA500;
+}
+
+::ng-deep .card-resumo-final {
+  background: #f8f9fa;
+  border: 3px solid #007bff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* FORMAS DE PAGAMENTO */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .formas-pagamento {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+::ng-deep .forma-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  transition: all 0.3s;
+}
+
+::ng-deep .forma-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+::ng-deep .forma-icon {
+  font-size: 2.5em;
+}
+
+::ng-deep .forma-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+::ng-deep .forma-label {
+  font-size: 0.9em;
+  color: #666;
+  font-weight: 600;
+}
+
+::ng-deep .forma-valor {
+  font-size: 1.3em;
+  font-weight: 900;
+  color: #2c3e50;
+}
+
+::ng-deep .faturado-destaque {
+  border-left: 4px solid #FFA500;
+  background: rgba(255, 165, 0, 0.1);
+}
+
+::ng-deep .faturado-valor {
+  color: #FFA500;
+  font-weight: bold;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* TOTAL SECTION */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .total-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+::ng-deep .total-section.recebido {
+  background: #28a745;
+  color: white;
+}
+
+::ng-deep .total-section.faturado {
+  background: #FFA500;
+  color: white;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* RESUMO FINAL GRID */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .resumo-final-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+::ng-deep .resumo-final-item {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 25px;
+  border-radius: 12px;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+::ng-deep .resumo-final-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+::ng-deep .destaque-verde {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+}
+
+::ng-deep .destaque-laranja {
+  background: linear-gradient(135deg, #FFA500 0%, #FF8C00 100%);
+  color: white;
+}
+
+::ng-deep .destaque-azul {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+}
+
+::ng-deep .item-icon {
+  font-size: 48px;
+  opacity: 0.9;
+}
+
+::ng-deep .item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+::ng-deep .item-label {
+  font-size: 14px;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+::ng-deep .item-valor {
+  font-size: 28px;
+  font-weight: bold;
+}
+
+::ng-deep .item-hint {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* MOVIMENTAÇÃO */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+::ng-deep .stat-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 30px;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s;
+}
+
+::ng-deep .stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+::ng-deep .stat-icon {
+  font-size: 3em;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+}
+
+::ng-deep .stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+::ng-deep .stat-label {
+  font-size: 0.9em;
+  color: #666;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+::ng-deep .stat-value {
+  font-size: 2.5em;
+  font-weight: 900;
+  color: #2c3e50;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* 🛒 PRODUTOS VENDIDOS */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .secao-produtos {
+  padding: 20px;
+}
+
+::ng-deep .secao-produtos .secao-header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 25px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 15px;
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+::ng-deep .secao-produtos .secao-header h3 {
+  margin: 0 0 10px 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: white;
+}
+
+::ng-deep .secao-produtos .subtitulo {
+  margin: 0;
+  font-size: 1.1rem;
+  opacity: 0.95;
+  color: white;
+}
+
+::ng-deep .loading-vendas,
+::ng-deep .sem-vendas {
+  text-align: center;
+  padding: 60px 40px;
+  color: #666;
+  font-size: 1.2rem;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+::ng-deep .resumo-vendas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+::ng-deep .resumo-vendas .resumo-item {
+  background: white;
+  padding: 30px 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: all 0.3s ease;
+  border-top: 5px solid #667eea;
+}
+
+::ng-deep .resumo-vendas .resumo-item:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+::ng-deep .resumo-vendas .resumo-item.total {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-top: none;
+}
+
+::ng-deep .resumo-vendas .resumo-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  opacity: 0.7;
+  color: #666;
+}
+
+::ng-deep .resumo-vendas .resumo-item.total .resumo-label {
+  opacity: 1;
+  color: white;
+}
+
+::ng-deep .resumo-vendas .resumo-valor {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #2c3e50;
+}
+
+::ng-deep .resumo-vendas .resumo-item.total .resumo-valor {
+  color: white;
+  font-size: 2.5rem;
+}
+
+::ng-deep .formas-pagamento-container {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+::ng-deep .forma-pagamento-card {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border-left: 6px solid #28a745;
+  transition: all 0.3s ease;
+}
+
+::ng-deep .forma-pagamento-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+::ng-deep .forma-pagamento-card:nth-child(1) { border-left-color: #28a745; }
+::ng-deep .forma-pagamento-card:nth-child(2) { border-left-color: #17a2b8; }
+::ng-deep .forma-pagamento-card:nth-child(3) { border-left-color: #ffc107; }
+::ng-deep .forma-pagamento-card:nth-child(4) { border-left-color: #fd7e14; }
+::ng-deep .forma-pagamento-card:nth-child(5) { border-left-color: #6f42c1; }
+::ng-deep .forma-pagamento-card:nth-child(6) { border-left-color: #e83e8c; }
+
+::ng-deep .forma-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px 25px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 2px solid #dee2e6;
+}
+
+::ng-deep .forma-icone {
+  font-size: 2.8rem;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+::ng-deep .forma-nome {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #2c3e50;
+  flex: 1;
+}
+
+::ng-deep .forma-total {
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: #28a745;
+  padding: 10px 24px;
+  background: white;
+  border-radius: 25px;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+}
+
+::ng-deep .forma-subtotais {
+  display: flex;
+  gap: 15px;
+  padding: 12px 25px;
+  background: #f1f3f5;
+  color: #495057;
+  font-size: 1rem;
+  font-weight: 600;
+  border-bottom: 1px solid #dee2e6;
+}
+
+::ng-deep .vendas-lista {
+  padding: 20px;
+  background: #fafafa;
+}
+
+::ng-deep .venda-item {
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  overflow: hidden;
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+::ng-deep .venda-item:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+::ng-deep .venda-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 15px;
+  padding: 18px 25px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+::ng-deep .venda-id {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: white;
+}
+
+::ng-deep .venda-data {
+  font-size: 1rem;
+  color: white;
+}
+
+::ng-deep .venda-tipo {
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-weight: 600;
+  color: white;
+}
+
+::ng-deep .venda-total {
+  font-weight: 900;
+  font-size: 1.4rem;
+  background: white;
+  color: #28a745;
+  padding: 8px 20px;
+  border-radius: 25px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  margin-left: auto;
+}
+
+::ng-deep .produtos-lista {
+  padding: 15px 25px;
+  background: #f8f9fa;
+}
+
+::ng-deep .produto-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 18px;
+  background: white;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  border-left: 4px solid #667eea;
+  transition: all 0.2s ease;
+}
+
+::ng-deep .produto-item:hover {
+  background: #f0f4ff;
+  border-left-color: #28a745;
+  transform: translateX(8px);
+}
+
+::ng-deep .produto-nome {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 1.05rem;
+}
+
+::ng-deep .produto-qtd {
+  color: #6c757d;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: #e9ecef;
+  padding: 5px 12px;
+  border-radius: 6px;
+}
+
+::ng-deep .produto-total {
+  font-weight: 700;
+  color: #28a745;
+  font-size: 1.15rem;
+  min-width: 100px;
+  text-align: right;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* TABELAS */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .table-container {
+  overflow-x: auto;
+}
+
+::ng-deep table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+::ng-deep thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+::ng-deep th {
+  padding: 15px;
+  text-align: left;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.9em;
+}
+
+::ng-deep td {
+  padding: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+::ng-deep tr:hover {
+  background: #f8f9fa;
+}
+
+::ng-deep td.valor {
+  font-weight: 700;
+  color: #27ae60;
+  text-align: right;
+}
+
+::ng-deep .badge {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+::ng-deep .total-row {
+  background: #f8f9fa;
+  font-weight: bold;
+  border-top: 2px solid #333;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* LOADING */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 20px;
+}
+
+::ng-deep .spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* MODAL */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* MODAL - ESTILOS INTERNOS (ADICIONAR) */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+::ng-deep .modal-header h2 {
+  margin: 0;
+  font-size: 1.8em;
+  color: white;
+}
+
+::ng-deep .resumo-fechamento {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 12px;
+  margin: 20px 0;
+  border-left: 4px solid #2196f3;
+}
+
+::ng-deep .resumo-fechamento .item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  font-size: 1.1em;
+}
+
+::ng-deep .resumo-fechamento .item span:first-child {
+  font-weight: 600;
+  color: #666;
+}
+
+::ng-deep .valor-destaque {
+  font-size: 1.8em;
+  font-weight: 900;
+  color: #28a745;
+  background: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+::ng-deep .form-group {
+  margin: 20px 0;
+}
+
+::ng-deep .form-group label {
+  display: block;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 10px;
+  font-size: 1.1em;
+}
+
+::ng-deep .textarea {
+  width: 100%;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 1em;
+  resize: vertical;
+  transition: all 0.3s;
+  box-sizing: border-box;
+}
+
+::ng-deep .textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+::ng-deep .aviso {
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+  border-radius: 10px;
+  padding: 15px 20px;
+  margin: 20px 0;
+  color: #856404;
+  font-weight: 600;
+  text-align: center;
+  font-size: 1.05em;
+}
+
+::ng-deep .btn-cancelar:hover {
+  background: #e0e0e0;
+}
+
+::ng-deep .btn-confirmar:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+::ng-deep .btn-cancelar:disabled,
+::ng-deep .btn-confirmar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+::ng-deep .modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+::ng-deep .modal {
+  background: white;
+  border-radius: 20px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+::ng-deep .modal-header {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  color: white;
+  padding: 25px;
+  border-radius: 20px 20px 0 0;
+}
+
+::ng-deep .modal-body {
+  padding: 30px;
+}
+
+::ng-deep .modal-footer {
+  padding: 20px 30px;
+  display: flex;
+  gap: 10px;
+  border-top: 1px solid #e0e0e0;
+}
+
+::ng-deep .btn-cancelar {
+  flex: 1;
+  background: #f5f5f5;
+  color: #666;
+}
+
+::ng-deep .btn-confirmar {
+  flex: 1;
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  color: white;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* RESPONSIVO */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 992px) {
+  ::ng-deep .venda-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  ::ng-deep .venda-total {
+    width: 100%;
+    text-align: center;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  ::ng-deep .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  ::ng-deep .resumo-final-grid,
+  ::ng-deep .resumo-vendas {
+    grid-template-columns: 1fr;
+  }
+  
+  ::ng-deep .produto-item {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  ::ng-deep .produto-nome {
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e9ecef;
+  }
+}

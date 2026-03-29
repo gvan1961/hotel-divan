@@ -1,0 +1,117 @@
+<div class="relatorio-container">
+  <div class="header-relatorio">
+    <h2>📊 Relatório de Comandas do Restaurante</h2>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filtros">
+    <div class="filtro-grupo">
+      <label>Data Início:</label>
+      <input type="date" [(ngModel)]="dataInicio" class="input-data">
+    </div>
+    
+    <div class="filtro-grupo">
+      <label>Data Fim:</label>
+      <input type="date" [(ngModel)]="dataFim" class="input-data">
+    </div>
+    
+    <button (click)="gerarRelatorio()" class="btn-gerar">
+      📊 Gerar Relatório
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div *ngIf="carregando" class="loading">
+    ⏳ Gerando relatório...
+  </div>
+
+  <!-- RELATÓRIO -->
+  <div *ngIf="!carregando && relatorio" class="relatorio-content">
+    
+    <!-- RESUMO -->
+    <div class="resumo">
+      <div class="resumo-card">
+        <h3>📅 Período</h3>
+        <p>{{ relatorio.periodo.inicio | date:'dd/MM/yyyy' }} até {{ relatorio.periodo.fim | date:'dd/MM/yyyy' }}</p>
+      </div>
+      
+      <div class="resumo-card">
+        <h3>📝 Total de Comandas</h3>
+        <p class="numero-grande">{{ relatorio.totalComandas }}</p>
+      </div>
+      
+      <div class="resumo-card">
+        <h3>💰 Total Geral</h3>
+        <p class="valor-grande">R$ {{ relatorio.totalGeral.toFixed(2) }}</p>
+      </div>
+    </div>
+
+    <!-- BOTÃO IMPRIMIR -->
+    <div class="acoes">
+      <button (click)="imprimir()" class="btn-imprimir">
+        🖨️ Imprimir Relatório
+      </button>
+    </div>
+
+    <!-- LISTA DE COMANDAS -->
+    <div class="comandas-lista">
+      <h3>Comandas Detalhadas:</h3>
+      
+      <div *ngFor="let comanda of relatorio.comandas; let i = index" class="comanda-card">
+        <div class="comanda-header">
+  <div class="comanda-info">
+    <span class="comanda-numero">Comanda #{{ comanda.notaId }}</span>
+    <span class="comanda-data">{{ comanda.dataHora | date:'dd/MM/yyyy HH:mm' }}</span>
+  </div>
+  <div class="comanda-acoes">
+    <span class="comanda-total">R$ {{ comanda.total.toFixed(2) }}</span>
+    <a [routerLink]="['/comanda-impressao', comanda.notaId]" 
+       target="_blank"
+       class="btn-imprimir-comanda">
+      🖨️ Imprimir
+    </a>
+  </div>
+</div>
+        
+        <div class="comanda-body">
+          <div class="info-linha">
+            <strong>🏢 Apartamento:</strong> {{ comanda.apartamento }}
+          </div>
+          <div class="info-linha">
+            <strong>👤 Cliente:</strong> {{ comanda.cliente }}
+          </div>
+          <div *ngIf="comanda.observacao" class="info-linha">
+            <strong>📝 Obs:</strong> {{ comanda.observacao }}
+          </div>
+          
+          <!-- ITENS -->
+          <div class="itens-tabela">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th class="text-center">Qtd</th>
+                  <th class="text-right">Vlr Unit.</th>
+                  <th class="text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of comanda.itens">
+                  <td>{{ item.produto }}</td>
+                  <td class="text-center">{{ item.quantidade }}</td>
+                  <td class="text-right">R$ {{ item.valorUnitario.toFixed(2) }}</td>
+                  <td class="text-right">R$ {{ item.total.toFixed(2) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MENSAGEM SE VAZIO -->
+    <div *ngIf="relatorio.totalComandas === 0" class="vazio">
+      😴 Nenhuma comanda encontrada no período selecionado
+    </div>
+  </div>
+</div>
