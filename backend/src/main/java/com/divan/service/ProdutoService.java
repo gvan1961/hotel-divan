@@ -105,6 +105,8 @@ public class ProdutoService {
         produto.setQuantidade(dto.getQuantidade());
         produto.setValorVenda(dto.getValorVenda());
         produto.setValorCompra(dto.getValorCompra());
+        produto.setCodigoBarras(dto.getCodigoBarras());
+        
         
         // ✅ BUSCAR E SETAR A CATEGORIA
         if (dto.getCategoriaId() != null) {
@@ -134,6 +136,7 @@ public class ProdutoService {
         produto.setQuantidade(dto.getQuantidade());
         produto.setValorVenda(dto.getValorVenda());
         produto.setValorCompra(dto.getValorCompra());
+        produto.setCodigoBarras(dto.getCodigoBarras());
         
         // ✅ BUSCAR E SETAR A CATEGORIA
         if (dto.getCategoriaId() != null) {
@@ -148,5 +151,9 @@ public class ProdutoService {
         System.out.println("✅ Produto atualizado com sucesso");
         
         return atualizado;
+    }
+    
+    public List<Produto> buscarPorCodigoBarras(String codigo) {
+        return produtoRepository.findByCodigoBarrasContaining(codigo);
     }
 }

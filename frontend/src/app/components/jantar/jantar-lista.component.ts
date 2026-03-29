@@ -87,14 +87,8 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
 
   <hr class="separador">
 
-  <div *ngIf="loading" class="loading">
-    Carregando...
-  </div>
-
-  <div *ngIf="erro" class="erro">
-    {{ erro }}
-  </div>
-
+  <div *ngIf="loading" class="loading">Carregando...</div>
+  <div *ngIf="erro" class="erro">{{ erro }}</div>
   <div *ngIf="!loading && apartamentos.length === 0" class="vazio">
     😴 Nenhum apartamento com hóspedes autorizados
   </div>
@@ -130,82 +124,80 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
     </div>
   </div>
 
-  <!-- MODAL DE COMANDA -->
+  <!-- ✅ MODAL DE COMANDA — DOIS PAINÉIS -->
   <div *ngIf="modalAberto" class="modal-overlay" (click)="fecharModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-content modal-dois-paineis" (click)="$event.stopPropagation()">
+
+      <!-- HEADER -->
       <div class="modal-header">
         <h3>📝 Lançar Comanda</h3>
+        <div class="modal-info-hospede">
+          <span>👤 {{ hospedeSelecionado?.nomeCompleto }}</span>
+          <span>🏢 Apt {{ apartamentoSelecionado }}</span>
+        </div>
         <button class="btn-fechar" (click)="fecharModal()">✕</button>
       </div>
 
-      <div class="modal-body">
-        <div class="info-hospede">
-          <p><strong>👤 Hóspede:</strong> {{ hospedeSelecionado?.nomeCompleto }}</p>
-          <p><strong>🏢 Apartamento:</strong> {{ apartamentoSelecionado }}</p>
-        </div>
+      <!-- CORPO — DOIS PAINÉIS -->
+      <div class="modal-dois-paineis-body">
 
-        <!-- PRODUTOS DISPONÍVEIS -->
-        <div class="produtos-section">
-          <h4>Produtos do Restaurante:</h4>
-          
-          <div *ngIf="produtosCarregando" class="temp-message">
-            ⏳ Carregando produtos...
-          </div>
-
+        <!-- PAINEL ESQUERDO — PRODUTOS DISPONÍVEIS -->
+        <div class="painel-produtos">
+          <h4>📦 Produtos</h4>
+          <div *ngIf="produtosCarregando" class="temp-message">⏳ Carregando...</div>
           <div *ngIf="!produtosCarregando" class="produtos-lista">
             <div *ngFor="let produto of produtos" class="produto-item">
               <div class="produto-info">
                 <span class="produto-nome">{{ produto.nomeProduto }}</span>
                 <span class="produto-preco">R$ {{ produto.valorVenda.toFixed(2) }}</span>
               </div>
-              <button (click)="adicionarProduto(produto)" class="btn-adicionar">
-                ➕ Adicionar
-              </button>
+              <button (click)="adicionarProduto(produto)" class="btn-adicionar">➕</button>
             </div>
           </div>
         </div>
 
-        <!-- PRODUTOS SELECIONADOS -->
-        <div *ngIf="produtosSelecionados.length > 0" class="selecionados-section">
-          <h4>Itens da Comanda:</h4>
-          
+        <!-- PAINEL DIREITO — COMANDA -->
+        <div class="painel-comanda">
+          <h4>🧾 Comanda</h4>
+
+          <div *ngIf="produtosSelecionados.length === 0" class="comanda-vazia">
+            Nenhum item adicionado
+          </div>
+
           <div class="selecionados-lista">
             <div *ngFor="let item of produtosSelecionados; let i = index" class="item-selecionado">
-              <div class="item-info">
-                <span class="item-nome">{{ item.produto.nomeProduto }}</span>
-                <div class="item-controles">
-                  <input 
-                    type="number" 
-                    [(ngModel)]="item.quantidade"
-                    (change)="alterarQuantidade(i, item.quantidade)"
-                    min="1"
-                    class="input-quantidade">
-                  <span class="item-subtotal">
-                    R$ {{ (item.produto.valorVenda * item.quantidade).toFixed(2) }}
-                  </span>
-                  <button (click)="removerProduto(i)" class="btn-remover">🗑️</button>
-                </div>
+              <span class="item-nome">{{ item.produto.nomeProduto }}</span>
+              <div class="item-controles">
+                <button class="btn-qtd" (click)="alterarQuantidade(i, item.quantidade - 1)">-</button>
+                <span class="item-qty">{{ item.quantidade }}</span>
+                <button class="btn-qtd" (click)="alterarQuantidade(i, item.quantidade + 1)">+</button>
+                <span class="item-subtotal">R$ {{ (item.produto.valorVenda * item.quantidade).toFixed(2) }}</span>
+                <button (click)="removerProduto(i)" class="btn-remover">🗑️</button>
               </div>
             </div>
           </div>
 
-          <div class="total-section">
+          <div class="total-section" *ngIf="produtosSelecionados.length > 0">
             <strong>TOTAL:</strong>
             <span class="total-valor">R$ {{ calcularTotal().toFixed(2) }}</span>
           </div>
         </div>
+
       </div>
 
+      <!-- FOOTER -->
       <div class="modal-footer">
         <button class="btn-cancelar" (click)="fecharModal()">Cancelar</button>
-        <button class="btn-confirmar" (click)="confirmarComanda()">
-          Confirmar Comanda ({{ produtosSelecionados.length }} item(ns))
+        <button class="btn-confirmar" (click)="confirmarComanda()"
+                [disabled]="produtosSelecionados.length === 0">
+          ✅ Confirmar ({{ produtosSelecionados.length }} item(ns))
         </button>
       </div>
+
     </div>
   </div>
 </div>
-  `,
+`,
   styles: [`
 .jantar-container {
   padding: 20px;
@@ -732,6 +724,104 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
   border-top: 2px dashed #ddd;
   margin: 30px 0;
 }
+
+   .modal-dois-paineis {
+  width: 95%;
+  max-width: 900px;
+  max-height: 85vh;
+}
+
+.modal-info-hospede {
+  display: flex;
+  gap: 16px;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.modal-dois-paineis-body {
+  display: flex;
+  gap: 0;
+  flex: 1;
+  overflow: hidden;
+  height: calc(85vh - 130px);
+}
+
+.painel-produtos {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  border-right: 2px solid #eee;
+}
+
+.painel-comanda {
+  width: 320px;
+  padding: 16px;
+  overflow-y: auto;
+  background: #f9fffe;
+  display: flex;
+  flex-direction: column;
+}
+
+.painel-produtos h4,
+.painel-comanda h4 {
+  margin: 0 0 12px 0;
+  color: #333;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 8px;
+}
+
+.comanda-vazia {
+  text-align: center;
+  color: #aaa;
+  padding: 20px;
+  font-style: italic;
+}
+
+.item-selecionado {
+  padding: 8px;
+  background: #e8f5e9;
+  border-radius: 6px;
+  border-left: 3px solid #4CAF50;
+  margin-bottom: 8px;
+}
+
+.item-nome {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9em;
+  margin-bottom: 4px;
+}
+
+.item-controles {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-qtd {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.item-qty {
+  min-width: 20px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.item-subtotal {
+  flex: 1;
+  text-align: right;
+  color: #4CAF50;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
   `]
 })
 export class JantarListaComponent implements OnInit {

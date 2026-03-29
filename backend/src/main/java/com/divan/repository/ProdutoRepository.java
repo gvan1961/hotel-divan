@@ -28,4 +28,6 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
     List<Produto> findProdutosDisponiveis();
     
     List<Produto> findByCategoriaId(Long categoriaId);
+    
+    List<Produto> findByCodigoBarrasContaining(String codigoBarras);
 }

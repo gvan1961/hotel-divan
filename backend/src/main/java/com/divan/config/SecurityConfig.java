@@ -128,6 +128,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/diarias/**").hasAnyAuthority("DIARIA_UPDATE", "ROLE_ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/diarias/**").hasAnyAuthority("DIARIA_DELETE", "ROLE_ADMIN")
                 
+                
                 // ========== RELATÓRIOS ==========
                 .requestMatchers("/api/relatorios/**").hasAnyAuthority("RELATORIO_READ", "ROLE_ADMIN", "ROLE_GERENTE")
                 
@@ -138,6 +139,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
                 .requestMatchers("/api/perfis/**").hasRole("ADMIN")
                 .requestMatchers("/api/permissoes/**").hasRole("ADMIN")
+                
+                .requestMatchers("/api/deposito/**").hasAnyRole("ADMIN", "GERENTE", "RECEPCIONISTA")
+                
                 
                 // ========== QUALQUER OUTRA REQUISIÇÃO ==========
                 .anyRequest().authenticated()

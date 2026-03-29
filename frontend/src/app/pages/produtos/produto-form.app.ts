@@ -59,11 +59,12 @@ import { Categoria } from '../../models/categoria.model';
   <label>🔍 Código de Barras <small>(opcional)</small></label>
   <div class="input-codigo-container">
     <input 
-      type="text" 
-      [(ngModel)]="produto.codigoBarras" 
-      name="codigoBarras"
-      placeholder="Digite ou escaneie o código de barras"
-      class="input-codigo-barras-cadastro" />
+  type="text" 
+  [(ngModel)]="produto.codigoBarras" 
+  name="codigoBarras"
+  placeholder="Digite ou escaneie o código de barras"
+  class="input-codigo-barras-cadastro"
+  (keydown.enter)="$event.preventDefault()" />
     <small class="hint-codigo">
       💡 Com leitor USB: clique no campo e escaneie o produto
     </small>
@@ -273,8 +274,8 @@ export class ProdutoFormApp implements OnInit {
     });
 }
 
-  salvar(): void {
-    if (!this.validarFormulario()) {
+ salvar(): void {
+    if (!this.validarFormulario()) { 
       return;
     }
 
@@ -286,7 +287,8 @@ export class ProdutoFormApp implements OnInit {
       quantidade: this.produto.quantidade,
       valorVenda: this.produto.valorVenda,
       valorCompra: this.produto.valorCompra,
-      categoriaId: this.produto.categoriaId || undefined
+      categoriaId: this.produto.categoriaId || undefined,
+      codigoBarras: this.produto.codigoBarras || undefined
     };
 
     console.log('═══════════════════════════════════════');

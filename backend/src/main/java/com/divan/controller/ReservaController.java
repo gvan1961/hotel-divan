@@ -12,6 +12,7 @@ import com.divan.repository.DiariaRepository;
 import com.divan.repository.ExtratoReservaRepository;
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 import com.divan.dto.ItemVendaRequestDTO;
@@ -73,6 +74,8 @@ public class ReservaController {
     
     @Autowired
     private ClienteService clienteService;
+    
+    
     
     @PostMapping
     public ResponseEntity<?> criarReserva(@Valid @RequestBody ReservaRequestDTO dto) {
@@ -150,6 +153,138 @@ public class ReservaController {
             return ResponseEntity.ok(todas);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/pesquisar-cliente")
+    public ResponseEntity<?> pesquisarCliente(@RequestParam String nome) {
+        try {
+            List<Cliente> clientes = clienteRepository.findByNomeContainingIgnoreCase(nome);
+            
+            if (clientes.isEmpty()) {
+                return ResponseEntity.ok(Map.of(
+                    "sucesso", false,
+                    "mensagem", "Nenhum cliente encontrado com o nome: " + nome
+                ));
+            }
+
+            for (Cliente cliente : clientes) {
+                // ✅ BUSCAR COMO TITULAR
+                List<Reserva> reservasAtivas = reservaRepository.findByClienteIdAndStatusIn(
+                    cliente.getId(),
+                    List.of(Reserva.StatusReservaEnum.ATIVA, Reserva.StatusReservaEnum.PRE_RESERVA)
+                );
+
+                if (!reservasAtivas.isEmpty()) {
+                    Reserva reserva = reservasAtivas.get(0);
+                    return ResponseEntity.ok(Map.of(
+                        "sucesso", true,
+                        "mensagem", "Cliente encontrado",
+                        "reserva", Map.of(
+                            "id", reserva.getId(),
+                            "cliente", cliente.getNome(),
+                            "apartamento", reserva.getApartamento().getNumeroApartamento(),
+                            "dataCheckin", reserva.getDataCheckin(),
+                            "dataCheckout", reserva.getDataCheckout(),
+                            "status", reserva.getStatus(),
+                            "quantidadeHospede", reserva.getQuantidadeHospede(),
+                            "totalHospedagem", reserva.getTotalHospedagem()
+                        )
+                    ));
+                }
+
+                // ✅ BUSCAR COMO HÓSPEDE ADICIONAL
+                List<HospedagemHospede> hospedesAtivos = hospedagemHospedeRepository
+                    .findByClienteIdAndStatus(cliente.getId(), HospedagemHospede.StatusEnum.HOSPEDADO);
+
+                if (!hospedesAtivos.isEmpty()) {
+                    HospedagemHospede hospede = hospedesAtivos.get(0);
+                    Reserva reserva = hospede.getReserva();
+                    if (reserva != null && reserva.getStatus() == Reserva.StatusReservaEnum.ATIVA) {
+                        return ResponseEntity.ok(Map.of(
+                            "sucesso", true,
+                            "mensagem", "Cliente encontrado como hóspede adicional",
+                            "reserva", Map.of(
+                                "id", reserva.getId(),
+                                "cliente", cliente.getNome(),
+                                "apartamento", reserva.getApartamento().getNumeroApartamento(),
+                                "dataCheckin", reserva.getDataCheckin(),
+                                "dataCheckout", reserva.getDataCheckout(),
+                                "status", reserva.getStatus(),
+                                "quantidadeHospede", reserva.getQuantidadeHospede(),
+                                "totalHospedagem", reserva.getTotalHospedagem()
+                            )
+                        ));
+                    }
+                }
+            }
+
+            return ResponseEntity.ok(Map.of(
+                "sucesso", false,
+                "mensagem", "Cliente encontrado mas sem reserva ativa"
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("sucesso", false, "mensagem", e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/pesquisar-empresa")
+    public ResponseEntity<?> pesquisarEmpresa(@RequestParam String nomeEmpresa) {
+        try {
+            // ✅ BUSCAR HÓSPEDES DA EMPRESA COM RESERVAS ATIVAS
+            List<HospedagemHospede> hospedes = hospedagemHospedeRepository
+                .findByStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
+
+            List<Map<String, Object>> hospedesEmpresa = hospedes.stream()
+                .filter(h -> h.getCliente() != null
+                    && h.getCliente().getEmpresa() != null
+                    && h.getCliente().getEmpresa().getNomeEmpresa()
+                        .toLowerCase().contains(nomeEmpresa.toLowerCase())
+                    && h.getReserva() != null
+                    && h.getReserva().getStatus() == Reserva.StatusReservaEnum.ATIVA)
+                .map(h -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("nomeCliente", h.getCliente().getNome());
+                    map.put("apartamento", h.getReserva().getApartamento().getNumeroApartamento());
+                    map.put("reservaId", h.getReserva().getId());
+                    map.put("titular", h.isTitular());
+                    return map;
+                })
+                .collect(Collectors.toList());
+
+            if (hospedesEmpresa.isEmpty()) {
+                return ResponseEntity.ok(Map.of(
+                    "sucesso", false,
+                    "mensagem", "Nenhum hóspede encontrado para a empresa: " + nomeEmpresa
+                ));
+            }
+
+            Set<Object> apartamentos = hospedesEmpresa.stream()
+                .map(h -> h.get("apartamento"))
+                .collect(Collectors.toSet());
+
+            String nomeEmpresaEncontrada = hospedes.stream()
+                .filter(h -> h.getCliente() != null && h.getCliente().getEmpresa() != null
+                    && h.getCliente().getEmpresa().getNomeEmpresa()
+                        .toLowerCase().contains(nomeEmpresa.toLowerCase()))
+                .map(h -> h.getCliente().getEmpresa().getNomeEmpresa())
+                .findFirst().orElse(nomeEmpresa);
+
+            return ResponseEntity.ok(Map.of(
+                "sucesso", true,
+                "mensagem", "Empresa encontrada",
+                "nomeEmpresa", nomeEmpresaEncontrada,
+                "hospedes", hospedesEmpresa,
+                "totalHospedes", hospedesEmpresa.size(),
+                "totalApartamentos", apartamentos.size()
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "sucesso", false,
+                "mensagem", e.getMessage()
+            ));
         }
     }
     
@@ -329,38 +464,57 @@ public class ReservaController {
                 return ResponseEntity.badRequest().body("clienteId é obrigatório");
             }
 
-            Long clienteId;
-            try {
-                clienteId = Long.parseLong(clienteIdObj.toString());
-            } catch (NumberFormatException e) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("disponivel", false, "mensagem", "clienteId inválido: " + clienteIdObj));
-            }
-
-            // ✅ Pegar datas enviadas pelo Angular
+            Long clienteId = Long.parseLong(clienteIdObj.toString());
             LocalDateTime dataCheckin = LocalDateTime.parse(body.get("dataCheckin").toString().substring(0, 19));
             LocalDateTime dataCheckout = LocalDateTime.parse(body.get("dataCheckout").toString().substring(0, 19));
 
-            // ✅ Buscar reservas ATIVAS ou PRE_RESERVA do cliente
-            List<Reserva> reservasDoCliente = reservaRepository.findByClienteIdAndStatusIn(
-                clienteId,
-                List.of(Reserva.StatusReservaEnum.ATIVA, Reserva.StatusReservaEnum.PRE_RESERVA)
-            );
+            // ✅ VERIFICAR SE CLIENTE JÁ ESTÁ HOSPEDADO (titular OU adicional)
+            List<HospedagemHospede> hospedesAtivos = hospedagemHospedeRepository
+                .findByClienteIdAndStatus(clienteId, HospedagemHospede.StatusEnum.HOSPEDADO);
 
-            // ✅ Verificar sobreposição de datas
-            for (Reserva r : reservasDoCliente) {
-                boolean temConflito =
-                    dataCheckin.isBefore(r.getDataCheckout()) &&
-                    dataCheckout.isAfter(r.getDataCheckin());
+            for (HospedagemHospede hAtivo : hospedesAtivos) {
+                Reserva rAtiva = hAtivo.getReserva();
+                if (rAtiva == null) continue;
+                if (rAtiva.getStatus() != Reserva.StatusReservaEnum.ATIVA) continue;
 
-                if (temConflito) {
+                boolean conflito =
+                    dataCheckin.isBefore(rAtiva.getDataCheckout()) &&
+                    dataCheckout.isAfter(rAtiva.getDataCheckin());
+
+                if (conflito) {
                     return ResponseEntity.ok(Map.of(
                         "disponivel", false,
                         "mensagem", String.format(
-                            "Cliente já possui reserva no período %s a %s (Apt %s)",
+                            "Cliente já está hospedado no apartamento %s (Reserva #%d) de %s a %s.",
+                            rAtiva.getApartamento().getNumeroApartamento(),
+                            rAtiva.getId(),
+                            rAtiva.getDataCheckin().toLocalDate(),
+                            rAtiva.getDataCheckout().toLocalDate()
+                        )
+                    ));
+                }
+            }
+
+            // ✅ VERIFICAR PRÉ-RESERVAS COMO TITULAR
+            List<Reserva> preReservas = reservaRepository.findByClienteIdAndStatusIn(
+                clienteId,
+                List.of(Reserva.StatusReservaEnum.PRE_RESERVA)
+            );
+
+            for (Reserva r : preReservas) {
+                boolean conflito =
+                    dataCheckin.isBefore(r.getDataCheckout()) &&
+                    dataCheckout.isAfter(r.getDataCheckin());
+
+                if (conflito) {
+                    return ResponseEntity.ok(Map.of(
+                        "disponivel", false,
+                        "mensagem", String.format(
+                            "Cliente já possui pré-reserva no apartamento %s (Reserva #%d) de %s a %s.",
+                            r.getApartamento().getNumeroApartamento(),
+                            r.getId(),
                             r.getDataCheckin().toLocalDate(),
-                            r.getDataCheckout().toLocalDate(),
-                            r.getApartamento().getNumeroApartamento()
+                            r.getDataCheckout().toLocalDate()
                         )
                     ));
                 }
@@ -855,9 +1009,9 @@ public class ReservaController {
                 if (rAtiva.getStatus() != Reserva.StatusReservaEnum.ATIVA) continue;
 
                 boolean conflito =
-                	    reserva.getDataCheckin().isBefore(rAtiva.getDataCheckout())
-                	    && reserva.getDataCheckout().isAfter(rAtiva.getDataCheckin());
-                
+                    reserva.getDataCheckin().isBefore(rAtiva.getDataCheckout())
+                    && reserva.getDataCheckout().isAfter(rAtiva.getDataCheckin());
+
                 if (conflito) {
                     return ResponseEntity.badRequest().body(Map.of(
                         "erro", String.format(
@@ -872,11 +1026,27 @@ public class ReservaController {
                 }
             }
 
+            // ✅ ATIVAR RESERVA
             reserva.setStatus(Reserva.StatusReservaEnum.ATIVA);
             reserva.setDataCheckin(LocalDateTime.now());
             LocalDateTime checkoutPadronizado = reserva.getDataCheckout().toLocalDate().atTime(12, 0);
             reserva.setDataCheckout(checkoutPadronizado);
             reservaRepository.save(reserva);
+
+            // ✅ ATUALIZAR APARTAMENTO PARA OCUPADO
+            Apartamento apartamento = reserva.getApartamento();
+            apartamento.setStatus(Apartamento.StatusEnum.OCUPADO);
+            apartamentoRepository.save(apartamento);
+
+            // ✅ ADICIONAR TITULAR EM HOSPEDAGEM_HOSPEDES AO ATIVAR
+            HospedagemHospede hospedeTitular = new HospedagemHospede();
+            hospedeTitular.setReserva(reserva);
+            hospedeTitular.setCliente(reserva.getCliente());
+            hospedeTitular.setTitular(true);
+            hospedeTitular.setStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
+            hospedeTitular.setDataHoraEntrada(LocalDateTime.now());
+            hospedagemHospedeRepository.save(hospedeTitular);
+            System.out.println("✅ Titular adicionado ao ativar pré-reserva: " + reserva.getCliente().getNome());
 
             return ResponseEntity.ok(Map.of(
                 "mensagem", "Pré-reserva #" + id + " ativada com sucesso!",
@@ -953,6 +1123,15 @@ public class ReservaController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
+    }
+    
+    @GetMapping("/ativas/buscar")
+    public ResponseEntity<List<Reserva>> buscarAtivasPorTermo(@RequestParam String termo) {
+        List<Reserva> reservas = reservaService.buscarAtivas().stream()
+            .filter(r -> r.getCliente().getNome().toLowerCase().contains(termo.toLowerCase())
+                    || r.getApartamento().getNumeroApartamento().toLowerCase().contains(termo.toLowerCase()))
+            .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(reservas);
     }
         
 }

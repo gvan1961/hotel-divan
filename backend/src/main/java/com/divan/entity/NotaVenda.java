@@ -1,24 +1,18 @@
 package com.divan.entity;
 
-import com.divan.entity.Pagamento.FormaPagamentoEnum;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(name = "notas_venda")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class NotaVenda {
     
     @Id
@@ -69,4 +63,95 @@ public class NotaVenda {
     public enum FormaPagamentoEnum {
         DINHEIRO, PIX, CARTAO_DEBITO, CARTAO_CREDITO, TRANSFERENCIA_BANCARIA, FATURADO
     }
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public LocalDateTime getDataHoraVenda() {
+		return dataHoraVenda;
+	}
+
+	public void setDataHoraVenda(LocalDateTime dataHoraVenda) {
+		this.dataHoraVenda = dataHoraVenda;
+	}
+
+	public TipoVendaEnum getTipoVenda() {
+		return tipoVenda;
+	}
+
+	public void setTipoVenda(TipoVendaEnum tipoVenda) {
+		this.tipoVenda = tipoVenda;
+	}
+
+	public FormaPagamentoEnum getFormaPagamento() {
+		return formaPagamento;
+	}
+
+	public void setFormaPagamento(FormaPagamentoEnum formaPagamento) {
+		this.formaPagamento = formaPagamento;
+	}
+
+	public String getObservacao() {
+		return observacao;
+	}
+
+	public void setObservacao(String observacao) {
+		this.observacao = observacao;
+	}
+
+	public Reserva getReserva() {
+		return reserva;
+	}
+
+	public void setReserva(Reserva reserva) {
+		this.reserva = reserva;
+	}
+
+	public BigDecimal getTotal() {
+		return total;
+	}
+
+	public void setTotal(BigDecimal total) {
+		this.total = total;
+	}
+
+	public List<ItemVenda> getItens() {
+		return itens;
+	}
+
+	public void setItens(List<ItemVenda> itens) {
+		this.itens = itens;
+	}
+
+	public Status getStatus() {
+		return status;
+	}
+
+	public void setStatus(Status status) {
+		this.status = status;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		NotaVenda other = (NotaVenda) obj;
+		return Objects.equals(id, other.id);
+	}
+    
+    
 }

@@ -67,28 +67,31 @@ public class ReservaService {
     private boolean existeConflitoDeDatas(Long apartamentoId, LocalDateTime checkin, LocalDateTime checkout, Long reservaIdExcluir) {
         List<Reserva> reservasDoApartamento = reservaRepository.findByApartamentoId(apartamentoId);
 
+        System.out.println("🔍 VERIFICANDO CONFLITO APT ID: " + apartamentoId);
+        System.out.println("   Novo checkin: " + checkin);
+        System.out.println("   Novo checkout: " + checkout);
+        System.out.println("   Total reservas encontradas: " + reservasDoApartamento.size());
+
         for (Reserva r : reservasDoApartamento) {
-            if (reservaIdExcluir != null && r.getId().equals(reservaIdExcluir)) {
-                continue;
-            }
-
+            if (reservaIdExcluir != null && r.getId().equals(reservaIdExcluir)) continue;
             if (r.getStatus() == Reserva.StatusReservaEnum.CANCELADA ||
-                r.getStatus() == Reserva.StatusReservaEnum.FINALIZADA) {
-                continue;
-            }
+                r.getStatus() == Reserva.StatusReservaEnum.FINALIZADA) continue;
 
-            // ✅ Conflito real: períodos se sobrepõem
-            // Não há conflito se: novo checkout <= checkout existente OU novo checkin >= checkout existente
-            boolean semConflito = !checkin.toLocalDate().isBefore(r.getDataCheckout().toLocalDate())
-                    || !checkout.toLocalDate().isAfter(r.getDataCheckin().toLocalDate());
+            System.out.println("   Comparando com #" + r.getId() + 
+                " status=" + r.getStatus() +
+                " checkin=" + r.getDataCheckin() + 
+                " checkout=" + r.getDataCheckout());
+
+            boolean semConflito = !checkin.isBefore(r.getDataCheckout())
+                    || !checkout.isAfter(r.getDataCheckin());
+
+            System.out.println("   semConflito=" + semConflito);
+
             if (!semConflito) {
-                System.out.println("❌ Conflito encontrado com reserva #" + r.getId());
-                System.out.println("   Reserva existente: " + r.getDataCheckin() + " a " + r.getDataCheckout());
-                System.out.println("   Tentativa: " + checkin + " a " + checkout);
+                System.out.println("❌ CONFLITO com reserva #" + r.getId());
                 return true;
             }
         }
-
         return false;
     }
    
@@ -370,16 +373,20 @@ public class ReservaService {
         Reserva salva = reservaRepository.save(reserva);
 
         // ✅ ADICIONAR CLIENTE TITULAR COMO HÓSPEDE
-        HospedagemHospede hospedeTitular = new HospedagemHospede();
-        hospedeTitular.setReserva(salva);
-        hospedeTitular.setCliente(reserva.getCliente());
-        hospedeTitular.setTitular(true);
-        hospedeTitular.setStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
-        hospedeTitular.setDataHoraEntrada(LocalDateTime.now());
-        hospedagemHospedeRepository.save(hospedeTitular);
-
-        System.out.println("✅ Titular adicionado como hóspede: " + reserva.getCliente().getNome());
-
+     // ✅ ADICIONAR CLIENTE TITULAR COMO HÓSPEDE APENAS SE RESERVA ATIVA
+     // PRÉ-RESERVA: titular será adicionado somente ao ativar o check-in
+     if (salva.getStatus() == Reserva.StatusReservaEnum.ATIVA) {
+         HospedagemHospede hospedeTitular = new HospedagemHospede();
+         hospedeTitular.setReserva(salva);
+         hospedeTitular.setCliente(reserva.getCliente());
+         hospedeTitular.setTitular(true);
+         hospedeTitular.setStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
+         hospedeTitular.setDataHoraEntrada(LocalDateTime.now());
+         hospedagemHospedeRepository.save(hospedeTitular);
+         System.out.println("✅ Titular adicionado como hóspede: " + reserva.getCliente().getNome());
+     } else {
+         System.out.println("📅 PRÉ-RESERVA — titular será adicionado ao fazer check-in");
+     }
         // ✅ CRIAR LANÇAMENTOS DE DIÁRIAS DIA A DIA
         criarExtratosDiarias(salva, dataInicioDiarias, reserva.getDataCheckout());
 

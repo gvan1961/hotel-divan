@@ -108,4 +108,11 @@ public class ProdutoController {
         List<Produto> produtos = produtoService.listarDisponiveis();
         return ResponseEntity.ok(produtos);
     }
+    
+    @GetMapping("/buscar-codigo")
+    public ResponseEntity<List<Produto>> buscarPorCodigo(@RequestParam String codigo) {
+        List<Produto> produtos = produtoService.buscarPorCodigoBarras(codigo);
+        return ResponseEntity.ok(produtos);
+    }
+    
 }

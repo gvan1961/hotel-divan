@@ -6,19 +6,15 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(name = "produtos")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+
 public class Produto {
     
     @Id
@@ -52,4 +48,100 @@ public class Produto {
     @OneToMany(mappedBy = "produto", cascade = CascadeType.ALL)
     @JsonIgnoreProperties({"produto", "notaVenda"})
     private List<ItemVenda> itensVenda;
+    
+    @Column(name = "codigo_barras", length = 50)
+    private String codigoBarras;
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public String getNomeProduto() {
+		return nomeProduto;
+	}
+
+	public void setNomeProduto(String nomeProduto) {
+		this.nomeProduto = nomeProduto;
+	}
+
+	public Integer getQuantidade() {
+		return quantidade;
+	}
+
+	public void setQuantidade(Integer quantidade) {
+		this.quantidade = quantidade;
+	}
+
+	public BigDecimal getValorVenda() {
+		return valorVenda;
+	}
+
+	public void setValorVenda(BigDecimal valorVenda) {
+		this.valorVenda = valorVenda;
+	}
+
+	public BigDecimal getValorCompra() {
+		return valorCompra;
+	}
+
+	public void setValorCompra(BigDecimal valorCompra) {
+		this.valorCompra = valorCompra;
+	}
+
+	public LocalDate getDataUltimaCompra() {
+		return dataUltimaCompra;
+	}
+
+	public void setDataUltimaCompra(LocalDate dataUltimaCompra) {
+		this.dataUltimaCompra = dataUltimaCompra;
+	}
+
+	public Categoria getCategoria() {
+		return categoria;
+	}
+
+	public void setCategoria(Categoria categoria) {
+		this.categoria = categoria;
+	}
+
+	public List<ItemVenda> getItensVenda() {
+		return itensVenda;
+	}
+
+	public void setItensVenda(List<ItemVenda> itensVenda) {
+		this.itensVenda = itensVenda;
+	}
+
+	public String getCodigoBarras() {
+		return codigoBarras;
+	}
+
+	public void setCodigoBarras(String codigoBarras) {
+		this.codigoBarras = codigoBarras;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Produto other = (Produto) obj;
+		return Objects.equals(id, other.id);
+	}
+    
+    
 }
+
+
