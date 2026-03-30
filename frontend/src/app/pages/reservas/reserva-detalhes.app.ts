@@ -124,7 +124,8 @@ interface Apartamento {
       <!-- HEADER -->
       <div class="header">
         <div>
-          <h1>📋 Reserva #{{ reserva.id }}</h1>
+          <h1>📋 Reserva #{{ reserva.id }} — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong></h1>
+          
           <span [class]="'badge-status ' + obterStatusClass()">
             {{ reserva.status }}
           </span>
@@ -227,13 +228,13 @@ interface Apartamento {
               <span class="label">Desconto:</span>
               <span class="value-pequeno valor-positivo">-R$ {{ formatarMoeda(reserva.desconto || 0) }}</span>
             </div>
-            <button 
-              *ngIf="reserva.status === 'ATIVA'"
-              class="btn-mini btn-desconto"
-              (click)="abrirModalDesconto()"
-              title="Adicionar desconto">
-              ➕
-            </button>
+           <button
+  *ngIf="reserva.status === 'ATIVA'"
+  class="btn-mini btn-desconto"
+  (click)="abrirModalDesconto(); $event.stopPropagation()"
+  title="Adicionar desconto">
+  +
+</button>
           </div>
           
           <!-- JÁ RECEBIDO -->
@@ -257,7 +258,7 @@ interface Apartamento {
         <span class="responsavel-label">💳 Pagamento por conta de:</span>
         <span class="responsavel-nome">{{ reserva.responsavelPagamentoNome }}</span>
         <span class="responsavel-apt" *ngIf="reserva.numeroApartamentoResponsavel">
-          — Apt {{ reserva.numeroApartamentoResponsavel }}
+           — Apt {{ reserva.numeroApartamentoResponsavel }}
         </span>
         <button class="btn-remover-responsavel" 
                 (click)="removerResponsavel()"
@@ -314,7 +315,7 @@ interface Apartamento {
       <!-- GRID NORMAL (EXTRATO) -->
       <div class="grid">
         <div class="card extrato-card" *ngIf="reserva.extratos && reserva.extratos.length > 0">
-          <h2>📊 Extrato</h2>
+          <h2>📊 Extrato — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong></h2>
           <table class="tabela-extrato">
             <thead>
               <tr>
@@ -373,7 +374,7 @@ interface Apartamento {
       <!-- HÓSPEDES -->
       <div class="secao-hospedes" *ngIf="reserva && (reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA')">
         <div class="secao-header">
-          <h3>👥 Hóspedes da Reserva</h3>
+          <h3>👥 Hóspedes da Reserva — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong></h3>
           <span class="badge-hospedes">{{ hospedes.length }}</span>
 
   
@@ -463,7 +464,7 @@ interface Apartamento {
 
       <!-- CARD DE AÇÕES -->
       <div class="card acoes-card">
-        <h2>⚙️ Ações</h2>
+        <h2>⚙️ Ações — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong></h2>
         <div class="botoes-acoes">
           <ng-container *hasPermission="'RESERVA_EDITAR'">
             <button class="btn-acao btn-ativar-reserva" 
@@ -544,7 +545,7 @@ interface Apartamento {
 
       <!-- HISTÓRICO -->
       <div class="card historico-card" *ngIf="reserva.historicos && reserva.historicos.length > 0">
-        <h2>📜 Histórico</h2>
+        <h2>📜 Histórico — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong></h2>
         <div class="timeline">
           <div class="timeline-item" *ngFor="let hist of reserva.historicos">
             <div class="timeline-marker"></div>
@@ -553,7 +554,7 @@ interface Apartamento {
                 <span class="timeline-date">{{ formatarDataHora(hist.dataHora) }}</span>
               </div>
               <div class="timeline-body">
-                <p>{{ hist.motivo }}</p>
+                <p>{{ formatarHistorico(hist.motivo) }}</p>
                 <small *ngIf="hist.quantidadeAnterior !== hist.quantidadeNova">
                   Hóspedes: {{ hist.quantidadeAnterior }} → {{ hist.quantidadeNova }}
                 </small>
@@ -579,19 +580,21 @@ interface Apartamento {
                 placeholder="Digite o nome do cliente..."
                 class="input-busca" />
             </div>
-            <div class="lista-responsaveis" *ngIf="responsaveisEncontrados.length > 0">
-              <div class="responsavel-item"
-                   *ngFor="let r of responsaveisEncontrados"
-                   (click)="selecionarResponsavel(r)">
-                <span>👤 {{ r.nome }}</span>
-                <span class="responsavel-cpf" *ngIf="r.cpf">— {{ r.cpf }}</span>
-              </div>
-            </div>
-            <div class="responsavel-selecionado" *ngIf="responsavelSelecionado">
-              ✅ <strong>{{ responsavelSelecionado.nome }}</strong> selecionado
-            </div>
-          </div>
-          <div class="modal-footer">
+
+           <div class="lista-responsaveis" *ngIf="responsaveisEncontrados.length > 0">
+  <div class="responsavel-item"
+       *ngFor="let r of responsaveisEncontrados"
+       (click)="selecionarResponsavel(r)">
+    <span>👤 {{ r.nome }}</span>
+    <span class="responsavel-cpf" *ngIf="r.cpf">— {{ r.cpf }}</span>
+    <span class="responsavel-apt">🏨 Apt <strong>{{ r.numeroApartamento }}</strong></span>
+  </div>
+</div>
+<div class="responsavel-selecionado" *ngIf="responsavelSelecionado">
+  ✅ <strong>{{ responsavelSelecionado.nome }}</strong> selecionado
+</div>
+</div><!-- fecha modal-body -->
+<div class="modal-footer">
             <button class="btn-cancelar-modal" (click)="fecharModalResponsavel()">Cancelar</button>
             <button class="btn-confirmar" 
                     (click)="salvarResponsavel()"
@@ -5125,8 +5128,8 @@ buscarResponsavel(): void {
   if (!this.responsavelBusca || this.responsavelBusca.length < 2) return;
   const token = localStorage.getItem('token');
   const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
-  this.http.get<any[]>(`/api/clientes/buscar?nome=${this.responsavelBusca}`, { headers })
-    .subscribe({
+  this.http.get<any[]>(`/api/clientes/hospedados/buscar?termo=${this.responsavelBusca}`, { headers })   
+  .subscribe({
       next: (res) => this.responsaveisEncontrados = res,
       error: (err) => console.error('Erro ao buscar:', err)
     });
@@ -5141,10 +5144,10 @@ selecionarResponsavel(responsavel: any): void {
 salvarResponsavel(): void {
   if (!this.responsavelSelecionado || !this.reserva) return;
   const token = localStorage.getItem('token');
-const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+  const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
   this.http.patch(`/api/reservas/${this.reserva.id}/responsavel-pagamento`, {
     responsavelId: this.responsavelSelecionado.id,
-    numeroApartamento: this.responsavelSelecionado.apartamento || ''
+    numeroApartamento: this.responsavelSelecionado.numeroApartamento
   }, { headers }).subscribe({
     next: () => {
       this.fecharModalResponsavel();
@@ -5194,6 +5197,21 @@ buscarPorPlaca(): void {
       this.erroBuscaPlaca = 'Erro ao buscar placa';
     }
   });
+}
+
+formatarHistorico(motivo: string): string {
+  if (!motivo) return '';
+  return motivo
+    .replace('Reserva criada —', 'Reserva criada —')
+    .replace(/Check-in: (\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/g, 
+      'Check-in: $3/$2/$1 às $4:$5')
+    .replace(/Check-out: (\d{4})-(\d{2})-(\d{2})/g, 
+      'Check-out: $3/$2/$1')
+    .replace('Status: ATIVA', 'Status: Ativa')
+    .replace('Status: PRE_RESERVA', 'Status: Pré-Reserva')
+    .replace('Status: FINALIZADA', 'Status: Finalizada')
+    .replace('Status: CANCELADA', 'Status: Cancelada')
+    .replace('hóspede(s)', 'hóspede(s)');
 }
 
 }

@@ -52,6 +52,7 @@ import { UsuarioListaComponent } from './components/usuario-lista/usuario-lista.
 import { PerfilListaComponent } from './components/perfil-lista/perfil-lista.component';
 import { AdministrativoComponent } from './pages/administrativo/administrativo.component';
 import { PainelRecepcaoApp } from './pages/painel-recepcao/painel-recepcao.app';
+import { AuditoriaComponent } from './pages/administrativo/auditoria.component';
 
 export const routes: Routes = [
   // LOGIN (sem layout)
@@ -129,6 +130,8 @@ export const routes: Routes = [
       { path: 'comanda-impressao/:id', component: ComandaImpressaoComponent },
       { path: 'gestao-comandas', component: GestaoComandasComponent },
 
+      { path: 'auditoria', component: AuditoriaComponent },
+
       // ===== ESTOQUE =====
       { path: 'contagem-estoque', component: ContagemEstoqueComponent },
 
@@ -166,5 +169,5 @@ export const routes: Routes = [
   },
 
   // REDIRECT PARA DASHBOARD
-  { path: '**', redirectTo: '/painel-recepcao' }
+  { path: '**', redirectTo: 'painel-recepcao' }
 ];

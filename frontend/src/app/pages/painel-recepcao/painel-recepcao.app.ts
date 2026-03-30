@@ -475,16 +475,16 @@ interface Contadores {
     }
 
     .card-header {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 9px 12px;
-      color: #fff;
-      font-family: 'Rajdhani', sans-serif;
-      font-weight: 700;
-      font-size: 0.95rem;
-      min-height: 40px;
-    }
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 12px;
+  color: #fff;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  min-height: 40px;
+}
     .card-ocupado    .card-header { background: #c0392b; }
 .card-atrasado   .card-header { background: #6e2222; }
 .card-prereserva .card-header { background: #2980b9; }
@@ -494,13 +494,13 @@ interface Contadores {
 .card-limpeza    .card-body   { background: #f2f3f4; }
 .card-prereserva .card-body   { background: #d6eaf8; }
 
-    .apt-numero { flex: 1; letter-spacing: .5px; font-size: 1rem; }
+    .apt-numero { letter-spacing: .5px; font-size: 1rem; }
     .apt-tipo {
-      font-size: 0.7rem; font-weight: 500;
-      background: rgba(255,255,255,.2);
-      border-radius: 3px; padding: 1px 5px;
-      font-family: 'Noto Sans', sans-serif;
-    }
+  font-size: 0.7rem; font-weight: 500;
+  background: rgba(255,255,255,.2);
+  border-radius: 3px; padding: 1px 5px;
+  font-family: 'Noto Sans', sans-serif;
+}
     .header-badges { display: flex; gap: 4px; flex-wrap: wrap; }
     .badge-sai, .badge-entra, .badge-atraso {
       font-size: 0.62rem; font-weight: 700;

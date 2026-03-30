@@ -159,7 +159,7 @@ export class LoginApp {
     this.authService.login({ username: this.username, password: this.password })
       .subscribe({
         next: () => {
-          this.router.navigate(['/dashboard']);
+          this.router.navigate(['/painel-recepcao']);
         },
         error: (err) => {
           this.loading = false;
