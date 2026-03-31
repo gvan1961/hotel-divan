@@ -2,8 +2,11 @@ package com.divan.controller;
 
 import com.divan.dto.ClienteDTO;
 import com.divan.repository.ClienteRepository;
+import com.divan.repository.HospedagemHospedeRepository;
 import com.divan.dto.ClienteRequestDTO;
 import com.divan.entity.Cliente;
+import com.divan.entity.HospedagemHospede;
+import com.divan.entity.Reserva;
 import com.divan.service.ClienteService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -25,6 +29,9 @@ public class ClienteController {
     
     @Autowired
     private ClienteRepository clienteRepository;
+    
+    @Autowired
+    private HospedagemHospedeRepository hospedagemHospedeRepository;
     
     @PostMapping
     public ResponseEntity<Cliente> criar(@Valid @RequestBody ClienteRequestDTO dto) {
@@ -74,6 +81,32 @@ public class ClienteController {
     public ResponseEntity<List<ClienteDTO>> buscar(@RequestParam String termo) {
         List<ClienteDTO> clientes = clienteService.buscarPorTermo(termo);
         return ResponseEntity.ok(clientes);
+    }
+    
+    @GetMapping("/hospedados/buscar")
+    public ResponseEntity<List<Map<String, Object>>> buscarHospedados(@RequestParam String termo) {
+        List<HospedagemHospede> hospedados = hospedagemHospedeRepository
+            .findByStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
+
+        List<Map<String, Object>> resultado = hospedados.stream()
+            .filter(h -> h.getCliente() != null &&
+                    h.getReserva() != null &&
+                    Reserva.StatusReservaEnum.ATIVA.equals(h.getReserva().getStatus()) &&
+                    (h.getCliente().getNome().toLowerCase().contains(termo.toLowerCase()) ||
+                    (h.getCliente().getCpf() != null && h.getCliente().getCpf().contains(termo))))
+            .map(h -> {
+                Map<String, Object> map = new java.util.HashMap<>();
+                map.put("id", h.getCliente().getId());
+                map.put("nome", h.getCliente().getNome());
+                map.put("cpf", h.getCliente().getCpf());
+                map.put("celular", h.getCliente().getCelular());
+                map.put("reservaId", h.getReserva().getId());
+                map.put("numeroApartamento", h.getReserva().getApartamento().getNumeroApartamento());
+                return map;
+            })
+            .collect(java.util.stream.Collectors.toList());
+
+        return ResponseEntity.ok(resultado);
     }
     
     @PatchMapping("/{id}/aprovar-credito")
@@ -138,12 +171,12 @@ public class ClienteController {
     }
     
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletar(@PathVariable Long id) {
+    public ResponseEntity<?> deletar(@PathVariable Long id) {
         try {
             clienteService.deletar(id);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
 }

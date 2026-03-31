@@ -83,6 +83,8 @@ public class SecurityConfig {
                 // ========== TIPOS DE APARTAMENTO ==========
                 .requestMatchers("/api/tipos-apartamento/**").authenticated()
                 
+                .requestMatchers("/api/auditoria/**").hasAnyRole("ADMIN", "GERENTE")
+                
                 // ========== CLIENTES ==========
                 .requestMatchers(HttpMethod.GET, "/api/clientes/**").hasAnyAuthority("CLIENTE_READ", "ROLE_ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/clientes").hasAnyAuthority("CLIENTE_CREATE", "ROLE_ADMIN")

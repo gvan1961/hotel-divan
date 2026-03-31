@@ -4,21 +4,23 @@ import com.divan.entity.DepositoProvisorio;
 import com.divan.entity.DepositoProvisorioItem;
 import com.divan.dto.*;
 import com.divan.service.DepositoProvisorioService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/deposito")
-@RequiredArgsConstructor
 public class DepositoProvisorioController {
 
     private final DepositoProvisorioService service;
 
+    public DepositoProvisorioController(DepositoProvisorioService service) {
+        this.service = service;
+    }
+
     @GetMapping("/atual")
     public ResponseEntity<DepositoProvisorio> getAtual() {
         DepositoProvisorio deposito = service.getDepositoAtual();
-        if (deposito == null) return ResponseEntity.noContent().build();
+        if (deposito == null) return ResponseEntity.ok().build();
         return ResponseEntity.ok(deposito);
     }
 

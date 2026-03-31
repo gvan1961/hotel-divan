@@ -3,6 +3,7 @@ package com.divan.controller;
 import com.divan.dto.ApartamentoRequestDTO;
 import com.divan.entity.HistoricoApartamento;
 import com.divan.entity.HospedagemHospede;
+import com.divan.entity.LogAuditoria;
 import com.divan.dto.ApartamentoResponseDTO;
 import com.divan.entity.Apartamento;
 import com.divan.util.DataUtil;
@@ -10,6 +11,7 @@ import java.util.stream.Collectors;
 import com.divan.entity.Reserva;
 import com.divan.repository.HistoricoApartamentoRepository;
 import com.divan.repository.HospedagemHospedeRepository;
+import com.divan.repository.LogAuditoriaRepository;
 import com.divan.repository.ReservaRepository;
 import com.divan.repository.UsuarioRepository;
 import com.divan.service.ApartamentoService;
@@ -50,6 +52,9 @@ public class ApartamentoController {
     
     @Autowired
     private HospedagemHospedeRepository hospedagemHospedeRepository;
+    
+    @Autowired
+    private LogAuditoriaRepository logAuditoriaRepository;
     
     // ✅ ATUALIZADO - Usar DTO
     @PostMapping
@@ -207,6 +212,19 @@ public class ApartamentoController {
             }
 
             historicoApartamentoRepository.save(historico);
+            
+         // ✅ REGISTRAR LOG DE AUDITORIA
+            LogAuditoria log = new LogAuditoria();
+            log.setAcao("LIBERAR_LIMPEZA");
+            log.setDescricao("Apartamento " + apartamento.getNumeroApartamento() + " liberado da limpeza");
+            log.setDataHora(LocalDateTime.now());
+
+            if (historico.getUsuario() != null) {
+                log.setUsuario(historico.getUsuario());
+            }
+
+            logAuditoriaRepository.save(log);
+            
 
             System.out.println("✅ Apt " + apartamento.getNumeroApartamento()
                 + " liberado da limpeza por usuário "

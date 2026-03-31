@@ -217,16 +217,16 @@ export class ClienteListaApp implements OnInit {
   }
 
   excluir(id: number): void {
-    if (confirm('Deseja realmente excluir este cliente?')) {
-      this.clienteService.delete(id).subscribe({
-        next: () => {
-          this.carregarClientes();
-        },
-        error: (err) => {
-          console.error('Erro ao excluir cliente', err);
-          alert('Erro ao excluir cliente');
-        }
-      });
-    }
+  if (confirm('Deseja realmente excluir este cliente?')) {
+    this.clienteService.delete(id).subscribe({
+      next: () => {
+        this.carregarClientes();
+      },
+      error: (err) => {
+        const mensagem = err.error?.erro || 'Erro ao excluir cliente';
+        alert(mensagem);
+      }
+    });
   }
+}
 }

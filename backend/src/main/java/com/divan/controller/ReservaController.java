@@ -1128,6 +1128,7 @@ public class ReservaController {
     @GetMapping("/ativas/buscar")
     public ResponseEntity<List<Reserva>> buscarAtivasPorTermo(@RequestParam String termo) {
         List<Reserva> reservas = reservaService.buscarAtivas().stream()
+            .filter(r -> r.getStatus() == Reserva.StatusReservaEnum.ATIVA)
             .filter(r -> r.getCliente().getNome().toLowerCase().contains(termo.toLowerCase())
                     || r.getApartamento().getNumeroApartamento().toLowerCase().contains(termo.toLowerCase()))
             .collect(java.util.stream.Collectors.toList());

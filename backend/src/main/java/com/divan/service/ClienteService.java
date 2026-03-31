@@ -5,6 +5,9 @@ import com.divan.entity.Cliente;
 import com.divan.entity.Empresa;
 import com.divan.repository.ClienteRepository;
 import com.divan.repository.EmpresaRepository;
+import com.divan.repository.HospedagemHospedeRepository;
+import com.divan.repository.ReservaRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +26,12 @@ public class ClienteService {
     
     @Autowired
     private EmpresaRepository empresaRepository;
+    
+    @Autowired
+    private ReservaRepository reservaRepository;
+
+    @Autowired
+    private HospedagemHospedeRepository hospedagemHospedeRepository;
     
     public Cliente salvar(Cliente cliente, Long empresaId) {
         if (clienteRepository.existsByCpf(cliente.getCpf()) && cliente.getId() == null) {
@@ -129,6 +138,17 @@ public class ClienteService {
         if (!clienteRepository.existsById(id)) {
             throw new RuntimeException("Cliente não encontrado");
         }
+
+        boolean temReservas = reservaRepository.existsByClienteId(id);
+        if (temReservas) {
+            throw new RuntimeException("Cliente possui reservas e não pode ser excluído");
+        }
+
+        boolean temHospedagens = hospedagemHospedeRepository.existsByClienteId(id);
+        if (temHospedagens) {
+            throw new RuntimeException("Cliente possui hospedagens e não pode ser excluído");
+        }
+
         clienteRepository.deleteById(id);
     }
     

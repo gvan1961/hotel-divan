@@ -8,7 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.divan.dto.ProdutoRequestDTO;
 import com.divan.repository.CategoriaRepository;
-
+import com.divan.repository.ItemVendaRepository;
 import com.divan.entity.Categoria;
 
 import java.util.List;
@@ -17,6 +17,9 @@ import java.util.Optional;
 @Service
 @Transactional
 public class ProdutoService {
+	
+	@Autowired
+	private ItemVendaRepository itemVendaRepository;
     
     @Autowired
     private ProdutoRepository produtoRepository;
@@ -155,5 +158,18 @@ public class ProdutoService {
     
     public List<Produto> buscarPorCodigoBarras(String codigo) {
         return produtoRepository.findByCodigoBarrasContaining(codigo);
+    }
+    
+    public void deletar(Long id) {
+        if (!produtoRepository.existsById(id)) {
+            throw new RuntimeException("Produto não encontrado");
+        }
+        
+        // Verificar se tem itens de venda vinculados
+        if (itemVendaRepository.existsByProdutoId(id)) {
+            throw new RuntimeException("Produto possui vendas registradas e não pode ser excluído");
+        }
+        
+        produtoRepository.deleteById(id);
     }
 }

@@ -60,6 +60,9 @@ public class ReservaService {
        
     @Autowired
     private ContaAReceberRepository contaAReceberRepository;
+    
+    @Autowired
+    private LogAuditoriaService logAuditoriaService;
      
     /**
      * Verifica se existe conflito de datas para o apartamento
@@ -410,6 +413,13 @@ public class ReservaService {
         System.out.println("💰 Diária para " + quantidadeHospedes + " hóspede(s): R$ " + valorDiaria);
         System.out.println("📅 Total " + dias + " dia(s): R$ " + totalDiaria);
         System.out.println("═══════════════════════════════════════════");
+        
+        logAuditoriaService.registrar(
+        	    salva.getStatus() == Reserva.StatusReservaEnum.ATIVA ? "CHECKIN" : "PRE_RESERVA",
+        	    (salva.getStatus() == Reserva.StatusReservaEnum.ATIVA ? "Check-in realizado" : "Pré-reserva criada") +
+        	    " — Apt " + salva.getApartamento().getNumeroApartamento() +
+        	    " — Cliente: " + salva.getCliente().getNome(),
+        	    salva);
 
         return salva;
     }
@@ -974,6 +984,12 @@ public class ReservaService {
         System.out.println("   Status: " + salva.getStatus());
         System.out.println("   Apartamento " + apartamento.getNumeroApartamento() + " → LIMPEZA");
         System.out.println("═══════════════════════════════════════════");
+        
+        logAuditoriaService.registrar("CHECKOUT_FATURADO",
+        	    "Checkout faturado — Apt " + apartamento.getNumeroApartamento() +
+        	    " — Cliente: " + reserva.getCliente().getNome() +
+        	    " — Valor: R$ " + reserva.getTotalApagar(),
+        	    salva);
 
         return salva;
     }
@@ -1610,6 +1626,12 @@ public class ReservaService {
         System.out.println("✅ Reserva #" + reservaId + " finalizada!");
         System.out.println("🧹 Apartamento " + apartamento.getNumeroApartamento() + " → LIMPEZA");
         System.out.println("═══════════════════════════════════════════");
+        
+        logAuditoriaService.registrar("CHECKOUT_PAGO",
+        	    "Checkout pago — Apt " + apartamento.getNumeroApartamento() +
+        	    " — Cliente: " + reserva.getCliente().getNome() +
+        	    " — Total: R$ " + reserva.getTotalHospedagem(),
+        	    reserva);
 
         return reserva;
     }

@@ -29,10 +29,9 @@ public class Reserva {
     @JsonIgnoreProperties({"reservas", "tipoApartamento"})
     private Apartamento apartamento;
     
-    @NotNull(message = "Cliente é obrigatório")
-    @ManyToOne
-    @JoinColumn(name = "cliente_id", nullable = false)
-    @JsonIgnoreProperties({"reservas", "empresa"})
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cliente_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "reservas"})
     private Cliente cliente;
     
     @Min(value = 1, message = "Quantidade de hóspedes deve ser no mínimo 1")
@@ -108,7 +107,7 @@ public class Reserva {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "responsavel_pagamento_id")
-    @JsonIgnoreProperties({"reservas", "empresa"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Cliente responsavelPagamento;
 
 
@@ -142,37 +141,25 @@ public class Reserva {
 		this.apartamento = apartamento;
 	}
 
-
-
 	public Cliente getCliente() {
 		return cliente;
 	}
-
-
 
 	public void setCliente(Cliente cliente) {
 		this.cliente = cliente;
 	}
 
-
-
 	public Integer getQuantidadeHospede() {
 		return quantidadeHospede;
 	}
-
-
 
 	public void setQuantidadeHospede(Integer quantidadeHospede) {
 		this.quantidadeHospede = quantidadeHospede;
 	}
 
-
-
 	public Diaria getDiaria() {
 		return diaria;
 	}
-
-
 
 	public void setDiaria(Diaria diaria) {
 		this.diaria = diaria;
@@ -356,13 +343,19 @@ public class Reserva {
 		this.reservaPagante = reservaPagante;
 	}
 
+	
+
 	public Cliente getResponsavelPagamento() {
 		return responsavelPagamento;
 	}
 
+
+
 	public void setResponsavelPagamento(Cliente responsavelPagamento) {
 		this.responsavelPagamento = responsavelPagamento;
 	}
+
+
 
 	public String getNumeroApartamentoResponsavel() {
 		return numeroApartamentoResponsavel;

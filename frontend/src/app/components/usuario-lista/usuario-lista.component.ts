@@ -106,29 +106,28 @@ export class UsuarioListaComponent implements OnInit {
   }
   
   abrirModalEditar(usuario: Usuario): void {
-    this.editando = true;
-    this.modalTitulo = 'Editar Usuário';
-    this.usuarioSelecionado = usuario;
-    
-    // Carregar dados do usuário para o formulário
-    this.usuarioService.buscarPorId(usuario.id!).subscribe({
-      next: (u) => {
-        this.formulario = {
-          nome: u.nome,
-          username: u.username,
-          email: u.email,
-          password: '',
-          ativo: u.ativo,
-          perfilIds: [] // TODO: Implementar quando backend retornar IDs dos perfis
-        };
-        this.mostrarModal = true;
-      },
-      error: (error) => {
-        console.error('Erro ao carregar usuário:', error);
-        alert('Erro ao carregar dados do usuário!');
-      }
-    });
-  }
+  this.editando = true;
+  this.modalTitulo = 'Editar Usuário';
+  this.usuarioSelecionado = usuario;
+
+  this.usuarioService.buscarPorId(usuario.id!).subscribe({
+    next: (u) => {
+      this.formulario = {
+        nome: u.nome,
+        username: u.username,
+        email: u.email,
+        password: '',
+        ativo: u.ativo,
+        perfilIds: u.perfis?.map((p: any) => p.id) || []
+      };
+      this.mostrarModal = true;
+    },
+    error: (error) => {
+      console.error('Erro ao carregar usuário:', error);
+      alert('Erro ao carregar dados do usuário!');
+    }
+  });
+}
   
   fecharModal(): void {
     this.mostrarModal = false;

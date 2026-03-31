@@ -653,16 +653,16 @@ export class ProdutoListaApp implements OnInit {
   }
 
   excluir(id: number): void {
-    if (confirm('Deseja realmente excluir este produto?')) {
-      this.produtoService.delete(id).subscribe({
-        next: () => {
-          this.carregarProdutos();
-        },
-        error: (err) => {
-          console.error('Erro ao excluir produto', err);
-          alert('Erro ao excluir produto');
-        }
-      });
-    }
+  if (confirm('Deseja realmente excluir este produto?')) {
+    this.produtoService.delete(id).subscribe({
+      next: () => {
+        this.carregarProdutos();
+      },
+      error: (err) => {
+        const mensagem = err.error?.erro || 'Erro ao excluir produto';
+        alert(mensagem);
+      }
+    });
   }
+}
 }

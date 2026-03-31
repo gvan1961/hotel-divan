@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -113,6 +114,16 @@ public class ProdutoController {
     public ResponseEntity<List<Produto>> buscarPorCodigo(@RequestParam String codigo) {
         List<Produto> produtos = produtoService.buscarPorCodigoBarras(codigo);
         return ResponseEntity.ok(produtos);
+    }
+    
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deletar(@PathVariable Long id) {
+        try {
+            produtoService.deletar(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
     }
     
 }

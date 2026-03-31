@@ -24,4 +24,6 @@ public interface ItemVendaRepository extends JpaRepository<ItemVenda, Long> {
     List<Object[]> findProdutosMaisVendidosPorPeriodo(LocalDateTime inicio, LocalDateTime fim);
     
     List<ItemVenda> findByProdutoId(Long produtoId);
+    
+    boolean existsByProdutoId(Long produtoId);
 }

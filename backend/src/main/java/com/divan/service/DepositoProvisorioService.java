@@ -17,13 +17,14 @@ import java.util.List;
 @Service
 public class DepositoProvisorioService {
 
-    private final DepositoProvisorioRepository depositoRepository;
+	private final DepositoProvisorioRepository depositoRepository;
     private final DepositoProvisorioItemRepository itemRepository;
     private final ProdutoRepository produtoRepository;
     private final ReservaRepository reservaRepository;
     private final NotaVendaRepository notaVendaRepository;
     private final ItemVendaRepository itemVendaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ExtratoReservaRepository extratoReservaRepository;
 
     public DepositoProvisorioService(
             DepositoProvisorioRepository depositoRepository,
@@ -32,7 +33,8 @@ public class DepositoProvisorioService {
             ReservaRepository reservaRepository,
             NotaVendaRepository notaVendaRepository,
             ItemVendaRepository itemVendaRepository,
-            UsuarioRepository usuarioRepository) {
+            UsuarioRepository usuarioRepository,
+            ExtratoReservaRepository extratoReservaRepository) {
         this.depositoRepository = depositoRepository;
         this.itemRepository = itemRepository;
         this.produtoRepository = produtoRepository;
@@ -40,8 +42,8 @@ public class DepositoProvisorioService {
         this.notaVendaRepository = notaVendaRepository;
         this.itemVendaRepository = itemVendaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.extratoReservaRepository = extratoReservaRepository;
     }
-
     @Transactional
     public DepositoProvisorio abrirOuRetornarDeposito() {
         List<DepositoProvisorio> abertos = depositoRepository.findByStatus(StatusDeposito.ABERTO);
@@ -118,6 +120,23 @@ public class DepositoProvisorioService {
      // Atualiza estoque do produto
         produto.setQuantidade(produto.getQuantidade() - request.getQuantidade());
         produtoRepository.save(produto);
+        
+     // Cria ExtratoReserva
+        ExtratoReserva extrato = new ExtratoReserva();
+        extrato.setReserva(reserva);
+        extrato.setDescricao("Consumo: " + produto.getNomeProduto());
+        extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.PRODUTO);
+        extrato.setQuantidade(request.getQuantidade());
+        extrato.setValorUnitario(valorUnitario);
+        extrato.setTotalLancamento(total);
+        extrato.setDataHoraLancamento(LocalDateTime.now());
+        extratoReservaRepository.save(extrato);
+
+        // Atualiza totais da reserva
+        reserva.setTotalProduto(reserva.getTotalProduto().add(total));
+        reserva.setTotalHospedagem(reserva.getTotalHospedagem().add(total));
+        reserva.setTotalApagar(reserva.getTotalApagar().add(total));
+        reservaRepository.save(reserva);
 
         // Atualiza quantidade distribuída
         item.setQuantidadeDistribuida(item.getQuantidadeDistribuida() + request.getQuantidade());

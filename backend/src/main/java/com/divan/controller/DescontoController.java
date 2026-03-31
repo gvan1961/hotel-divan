@@ -8,6 +8,8 @@ import com.divan.repository.DescontoRepository;
 import com.divan.repository.ExtratoReservaRepository;
 import com.divan.repository.ReservaRepository;
 import com.divan.repository.UsuarioRepository;
+import com.divan.service.LogAuditoriaService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +29,9 @@ public class DescontoController {
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private ExtratoReservaRepository extratoReservaRepository;
 
+    @Autowired 
+    private LogAuditoriaService logAuditoriaService;
+    
     @PostMapping
     public ResponseEntity<?> aplicarDesconto(@RequestBody Map<String, Object> body) {
         try {
@@ -69,12 +74,18 @@ public class DescontoController {
             extrato.setDataHoraLancamento(LocalDateTime.now());
             extratoReservaRepository.save(extrato);
 
+            logAuditoriaService.registrar("DESCONTO",
+        		    "Desconto de R$ " + valor + " aplicado — " + motivo +
+        		    " — Apt " + reserva.getApartamento().getNumeroApartamento(),
+        		    reserva); 
+            
             return ResponseEntity.ok(Map.of(
                 "mensagem", "Desconto aplicado com sucesso",
                 "descontoId", desconto.getId(),
                 "novoTotalApagar", reserva.getTotalApagar()
             ));
         } catch (Exception e) {
+        	
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
@@ -115,12 +126,22 @@ public class DescontoController {
             extratoReservaRepository.save(extrato);
 
             descontoRepository.delete(desconto);
+            
+            logAuditoriaService.registrar("ESTORNO_DESCONTO",
+        		    "Desconto de R$ " + valor + " estornado — " + desconto.getMotivo() +
+        		    " — Apt " + reserva.getApartamento().getNumeroApartamento(),
+        		    reserva);
 
             return ResponseEntity.ok(Map.of(
                 "mensagem", "Desconto removido com sucesso",
                 "valorEstornado", valor
             ));
+            
+            
         } catch (Exception e) {
+        	
+        	
+        	
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }

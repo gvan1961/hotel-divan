@@ -19,7 +19,7 @@ export interface Permissao {
 export interface PerfilRequest {
   nome: string;
   descricao: string;
-  permissaoIds: number[];
+  permissoesIds: number[];
 }
 
 @Injectable({

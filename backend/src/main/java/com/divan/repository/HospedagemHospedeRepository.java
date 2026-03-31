@@ -23,4 +23,6 @@ public interface HospedagemHospedeRepository extends JpaRepository<HospedagemHos
     
     List<HospedagemHospede> findByPlacaCarroIgnoreCaseAndStatus(
     	    String placaCarro, HospedagemHospede.StatusEnum status);
+    
+    boolean existsByClienteId(Long clienteId);
 }

@@ -17,6 +17,9 @@ public class UsuarioController {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+    
+    @Autowired
+    private com.divan.repository.PerfilRepository perfilRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -55,9 +58,18 @@ public class UsuarioController {
             u.setUsername(body.get("username").toString());
             u.setEmail(body.get("email").toString());
             if (body.get("password") != null && !body.get("password").toString().isBlank()) {
-            	u.setPassword(passwordEncoder.encode(body.get("password").toString()));
+                u.setPassword(passwordEncoder.encode(body.get("password").toString()));
             }
             u.setAtivo(Boolean.valueOf(body.getOrDefault("ativo", "true").toString()));
+
+            // ✅ SALVAR PERFIS
+            if (body.get("perfilIds") != null) {
+                List<Integer> perfilIds = (List<Integer>) body.get("perfilIds");
+                List<Long> ids = perfilIds.stream().map(Long::valueOf).collect(java.util.stream.Collectors.toList());
+                List<com.divan.entity.Perfil> perfis = perfilRepository.findAllById(ids);
+                u.setPerfis(new java.util.HashSet<>(perfis));
+            }
+
             return ResponseEntity.ok(usuarioRepository.save(u));
         }).orElse(ResponseEntity.notFound().build());
     }
