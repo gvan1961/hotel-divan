@@ -63,6 +63,12 @@ public class ReservaService {
     
     @Autowired
     private LogAuditoriaService logAuditoriaService;
+    
+    @Autowired
+    private LogAuditoriaRepository logAuditoriaRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
      
     /**
      * Verifica se existe conflito de datas para o apartamento
@@ -1479,70 +1485,92 @@ public class ReservaService {
         System.out.println("═══════════════════════════════════════════");
         System.out.println("🍽️ PROCESSANDO COMANDAS RÁPIDAS");
         System.out.println("═══════════════════════════════════════════");
-        
+
         int totalComandas = request.getComandas().size();
         int totalItens = request.getComandas().stream()
             .mapToInt(c -> c.getItens().size())
             .sum();
-        
+
         System.out.println("📊 Total de comandas: " + totalComandas);
         System.out.println("📊 Total de itens: " + totalItens);
-        
+
         List<String> erros = new ArrayList<>();
         List<String> sucessos = new ArrayList<>();
         int itensProcessados = 0;
-        
+
         for (ComandaRapidaDTO comanda : request.getComandas()) {
             Long reservaId = comanda.getReservaId();
-            
+
             try {
-                // Buscar reserva
                 Reserva reserva = reservaRepository.findById(reservaId)
                     .orElseThrow(() -> new RuntimeException("Reserva #" + reservaId + " não encontrada"));
-                
-                // Validar status
+
                 if (reserva.getStatus() != Reserva.StatusReservaEnum.ATIVA) {
-                    erros.add("Apt " + reserva.getApartamento().getNumeroApartamento() + 
+                    erros.add("Apt " + reserva.getApartamento().getNumeroApartamento() +
                              ": Reserva não está ativa");
                     continue;
                 }
-                
-                // Processar cada item
+
                 for (ComandaRapidaDTO.ItemComanda item : comanda.getItens()) {
                     try {
                         adicionarProdutoAoConsumo(
-                            reservaId, 
-                            item.getProdutoId(), 
-                            item.getQuantidade(), 
+                            reservaId,
+                            item.getProdutoId(),
+                            item.getQuantidade(),
                             "Comanda Jantar"
                         );
                         itensProcessados++;
-                        
+
                     } catch (Exception e) {
                         Produto produto = produtoRepository.findById(item.getProdutoId())
                             .orElse(null);
                         String nomeProduto = produto != null ? produto.getNomeProduto() : "Produto #" + item.getProdutoId();
-                        
-                        erros.add("Apt " + reserva.getApartamento().getNumeroApartamento() + 
+
+                        erros.add("Apt " + reserva.getApartamento().getNumeroApartamento() +
                                  " - " + nomeProduto + ": " + e.getMessage());
                     }
                 }
-                
-                sucessos.add("Apt " + reserva.getApartamento().getNumeroApartamento() + 
+
+                sucessos.add("Apt " + reserva.getApartamento().getNumeroApartamento() +
                             ": " + comanda.getItens().size() + " item(ns) adicionado(s)");
-                
+
             } catch (Exception e) {
                 erros.add("Reserva #" + reservaId + ": " + e.getMessage());
             }
         }
-        
+
         System.out.println("═══════════════════════════════════════════");
         System.out.println("✅ Processamento concluído!");
         System.out.println("   Itens processados: " + itensProcessados + "/" + totalItens);
         System.out.println("   Sucessos: " + sucessos.size());
         System.out.println("   Erros: " + erros.size());
         System.out.println("═══════════════════════════════════════════");
-        
+
+        // ✅ LOG AUDITORIA
+        try {
+            String username = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication().getName();
+
+            for (ComandaRapidaDTO comanda : request.getComandas()) {
+                try {
+                    Reserva r = reservaRepository.findById(comanda.getReservaId()).orElse(null);
+                    if (r != null) {
+                        LogAuditoria log = new LogAuditoria();
+                        log.setAcao("COMANDA_RAPIDA");
+                        log.setDescricao("Comandas Rápidas — Apt " + r.getApartamento().getNumeroApartamento()
+                            + " — Cliente: " + r.getCliente().getNome()
+                            + " — " + comanda.getItens().size() + " item(ns)");
+                        log.setDataHora(LocalDateTime.now());
+                        log.setReserva(r);
+                        usuarioRepository.findByUsername(username).ifPresent(log::setUsuario);
+                        logAuditoriaRepository.save(log);
+                    }
+                } catch (Exception ignored) {}
+            }
+        } catch (Exception logEx) {
+            System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+        }
+
         // Montar resposta
         Map<String, Object> resultado = new HashMap<>();
         resultado.put("totalComandas", totalComandas);
@@ -1551,7 +1579,7 @@ public class ReservaService {
         resultado.put("sucessos", sucessos);
         resultado.put("erros", erros);
         resultado.put("sucesso", erros.isEmpty());
-        
+
         return resultado;
     }
 

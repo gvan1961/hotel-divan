@@ -80,9 +80,29 @@ export class AuthService {
     return localStorage.getItem('token');
   }
 
-  isAuthenticated(): boolean {
-    return !!this.getToken();
+ isAuthenticated(): boolean {
+  const token = this.getToken();
+  if (!token) return false;
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const expiracao = payload.exp * 1000;
+    
+    if (Date.now() >= expiracao) {
+    console.log('⏰ Token expirado — fazendo logout automático');
+    localStorage.clear();
+    alert('⏰ Sua sessão expirou. Faça login novamente.');
+    this.logout();
+    return false;
+}
+    
+    return true;
+  } catch (e) {
+    console.error('❌ Erro ao verificar token:', e);
+    this.logout();
+    return false;
   }
+}
 
   private getUserFromStorage(): LoginResponse | null {
     // Tentar buscar de 'usuario' primeiro (novo formato)

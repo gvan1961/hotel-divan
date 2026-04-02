@@ -5,16 +5,12 @@ import jakarta.persistence.PreUpdate;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.hibernate.validator.constraints.br.CPF;
+
+
 
 import java.time.LocalDate;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class ClienteDTO {
     
     private Long id;
@@ -29,6 +25,11 @@ public class ClienteDTO {
     private String celular;
     
     private String endereco;
+    
+    private Boolean menorDeIdade;
+    private Long responsavelId;
+    private String responsavelNome;
+    private String responsavelCpf;
     
    // @Pattern(regexp = "\\d{5}-\\d{3}", message = "CEP deve estar no formato XXXXX-XXX")
     @Pattern(regexp = "\\d{5}-?\\d{3}", message = "CEP deve ter 8 dígitos")
@@ -52,9 +53,123 @@ public class ClienteDTO {
     private String cidade;
     private String estado;
     
+    private Boolean creditoAprovado;
+    private Boolean autorizadoJantar;
+    private String tipoCliente;
+    
     @NotNull(message = "Data de nascimento é obrigatória")
     private LocalDate dataNascimento;
     
     private Long empresaId;
     private String empresaNome;
+
+	public Long getId() {
+		return id;
+	}
+	public void setId(Long id) {
+		this.id = id;
+	}
+	public String getNome() {
+		return nome;
+	}
+	public void setNome(String nome) {
+		this.nome = nome;
+	}
+	public String getCpf() {
+		return cpf;
+	}
+	public void setCpf(String cpf) {
+		this.cpf = cpf;
+	}
+	public String getCelular() {
+		return celular;
+	}
+	public void setCelular(String celular) {
+		this.celular = celular;
+	}
+	public String getEndereco() {
+		return endereco;
+	}
+	public void setEndereco(String endereco) {
+		this.endereco = endereco;
+	}
+	public String getCep() {
+		return cep;
+	}
+	public void setCep(String cep) {
+		this.cep = cep;
+	}
+	public String getCidade() {
+		return cidade;
+	}
+	public void setCidade(String cidade) {
+		this.cidade = cidade;
+	}
+	public String getEstado() {
+		return estado;
+	}
+	public void setEstado(String estado) {
+		this.estado = estado;
+	}
+	public LocalDate getDataNascimento() {
+		return dataNascimento;
+	}
+	public void setDataNascimento(LocalDate dataNascimento) {
+		this.dataNascimento = dataNascimento;
+	}
+	public Long getEmpresaId() {
+		return empresaId;
+	}
+	public void setEmpresaId(Long empresaId) {
+		this.empresaId = empresaId;
+	}
+	public String getEmpresaNome() {
+		return empresaNome;
+	}
+	public void setEmpresaNome(String empresaNome) {
+		this.empresaNome = empresaNome;
+	}
+	public Boolean getMenorDeIdade() {
+		return menorDeIdade;
+	}
+	public void setMenorDeIdade(Boolean menorDeIdade) {
+		this.menorDeIdade = menorDeIdade;
+	}
+	public Long getResponsavelId() {
+		return responsavelId;
+	}
+	public void setResponsavelId(Long responsavelId) {
+		this.responsavelId = responsavelId;
+	}
+	public String getResponsavelNome() {
+		return responsavelNome;
+	}
+	public void setResponsavelNome(String responsavelNome) {
+		this.responsavelNome = responsavelNome;
+	}
+	public String getResponsavelCpf() {
+		return responsavelCpf;
+	}
+	public void setResponsavelCpf(String responsavelCpf) {
+		this.responsavelCpf = responsavelCpf;
+	}
+	public Boolean getCreditoAprovado() {
+		return creditoAprovado;
+	}
+	public void setCreditoAprovado(Boolean creditoAprovado) {
+		this.creditoAprovado = creditoAprovado;
+	}
+	public Boolean getAutorizadoJantar() {
+		return autorizadoJantar;
+	}
+	public void setAutorizadoJantar(Boolean autorizadoJantar) {
+		this.autorizadoJantar = autorizadoJantar;
+	}
+	public String getTipoCliente() {
+		return tipoCliente;
+	}
+	public void setTipoCliente(String tipoCliente) {
+		this.tipoCliente = tipoCliente;
+	}   
+			        
 }

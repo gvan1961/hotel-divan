@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../services/auth.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-header',
@@ -34,7 +35,6 @@ import { AuthService } from '../services/auth.service';
       top: 0;
       z-index: 1000;
     }
-
     .header-content {
       display: flex;
       justify-content: space-between;
@@ -42,20 +42,17 @@ import { AuthService } from '../services/auth.service';
       max-width: 1600px;
       margin: 0 auto;
     }
-
     .logo h1 {
       margin: 0;
       font-size: 24px;
       font-weight: 700;
       cursor: default;
     }
-
     .user-info {
       display: flex;
       align-items: center;
       gap: 15px;
     }
-
     .user-greeting {
       font-size: 14px;
       background: rgba(255, 255, 255, 0.2);
@@ -63,12 +60,10 @@ import { AuthService } from '../services/auth.service';
       border-radius: 20px;
       backdrop-filter: blur(10px);
     }
-
     .user-greeting strong {
       font-weight: 700;
       font-size: 15px;
     }
-
     .btn-logout {
       background: rgba(255, 255, 255, 0.9);
       color: #667eea;
@@ -83,73 +78,58 @@ import { AuthService } from '../services/auth.service';
       align-items: center;
       gap: 5px;
     }
-
     .btn-logout:hover {
       background: white;
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
-
-    .btn-logout:active {
-      transform: translateY(0);
-    }
-
+    .btn-logout:active { transform: translateY(0); }
     @media (max-width: 768px) {
-      .app-header {
-        padding: 12px 15px;
-      }
-
-      .header-content {
-        flex-direction: column;
-        gap: 10px;
-        align-items: stretch;
-      }
-      
-      .logo h1 {
-        font-size: 20px;
-        text-align: center;
-      }
-
-      .user-info {
-        justify-content: space-between;
-      }
-
-      .user-greeting {
-        font-size: 13px;
-        padding: 6px 12px;
-      }
-
-      .btn-logout {
-        font-size: 12px;
-        padding: 6px 15px;
-      }
+      .app-header { padding: 12px 15px; }
+      .header-content { flex-direction: column; gap: 10px; align-items: stretch; }
+      .logo h1 { font-size: 20px; text-align: center; }
+      .user-info { justify-content: space-between; }
+      .user-greeting { font-size: 13px; padding: 6px 12px; }
+      .btn-logout { font-size: 12px; padding: 6px 15px; }
     }
   `]
 })
-export class HeaderComponent implements OnInit {
+export class HeaderComponent implements OnInit, OnDestroy {
   nomeUsuario: string = '';
   isLogado: boolean = false;
+  private sub: Subscription = new Subscription();
 
   constructor(private authService: AuthService) {}
 
   ngOnInit(): void {
+    this.atualizarHeader();
+
+    // Observa mudanças no localStorage a cada 1 segundo
+    this.sub = new Subscription();
+    const interval = setInterval(() => {
+      this.atualizarHeader();
+    }, 1000);
+
+    this.sub.add({ unsubscribe: () => clearInterval(interval) });
+  }
+
+  ngOnDestroy(): void {
+    this.sub.unsubscribe();
+  }
+
+  atualizarHeader(): void {
     this.isLogado = this.authService.isAuthenticated();
-    
+
     if (this.isLogado) {
-      // ✅ PEGAR DIRETO DO LOCALSTORAGE (MAIS CONFIÁVEL)
       const usuarioStr = localStorage.getItem('usuario') || localStorage.getItem('user');
-      
       if (usuarioStr) {
         try {
           const usuario = JSON.parse(usuarioStr);
           this.nomeUsuario = usuario.nome || usuario.username || 'Usuário';
-          console.log('👤 Header - Usuário logado:', this.nomeUsuario);
         } catch (e) {
-          console.error('❌ Erro ao parsear usuário:', e);
           this.nomeUsuario = 'Usuário';
         }
       } else {
-        // FALLBACK: Tentar pelo service
         this.nomeUsuario = this.authService.getUsuarioNome();
       }
     }

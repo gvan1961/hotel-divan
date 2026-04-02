@@ -5,6 +5,7 @@ import com.divan.repository.*;
 import com.divan.service.VendaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -25,6 +26,8 @@ public class VendaController {
     @Autowired private ItemVendaRepository itemVendaRepository;
     @Autowired private ExtratoReservaRepository extratoReservaRepository;
     @Autowired private VendaService vendaService;
+    @Autowired private LogAuditoriaRepository logAuditoriaRepository;
+    @Autowired private UsuarioRepository usuarioRepository;
 
     @GetMapping("/teste")
     public ResponseEntity<String> teste() {
@@ -105,6 +108,22 @@ public class VendaController {
             reserva.setTotalApagar(reserva.getTotalApagar().add(totalNota));
             reservaRepository.save(reserva);
 
+         // ✅ LOG AUDITORIA
+            try {
+                String username = SecurityContextHolder.getContext().getAuthentication().getName();
+                LogAuditoria log = new LogAuditoria();
+                log.setAcao("PDV_COMANDA_APARTAMENTO");
+                log.setDescricao("Comanda — Apt " + reserva.getApartamento().getNumeroApartamento()
+                    + " — Cliente: " + reserva.getCliente().getNome()
+                    + " — Total: R$ " + totalNota);
+                log.setDataHora(LocalDateTime.now());
+                log.setReserva(reserva);
+                usuarioRepository.findByUsername(username).ifPresent(log::setUsuario);
+                logAuditoriaRepository.save(log);
+            } catch (Exception logEx) {
+                System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+            }
+
             return ResponseEntity.ok(Map.of(
                 "notaVendaId", nota.getId(),
                 "total", totalNota,
@@ -126,7 +145,6 @@ public class VendaController {
                 ? body.get("observacao").toString() : "";
             List<Map<String, Object>> itens = (List<Map<String, Object>>) body.get("itens");
 
-            // ✅ Converter string para enum
             NotaVenda.FormaPagamentoEnum formaPagamento =
                 NotaVenda.FormaPagamentoEnum.valueOf(formaPagamentoStr);
 
@@ -135,7 +153,7 @@ public class VendaController {
             NotaVenda nota = new NotaVenda();
             nota.setDataHoraVenda(LocalDateTime.now());
             nota.setTipoVenda(NotaVenda.TipoVendaEnum.VISTA);
-            nota.setFormaPagamento(formaPagamento); // ✅ SALVAR FORMA DE PAGAMENTO
+            nota.setFormaPagamento(formaPagamento);
             nota.setStatus(NotaVenda.Status.FECHADA);
             nota.setObservacao("PDV À Vista - " + formaPagamentoStr +
                 (observacao.isBlank() ? "" : " - " + observacao));
@@ -173,6 +191,20 @@ public class VendaController {
             nota.setTotal(totalNota);
             notaVendaRepository.save(nota);
 
+            // ✅ LOG AUDITORIA
+            try {
+                String username = SecurityContextHolder.getContext().getAuthentication().getName();
+                LogAuditoria log = new LogAuditoria();
+                log.setAcao("PDV_VENDA_VISTA");
+                log.setDescricao("À Vista — " + formaPagamentoStr
+                    + " — Total: R$ " + totalNota);
+                log.setDataHora(LocalDateTime.now());
+                usuarioRepository.findByUsername(username).ifPresent(log::setUsuario);
+                logAuditoriaRepository.save(log);
+            } catch (Exception logEx) {
+                System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+            }
+
             return ResponseEntity.ok(Map.of(
                 "notaVendaId", nota.getId(),
                 "total", totalNota,
@@ -202,8 +234,8 @@ public class VendaController {
 
             NotaVenda nota = new NotaVenda();
             nota.setDataHoraVenda(LocalDateTime.now());
-            nota.setTipoVenda(NotaVenda.TipoVendaEnum.FATURADO); // ✅ CORRIGIDO (era VISTA)
-            nota.setFormaPagamento(NotaVenda.FormaPagamentoEnum.FATURADO); // ✅ SALVAR FORMA
+            nota.setTipoVenda(NotaVenda.TipoVendaEnum.FATURADO);
+            nota.setFormaPagamento(NotaVenda.FormaPagamentoEnum.FATURADO);
             nota.setStatus(NotaVenda.Status.FECHADA);
             nota.setObservacao("PDV Faturado - " + cliente.getNome() +
                 (observacao.isBlank() ? "" : " - " + observacao));
@@ -240,6 +272,20 @@ public class VendaController {
 
             nota.setTotal(totalNota);
             notaVendaRepository.save(nota);
+
+            // ✅ LOG AUDITORIA
+            try {
+                String username = SecurityContextHolder.getContext().getAuthentication().getName();
+                LogAuditoria log = new LogAuditoria();
+                log.setAcao("PDV_VENDA_FATURADA");
+                log.setDescricao("Faturado — Cliente: " + cliente.getNome()
+                    + " — Total: R$ " + totalNota);
+                log.setDataHora(LocalDateTime.now());
+                usuarioRepository.findByUsername(username).ifPresent(log::setUsuario);
+                logAuditoriaRepository.save(log);
+            } catch (Exception logEx) {
+                System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+            }
 
             return ResponseEntity.ok(Map.of(
                 "notaVendaId", nota.getId(),

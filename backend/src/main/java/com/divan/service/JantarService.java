@@ -35,6 +35,12 @@ public class JantarService {
 
     @Autowired
     private ExtratoReservaRepository extratoReservaRepository;
+    
+    @Autowired
+    private LogAuditoriaRepository logAuditoriaRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
     // ✅ LISTAR APARTAMENTOS COM HÓSPEDES AUTORIZADOS PARA JANTAR
     @Transactional(readOnly = true)
@@ -142,8 +148,9 @@ public class JantarService {
         nota.setStatus(NotaVenda.Status.FECHADA);
         nota.setObservacao("Jantar - " + hospede.getCliente().getNome());
         nota.setItens(new ArrayList<>());
-        nota.setTotal(BigDecimal.ZERO); // ✅ ADICIONA ESTA LINHA
+        nota.setTotal(BigDecimal.ZERO);
         notaVendaRepository.save(nota);
+
         // ✅ PROCESSAR ITENS
         for (Map<String, Object> itemMap : itens) {
             Long produtoId = Long.parseLong(itemMap.get("produtoId").toString());
@@ -152,7 +159,6 @@ public class JantarService {
             Produto produto = produtoRepository.findById(produtoId)
                 .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + produtoId));
 
-            // Verificar estoque
             if (produto.getQuantidade() < quantidade) {
                 throw new RuntimeException("Estoque insuficiente para: " + produto.getNomeProduto());
             }
@@ -198,6 +204,23 @@ public class JantarService {
         reserva.setTotalHospedagem(reserva.getTotalHospedagem().add(totalComanda));
         reserva.setTotalApagar(reserva.getTotalApagar().add(totalComanda));
         reservaRepository.save(reserva);
+
+        // ✅ LOG AUDITORIA
+        try {
+            String username = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication().getName();
+            LogAuditoria log = new LogAuditoria();
+            log.setAcao("JANTAR_COMANDA");
+            log.setDescricao("Jantar — Apt " + reserva.getApartamento().getNumeroApartamento()
+                + " — Cliente: " + hospede.getCliente().getNome()
+                + " — Total: R$ " + totalComanda);
+            log.setDataHora(LocalDateTime.now());
+            log.setReserva(reserva);
+            usuarioRepository.findByUsername(username).ifPresent(log::setUsuario);
+            logAuditoriaRepository.save(log);
+        } catch (Exception logEx) {
+            System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+        }
 
         System.out.println("🍽️ Comanda salva | Reserva #" + reserva.getId() +
             " | Hóspede: " + hospede.getCliente().getNome() +

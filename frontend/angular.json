@@ -28,14 +28,20 @@
           },
           "configurations": {
             "production": {
-  "budgets": [],
-  "outputHashing": "all",
-  "optimization": {
-    "fonts": {
-      "inline": false
-    }
-  }
-},
+              "budgets": [],
+              "outputHashing": "all",
+              "optimization": {
+                "fonts": {
+                  "inline": false
+                }
+              },
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ]
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,
@@ -44,21 +50,21 @@
           },
           "defaultConfiguration": "production"
         },
-       "serve": {
-  "builder": "@angular-devkit/build-angular:dev-server",
-  "options": {
-    "proxyConfig": "proxy.conf.json"
-  },
-  "configurations": {
-    "production": {
-      "buildTarget": "divan:build:production"
-    },
-    "development": {
-      "buildTarget": "divan:build:development"
-    }
-  },
-  "defaultConfiguration": "development"
-}
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "proxyConfig": "proxy.conf.json"
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "divan:build:production"
+            },
+            "development": {
+              "buildTarget": "divan:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
       }
     }
   },

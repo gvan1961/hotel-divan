@@ -33,7 +33,7 @@ public class ClienteService {
     @Autowired
     private HospedagemHospedeRepository hospedagemHospedeRepository;
     
-    public Cliente salvar(Cliente cliente, Long empresaId) {
+    public Cliente salvar(Cliente cliente, Long empresaId, Long responsavelId) {
         if (clienteRepository.existsByCpf(cliente.getCpf()) && cliente.getId() == null) {
             throw new RuntimeException("CPF já cadastrado");
         }
@@ -61,12 +61,15 @@ public class ClienteService {
             .collect(Collectors.toList());
     }
     
-    private ClienteDTO converterParaDTO(Cliente cliente) {
+    public ClienteDTO converterParaDTO(Cliente cliente) {
         ClienteDTO dto = new ClienteDTO();
         dto.setId(cliente.getId());
         dto.setNome(cliente.getNome());
         dto.setCpf(cliente.getCpf());
         dto.setCelular(cliente.getCelular());
+        dto.setCreditoAprovado(cliente.getCreditoAprovado());
+        dto.setAutorizadoJantar(cliente.getAutorizadoJantar());
+        dto.setTipoCliente(cliente.getTipoCliente());
         
         // ✅ ADICIONE OUTROS CAMPOS SE EXISTIREM NO DTO
         // dto.setEmail(cliente.getEmail());
@@ -77,14 +80,20 @@ public class ClienteService {
             dto.setEmpresaNome(cliente.getEmpresa().getNomeEmpresa());
         }
         
+        dto.setMenorDeIdade(cliente.getMenorDeIdade());
+        if (cliente.getResponsavel() != null) {
+            dto.setResponsavelId(cliente.getResponsavel().getId());
+            dto.setResponsavelNome(cliente.getResponsavel().getNome());
+            dto.setResponsavelCpf(cliente.getResponsavel().getCpf());
+        }
+        
         return dto;
     }
     
-    public Cliente atualizar(Long id, Cliente clienteAtualizado, Long empresaId) {
+    public Cliente atualizar(Long id, Cliente clienteAtualizado, Long empresaId, Long responsavelId) {
         Cliente clienteExistente = clienteRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
 
-        // ✅ ATUALIZA APENAS OS CAMPOS ENVIADOS — preserva os demais
         clienteExistente.setNome(clienteAtualizado.getNome());
         clienteExistente.setCpf(clienteAtualizado.getCpf());
         clienteExistente.setCelular(clienteAtualizado.getCelular());
@@ -93,8 +102,9 @@ public class ClienteService {
         clienteExistente.setCidade(clienteAtualizado.getCidade());
         clienteExistente.setEstado(clienteAtualizado.getEstado());
         clienteExistente.setDataNascimento(clienteAtualizado.getDataNascimento());
+        clienteExistente.setMenorDeIdade(clienteAtualizado.getMenorDeIdade() != null 
+            ? clienteAtualizado.getMenorDeIdade() : false);
 
-        // ✅ CAMPOS QUE FALTAVAM
         if (clienteAtualizado.getCreditoAprovado() != null) {
             clienteExistente.setCreditoAprovado(clienteAtualizado.getCreditoAprovado());
         }
@@ -105,18 +115,25 @@ public class ClienteService {
             clienteExistente.setAutorizadoJantar(clienteAtualizado.getAutorizadoJantar());
         }
 
+        // ✅ RESPONSÁVEL (menor de idade)
+        if (responsavelId != null) {
+            Cliente responsavel = clienteRepository.findById(responsavelId)
+                .orElseThrow(() -> new RuntimeException("Responsável não encontrado"));
+            clienteExistente.setResponsavel(responsavel);
+        } else {
+            clienteExistente.setResponsavel(null);
+        }
+
         // ✅ EMPRESA
         if (empresaId != null) {
             Empresa empresa = empresaRepository.findById(empresaId)
                 .orElseThrow(() -> new RuntimeException("Empresa não encontrada"));
             clienteExistente.setEmpresa(empresa);
-            // ✅ CRÉDITO APROVADO AUTOMATICAMENTE POR VÍNCULO COM EMPRESA
             clienteExistente.setCreditoAprovado(true);
-            System.out.println("✅ Crédito aprovado automaticamente — empresa: " 
+            System.out.println("✅ Crédito aprovado automaticamente — empresa: "
                 + empresa.getNomeEmpresa());
         } else {
             clienteExistente.setEmpresa(null);
-            // ✅ SEM EMPRESA — MANTER CRÉDITO COMO ESTÁ (não revogar automaticamente)
         }
 
         return clienteRepository.save(clienteExistente);

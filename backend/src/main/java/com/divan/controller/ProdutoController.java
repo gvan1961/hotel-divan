@@ -1,7 +1,9 @@
 package com.divan.controller;
 
 import com.divan.dto.ProdutoRequestDTO;
+import com.divan.entity.LogAuditoria;
 import com.divan.entity.Produto;
+import com.divan.repository.LogAuditoriaRepository;
 import com.divan.service.ProdutoService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,10 @@ import java.util.Optional;
 @RequestMapping("/api/produtos")
 @CrossOrigin(origins = "*")
 public class ProdutoController {
+	
+	@Autowired
+	private LogAuditoriaRepository logAuditoriaRepository;	
+	
     
     @Autowired
     private ProdutoService produtoService;
@@ -26,9 +32,26 @@ public class ProdutoController {
     public ResponseEntity<Produto> criar(@Valid @RequestBody ProdutoRequestDTO dto) {
         System.out.println("📥 Recebendo requisição para criar produto");
         System.out.println("📦 DTO recebido: " + dto);
-        
+
         try {
             Produto produtoSalvo = produtoService.salvarComDTO(dto);
+
+            // ✅ LOG AUDITORIA
+            try {
+                String username = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication().getName();
+                LogAuditoria log = new LogAuditoria();
+                log.setAcao("CRIAR_PRODUTO");
+                log.setDescricao("Usuário: " + username
+                    + " | Produto criado: " + produtoSalvo.getNomeProduto()
+                    + " | Qtd: " + produtoSalvo.getQuantidade()
+                    + " | Valor Compra: R$ " + produtoSalvo.getValorCompra());
+                log.setDataHora(java.time.LocalDateTime.now());
+                logAuditoriaRepository.save(log);
+            } catch (Exception logEx) {
+                System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+            }
+
             return ResponseEntity.status(HttpStatus.CREATED).body(produtoSalvo);
         } catch (Exception e) {
             System.err.println("❌ Erro ao criar produto: " + e.getMessage());

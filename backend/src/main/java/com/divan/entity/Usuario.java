@@ -21,12 +21,9 @@ import java.util.stream.Collectors;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Usuario implements UserDetails {
 
-    /**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	@Id
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -74,20 +71,20 @@ public class Usuario implements UserDetails {
     @JsonIgnoreProperties("usuarios")
     private Set<Permissao> permissoes = new HashSet<>();
 
-    // Implementação UserDetails
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Set<GrantedAuthority> authorities = new HashSet<>();
 
-        // Adicionar permissões dos perfis
+        System.out.println("🔍 Perfis do usuário " + username + ": " + perfis.size());
+
         for (Perfil perfil : perfis) {
+            System.out.println("🔍 Perfil: " + perfil.getNome() + " - Permissões: " + perfil.getPermissoes().size());
             authorities.add(new SimpleGrantedAuthority("ROLE_" + perfil.getNome()));
             authorities.addAll(perfil.getPermissoes().stream()
                 .map(p -> new SimpleGrantedAuthority(p.getNome()))
                 .collect(Collectors.toSet()));
         }
 
-        // Adicionar permissões individuais do usuário
         authorities.addAll(permissoes.stream()
             .map(p -> new SimpleGrantedAuthority(p.getNome()))
             .collect(Collectors.toSet()));
@@ -127,94 +124,89 @@ public class Usuario implements UserDetails {
         return ativo;
     }
 
-	public Long getId() {
-		return id;
-	}
+    public Long getId() {
+        return id;
+    }
 
-	public void setId(Long id) {
-		this.id = id;
-	}
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-	public String getNome() {
-		return nome;
-	}
+    public String getNome() {
+        return nome;
+    }
 
-	public void setNome(String nome) {
-		this.nome = nome;
-	}
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
 
-	public String getEmail() {
-		return email;
-	}
+    public String getEmail() {
+        return email;
+    }
 
-	public void setEmail(String email) {
-		this.email = email;
-	}
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-	public Boolean getAtivo() {
-		return ativo;
-	}
+    public Boolean getAtivo() {
+        return ativo;
+    }
 
-	public void setAtivo(Boolean ativo) {
-		this.ativo = ativo;
-	}
+    public void setAtivo(Boolean ativo) {
+        this.ativo = ativo;
+    }
 
-	public LocalDateTime getDataCriacao() {
-		return dataCriacao;
-	}
+    public LocalDateTime getDataCriacao() {
+        return dataCriacao;
+    }
 
-	public void setDataCriacao(LocalDateTime dataCriacao) {
-		this.dataCriacao = dataCriacao;
-	}
+    public void setDataCriacao(LocalDateTime dataCriacao) {
+        this.dataCriacao = dataCriacao;
+    }
 
-	public LocalDateTime getUltimoAcesso() {
-		return ultimoAcesso;
-	}
+    public LocalDateTime getUltimoAcesso() {
+        return ultimoAcesso;
+    }
 
-	public void setUltimoAcesso(LocalDateTime ultimoAcesso) {
-		this.ultimoAcesso = ultimoAcesso;
-	}
+    public void setUltimoAcesso(LocalDateTime ultimoAcesso) {
+        this.ultimoAcesso = ultimoAcesso;
+    }
 
-	public Set<Perfil> getPerfis() {
-		return perfis;
-	}
+    public Set<Perfil> getPerfis() {
+        return perfis;
+    }
 
-	public void setPerfis(Set<Perfil> perfis) {
-		this.perfis = perfis;
-	}
+    public void setPerfis(Set<Perfil> perfis) {
+        this.perfis = perfis;
+    }
 
-	public Set<Permissao> getPermissoes() {
-		return permissoes;
-	}
+    public Set<Permissao> getPermissoes() {
+        return permissoes;
+    }
 
-	public void setPermissoes(Set<Permissao> permissoes) {
-		this.permissoes = permissoes;
-	}
+    public void setPermissoes(Set<Permissao> permissoes) {
+        this.permissoes = permissoes;
+    }
 
-	public void setUsername(String username) {
-		this.username = username;
-	}
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
-	public void setPassword(String password) {
-		this.password = password;
-	}
+    public void setPassword(String password) {
+        this.password = password;
+    }
 
-	@Override
-	public int hashCode() {
-		return Objects.hash(id);
-	}
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		Usuario other = (Usuario) obj;
-		return Objects.equals(id, other.id);
-	}
-    
-    
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
+        Usuario other = (Usuario) obj;
+        return Objects.equals(id, other.id);
+    }
 }

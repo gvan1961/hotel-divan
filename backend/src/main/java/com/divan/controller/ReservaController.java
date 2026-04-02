@@ -3,6 +3,7 @@ package com.divan.controller;
 import com.divan.repository.ApartamentoRepository;
 import com.divan.repository.ClienteRepository;
 import com.divan.repository.HospedagemHospedeRepository;
+import com.divan.repository.LogAuditoriaRepository;
 import com.divan.entity.HospedagemHospede;
 import com.divan.entity.Cliente;
 import com.divan.entity.ExtratoReserva;
@@ -23,9 +24,11 @@ import com.divan.dto.ReservaResponseDTO;
 import com.divan.dto.TransferenciaApartamentoDTO;
 import com.divan.entity.Apartamento;
 import com.divan.entity.ItemVenda;
+import com.divan.entity.LogAuditoria;
 import com.divan.entity.NotaVenda;
 import com.divan.entity.Reserva;
 import com.divan.repository.ReservaRepository;
+import com.divan.repository.UsuarioRepository;
 import com.divan.service.ApartamentoService;
 import com.divan.service.ClienteService;
 import com.divan.service.ReservaService;
@@ -47,6 +50,12 @@ import java.util.List;
 @RequestMapping("/api/reservas")
 @CrossOrigin(origins = "*")
 public class ReservaController {
+	
+	@Autowired
+	private LogAuditoriaRepository logAuditoriaRepository;
+
+	@Autowired
+	private UsuarioRepository usuarioRepository;
 	
 	@Autowired
 	private ApartamentoRepository apartamentoRepository;
@@ -402,11 +411,28 @@ public class ReservaController {
             @RequestBody ItemVendaRequestDTO request) {
         try {
             Reserva reserva = reservaService.adicionarProdutoAoConsumo(
-                id, 
-                request.getProdutoId(), 
-                request.getQuantidade(), 
+                id,
+                request.getProdutoId(),
+                request.getQuantidade(),
                 request.getObservacao()
             );
+
+            // ✅ LOG AUDITORIA
+            try {
+                String username = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication().getName();
+                LogAuditoria log = new LogAuditoria();
+                log.setAcao("COMANDA_CONSUMO");
+                log.setDescricao("Comanda de Consumo — Apt " + reserva.getApartamento().getNumeroApartamento()
+                    + " — Cliente: " + reserva.getCliente().getNome());
+                log.setDataHora(LocalDateTime.now());
+                log.setReserva(reserva);
+                usuarioRepository.findByUsername(username).ifPresent(log::setUsuario);
+                logAuditoriaRepository.save(log);
+            } catch (Exception logEx) {
+                System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+            }
+
             return ResponseEntity.ok(reserva);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));

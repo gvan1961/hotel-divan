@@ -64,6 +64,7 @@ public class UsuarioController {
 
             // ✅ SALVAR PERFIS
             if (body.get("perfilIds") != null) {
+            	@SuppressWarnings("unchecked")
                 List<Integer> perfilIds = (List<Integer>) body.get("perfilIds");
                 List<Long> ids = perfilIds.stream().map(Long::valueOf).collect(java.util.stream.Collectors.toList());
                 List<com.divan.entity.Perfil> perfis = perfilRepository.findAllById(ids);
@@ -77,15 +78,12 @@ public class UsuarioController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletar(@PathVariable Long id) {
         if (!usuarioRepository.existsById(id)) return ResponseEntity.notFound().build();
-        usuarioRepository.deleteById(id);
-        return ResponseEntity.ok().build();
-    }
-
-    @PatchMapping("/{id}/ativar-desativar")
-    public ResponseEntity<?> ativarDesativar(@PathVariable Long id) {
-        return usuarioRepository.findById(id).map(u -> {
-        	u.setAtivo(!Boolean.TRUE.equals(u.getAtivo()));
-            return ResponseEntity.ok(usuarioRepository.save(u));
-        }).orElse(ResponseEntity.notFound().build());
+        try {
+            usuarioRepository.deleteById(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", 
+                "Usuário possui registros vinculados (caixa, reservas, etc.) e não pode ser excluído. Use a opção Inativar."));
+        }
     }
 }

@@ -11,8 +11,12 @@ export interface Cliente {
   empresaId?: number;
   empresa?: any;
   creditoAprovado?: boolean;
-  autorizadoJantar?: boolean;  // ⭐ ADICIONAR ESTA LINHA
+  autorizadoJantar?: boolean;
   tipoCliente?: TipoCliente;
+  menorDeIdade?: boolean;
+  responsavelId?: number;
+  responsavelNome?: string;
+  responsavelCpf?: string;
 }
 
 export interface ClienteRequest {
@@ -26,17 +30,17 @@ export interface ClienteRequest {
   dataNascimento: string;
   empresaId?: number;
   creditoAprovado?: boolean;
-  autorizadoJantar?: boolean;  // ⭐ ADICIONAR ESTA LINHA
+  autorizadoJantar?: boolean;
   tipoCliente?: TipoCliente;
+  menorDeIdade?: boolean;
+  responsavelId?: number;
 }
 
-// ⭐ ADICIONAR ENUM
 export enum TipoCliente {
   HOSPEDE = 'HOSPEDE',
   FUNCIONARIO = 'FUNCIONARIO'
 }
 
-// ⭐ ADICIONAR LABELS
 export const TIPO_CLIENTE_LABELS: { [key in TipoCliente]: string } = {
   HOSPEDE: 'Hóspede',
   FUNCIONARIO: 'Funcionário'

@@ -21,6 +21,15 @@ import { HasPermissionDirective } from '../directives/has-permission.directive';
       </div>
 
       <nav class="sidebar-nav">
+
+        <!-- PAINEL DE RECEPÇÃO -->
+          <a *hasPermission="'RESERVA_VISUALIZAR'"
+            routerLink="/painel-recepcao" routerLinkActive="active" class="nav-item">
+            <span class="icon">🏨</span>
+            <span class="label">Painel Recepção</span>
+          </a>
+
+
         <!-- DASHBOARD -->
         <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
           <span class="icon">📊</span>
@@ -47,14 +56,7 @@ import { HasPermissionDirective } from '../directives/has-permission.directive';
           <span class="icon">📅</span>
           <span class="label">Mapa de Reservas</span>
         </a>
-
-        <!-- PAINEL DE RECEPÇÃO -->
-<a *hasPermission="'RESERVA_VISUALIZAR'"
-   routerLink="/painel-recepcao" routerLinkActive="active" class="nav-item">
-  <span class="icon">🏨</span>
-  <span class="label">Painel Recepção</span>
-</a>
-
+        
         <div class="nav-divider"></div>
 
         <!-- CAIXA -->

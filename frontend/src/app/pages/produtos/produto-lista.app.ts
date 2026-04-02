@@ -25,12 +25,12 @@ interface Categoria {
           <h1>Produtos</h1>
         </div>
         <div class="header-right">
-          <button class="btn-imprimir" (click)="imprimirConferencia()">
-            🖨️ Imprimir Conferência
-          </button>
-          <button *hasPermission="'PRODUTO_CRIAR'" 
-        class="btn-primary" 
-        (click)="novo()">+ Novo Produto</button>
+         <button class="btn-imprimir" (click)="imprimirConferencia()">
+         🖨️ Imprimir Conferência
+        </button>
+         <button *hasPermission="'PRODUTO_CRIAR'" 
+    class="btn-primary" 
+    (click)="novo()">+ Novo Produto</button>
         </div>
       </div>
 

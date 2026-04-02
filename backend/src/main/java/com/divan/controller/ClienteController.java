@@ -34,9 +34,8 @@ public class ClienteController {
     private HospedagemHospedeRepository hospedagemHospedeRepository;
     
     @PostMapping
-    public ResponseEntity<Cliente> criar(@Valid @RequestBody ClienteRequestDTO dto) {
+    public ResponseEntity<?> criar(@Valid @RequestBody ClienteRequestDTO dto) {
         try {
-            // Converter DTO para Entity
             Cliente cliente = new Cliente();
             cliente.setNome(dto.getNome());
             cliente.setCpf(dto.getCpf());
@@ -46,11 +45,12 @@ public class ClienteController {
             cliente.setCidade(dto.getCidade());
             cliente.setEstado(dto.getEstado());
             cliente.setDataNascimento(dto.getDataNascimento());
-            
-            Cliente clienteSalvo = clienteService.salvar(cliente, dto.getEmpresaId());
+            cliente.setMenorDeIdade(dto.getMenorDeIdade() != null ? dto.getMenorDeIdade() : false);
+
+            Cliente clienteSalvo = clienteService.salvar(cliente, dto.getEmpresaId(), dto.getResponsavelId());
             return ResponseEntity.status(HttpStatus.CREATED).body(clienteSalvo);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
     
@@ -61,9 +61,10 @@ public class ClienteController {
     }
     
     @GetMapping("/{id}")
-    public ResponseEntity<Cliente> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<ClienteDTO> buscarPorId(@PathVariable Long id) {
         Optional<Cliente> cliente = clienteService.buscarPorId(id);
-        return cliente.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+        return cliente.map(c -> ResponseEntity.ok(clienteService.converterParaDTO(c)))
+                      .orElse(ResponseEntity.notFound().build());
     }
     
     @GetMapping("/cpf/{cpf}")
@@ -140,7 +141,7 @@ public class ClienteController {
     }
     
     @PutMapping("/{id}")
-    public ResponseEntity<Cliente> atualizar(@PathVariable Long id, @Valid @RequestBody ClienteRequestDTO dto) {
+    public ResponseEntity<?> atualizar(@PathVariable Long id, @Valid @RequestBody ClienteRequestDTO dto) {
         try {
             Cliente cliente = new Cliente();
             cliente.setNome(dto.getNome());
@@ -151,8 +152,8 @@ public class ClienteController {
             cliente.setCidade(dto.getCidade());
             cliente.setEstado(dto.getEstado());
             cliente.setDataNascimento(dto.getDataNascimento());
+            cliente.setMenorDeIdade(dto.getMenorDeIdade() != null ? dto.getMenorDeIdade() : false);
 
-            // ✅ CAMPOS QUE FALTAVAM
             if (dto.getCreditoAprovado() != null) {
                 cliente.setCreditoAprovado(dto.getCreditoAprovado());
             }
@@ -163,10 +164,10 @@ public class ClienteController {
                 cliente.setAutorizadoJantar(dto.getAutorizadoJantar());
             }
 
-            Cliente clienteAtualizado = clienteService.atualizar(id, cliente, dto.getEmpresaId());
+            Cliente clienteAtualizado = clienteService.atualizar(id, cliente, dto.getEmpresaId(), dto.getResponsavelId());
             return ResponseEntity.ok(clienteAtualizado);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
     
