@@ -41,6 +41,9 @@ public class ReservaService {
     private DiariaRepository diariaRepository; 
     
     @Autowired
+    private ItemVendaRepository itemVendaRepository;
+    
+    @Autowired
     private ApartamentoRepository apartamentoRepository;
     
     @Autowired
@@ -69,6 +72,8 @@ public class ReservaService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+    
+    
      
     /**
      * Verifica se existe conflito de datas para o apartamento
@@ -836,21 +841,19 @@ public class ReservaService {
         }
         notaVenda.getItens().add(item);
         
-        // Recalcular total da nota
-        BigDecimal novoTotal = notaVenda.getItens().stream()
+        // ✅ BUSCAR TOTAL DO BANCO (não confiar no lazy loading)
+        BigDecimal totalItensExistentes = itemVendaRepository
+            .findByNotaVendaId(notaVenda.getId())
+            .stream()
             .map(ItemVenda::getTotalItem)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
+
+        BigDecimal novoTotal = totalItensExistentes.add(valorTotalItem);
         notaVenda.setTotal(novoTotal);
         
         // Atualizar estoque
         produto.setQuantidade(produto.getQuantidade() - quantidade);
         produtoRepository.save(produto);
-        
-        // Atualizar totais da reserva
-        reserva.setTotalProduto(novoTotal);
-        reserva.setTotalHospedagem(reserva.getTotalDiaria().add(novoTotal));
-        reserva.setTotalApagar(reserva.getTotalHospedagem().subtract(reserva.getTotalRecebido()));
         
         // Salvar reserva (isso salva a nota em cascata)
         Reserva reservaSalva = reservaRepository.save(reserva);
@@ -861,7 +864,7 @@ public class ReservaService {
             .findFirst()
             .orElseThrow(() -> new RuntimeException("Nota de venda não encontrada após salvar"));
         
-        // Criar lançamento no extrato
+        // ✅ Criar e salvar extrato ANTES de recalcular
         ExtratoReserva extrato = new ExtratoReserva();
         extrato.setReserva(reservaSalva);
         extrato.setDataHoraLancamento(LocalDateTime.now());
@@ -871,8 +874,11 @@ public class ReservaService {
         extrato.setValorUnitario(produto.getValorVenda());
         extrato.setTotalLancamento(valorTotalItem);
         extrato.setNotaVendaId(notaSalva.getId());
-        
         extratoReservaRepository.save(extrato);
+
+        // ✅ Recalcular totais somando do extrato (já inclui o novo item)
+        recalcularTotaisReserva(reservaSalva);
+        reservaRepository.save(reservaSalva);
         
         // Criar histórico
         HistoricoHospede historico = new HistoricoHospede();

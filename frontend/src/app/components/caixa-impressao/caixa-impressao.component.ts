@@ -299,20 +299,80 @@ import { CaixaConsultaService } from '../../services/caixa-consulta.service';
 
     /* IMPRESSÃO */
     @media print {
-      .no-print {
-        display: none !important;
-      }
+  .no-print {
+    display: none !important;
+  }
 
-      .container-impressao {
-        padding: 0;
-        max-width: 100%;
-      }
+  .container-impressao {
+    padding: 0;
+    max-width: 80mm;
+  }
 
-      .impressao {
-        box-shadow: none;
-        padding: 20px;
-      }
-    }
+  .impressao {
+    box-shadow: none;
+    padding: 3mm;
+    width: 80mm;
+    font-size: 9pt;
+    font-family: 'Courier New', monospace;
+  }
+
+  .cabecalho h1 { font-size: 13pt; }
+  .cabecalho h2 { font-size: 10pt; }
+  .status { font-size: 9pt; }
+
+  .secao {
+    margin-bottom: 8px;
+  }
+
+  .secao h3 {
+    font-size: 9pt;
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+  }
+
+  .tabela-info td,
+  .tabela-valores td {
+    padding: 3px 2px;
+    font-size: 8pt;
+    border-bottom: 1px dashed #000;
+  }
+
+  .tabela-info td:first-child {
+    width: 45%;
+  }
+
+  .tabela-valores td:first-child {
+    width: 60%;
+  }
+
+  .tabela-valores .valor {
+    text-align: right;
+    width: 40%;
+    white-space: nowrap;
+  }
+
+  .tabela-valores .total td {
+    font-size: 9pt;
+    padding-top: 4px;
+  }
+
+  .tabela-valores .total-liquido td {
+    font-size: 10pt;
+  }
+
+  .rodape {
+    margin-top: 15px;
+    font-size: 8pt;
+  }
+
+  .assinatura {
+    margin-top: 20px;
+  }
+
+  .linha-assinatura {
+    width: 60mm;
+  }
+}
   `]
 })
 export class CaixaImpressaoComponent implements OnInit {

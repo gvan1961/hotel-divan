@@ -1060,20 +1060,20 @@ export class PDVComponent implements OnInit {
         <title>Cupom de Venda #${this.notaVendaId}</title>
         <style>
   @page { 
-    size: 58mm auto; 
-    margin: 2mm; 
-  }
-  @media print {
-    body { margin: 0; }
-  }
-  body { 
-    font-family: 'Courier New', monospace; 
-    font-size: 10px; 
-    width: 58mm; 
-    margin: 0 auto; 
-    padding: 2mm;
-    background: white;
-  }
+  size: 80mm auto; 
+  margin: 0; 
+}
+@media print {
+  body { margin: 0; }
+}
+body { 
+  font-family: 'Courier New', monospace; 
+  font-size: 11px; 
+  width: 80mm; 
+  margin: 0; 
+  padding: 3mm;
+  background: white;
+}
   .cabecalho { 
     text-align: center; 
     margin-bottom: 5px;
@@ -1102,32 +1102,40 @@ export class PDVComponent implements OnInit {
     margin: 3px 0;
     font-size: 9px;
   }
-  .item { 
-    display: flex; 
-    justify-content: space-between; 
-    margin: 3px 0;
-    font-size: 9px;
-  }
-  .item-nome {
-    flex: 1;
-    padding-right: 5px;
-  }
-  .item-qtd-preco {
-    text-align: right;
-    white-space: nowrap;
-  }
-  .total { 
-    font-size: 11px; 
-    font-weight: bold; 
-    margin-top: 5px;
-    padding-top: 5px;
-    border-top: 1px dashed #000;
-  }
-  .total-linha {
-    display: flex;
-    justify-content: space-between;
-    margin: 2px 0;
-  }
+
+ .item { 
+  display: block;
+  margin: 3px 0;
+  font-size: 9pt;
+  border-bottom: 1px dashed #000;
+  padding-bottom: 2px;
+}
+
+.item-nome {
+  display: block;
+  font-weight: bold;
+  font-size: 9pt;
+}
+
+.item-qtd-preco {
+  display: block;
+  text-align: right;
+  font-size: 9pt;
+  white-space: nowrap;
+}
+
+
+.total-linha {
+  display: block;
+  margin: 2px 0;
+  font-size: 10pt;
+}
+
+.total-linha span:last-child {
+  display: block;
+  text-align: right;
+  font-weight: bold;
+}
   .rodape {
     text-align: center;
     margin-top: 8px;
@@ -1197,49 +1205,59 @@ export class PDVComponent implements OnInit {
     const itensVenda = this.ultimosItensVendidos;
     const totalVenda = this.ultimoTotalVenda;
 
-    itensVenda.forEach(item => {
+     itensVenda.forEach(item => {
       htmlCupom += `
-        <div class="item">
-          <span class="item-nome">${item.produto.nomeProduto}</span>
-          <span class="item-qtd-preco">${item.quantidade}x R$ ${this.formatarMoeda(item.valorUnitario)} = R$ ${this.formatarMoeda(item.total)}</span>
-        </div>
+        <table style="width:100%; border-collapse:collapse; margin:3px 0; border-bottom:1px dashed #000;">
+          <tr>
+            <td colspan="2" style="font-size:11px; font-weight:bold; padding:2px 0;">
+              ${item.produto.nomeProduto}
+            </td>
+          </tr>
+          <tr>
+            <td style="font-size:11px; padding:2px 0;">
+              ${item.quantidade}x R$ ${this.formatarMoeda(item.valorUnitario)}
+            </td>
+            <td style="font-size:11px; font-weight:bold; text-align:right; white-space:nowrap; padding:2px 0;">
+              = R$ ${this.formatarMoeda(item.total)}
+            </td>
+          </tr>
+        </table>
       `;
     });
 
     htmlCupom += `
-        <div class="total">
-          <div class="total-linha">
-            <span>TOTAL:</span>
-            <span class="destaque">R$ ${this.formatarMoeda(totalVenda)}</span>
-          </div>
+        <table style="width:100%; border-collapse:collapse; border-top:2px solid #000; margin-top:5px; padding-top:5px;">
+          <tr>
+            <td style="font-size:12px; font-weight:bold; padding:3px 0;">TOTAL:</td>
+            <td style="font-size:12px; font-weight:bold; text-align:right; white-space:nowrap; padding:3px 0;">R$ ${this.formatarMoeda(totalVenda)}</td>
+          </tr>
     `;
 
-    if (this.tipoVenda === 'VISTA') {
+   if (this.tipoVenda === 'VISTA') {
       htmlCupom += `
-          <div class="total-linha">
-            <span>Valor Pago:</span>
-            <span>R$ ${this.formatarMoeda(this.valorPago)}</span>
-          </div>
+          <tr>
+            <td style="font-size:11px; padding:2px 0;">Valor Pago:</td>
+            <td style="font-size:11px; text-align:right; white-space:nowrap; padding:2px 0;">R$ ${this.formatarMoeda(this.valorPago)}</td>
+          </tr>
       `;
-      
       if (this.troco > 0) {
         htmlCupom += `
-          <div class="total-linha">
-            <span>Troco:</span>
-            <span class="destaque">R$ ${this.formatarMoeda(this.troco)}</span>
-          </div>
+          <tr>
+            <td style="font-size:12px; font-weight:bold; padding:2px 0;">Troco:</td>
+            <td style="font-size:12px; font-weight:bold; text-align:right; white-space:nowrap; padding:2px 0;">R$ ${this.formatarMoeda(this.troco)}</td>
+          </tr>
         `;
       }
     } else {
       htmlCupom += `
-          <div class="total-linha" style="margin-top: 10px; font-size: 12px;">
-            <span>💳 VIA DE APARTAMENTO</span>
-          </div>
+          <tr>
+            <td colspan="2" style="font-size:12px; font-weight:bold; padding:3px 0;">💳 VIA DE APARTAMENTO</td>
+          </tr>
       `;
     }
 
     htmlCupom += `
-        </div>
+        </table>
         
         <div class="rodape">
           <p>Obrigado pela preferência!</p>
