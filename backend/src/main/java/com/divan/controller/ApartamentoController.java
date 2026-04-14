@@ -499,4 +499,30 @@ public class ApartamentoController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    @GetMapping("/{id}/verificar-checkout-vencido")
+    public ResponseEntity<?> verificarCheckoutVencido(@PathVariable Long id) {
+        try {
+            List<Reserva> reservasAtivas = reservaRepository
+                .findByApartamentoIdAndStatus(id, Reserva.StatusReservaEnum.ATIVA);
+            
+            LocalDateTime agora = LocalDateTime.now();
+            
+            for (Reserva r : reservasAtivas) {
+                if (r.getDataCheckout().isBefore(agora)) {
+                    return ResponseEntity.ok(Map.of(
+                        "temCheckoutVencido", true,
+                        "hospedeNome", r.getCliente().getNome(),
+                        "checkoutPrevisto", r.getDataCheckout().toString(),
+                        "horasAtraso", java.time.Duration.between(r.getDataCheckout(), agora).toHours()
+                    ));
+                }
+            }
+            
+            return ResponseEntity.ok(Map.of("temCheckoutVencido", false));
+            
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
 }

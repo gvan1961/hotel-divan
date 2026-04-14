@@ -1,6 +1,5 @@
 package com.divan.controller;
 
-
 import com.divan.entity.Empresa;
 import com.divan.service.EmpresaService;
 import jakarta.validation.Valid;
@@ -10,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -21,12 +21,12 @@ public class EmpresaController {
     private EmpresaService empresaService;
     
     @PostMapping
-    public ResponseEntity<Empresa> criar(@Valid @RequestBody Empresa empresa) {
+    public ResponseEntity<?> criar(@Valid @RequestBody Empresa empresa) {
         try {
             Empresa empresaSalva = empresaService.salvar(empresa);
             return ResponseEntity.status(HttpStatus.CREATED).body(empresaSalva);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
     

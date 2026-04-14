@@ -173,35 +173,61 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
             </div>
           </div>
 
-          <!-- HOSPEDAGEM -->
-          <div class="card card-mini">
-            <h2>📅 Hospedagem</h2>
-            <div class="info-item-mini">
-              <span class="label">Check-in:</span>
-              <span class="value-pequeno">{{ formatarData(reserva.dataCheckin) }}</span>
-            </div>
-            <div class="info-item-com-botao-mini">
-              <div class="info-item-mini">
-                <span class="label">Check-out:</span>
-                <span class="value-pequeno">{{ formatarData(reserva.dataCheckout) }}</span>
-              </div>
-              <button 
-                *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
-                class="btn-mini"
-                (click)="abrirModalAlterarCheckout()"
-                title="Alterar checkout">
-                ✏️
-              </button>
-            </div>
-            <div class="info-item-mini">
-              <span class="label">Hóspedes:</span>
-              <span class="value">{{ reserva.quantidadeHospede }}</span>
-            </div>
-            <div class="info-item-mini">
-              <span class="label">Diárias:</span>
-              <span class="value">{{ reserva.quantidadeDiaria }}</span>
-            </div>
-          </div>
+         <!-- HOSPEDAGEM -->
+<div class="card card-mini">
+  <h2>📅 Hospedagem</h2>
+  <div class="info-item-mini">
+    <span class="label">Check-in:</span>
+    <span class="value-pequeno">{{ formatarData(reserva.dataCheckin) }}</span>
+  </div>
+  <div class="info-item-com-botao-mini">
+    <div class="info-item-mini">
+      <span class="label">Check-out:</span>
+      <span class="value-pequeno">{{ formatarData(reserva.dataCheckout) }}</span>
+    </div>
+    <button 
+      *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
+      class="btn-mini"
+      (click)="abrirModalAlterarCheckout()"
+      title="Alterar checkout">
+      ✏️
+    </button>
+  </div>
+  <div class="info-item-mini">
+    <span class="label">Hóspedes:</span>
+    <span class="value">{{ reserva.quantidadeHospede }}</span>
+  </div>
+  <div class="info-item-mini">
+    <span class="label">Diárias:</span>
+    <span class="value">{{ reserva.quantidadeDiaria }}</span>
+  </div>
+
+  <!-- ✅ OBSERVAÇÃO -->
+<div style="flex-direction: column; align-items: flex-start; padding-top: 10px; border-top: 1px solid #f0f0f0; margin-top: 6px;">
+  <span class="label" style="margin-bottom: 6px; font-size: 0.95em;">Observação:</span>
+  <div style="width: 100%; display: flex; gap: 6px; align-items: flex-start;">
+    <textarea
+      *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
+      [(ngModel)]="reserva.observacoes"
+      rows="3"
+      style="width:100%; font-size:0.95em; border:1.5px solid #ddd; border-radius:6px; padding:8px; resize:vertical; line-height:1.4;"
+      placeholder="Digite uma observação...">
+    </textarea>
+    <span *ngIf="reserva.status !== 'ATIVA' && reserva.status !== 'PRE_RESERVA'"
+          style="font-size:0.95em; color:#444; line-height:1.4;">
+      {{ reserva.observacoes || '-' }}
+    </span>
+    <button
+      *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
+      class="btn-mini"
+      (click)="salvarObservacao()"
+      title="Salvar observação"
+      style="margin-top: 2px;">
+      💾
+    </button>
+  </div>
+</div>
+</div>
 
           <!-- FINANCEIRO -->
           <div class="card card-mini">
@@ -540,6 +566,16 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
                 ❌ Cancelar Reserva
               </button>
             </ng-container>
+
+            <!-- ✅ NOVO - BILHETES DE SORTEIO -->
+<ng-container *hasPermission="'RESERVA_VISUALIZAR'">
+  <button class="btn-acao btn-bilhetes" 
+          *ngIf="reserva.status === 'FINALIZADA' && temBilhetes"
+          (click)="carregarEImprimirBilhetes()">
+    🎟️ Imprimir Bilhetes
+  </button>
+</ng-container>
+
           </div>
         </div>
 
@@ -2566,6 +2602,8 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
   termoBuscaPlaca = '';
   resultadoBuscaPlaca = '';
   erroBuscaPlaca = '';
+
+  temBilhetes = false;
   
   private intervaloAtualizacao: any;
 
@@ -2593,65 +2631,71 @@ ngOnDestroy(): void {
 }
 
   carregarReserva(id: number): void {
-    this.loading = true;
-    this.erro = '';
-    this.http.get<ReservaDetalhes>(`/api/reservas/${id}`).subscribe({
-      next: (data) => {
-        this.reserva = data;
-        this.loading = false;
-        
-        // ✅ DEBUG AUDITORIA
-        console.log('🔍 AUDITORIA:', {
-          criadoPor: data.criadoPor,
-          dataCriacao: data.dataCriacao,
-          finalizadoPor: data.finalizadoPor,
-          dataFinalizacao: data.dataFinalizacao,
-          canceladoPor: data.canceladoPor,
-          dataCancelamento: data.dataCancelamento,
-          motivoCancelamento: data.motivoCancelamento
+  this.loading = true;
+  this.erro = '';
+  this.http.get<ReservaDetalhes>(`/api/reservas/${id}`).subscribe({
+    next: (data) => {
+      this.reserva = data;
+      this.loading = false;
+      
+      // ✅ DEBUG AUDITORIA
+      console.log('🔍 AUDITORIA:', {
+        criadoPor: data.criadoPor,
+        dataCriacao: data.dataCriacao,
+        finalizadoPor: data.finalizadoPor,
+        dataFinalizacao: data.dataFinalizacao,
+        canceladoPor: data.canceladoPor,
+        dataCancelamento: data.dataCancelamento,
+        motivoCancelamento: data.motivoCancelamento
+      });
+      
+      console.log('═══════════════════════════════════════');
+      console.log('📋 TODOS OS EXTRATOS:');
+      console.table(data.extratos);
+      
+      console.log('💰 EXTRATOS COM DESCONTO:');
+      const extratosDesconto = (data.extratos || []).filter((e: any) => 
+        e.descricao && e.descricao.includes('Desconto')
+      );
+      console.table(extratosDesconto);
+      
+      console.log('🔍 VERIFICANDO CONDIÇÕES DOS BOTÕES:');
+      extratosDesconto.forEach((ext: any, i: number) => {
+        console.log(`Extrato ${i + 1}:`, {
+          id: ext.id,
+          descricao: ext.descricao,
+          statusLancamento: ext.statusLancamento,
+          estornado: ext.estornado,
+          'Começa com "Desconto aplicado"?': ext.descricao?.startsWith('Desconto aplicado'),
+          'Status é ESTORNO?': ext.statusLancamento === 'ESTORNO',
+          'NÃO está estornado?': !ext.estornado,
+          'DEVE MOSTRAR BOTÃO?': 
+            ext.statusLancamento === 'ESTORNO' && 
+            ext.descricao?.startsWith('Desconto aplicado') &&
+            !ext.estornado
         });
-        
-        // ✅ LOG CORRIGIDO:
-        console.log('═══════════════════════════════════════');
-        console.log('📋 TODOS OS EXTRATOS:');
-        console.table(data.extratos);
-        
-        console.log('💰 EXTRATOS COM DESCONTO:');
-        const extratosDesconto = (data.extratos || []).filter((e: any) => 
-          e.descricao && e.descricao.includes('Desconto')
-        );
-        console.table(extratosDesconto);
-        
-        console.log('🔍 VERIFICANDO CONDIÇÕES DOS BOTÕES:');
-        extratosDesconto.forEach((ext: any, i: number) => {
-          console.log(`Extrato ${i + 1}:`, {
-            id: ext.id,
-            descricao: ext.descricao,
-            statusLancamento: ext.statusLancamento,
-            estornado: ext.estornado,
-            'Começa com "Desconto aplicado"?': ext.descricao?.startsWith('Desconto aplicado'),
-            'Status é ESTORNO?': ext.statusLancamento === 'ESTORNO',
-            'NÃO está estornado?': !ext.estornado,
-            'DEVE MOSTRAR BOTÃO?': 
-              ext.statusLancamento === 'ESTORNO' && 
-              ext.descricao?.startsWith('Desconto aplicado') &&
-              !ext.estornado
-          });
+      });
+      console.log('═══════════════════════════════════════');
+      console.log('✅ Reserva carregada:', data);
+      
+      // ✅ CARREGAR HÓSPEDES
+      this.carregarHospedes();
+
+      // ✅ VERIFICAR BILHETES SE FINALIZADA
+      if (data.status === 'FINALIZADA') {
+        this.http.get<any[]>(`/api/reservas/${data.id}/bilhetes-sorteio`).subscribe({
+          next: (bilhetes) => this.temBilhetes = bilhetes.length > 0,
+          error: () => this.temBilhetes = false
         });
-        console.log('═══════════════════════════════════════');
-        console.log('✅ Reserva carregada:', data);
-        
-        // ✅ CARREGAR HÓSPEDES PARA QUALQUER STATUS
-        // (antes só carregava para ATIVA)
-        this.carregarHospedes();
-      },
-      error: (err: any) => {
-        console.error('❌ Erro:', err);
-        this.erro = err.error?.message || 'Erro ao carregar reserva';
-        this.loading = false;
       }
-    });
-  }
+    },
+    error: (err: any) => {
+      console.error('❌ Erro:', err);
+      this.erro = err.error?.message || 'Erro ao carregar reserva';
+      this.loading = false;
+    }
+  });
+}
 
     /**
      * ✅ MÉTODO PARA RECARREGAR RESERVA APÓS ALTERAÇÃO DE HÓSPEDES
@@ -2665,7 +2709,7 @@ ngOnDestroy(): void {
   }
 
     voltar(): void {
-      this.router.navigate(['/reservas']);
+      this.router.navigate(['/painel-recepcao']);
     }
 
     abrirComanda(): void {
@@ -2732,6 +2776,10 @@ ngOnDestroy(): void {
         <title>Ficha de Check-in - Reserva #${this.reserva.id}</title>
         <style>
           @page { 
+            html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+}
             size: 80mm auto; 
             margin: 0; 
           }
@@ -2745,12 +2793,13 @@ ngOnDestroy(): void {
           }
           
           body { 
-            width: 80mm; 
-            margin: 0; 
-            padding: 3mm;
-            line-height: 1.4;
-            font-size: 11pt !important;  /* ✅ AUMENTADO */
-          }
+  width: 72mm;
+  max-width: 72mm;
+  margin: 0; 
+  padding: 1mm 2mm;
+  line-height: 1.3;
+  font-size: 8pt !important;
+}
           
           .cabecalho { 
             text-align: left; 
@@ -2988,6 +3037,11 @@ ngOnDestroy(): void {
         <title>Recibo - Reserva #${this.reserva.id}</title>
         <style>
           @page { 
+
+            html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+}
             size: 80mm auto; 
             margin: 0; 
           }
@@ -3000,13 +3054,14 @@ ngOnDestroy(): void {
             print-color-adjust: exact !important;
           }
           
-          body { 
-            width: 80mm; 
-            margin: 0; 
-            padding: 3mm;
-            font-size: 11pt !important;  /* ✅ AUMENTADO */
-            line-height: 1.4;
-          }
+         body { 
+  width: 72mm;
+  max-width: 72mm;
+  margin: 0; 
+  padding: 1mm 2mm;
+  font-size: 8pt !important;
+  line-height: 1.3;
+}
           
           .cabecalho { 
             text-align: left; 
@@ -3252,14 +3307,20 @@ ngOnDestroy(): void {
           <meta charset="UTF-8">
           <title>Fatura - Reserva #${this.reserva.id}</title>
           <style>
-            @page { size: 80mm auto; margin: 0; }
+            @page
+            html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+            { size: 80mm auto; margin: 0; }
             body { 
-              font-family: 'Courier New', monospace; 
-              font-size: 10px; 
-              width: 80mm; 
-              margin: 0; 
-              padding: 5mm;
-            }
+  font-family: 'Courier New', monospace; 
+  font-size: 8pt; 
+  width: 72mm;
+  max-width: 72mm;
+  margin: 0; 
+  padding: 1mm 2mm;
+}
             .cabecalho { text-align: left; margin-bottom: 8px; }
             .cabecalho h1 { font-size: 14px; margin: 0; letter-spacing: 2px; }
             .cnpj, .endereco { font-size: 9px; margin: 2px 0; }
@@ -3873,8 +3934,19 @@ ngOnDestroy(): void {
         alert('✅ Reserva finalizada! Valor enviado para Contas a Receber.');
         this.carregarReserva(this.reserva!.id);
         setTimeout(() => {
-          this.gerarFatura();
-        }, 800);
+  this.gerarFatura();
+  // ✅ BUSCAR E IMPRIMIR BILHETES
+  this.http.get<any[]>(`/api/reservas/${this.reserva!.id}/bilhetes-sorteio`).subscribe({
+    
+    next: (bilhetes) => {
+      if (bilhetes.length > 0) {
+        const imprimir = confirm(`🎟️ ${bilhetes.length} bilhete(s) de sorteio gerado(s)! Deseja imprimir?`);
+        if (imprimir) this.imprimirBilhetes(bilhetes);
+      }
+    },
+    error: () => {}
+  });
+}, 800);
       },
       error: (err: any) => {
         let mensagemErro = 'Erro ao finalizar reserva';
@@ -3928,11 +4000,23 @@ ngOnDestroy(): void {
         this.carregarReserva(this.reserva!.id);
         
         setTimeout(() => {
-          const imprimir = confirm('📄 Deseja imprimir o RECIBO agora?');
-          if (imprimir) {
-            this.gerarRecibo();
-          }
-        }, 500);
+
+          const reservaId = this.reserva!.id;
+  const imprimir = confirm('📄 Deseja imprimir o RECIBO agora?');
+  if (imprimir) {
+    this.gerarRecibo();
+  }
+  // ✅ BUSCAR E IMPRIMIR BILHETES
+  this.http.get<any[]>(`/api/reservas/${this.reserva!.id}/bilhetes-sorteio`).subscribe({
+    next: (bilhetes) => {
+      if (bilhetes.length > 0) {
+        const imprimirBilhetes = confirm(`🎟️ ${bilhetes.length} bilhete(s) de sorteio gerado(s)! Deseja imprimir?`);
+        if (imprimirBilhetes) this.imprimirBilhetes(bilhetes);
+      }
+    },
+    error: () => {}
+  });
+}, 500);
       },
       error: (err: any) => {
         alert('❌ Erro: ' + (err.error?.erro || err.error?.message || err.message));
@@ -4334,7 +4418,7 @@ ngOnDestroy(): void {
     }
 
     
-
+    
     salvarNovoHospede(): void {
     if (!this.novoHospede.nome || this.novoHospede.nome.trim() === '') {
       alert('⚠️ Nome completo é obrigatório!');
@@ -4463,18 +4547,22 @@ ngOnDestroy(): void {
     console.log('🚪 Enviando checkout parcial:', dto);
     
     this.reservaService.checkoutParcial(this.reserva.id, dto).subscribe({
-      next: (response: any) => {
-        console.log('✅ Checkout parcial realizado:', response);
-        
-        const mensagem = this.hospedeParaCheckout.titular
-          ? '✅ Checkout do titular realizado!\n\nO próximo hóspede foi promovido a titular.'
-          : '✅ Checkout realizado com sucesso!';
-        
-        alert(mensagem + '\n\nQuantidade de hóspedes atualizada: ' + response.novaQuantidadeHospedes);
-        
-        this.fecharModalCheckoutParcial();
-        this.carregarReserva(this.reserva!.id);
-      },
+     next: (response: any) => {
+  const mensagem = this.hospedeParaCheckout.titular
+    ? '✅ Checkout do titular realizado!\n\nO próximo hóspede foi promovido a titular.'
+    : '✅ Checkout realizado com sucesso!';
+  
+  alert(mensagem + '\n\nQuantidade de hóspedes atualizada: ' + response.novaQuantidadeHospedes);
+
+  // ✅ IMPRIMIR BILHETES DO CHECKOUT PARCIAL
+  if (response.bilhetesGerados && response.bilhetesGerados.length > 0) {
+    const imprimir = confirm(`🎟️ ${response.bilhetesGerados.length} bilhete(s) gerado(s)! Deseja imprimir?`);
+    if (imprimir) this.imprimirBilhetes(response.bilhetesGerados);
+  }
+
+  this.fecharModalCheckoutParcial();
+  this.carregarReserva(this.reserva!.id);
+},
       error: (err: any) => {
         console.error('❌ Erro no checkout parcial:', err);
         const erro = err.error?.erro || err.error?.message || err.message || 'Erro desconhecido';
@@ -4641,8 +4729,16 @@ ngOnDestroy(): void {
   
     <style>
       @page { 
+      html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+}
       size: 80mm auto; 
       margin: 0; 
+      html, body {
+      margin: 0 !important;
+     padding: 0 !important;
+    }
     }
     
     * {
@@ -4654,12 +4750,13 @@ ngOnDestroy(): void {
     }
     
     body { 
-      width: 80mm; 
-      margin: 0; 
-      padding: 3mm;
-      font-size: 10pt !important;  /* ✅ AUMENTADO */
-      line-height: 1.3;
-    }
+  width: 72mm;
+  max-width: 72mm;
+  margin: 0; 
+  padding: 1mm 2mm;
+  font-size: 8pt !important;
+  line-height: 1.3;
+}
     
     .cabecalho { 
       text-align: left; 
@@ -5252,4 +5349,93 @@ ngOnDestroy(): void {
       .replace('hóspede(s)', 'hóspede(s)');
   }
 
+  salvarObservacao(): void {
+  if (!this.reserva) return;
+
+  this.http.patch(`/api/reservas/${this.reserva.id}/observacao`, {
+    observacoes: this.reserva.observacoes
+  }).subscribe({
+    next: () => alert('✅ Observação salva!'),
+    error: (err) => alert('❌ Erro: ' + (err.error?.erro || err.message))
+  });
+}
+
+imprimirBilhetes(bilhetes: any[]): void {
+  if (!bilhetes || bilhetes.length === 0) return;
+
+  const linhasBilhetes = bilhetes.map(b => `
+    <div style="border:2px dashed #000; padding:8px; margin:10px 0; text-align:center;">
+      <div style="font-size:14pt; font-weight:900;">BILHETE #${b.numeroBilhete}</div>
+      <div style="font-size:10pt; font-weight:700; border-top:1px solid #000; border-bottom:1px solid #000; padding:3px 0;">
+        ${b.nomeHospede || ''}
+      </div>
+      <div style="font-size:9pt; font-weight:700;">Apt: ${b.apartamento || ''}</div>
+      <div style="font-size:9pt;">Check-in: ${this.formatarDataImpressao(b.dataCheckin)}</div>
+      <div style="font-size:9pt;">Check-out: ${this.formatarDataImpressao(b.dataCheckout)}</div>
+      <div style="font-size:8pt;">Emitido: ${this.formatarDataImpressao(b.dataEmissao)}</div>
+      <div style="font-size:8pt; margin-top:4px;">Sorteio Hotel Di Van</div>
+    </div>
+  `).join('');
+
+  const html = `
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        @page { size: 80mm auto; margin: 0; }
+        body { font-family: 'Courier New', monospace; width: 72mm; margin: 0; padding: 2mm; font-size: 9pt; }
+        .centro { text-align: center; font-weight: 700; }
+      </style>
+    </head>
+    <body>
+      <div class="centro"><strong>HOTEL DI VAN</strong></div>
+      <div class="centro">CNPJ: 07.757.726/0001-12</div>
+      <div class="centro">================================</div>
+      <div class="centro"><strong>BILHETES DE SORTEIO</strong></div>
+      <div class="centro">================================</div>
+      ${linhasBilhetes}
+      <div class="centro">================================</div>
+      <div class="centro"><strong>Boa sorte!</strong></div>
+    </body>
+    </html>
+  `;
+
+  // ✅ USAR IFRAME INVISÍVEL
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+  
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (doc) {
+    doc.open();
+    doc.write(html);
+    doc.close();
+    
+    setTimeout(() => {
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+    }, 500);
   }
+}
+
+formatarDataImpressao(data: string): string {
+  if (!data) return '-';
+  return new Date(data).toLocaleDateString('pt-BR');
+}
+
+carregarEImprimirBilhetes(): void {
+  this.http.get<any[]>(`/api/reservas/${this.reserva!.id}/bilhetes-sorteio`).subscribe({
+    next: (bilhetes) => {
+      if (bilhetes.length > 0) {
+        this.imprimirBilhetes(bilhetes);
+      } else {
+        alert('ℹ️ Nenhum bilhete gerado para esta reserva.');
+      }
+    },
+    error: () => alert('❌ Erro ao carregar bilhetes.')
+  });
+}
+
+}

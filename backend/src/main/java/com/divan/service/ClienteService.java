@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -34,6 +35,17 @@ public class ClienteService {
     private HospedagemHospedeRepository hospedagemHospedeRepository;
     
     public Cliente salvar(Cliente cliente, Long empresaId, Long responsavelId) {
+    	
+    	// ✅ VALIDAR CPF
+        if (cliente.getCpf() != null && !cliente.getCpf().isEmpty()) {
+            if (!validarCPF(cliente.getCpf())) {
+                throw new RuntimeException("CPF inválido: " + cliente.getCpf());
+            }
+            if (clienteRepository.existsByCpf(cliente.getCpf()) && cliente.getId() == null) {
+                throw new RuntimeException("CPF já cadastrado");
+            }
+        }
+    	
         if (clienteRepository.existsByCpf(cliente.getCpf()) && cliente.getId() == null) {
             throw new RuntimeException("CPF já cadastrado");
         }
@@ -55,10 +67,48 @@ public class ClienteService {
     }
     
     public List<ClienteDTO> buscarPorTermo(String termo) {
-        List<Cliente> clientes = clienteRepository.findByNomeContainingIgnoreCaseOrCpfContaining(termo, termo);
-        return clientes.stream()
-            .map(this::converterParaDTO)
-            .collect(Collectors.toList());
+        String termoLimpo = termo.trim();
+        System.out.println("🔍 Buscando por: " + termoLimpo);
+
+        try {
+            List<Object[]> resultados;
+            
+            // ✅ SE CONTÉM NÚMERO — busca por CPF também
+            String apenasNumeros = termoLimpo.replaceAll("\\D", "");
+            if (apenasNumeros.length() >= 3) {
+                // Formata o CPF para buscar no banco
+                String cpfFormatado = apenasNumeros;
+                if (apenasNumeros.length() == 11) {
+                    cpfFormatado = apenasNumeros.substring(0, 3) + "." +
+                                   apenasNumeros.substring(3, 6) + "." +
+                                   apenasNumeros.substring(6, 9) + "-" +
+                                   apenasNumeros.substring(9);
+                }
+                resultados = clienteRepository.buscarPorCpfOuNome(
+                    "%" + cpfFormatado + "%", termoLimpo + "*");
+            } else {
+                resultados = clienteRepository.buscarPorNomeFull(termoLimpo + "*");
+            }
+
+            System.out.println("✅ Resultados encontrados: " + resultados.size());
+
+            return resultados.stream().map(row -> {
+                ClienteDTO dto = new ClienteDTO();
+                dto.setId(((Number) row[0]).longValue());
+                dto.setNome((String) row[1]);
+                dto.setCpf((String) row[2]);
+                dto.setCelular((String) row[3]);
+                if (row[4] != null) {
+                    dto.setEmpresaNome((String) row[4]);
+                }
+                return dto;
+            }).collect(Collectors.toList());
+
+        } catch (Exception e) {
+            System.err.println("❌ ERRO na busca: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
     }
     
     public ClienteDTO converterParaDTO(Cliente cliente) {
@@ -67,6 +117,9 @@ public class ClienteService {
         dto.setNome(cliente.getNome());
         dto.setCpf(cliente.getCpf());
         dto.setCelular(cliente.getCelular());
+        dto.setDdi(cliente.getDdi() != null ? cliente.getDdi() : "+55");
+        dto.setCelular2(cliente.getCelular2());
+        dto.setDdi2(cliente.getDdi2() != null ? cliente.getDdi2() : "+55");
         dto.setCreditoAprovado(cliente.getCreditoAprovado());
         dto.setAutorizadoJantar(cliente.getAutorizadoJantar());
         dto.setTipoCliente(cliente.getTipoCliente());
@@ -97,6 +150,9 @@ public class ClienteService {
         clienteExistente.setNome(clienteAtualizado.getNome());
         clienteExistente.setCpf(clienteAtualizado.getCpf());
         clienteExistente.setCelular(clienteAtualizado.getCelular());
+        clienteExistente.setDdi(clienteAtualizado.getDdi() != null ? clienteAtualizado.getDdi() : "+55");
+        clienteExistente.setCelular2(clienteAtualizado.getCelular2());
+        clienteExistente.setDdi2(clienteAtualizado.getDdi2() != null ? clienteAtualizado.getDdi2() : "+55");
         clienteExistente.setEndereco(clienteAtualizado.getEndereco());
         clienteExistente.setCep(clienteAtualizado.getCep());
         clienteExistente.setCidade(clienteAtualizado.getCidade());
@@ -192,5 +248,27 @@ public class ClienteService {
     @Transactional(readOnly = true)
     public List<Cliente> buscarPorEmpresa(Long empresaId) {
         return clienteRepository.findByEmpresaId(empresaId);
+    }
+    
+    private boolean validarCPF(String cpf) {
+        String numeros = cpf.replaceAll("\\D", "");
+        
+        if (numeros.length() != 11) return false;
+        if (numeros.matches("(\\d)\\1{10}")) return false; // CPFs com todos dígitos iguais
+        
+        int soma = 0;
+        for (int i = 0; i < 9; i++)
+            soma += (numeros.charAt(i) - '0') * (10 - i);
+        int primeiro = 11 - (soma % 11);
+        if (primeiro >= 10) primeiro = 0;
+        if (primeiro != (numeros.charAt(9) - '0')) return false;
+        
+        soma = 0;
+        for (int i = 0; i < 10; i++)
+            soma += (numeros.charAt(i) - '0') * (11 - i);
+        int segundo = 11 - (soma % 11);
+        if (segundo >= 10) segundo = 0;
+        
+        return segundo == (numeros.charAt(10) - '0');
     }
 }

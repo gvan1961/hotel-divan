@@ -25,6 +25,15 @@ public class Cliente {
 
     @Column(nullable = true)
     private String celular;
+    
+    @Column(length = 5)
+    private String ddi = "+55";
+
+    @Column(name = "celular2", nullable = true)
+    private String celular2;
+
+    @Column(length = 5)
+    private String ddi2 = "+55";
 
     @Column(name = "credito_aprovado")
     private Boolean creditoAprovado = false;
@@ -74,7 +83,26 @@ public class Cliente {
     public void setCpf(String cpf) { this.cpf = cpf; }
     public String getCelular() { return celular; }
     public void setCelular(String celular) { this.celular = celular; }
-    public Boolean getCreditoAprovado() { return creditoAprovado; }
+            
+    public String getDdi() {
+		return ddi;
+	}
+	public void setDdi(String ddi) {
+		this.ddi = ddi;
+	}
+	public String getCelular2() {
+		return celular2;
+	}
+	public void setCelular2(String celular2) {
+		this.celular2 = celular2;
+	}
+	public String getDdi2() {
+		return ddi2;
+	}
+	public void setDdi2(String ddi2) {
+		this.ddi2 = ddi2;
+	}
+	public Boolean getCreditoAprovado() { return creditoAprovado; }
     public void setCreditoAprovado(Boolean creditoAprovado) { this.creditoAprovado = creditoAprovado; }
     public String getEndereco() { return endereco; }
     public void setEndereco(String endereco) { this.endereco = endereco; }

@@ -24,8 +24,8 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     
     List<Reserva> findByApartamento(Apartamento apartamento);
     
-    boolean existsByClienteId(Long clienteId);
-    
+    boolean existsByClienteId(Long clienteId);      
+        
     List<Reserva> findByStatus(Reserva.StatusReservaEnum status);
     
     @Query("SELECT r FROM Reserva r WHERE r.status = 'ATIVA'")

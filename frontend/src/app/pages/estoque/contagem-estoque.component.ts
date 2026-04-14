@@ -387,146 +387,146 @@ export class ContagemEstoqueComponent implements OnInit {
     });
 
     const htmlImpressao = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Contagem de Estoque - Hotel Di Van</title>
-        <style>
-          @page { 
-            size: 80mm auto; 
-            margin: 0; 
-          }
-          
-          body { 
-            font-family: 'Courier New', monospace; 
-            font-size: 10px; 
-            width: 80mm; 
-            margin: 0; 
-            padding: 5mm;
-            line-height: 1.3;
-          }
-          
-          .titulo { 
-            font-size: 14px; 
-            font-weight: bold; 
-            text-align: center; 
-            margin-bottom: 3px;
-            text-transform: uppercase;
-          }
-          
-          .subtitulo {
-            font-size: 11px;
-            text-align: center;
-            margin-bottom: 2px;
-          }
-          
-          .info { 
-            font-size: 9px; 
-            margin: 2px 0;
-            text-align: center;
-          }
-          
-          .separador { 
-            text-align: center; 
-            margin: 5px 0; 
-            font-size: 10px; 
-          }
-          
-          .secao-titulo {
-            font-size: 11px;
-            font-weight: bold;
-            margin: 8px 0 5px 0;
-            padding-bottom: 2px;
-            border-bottom: 1px dashed #000;
-            text-align: center;
-          }
-          
-          .produto-linha {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 0;
-            border-bottom: 1px dotted #ccc;
-            font-size: 10px;
-          }
-          
-          .produto-nome {
-            flex: 1;
-            font-weight: 600;
-            padding-right: 10px;
-          }
-          
-          .produto-qtd {
-            min-width: 40px;
-            text-align: right;
-            font-weight: bold;
-            border-bottom: 1px solid #000;
-          }
-          
-          .rodape {
-            margin-top: 10px;
-            text-align: center;
-            font-size: 8px;
-            color: #666;
-          }
-          
-          .total-produtos {
-            text-align: center;
-            font-size: 10px;
-            margin: 8px 0;
-            font-weight: bold;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="titulo">HOTEL DI VAN</div>
-        <div class="subtitulo">Contagem de Estoque</div>
-        <div class="subtitulo">para Conferência</div>
-        
-        <div class="separador">================================</div>
-        
-        <div class="info">Data: ${dataFormatada}</div>
-        <div class="info">Hora: ${horaFormatada}</div>
-        
-        <div class="separador">================================</div>
-        
-        <div class="secao-titulo">PRODUTOS</div>
-        
-        ${linhasProdutos}
-        
-        <div class="separador">================================</div>
-        
-        <div class="total-produtos">
-          Total de itens: ${produtos.length}
-        </div>
-        
-        <div class="separador">================================</div>
-        
-        <div class="rodape">
-          Conferido por: ___________________<br>
-          Assinatura: ______________________
-        </div>
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Contagem de Estoque - Hotel Di Van</title>
+              <style>
+              @page { size: 80mm auto; margin: 0; }
 
-        <script>
-          window.onload = function() {
-            window.print();
-            window.onafterprint = function() {
-              window.close();
-            };
-          };
-        </script>
-      </body>
-      </html>
-    `;
-
-    const janelaImpressao = window.open('', '_blank', 'width=400,height=600');
-    if (janelaImpressao) {
-      janelaImpressao.document.write(htmlImpressao);
-      janelaImpressao.document.close();
-    }
-  }
-
-  voltar(): void {
-    window.history.back();
-  }
+  body { 
+  font-family: 'Courier New', monospace; 
+  font-size: 11px; 
+  width: 72mm; 
+  margin: 0 auto; 
+  padding: 0 3mm;
+  box-sizing: border-box;
 }
+
+  .titulo { 
+    font-size: 14px; 
+    font-weight: bold; 
+    text-align: center; 
+    margin-bottom: 2px;
+    text-transform: uppercase;
+  }
+
+  .subtitulo {
+    font-size: 11px;
+    text-align: center;
+    margin-bottom: 1px;
+  }
+
+  .info { 
+    font-size: 10px; 
+    margin: 1px 0;
+    text-align: center;
+  }
+
+  .separador { 
+    text-align: center; 
+    margin: 3px 0; 
+    font-size: 10px; 
+  }
+
+  .secao-titulo {
+    font-size: 11px;
+    font-weight: bold;
+    margin: 4px 0 3px 0;
+    padding-bottom: 2px;
+    border-bottom: 1px dashed #000;
+    text-align: center;
+  }
+
+  .produto-linha {
+    display: table;
+    width: 100%;
+    padding: 2px 0;
+    border-bottom: 1px dotted #ccc;
+  }
+
+  .produto-nome {
+    display: table-cell;
+    font-size: 11px;
+    font-weight: 600;
+    width: 75%;
+  }
+
+  .produto-qtd {
+    display: table-cell;
+    font-size: 11px;
+    font-weight: bold;
+    width: 25%;
+    text-align: right;
+    border-bottom: 1px solid #000;
+  }
+
+  .rodape {
+    margin-top: 8px;
+    text-align: center;
+    font-size: 10px;
+  }
+
+  .total-produtos {
+    text-align: center;
+    font-size: 11px;
+    margin: 5px 0;
+    font-weight: bold;
+  }
+              </style>
+
+
+          </head>
+          <body>
+            <div class="titulo">HOTEL DI VAN</div>
+            <div class="subtitulo">Contagem de Estoque</div>
+            <div class="subtitulo">para Conferência</div>
+            
+            <div class="separador">================================</div>
+            
+            <div class="info">Data: ${dataFormatada}</div>
+            <div class="info">Hora: ${horaFormatada}</div>
+            
+            <div class="separador">================================</div>
+            
+            <div class="secao-titulo">PRODUTOS</div>
+            
+            ${linhasProdutos}
+            
+            <div class="separador">================================</div>
+            
+            <div class="total-produtos">
+              Total de itens: ${produtos.length}
+            </div>
+            
+            <div class="separador">================================</div>
+            
+            <div class="rodape">
+              Conferido por: ___________________<br>
+              Assinatura: ______________________
+            </div>
+
+            <script>
+              window.onload = function() {
+                window.print();
+                window.onafterprint = function() {
+                  window.close();
+                };
+              };
+            </script>
+          </body>
+          </html>
+        `;
+
+        const janelaImpressao = window.open('', '_blank', 'width=400,height=600');
+        if (janelaImpressao) {
+          janelaImpressao.document.write(htmlImpressao);
+          janelaImpressao.document.close();
+        }
+      }
+
+      voltar(): void {
+        window.history.back();
+      }
+    }

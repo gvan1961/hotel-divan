@@ -18,76 +18,71 @@ import java.util.List;
 
 @Component
 public class ReservaScheduler {
-	
-	@Autowired
-	private ExtratoReservaRepository extratoReservaRepository;
+
+    @Autowired
+    private ExtratoReservaRepository extratoReservaRepository;
 
     @Autowired
     private ReservaRepository reservaRepository;
-    
+
     @Autowired
     private ApartamentoRepository apartamentoRepository;
 
-    /**
-     * Roda todo dia às 00:01 (1 minuto após meia-noite)
-     * Ativa as pré-reservas cujo check-in chegou
-     */
+    @Autowired
+    private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+
     @Scheduled(cron = "0 1 0 * * *")
     @Transactional
     public void ativarPreReservas() {
+        ativarPreReservasInterno();
+    }
+
+    private void ativarPreReservasInterno() {
         System.out.println("═══════════════════════════════════════════");
         System.out.println("🔄 VERIFICANDO PRÉ-RESERVAS PARA ATIVAR");
         System.out.println("   Data/Hora: " + LocalDateTime.now());
         System.out.println("═══════════════════════════════════════════");
-        
+
         LocalDateTime agora = LocalDateTime.now();
-        
-        // Buscar PRE_RESERVAS cujo check-in já chegou (hoje ou antes)
+
         List<Reserva> preReservas = reservaRepository.findByStatus(Reserva.StatusReservaEnum.PRE_RESERVA);
-        
+
         System.out.println("📋 Total de pré-reservas: " + preReservas.size());
-        
+
         int ativadas = 0;
-        
+
         for (Reserva reserva : preReservas) {
             LocalDateTime dataCheckin = reserva.getDataCheckin();
-            
-            // Se o check-in é HOJE ou JÁ PASSOU
+
             if (!dataCheckin.isAfter(agora)) {
                 System.out.println("───────────────────────────────────────────");
                 System.out.println("✅ Ativando Reserva #" + reserva.getId());
                 System.out.println("   Apartamento: " + reserva.getApartamento().getNumeroApartamento());
                 System.out.println("   Cliente: " + reserva.getCliente().getNome());
                 System.out.println("   Check-in: " + dataCheckin.toLocalDate());
-                
-                // Mudar status da reserva para ATIVA
+
                 reserva.setStatus(Reserva.StatusReservaEnum.ATIVA);
                 reservaRepository.save(reserva);
-                
-                // Mudar status do apartamento para OCUPADO
+
                 Apartamento apartamento = reserva.getApartamento();
                 apartamento.setStatus(Apartamento.StatusEnum.OCUPADO);
                 apartamentoRepository.save(apartamento);
-                
+
                 System.out.println("   ✅ Reserva ativada!");
                 System.out.println("   🏨 Apartamento " + apartamento.getNumeroApartamento() + " → OCUPADO");
-                
+
                 ativadas++;
             } else {
                 System.out.println("⏭️ Reserva #" + reserva.getId() + " ainda é futura (check-in: " + dataCheckin.toLocalDate() + ")");
             }
         }
-        
+
         System.out.println("═══════════════════════════════════════════");
         System.out.println("✅ VERIFICAÇÃO CONCLUÍDA");
         System.out.println("   Pré-reservas ativadas: " + ativadas);
         System.out.println("═══════════════════════════════════════════");
     }
-    
-    /**
-     * Roda todo dia às 12:01
-     * Cobra diária extra para hóspedes que não fizeram checkout
-     */
+
     @Scheduled(cron = "0 1 12 * * *")
     @Transactional
     public void cobrarDiariaHospedesAtrasados() {
@@ -98,7 +93,6 @@ public class ReservaScheduler {
         System.out.println("   Data/Hora: " + agora);
         System.out.println("═══════════════════════════════════════════");
 
-        // Busca reservas ATIVAS com checkout antes de agora (vencidas)
         List<Reserva> reservasVencidas = reservaRepository
             .findByStatusAndDataCheckoutBefore(Reserva.StatusReservaEnum.ATIVA, agora);
 
@@ -116,7 +110,6 @@ public class ReservaScheduler {
 
                 BigDecimal valorDiaria = reserva.getDiaria().getValor();
 
-                // ✅ 1. Lançar nova diária no extrato
                 ExtratoReserva extrato = new ExtratoReserva();
                 extrato.setReserva(reserva);
                 extrato.setDataHoraLancamento(agora.toLocalDate().atTime(12, 1));
@@ -132,12 +125,10 @@ public class ReservaScheduler {
 
                 extratoReservaRepository.save(extrato);
 
-                // ✅ 2. Prorrogar checkout +1 dia
                 LocalDateTime novoCheckout = reserva.getDataCheckout().plusDays(1);
                 reserva.setDataCheckout(novoCheckout);
                 reserva.setQuantidadeDiaria(reserva.getQuantidadeDiaria() + 1);
 
-                // ✅ 3. Atualizar totais
                 reserva.setTotalDiaria(reserva.getTotalDiaria().add(valorDiaria));
                 reserva.setTotalHospedagem(reserva.getTotalHospedagem().add(valorDiaria));
                 reserva.setTotalApagar(reserva.getTotalApagar().add(valorDiaria));
@@ -159,11 +150,13 @@ public class ReservaScheduler {
         System.out.println("   Processadas: " + processadas);
         System.out.println("═══════════════════════════════════════════");
     }
-    
+
     @PostConstruct
-    @Transactional
     public void verificarAoIniciar() {
         System.out.println("🚀 Verificando pré-reservas ao iniciar aplicação...");
-        ativarPreReservas();
+        transactionTemplate.execute(status -> {
+            ativarPreReservasInterno();
+            return null;
+        });
     }
 }

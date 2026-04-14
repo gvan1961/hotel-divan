@@ -48,4 +48,9 @@ listarFuncionarios(): Observable<Cliente[]> {
   buscarPorId(id: number): Observable<Cliente> {
   return this.http.get<Cliente>(`${this.apiUrl}/${id}`);
 }
+
+buscar(termo: string): Observable<Cliente[]> {
+  return this.http.get<Cliente[]>(`${this.apiUrl}/buscar?termo=${termo}`);
+}
+
 }

@@ -73,6 +73,8 @@ public class ReservaService {
     @Autowired
     private UsuarioRepository usuarioRepository;
     
+    @Autowired
+    private SorteioService sorteioService;    
     
      
     /**
@@ -237,25 +239,25 @@ public class ReservaService {
         // ✅ VERIFICAR SE CLIENTE JÁ ESTÁ HOSPEDADO (titular OU adicional)
         System.out.println("🔍 Verificando hóspedes ativos para cliente: " + reserva.getCliente().getId());
         List<HospedagemHospede> hospedesAtivos = hospedagemHospedeRepository
-            .findByClienteIdAndStatus(reserva.getCliente().getId(),
-                HospedagemHospede.StatusEnum.HOSPEDADO);
-        System.out.println("🔍 Hóspedes ativos encontrados: " + hospedesAtivos.size());
+        	    .findByClienteIdAndStatus(reserva.getCliente().getId(), HospedagemHospede.StatusEnum.HOSPEDADO);
+
         for (HospedagemHospede hAtivo : hospedesAtivos) {
             Reserva rAtiva = hAtivo.getReserva();
             if (rAtiva == null) continue;
             if (rAtiva.getStatus() != Reserva.StatusReservaEnum.ATIVA) continue;
 
-            boolean conflito =
-            	    reserva.getDataCheckin().isBefore(rAtiva.getDataCheckout())
-            	    && reserva.getDataCheckout().isAfter(rAtiva.getDataCheckin());
-            
-            if (conflito) {
+            LocalDateTime agora = LocalDateTime.now();
+            boolean checkoutVencido = rAtiva.getDataCheckout().isBefore(agora);
+            boolean conflitaDatas = reserva.getDataCheckin().isBefore(rAtiva.getDataCheckout()) &&
+                                    reserva.getDataCheckout().isAfter(rAtiva.getDataCheckin());
+
+            if (checkoutVencido || conflitaDatas) {
                 throw new RuntimeException(String.format(
-                    "❌ %s já está hospedado no apartamento %s (Reserva #%d) de %s a %s.",
+                    "❌ %s está HOSPEDADO no apartamento %s (Reserva #%d) até %s. " +
+                    "Faça o checkout antes de criar nova reserva.",
                     reserva.getCliente().getNome(),
                     rAtiva.getApartamento().getNumeroApartamento(),
                     rAtiva.getId(),
-                    rAtiva.getDataCheckin().toLocalDate(),
                     rAtiva.getDataCheckout().toLocalDate()
                 ));
             }
@@ -982,6 +984,25 @@ public class ReservaService {
         }
 
         // Finalizar reserva
+     // ✅ GERAR BILHETES DO SORTEIO PARA TODOS OS HÓSPEDES ATIVOS
+        try {
+            List<HospedagemHospede> hospedes = hospedagemHospedeRepository.findByReservaId(reservaId);
+            for (HospedagemHospede hospede : hospedes) {
+                if (hospede.getStatus() == HospedagemHospede.StatusEnum.HOSPEDADO) {
+                    hospede.setStatus(HospedagemHospede.StatusEnum.CHECKOUT_REALIZADO);
+                    hospede.setDataHoraSaida(LocalDateTime.now());
+                    hospedagemHospedeRepository.save(hospede);
+
+                    List<BilheteSorteio> bilhetes = sorteioService.gerarBilhetesCheckout(hospede);
+                    System.out.println("🎟️ Bilhetes gerados para " +
+                        hospede.getCliente().getNome() + ": " + bilhetes.size());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Erro ao gerar bilhetes: " + e.getMessage());
+        }
+
+        // Finalizar reserva
         reserva.setStatus(Reserva.StatusReservaEnum.FINALIZADA);
 
         // Liberar apartamento para limpeza
@@ -1617,6 +1638,15 @@ public class ReservaService {
                 hospede.setStatus(HospedagemHospede.StatusEnum.CHECKOUT_REALIZADO);
                 hospede.setDataHoraSaida(LocalDateTime.now());
                 hospedagemHospedeRepository.save(hospede);
+
+                // ✅ GERAR BILHETES DO SORTEIO
+                try {
+                    List<BilheteSorteio> bilhetes = sorteioService.gerarBilhetesCheckout(hospede);
+                    System.out.println("🎟️ Bilhetes gerados para " + 
+                        hospede.getCliente().getNome() + ": " + bilhetes.size());
+                } catch (Exception e) {
+                    System.err.println("⚠️ Erro ao gerar bilhetes: " + e.getMessage());
+                }
             }
         }
 

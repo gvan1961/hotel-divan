@@ -58,6 +58,9 @@ public class Vale {
 
     @Column(length = 500)
     private String observacao;
+    
+    @Column(name = "data_concessao")
+    private LocalDate dataConcessao;
 
     public enum StatusVale {
         PENDENTE, PAGO, VENCIDO, CANCELADO
@@ -149,6 +152,14 @@ public class Vale {
 
 	public void setObservacao(String observacao) {
 		this.observacao = observacao;
+	}
+	
+	public LocalDate getDataConcessao() {
+		return dataConcessao;
+	}
+
+	public void setDataConcessao(LocalDate dataConcessao) {
+		this.dataConcessao = dataConcessao;
 	}
 
 	@Override

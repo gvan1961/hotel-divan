@@ -31,4 +31,8 @@ export class EmpresaService {
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
+
+  buscar(nome: string): Observable<Empresa[]> {
+  return this.http.get<Empresa[]>(`${this.apiUrl}/buscar?nome=${nome}`);
+}
 }

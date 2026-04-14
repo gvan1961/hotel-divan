@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,6 +41,9 @@ public class ClienteController {
             cliente.setNome(dto.getNome());
             cliente.setCpf(dto.getCpf());
             cliente.setCelular(dto.getCelular());
+            cliente.setDdi(dto.getDdi() != null ? dto.getDdi() : "+55");
+            cliente.setCelular2(dto.getCelular2());
+            cliente.setDdi2(dto.getDdi2() != null ? dto.getDdi2() : "+55");
             cliente.setEndereco(dto.getEndereco());
             cliente.setCep(dto.getCep());
             cliente.setCidade(dto.getCidade());
@@ -55,9 +59,21 @@ public class ClienteController {
     }
     
     @GetMapping
-    public ResponseEntity<List<Cliente>> listarTodos() {
-        List<Cliente> clientes = clienteService.listarTodos();
-        return ResponseEntity.ok(clientes);
+    public ResponseEntity<?> listarTodos(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        
+        var pagina = clienteRepository.findAll(
+            org.springframework.data.domain.PageRequest.of(
+                page, size, 
+                org.springframework.data.domain.Sort.by("nome")));
+        
+        return ResponseEntity.ok(Map.of(
+            "clientes", pagina.getContent(),
+            "totalPaginas", pagina.getTotalPages(),
+            "totalElementos", pagina.getTotalElements(),
+            "paginaAtual", pagina.getNumber()
+        ));
     }
     
     @GetMapping("/{id}")
@@ -147,6 +163,9 @@ public class ClienteController {
             cliente.setNome(dto.getNome());
             cliente.setCpf(dto.getCpf());
             cliente.setCelular(dto.getCelular());
+            cliente.setDdi(dto.getDdi() != null ? dto.getDdi() : "+55");
+            cliente.setCelular2(dto.getCelular2());
+            cliente.setDdi2(dto.getDdi2() != null ? dto.getDdi2() : "+55");
             cliente.setEndereco(dto.getEndereco());
             cliente.setCep(dto.getCep());
             cliente.setCidade(dto.getCidade());
@@ -180,4 +199,22 @@ public class ClienteController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    /*
+    @GetMapping("/funcionarios/buscar")
+    public ResponseEntity<List<ClienteDTO>> buscarFuncionarios(@RequestParam String termo) {
+        List<ClienteDTO> clientes = clienteService.buscarPorTermo(termo)
+            .stream()
+            .filter(c -> "FUNCIONARIO".equals(c.getTipoCliente()))
+            .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(clientes);
+    }
+    */
+    
+    @GetMapping("/funcionarios/buscar")
+    public ResponseEntity<List<Cliente>> buscarFuncionarios(@RequestParam String termo) {
+        List<Cliente> clientes = clienteService.buscarPorNome(termo);
+        return ResponseEntity.ok(clientes);
+    }
+    
 }

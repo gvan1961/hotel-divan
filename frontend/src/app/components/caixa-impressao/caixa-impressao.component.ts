@@ -297,81 +297,101 @@ import { CaixaConsultaService } from '../../services/caixa-consulta.service';
       background: #7f8c8d;
     }
 
+
+
     /* IMPRESSÃO */
-    @media print {
-  .no-print {
-    display: none !important;
+   @media print {
+  .no-print { display: none !important; }
+
+  @page { 
+    size: A4; 
+    margin: 20mm 15mm; 
   }
 
-  .container-impressao {
-    padding: 0;
-    max-width: 80mm;
+  .container-impressao { 
+    padding: 0; 
+    max-width: 100%;
   }
 
   .impressao {
     box-shadow: none;
-    padding: 3mm;
-    width: 80mm;
-    font-size: 9pt;
-    font-family: 'Courier New', monospace;
+    padding: 0;
+    width: 100%;
+    font-size: 16pt;
+    font-family: Arial, sans-serif;
   }
 
-  .cabecalho h1 { font-size: 13pt; }
-  .cabecalho h2 { font-size: 10pt; }
-  .status { font-size: 9pt; }
+  .cabecalho h1 { font-size: 26pt; margin: 5px 0; }
+  .cabecalho h2 { font-size: 20pt; margin: 5px 0; }
+  .cabecalho { padding-bottom: 15px; margin-bottom: 20px; }
+  .status { font-size: 18pt; }
 
-  .secao {
-    margin-bottom: 8px;
-  }
+  .secao { margin-bottom: 20px; }
 
   .secao h3 {
-    font-size: 9pt;
-    padding-bottom: 4px;
-    margin-bottom: 6px;
+    font-size: 18pt;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
   }
 
-  .tabela-info td,
+  .tabela-info,
+  .tabela-valores {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .tabela-info td {
+    padding: 8px 5px;
+    font-size: 16pt;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .tabela-info td:first-child { 
+    width: 35%; 
+    font-weight: 700; 
+  }
+
+  .tabela-info td:last-child { 
+    width: 65%; 
+  }
+
   .tabela-valores td {
-    padding: 3px 2px;
-    font-size: 8pt;
-    border-bottom: 1px dashed #000;
+    padding: 8px 5px;
+    font-size: 16pt;
+    border-bottom: 1px solid #ccc;
   }
 
-  .tabela-info td:first-child {
-    width: 45%;
-  }
-
-  .tabela-valores td:first-child {
+  .tabela-valores td:first-child { 
     width: 60%;
+  }
+
+  .tabela-valores td:last-child { 
+    width: 40%;
+    text-align: right;
   }
 
   .tabela-valores .valor {
     text-align: right;
-    width: 40%;
-    white-space: nowrap;
+    font-size: 16pt;
+    font-weight: 600;
   }
 
   .tabela-valores .total td {
-    font-size: 9pt;
-    padding-top: 4px;
+    font-size: 18pt;
+    padding-top: 10px;
+    font-weight: 700;
+    border-top: 2px solid #000;
   }
 
   .tabela-valores .total-liquido td {
-    font-size: 10pt;
+    font-size: 20pt;
+    font-weight: 700;
   }
 
-  .rodape {
-    margin-top: 15px;
-    font-size: 8pt;
-  }
-
-  .assinatura {
-    margin-top: 20px;
-  }
-
-  .linha-assinatura {
-    width: 60mm;
-  }
+  .rodape { margin-top: 30px; font-size: 14pt; }
+  .assinatura { margin-top: 50px; }
+  .linha-assinatura { width: 200px; }
 }
   `]
 })

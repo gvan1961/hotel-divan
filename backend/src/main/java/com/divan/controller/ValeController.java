@@ -142,5 +142,12 @@ public class ValeController {
         if (body.get("dataVencimento") != null)
             vale.setDataVencimento(LocalDate.parse(
                 body.get("dataVencimento").toString().substring(0, 10)));
+
+        // ✅ NOVO
+        if (body.get("dataConcessao") != null)
+            vale.setDataConcessao(LocalDate.parse(
+                body.get("dataConcessao").toString().substring(0, 10)));
+        else
+            vale.setDataConcessao(LocalDate.now());
     }
 }

@@ -66,7 +66,7 @@ import { HttpClient } from '@angular/common/http';
             </div>
           </div>
 
-          <!-- RESPONSÁVEL — aparece apenas para menores -->
+         <!-- RESPONSÁVEL — aparece apenas para menores -->
           <div class="form-group responsavel-group" *ngIf="menorDeIdade">
             <label>Responsável * (pai/mãe ou responsável legal)</label>
             <div class="responsavel-busca">
@@ -93,14 +93,37 @@ import { HttpClient } from '@angular/common/http';
             </small>
           </div>
 
+          <!-- TELEFONES E DATA -->
           <div class="form-row">
             <div class="form-group">
-              <label>Celular</label>
-              <input type="text" [(ngModel)]="cliente.celular" name="celular"
-                     (input)="formatarCelular()" maxlength="15"
-                     placeholder="(00) 00000-0000" />
+              <label>Fone</label>
+              <div class="fone-group">
+                <select [(ngModel)]="ddi" name="ddi" class="select-ddi">
+                  <option *ngFor="let p of paises" [value]="p.ddi">
+                    {{ p.flag }} {{ p.ddi }}
+                  </option>
+                </select>
+                <input type="text" [(ngModel)]="cliente.celular" name="celular"
+                       (input)="formatarCelular()" maxlength="15"
+                       placeholder="(00) 00000-0000" class="input-fone" />
+              </div>
             </div>
+            <div class="form-group">
+              <label>Fone extra</label>
+              <div class="fone-group">
+                <select [(ngModel)]="ddi2" name="ddi2" class="select-ddi">
+                  <option *ngFor="let p of paises" [value]="p.ddi">
+                    {{ p.flag }} {{ p.ddi }}
+                  </option>
+                </select>
+                <input type="text" [(ngModel)]="celular2" name="celular2"
+                       (input)="formatarCelular2()" maxlength="15"
+                       placeholder="(00) 00000-0000" class="input-fone" />
+              </div>
+            </div>
+          </div>
 
+          <div class="form-row">
             <div class="form-group">
               <label>Data de Nascimento</label>
               <input type="date" [(ngModel)]="dataNascimento" name="dataNascimento" />
@@ -209,7 +232,9 @@ import { HttpClient } from '@angular/common/http';
     .checkbox-text { color: #2c3e50; font-size: 14px; }
     .field-help { display: block; font-size: 12px; color: #666; margin-top: 5px; margin-left: 30px; font-style: italic; }
     .tipo-cliente-group .field-help { margin-left: 0; margin-top: 8px; color: #1565c0; font-weight: 500; }
-
+    .fone-group { display: flex; gap: 8px; align-items: center; }
+.select-ddi { width: 110px; padding: 10px 6px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; background: white; }
+.input-fone { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
     /* RESPONSÁVEL */
     .responsavel-group { margin-bottom: 20px; }
     .responsavel-busca { display: flex; flex-direction: column; gap: 8px; }
@@ -246,6 +271,28 @@ export class ClienteFormApp implements OnInit {
   termoBuscaResponsavel = '';
   resultadosResponsavel: any[] = [];
   responsavelSelecionado: any = null;
+
+  paises = [
+  { ddi: '+55', flag: '🇧🇷', nome: 'Brasil' },
+  { ddi: '+1', flag: '🇺🇸', nome: 'EUA' },
+  { ddi: '+54', flag: '🇦🇷', nome: 'Argentina' },
+  { ddi: '+595', flag: '🇵🇾', nome: 'Paraguai' },
+  { ddi: '+598', flag: '🇺🇾', nome: 'Uruguai' },
+  { ddi: '+56', flag: '🇨🇱', nome: 'Chile' },
+  { ddi: '+57', flag: '🇨🇴', nome: 'Colômbia' },
+  { ddi: '+51', flag: '🇵🇪', nome: 'Peru' },
+  { ddi: '+58', flag: '🇻🇪', nome: 'Venezuela' },
+  { ddi: '+34', flag: '🇪🇸', nome: 'Espanha' },
+  { ddi: '+351', flag: '🇵🇹', nome: 'Portugal' },
+  { ddi: '+39', flag: '🇮🇹', nome: 'Itália' },
+  { ddi: '+49', flag: '🇩🇪', nome: 'Alemanha' },
+  { ddi: '+33', flag: '🇫🇷', nome: 'França' },
+  { ddi: '+44', flag: '🇬🇧', nome: 'Reino Unido' },
+];
+
+  ddi = '+55';
+  ddi2 = '+55';
+  celular2 = '';
 
   cliente: ClienteRequest = {
     nome: '',
@@ -299,6 +346,10 @@ export class ClienteFormApp implements OnInit {
         autorizadoJantar: data.autorizadoJantar ?? false,
         tipoCliente: data.tipoCliente === 'FUNCIONARIO' ? TipoCliente.FUNCIONARIO : TipoCliente.HOSPEDE
       };
+
+      this.ddi = data.ddi ?? '+55';
+      this.ddi2 = data.ddi2 ?? '+55';
+      this.celular2 = data.celular2 ?? '';
 
       this.menorDeIdade = data.menorDeIdade ?? false;
 
@@ -378,6 +429,9 @@ export class ClienteFormApp implements OnInit {
       nome: this.cliente.nome,
       cpf: this.menorDeIdade ? null : this.cliente.cpf,
       celular: this.cliente.celular || null,
+      ddi: this.ddi || '+55',
+      celular2: this.celular2 || null,
+      ddi2: this.ddi2 || '+55',
       dataNascimento: dataISO,
       endereco: this.cliente.endereco || undefined,
       cep: this.cliente.cep || undefined,
@@ -455,6 +509,15 @@ export class ClienteFormApp implements OnInit {
       this.cliente.creditoAprovado = true;
     }
   }
+
+  formatarCelular2(): void {
+  if (!this.celular2) return;
+  let celular = this.celular2.replace(/\D/g, '');
+  if (celular.length > 0) celular = '(' + celular;
+  if (celular.length > 3) celular = celular.substring(0, 3) + ') ' + celular.substring(3);
+  if (celular.length > 10) celular = celular.substring(0, 10) + '-' + celular.substring(10, 14);
+  this.celular2 = celular;
+}
 
   voltar(): void {
     this.router.navigate(['/clientes']);

@@ -1,6 +1,7 @@
 package com.divan.controller;
 
 import com.divan.repository.ApartamentoRepository;
+import com.divan.repository.BilheteSorteioRepository;
 import com.divan.repository.ClienteRepository;
 import com.divan.repository.HospedagemHospedeRepository;
 import com.divan.repository.LogAuditoriaRepository;
@@ -23,6 +24,7 @@ import com.divan.dto.ReservaRequestDTO;
 import com.divan.dto.ReservaResponseDTO;
 import com.divan.dto.TransferenciaApartamentoDTO;
 import com.divan.entity.Apartamento;
+import com.divan.entity.BilheteSorteio;
 import com.divan.entity.ItemVenda;
 import com.divan.entity.LogAuditoria;
 import com.divan.entity.NotaVenda;
@@ -32,6 +34,8 @@ import com.divan.repository.UsuarioRepository;
 import com.divan.service.ApartamentoService;
 import com.divan.service.ClienteService;
 import com.divan.service.ReservaService;
+import com.divan.service.SorteioService;
+
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -44,7 +48,6 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
 
 @RestController
 @RequestMapping("/api/reservas")
@@ -84,7 +87,11 @@ public class ReservaController {
     @Autowired
     private ClienteService clienteService;
     
+    @Autowired
+    private SorteioService sorteioService;
     
+    @Autowired
+    private BilheteSorteioRepository bilheteSorteioRepository;
     
     @PostMapping
     public ResponseEntity<?> criarReserva(@Valid @RequestBody ReservaRequestDTO dto) {
@@ -496,30 +503,32 @@ public class ReservaController {
 
             // ✅ VERIFICAR SE CLIENTE JÁ ESTÁ HOSPEDADO (titular OU adicional)
             List<HospedagemHospede> hospedesAtivos = hospedagemHospedeRepository
-                .findByClienteIdAndStatus(clienteId, HospedagemHospede.StatusEnum.HOSPEDADO);
+            	    .findByClienteIdAndStatus(clienteId, HospedagemHospede.StatusEnum.HOSPEDADO);
 
-            for (HospedagemHospede hAtivo : hospedesAtivos) {
-                Reserva rAtiva = hAtivo.getReserva();
-                if (rAtiva == null) continue;
-                if (rAtiva.getStatus() != Reserva.StatusReservaEnum.ATIVA) continue;
+            	for (HospedagemHospede hAtivo : hospedesAtivos) {
+            	    Reserva rAtiva = hAtivo.getReserva();
+            	    if (rAtiva == null) continue;
+            	    if (rAtiva.getStatus() != Reserva.StatusReservaEnum.ATIVA) continue;
 
-                boolean conflito =
-                    dataCheckin.isBefore(rAtiva.getDataCheckout()) &&
-                    dataCheckout.isAfter(rAtiva.getDataCheckin());
+            	    // ✅ SÓ BLOQUEIA SE AS DATAS CONFLITAM OU SE O CHECKOUT JÁ VENCEU
+            	    LocalDateTime agora = LocalDateTime.now();
+            	    boolean checkoutVencido = rAtiva.getDataCheckout().isBefore(agora);
+            	    boolean conflitaDatas = dataCheckin.isBefore(rAtiva.getDataCheckout()) &&
+            	                            dataCheckout.isAfter(rAtiva.getDataCheckin());
 
-                if (conflito) {
-                    return ResponseEntity.ok(Map.of(
-                        "disponivel", false,
-                        "mensagem", String.format(
-                            "Cliente já está hospedado no apartamento %s (Reserva #%d) de %s a %s.",
-                            rAtiva.getApartamento().getNumeroApartamento(),
-                            rAtiva.getId(),
-                            rAtiva.getDataCheckin().toLocalDate(),
-                            rAtiva.getDataCheckout().toLocalDate()
-                        )
-                    ));
-                }
-            }
+            	    if (checkoutVencido || conflitaDatas) {
+            	        return ResponseEntity.ok(Map.of(
+            	            "disponivel", false,
+            	            "mensagem", String.format(
+            	                "Cliente está HOSPEDADO no apartamento %s (Reserva #%d) até %s. " +
+            	                "Faça o checkout antes de criar nova reserva.",
+            	                rAtiva.getApartamento().getNumeroApartamento(),
+            	                rAtiva.getId(),
+            	                rAtiva.getDataCheckout().toLocalDate()
+            	            )
+            	        ));
+            	    }
+            	}
 
             // ✅ VERIFICAR PRÉ-RESERVAS COMO TITULAR
             List<Reserva> preReservas = reservaRepository.findByClienteIdAndStatusIn(
@@ -763,6 +772,10 @@ public class ReservaController {
             hospede.setDataHoraSaida(agora);
             hospedagemHospedeRepository.save(hospede);
 
+            // ✅ GERAR BILHETES DO SORTEIO
+            List<BilheteSorteio> bilhetes = sorteioService.gerarBilhetesCheckout(hospede);
+            System.out.println("🎟️ Bilhetes gerados: " + bilhetes.size());
+
             // ✅ NOVA QUANTIDADE
             int novaQuantidade = reserva.getQuantidadeHospede() - 1;
             if (novaQuantidade < 1) novaQuantidade = 1;
@@ -872,11 +885,17 @@ public class ReservaController {
                 " | Hora: " + horaAtual + "h");
 
             return ResponseEntity.ok(Map.of(
-                "mensagem", "Checkout parcial realizado com sucesso",
-                "novaQuantidadeHospedes", novaQuantidade,
-                "diasRecalculados", diasRestantes,
-                "diferencaPorDia", diferencaPorDia
-            ));
+            	    "mensagem", "Checkout parcial realizado com sucesso",
+            	    "novaQuantidadeHospedes", novaQuantidade,
+            	    "diasRecalculados", diasRestantes,
+            	    "diferencaPorDia", diferencaPorDia,
+            	    "bilhetesGerados", bilhetes.stream()
+            	        .map(b -> Map.of(
+            	            "numeroBilhete", b.getNumeroBilhete(),
+            	            "nomeHospede", b.getHospedagemHospede().getCliente().getNome()
+            	        ))
+            	        .collect(java.util.stream.Collectors.toList())
+            	));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -1054,7 +1073,8 @@ public class ReservaController {
 
             // ✅ ATIVAR RESERVA
             reserva.setStatus(Reserva.StatusReservaEnum.ATIVA);
-            reserva.setDataCheckin(LocalDateTime.now());
+            reserva.setDataCheckin(reserva.getDataCheckin().toLocalDate()
+            	    .atTime(LocalDateTime.now().toLocalTime()));
             LocalDateTime checkoutPadronizado = reserva.getDataCheckout().toLocalDate().atTime(12, 0);
             reserva.setDataCheckout(checkoutPadronizado);
             reservaRepository.save(reserva);
@@ -1159,6 +1179,47 @@ public class ReservaController {
                     || r.getApartamento().getNumeroApartamento().toLowerCase().contains(termo.toLowerCase()))
             .collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(reservas);
+    }
+    
+    @PatchMapping("/{id}/observacao")
+    public ResponseEntity<?> salvarObservacao(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        try {
+            Reserva reserva = reservaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+            reserva.setObservacoes(body.get("observacoes"));
+            reservaRepository.save(reserva);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/{id}/bilhetes-sorteio")
+    public ResponseEntity<?> getBilhetesSorteio(@PathVariable Long id) {
+        try {
+            Reserva reserva = reservaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+            
+            List<HospedagemHospede> hospedes = hospedagemHospedeRepository.findByReservaId(id);
+            List<Map<String, Object>> bilhetes = new ArrayList<>();
+            
+            for (HospedagemHospede h : hospedes) {
+                List<BilheteSorteio> bs = bilheteSorteioRepository.findByHospedagemHospedeId(h.getId());
+                for (BilheteSorteio b : bs) {
+                    bilhetes.add(Map.of(
+                        "numeroBilhete", b.getNumeroBilhete(),
+                        "nomeHospede", h.getCliente().getNome(),
+                        "apartamento", reserva.getApartamento().getNumeroApartamento(),
+                        "dataCheckin", reserva.getDataCheckin().toString(),
+                        "dataCheckout", reserva.getDataCheckout().toString(),
+                        "dataEmissao", b.getDataEmissao().toString()
+                    ));
+                }
+            }
+            return ResponseEntity.ok(bilhetes);
+        } catch (Exception e) {
+            return ResponseEntity.ok(new ArrayList<>());
+        }
     }
         
 }

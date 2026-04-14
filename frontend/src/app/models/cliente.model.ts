@@ -3,6 +3,9 @@ export interface Cliente {
   nome: string;
   cpf: string;
   celular: string;
+  ddi?: string;
+  celular2?: string;
+  ddi2?: string;
   endereco?: string;
   cep?: string;
   cidade?: string;
@@ -10,6 +13,7 @@ export interface Cliente {
   dataNascimento: string;
   empresaId?: number;
   empresa?: any;
+  empresaNome?: string; 
   creditoAprovado?: boolean;
   autorizadoJantar?: boolean;
   tipoCliente?: TipoCliente;
@@ -23,6 +27,9 @@ export interface ClienteRequest {
   nome: string;
   cpf: string;
   celular: string;
+  ddi?: string;
+ celular2?: string;
+  ddi2?: string;
   endereco?: string;
   cep?: string;
   cidade?: string;

@@ -53,6 +53,7 @@ import { PerfilListaComponent } from './components/perfil-lista/perfil-lista.com
 import { AdministrativoComponent } from './pages/administrativo/administrativo.component';
 import { PainelRecepcaoApp } from './pages/painel-recepcao/painel-recepcao.app';
 import { AuditoriaComponent } from './pages/administrativo/auditoria.component';
+import { SorteioListaApp } from './pages/sorteio/sorteio-lista.app';
 
 export const routes: Routes = [
   // LOGIN (sem layout)
@@ -147,7 +148,7 @@ export const routes: Routes = [
       { path: 'caixa/imprimir/:id', component: CaixaImpressaoComponent },
       
       // ===== EMPRESAS =====
-      { path: 'empresas/nova', component: EmpresaFormApp },
+      { path: 'empresas/novo', component: EmpresaFormApp },
       { path: 'empresas/editar/:id', component: EmpresaFormApp },
       { path: 'empresas', component: EmpresaListaApp },
 
@@ -163,6 +164,8 @@ export const routes: Routes = [
       // ===== RELATÓRIOS =====
       { path: 'relatorios/ocupacao', component: RelatorioOcupacaoComponent },
       { path: 'relatorios/checkouts', component: RelatorioCheckoutsComponent },
+
+      { path: 'sorteios', component: SorteioListaApp },
 
       { path: 'administrativo', component: AdministrativoComponent }
     ]

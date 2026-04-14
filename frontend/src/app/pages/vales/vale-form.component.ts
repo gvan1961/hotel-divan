@@ -620,14 +620,19 @@ export class ValeFormComponent implements OnInit {
   }
 
   selecionarFuncionario(funcionario: Cliente): void {
-    this.funcionarioSelecionado = funcionario;
-    this.termoBuscaFuncionario = funcionario.nome;
-    this.funcionarios = [];
-    this.form.clienteId = funcionario.id!;
+  console.log('🎯 Funcionário selecionado:', funcionario);
+  console.log('🆔 ID:', funcionario.id);
+  
+  this.funcionarioSelecionado = funcionario;
+  this.termoBuscaFuncionario = funcionario.nome;
+  this.funcionarios = [];
+  this.form.clienteId = funcionario.id!;
 
-    // Carregar total pendente
-    this.carregarTotalPendente(funcionario.id!);
-  }
+  console.log('📋 form.clienteId após:', this.form.clienteId);
+  console.log('✅ formValido():', this.formValido());
+
+  this.carregarTotalPendente(funcionario.id!);
+}
 
   carregarTotalPendente(clienteId: number): void {
     this.valeService.calcularTotalPendente(clienteId).subscribe({

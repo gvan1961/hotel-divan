@@ -228,13 +228,13 @@ export class EmpresaListaApp implements OnInit {
   }
 
   filtrar(): void {
-    const termo = this.filtro.toLowerCase();
-    this.empresasFiltradas = this.empresas.filter(e =>
-      e.nomeEmpresa.toLowerCase().includes(termo) ||
-      e.cnpj.includes(termo) ||
-      e.contato.toLowerCase().includes(termo)
-    );
-  }
+  const termo = this.filtro.toLowerCase();
+  this.empresasFiltradas = this.empresas.filter(e =>
+    (e.nomeEmpresa?.toLowerCase().includes(termo) || false) ||
+    (e.cnpj?.includes(termo) || false) ||
+    (e.contato?.toLowerCase().includes(termo) || false)
+  );
+}
 
   nova(): void {
     this.router.navigate(['/empresas/novo']);
