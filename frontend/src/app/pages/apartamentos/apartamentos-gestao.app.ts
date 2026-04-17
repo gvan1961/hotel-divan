@@ -499,7 +499,7 @@ export class ApartamentosGestaoApp implements OnInit {
     this.loading = true;
     this.apartamentoService.getAll().subscribe({
       next: (data) => {
-        this.apartamentos = data;
+        this.apartamentos = data.sort((a, b) => a.numeroApartamento.localeCompare(b.numeroApartamento, 'pt-BR', { numeric: true }));
         this.aplicarFiltro();
         this.loading = false;
       },

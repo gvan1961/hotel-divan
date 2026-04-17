@@ -559,6 +559,15 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
                 📄 {{ (reserva.totalApagar || 0) > 0 ? 'Imprimir Fatura' : 'Imprimir Recibo' }}
               </button>
             </ng-container>
+
+              <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
+                 <button class="btn-acao btn-recibo-formal"
+                 *ngIf="reserva.status === 'FINALIZADA' || reserva.status === 'ATIVA'"
+                 (click)="abrirModalReciboFormal()">
+                 📄 Recibo Formal
+                 </button>
+               </ng-container>
+
             <ng-container *hasPermission="'RESERVA_CANCELAR'">
               <button class="btn-acao btn-cancelar" 
                       *ngIf="reserva.status === 'ATIVA'"
@@ -577,6 +586,39 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
 </ng-container>
 
           </div>
+
+        <!-- MODAL RECIBO FORMAL -->
+<div class="modal-overlay" *ngIf="modalReciboFormal" (click)="fecharModalReciboFormal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <h2>📄 Recibo Formal</h2>
+    <div class="info-box">
+      <p><strong>Hóspede:</strong> {{ reserva.cliente?.nome }}</p>
+      <p><strong>Total Diárias:</strong> R$ {{ formatarMoeda(reserva.totalDiaria) }}</p>
+    </div>
+    <div class="campo">
+      <label>Valor a imprimir no recibo (R$) *</label>
+      <input type="number"
+             [(ngModel)]="valorRecibo"
+             [max]="reserva.totalDiaria"
+             min="0"
+             step="0.01"
+             placeholder="0,00" />
+      <small>Máximo permitido: R$ {{ formatarMoeda(reserva.totalDiaria) }} (total de diárias)</small>
+      <small *ngIf="valorRecibo > reserva.totalDiaria" style="color: red;">
+        ⚠️ Valor não pode ser superior ao total de diárias
+      </small>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar-modal" (click)="fecharModalReciboFormal()">Cancelar</button>
+      <button class="btn-confirmar"
+              (click)="imprimirReciboFormal()"
+              [disabled]="!valorRecibo || valorRecibo <= 0 || valorRecibo > reserva.totalDiaria">
+        🖨️ Imprimir Recibo
+      </button>
+    </div>
+  </div>
+</div>
+
         </div>
 
         <!-- HISTÓRICO -->
@@ -2280,6 +2322,11 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
     font-style: italic;
   }
 
+     .btn-recibo-formal {
+  background: linear-gradient(135deg, #16a085 0%, #1abc9c 100%);
+  color: white;
+}
+
     /* ════════════════════════════════════════════
     PLACA DO HÓSPEDE
     ════════════════════════════════════════════ */
@@ -2604,6 +2651,9 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
   erroBuscaPlaca = '';
 
   temBilhetes = false;
+
+  modalReciboFormal = false;
+  valorRecibo = 0;
   
   private intervaloAtualizacao: any;
 
@@ -5436,6 +5486,146 @@ carregarEImprimirBilhetes(): void {
     },
     error: () => alert('❌ Erro ao carregar bilhetes.')
   });
+}
+
+abrirModalReciboFormal(): void {
+  this.valorRecibo = this.reserva?.totalDiaria || 0;
+  this.modalReciboFormal = true;
+}
+
+fecharModalReciboFormal(): void {
+  this.modalReciboFormal = false;
+  this.valorRecibo = 0;
+}
+
+imprimirReciboFormal(): void {
+  if (!this.reserva) return;
+  if (this.valorRecibo > (this.reserva.totalDiaria || 0)) {
+    alert('Valor não pode ser superior ao total de diárias.');
+    return;
+  }
+
+ const nomeUsuario = this.authService.getUsuarioNome();
+  
+  const valorExtenso = this.valorPorExtenso(this.valorRecibo);
+  const checkin = this.formatarData(this.reserva.dataCheckin);
+  const checkout = this.formatarData(this.reserva.dataCheckout);
+  const diarias = this.reserva.quantidadeDiaria || 0;
+  const nomeHospede = this.reserva.cliente?.nome || '';
+  const cpfHospede = this.reserva.cliente?.cpf || '';
+  const apto = this.reserva.apartamento?.numeroApartamento || '';
+  const dataHoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <title>Recibo - Hotel Di Van</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; font-size: 12pt; color: #000; padding: 40px; }
+        .cabecalho { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 25px; }
+        .cabecalho h1 { font-size: 20pt; font-weight: bold; letter-spacing: 2px; }
+        .cabecalho p { font-size: 10pt; margin-top: 4px; }
+        .titulo-recibo { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 25px; letter-spacing: 3px; text-decoration: underline; }
+        .corpo { margin-bottom: 30px; line-height: 1.8; font-size: 12pt; text-align: justify; }
+        .valor-destaque { font-weight: bold; font-size: 13pt; }
+        .assinatura { margin-top: 60px; }
+        .linha-assinatura { border-top: 1px solid #000; width: 350px; margin: 0 auto; padding-top: 8px; text-align: center; font-size: 11pt; }
+        .data-local { margin-top: 40px; font-size: 11pt; }
+        .numero-recibo { text-align: right; font-size: 10pt; color: #555; margin-bottom: 10px; }
+        @media print { body { padding: 20px; } }
+      </style>
+    </head>
+    <body>
+      <div class="cabecalho">
+        <h1>HOTEL DI VAN</h1>
+        <p>SANTOS E CORREIA LTDA &nbsp;|&nbsp; CNPJ: 07.757.726/0001-12</p>
+        <p>Av. João Crisóstomo Ramalho, Nr 406 C, Jardim Tropical, CEP 57.316-110 – Arapiraca/AL</p>
+      </div>
+
+      <div class="numero-recibo">Reserva #${this.reserva.id}</div>
+
+      <div class="titulo-recibo">RECIBO</div>
+
+      <div class="corpo">
+        <p>
+          Recebi do(a) Sr(a). <strong>${nomeHospede}</strong>${cpfHospede ? ', CPF ' + cpfHospede : ''},
+          a importância de <span class="valor-destaque">R$ ${this.formatarMoeda(this.valorRecibo)}
+          (${valorExtenso})</span>, referente à hospedagem no
+          Apartamento <strong>${apto}</strong>, no período de
+          <strong>${checkin}</strong> a <strong>${checkout}</strong>
+          (${diarias} diária${diarias !== 1 ? 's' : ''}).
+        </p>
+        <br>
+        <p>Por ser expressão da verdade, firmo o presente recibo.</p>
+      </div>
+
+      <div class="data-local">
+        <p>Arapiraca/AL, ${dataHoje}.</p>
+      </div>
+
+      <div class="assinatura">
+        <div class="linha-assinatura">
+          ${nomeUsuario}<br>
+          <small>Hotel Di Van</small>
+        </div>
+      </div>
+
+      <script>window.onload = function() { window.print(); }</script>
+    </body>
+    </html>
+  `;
+
+  const win = window.open('', '_blank');
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+  }
+  this.fecharModalReciboFormal();
+}
+
+valorPorExtenso(valor: number): string {
+  const inteiro = Math.floor(valor);
+  const centavos = Math.round((valor - inteiro) * 100);
+
+  const unidades = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove',
+    'dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+  const dezenas = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+  const centenas = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos',
+    'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+
+  const converterGrupo = (n: number): string => {
+    if (n === 0) return '';
+    if (n === 100) return 'cem';
+    let resultado = '';
+    if (n >= 100) { resultado += centenas[Math.floor(n / 100)]; n = n % 100; if (n > 0) resultado += ' e '; }
+    if (n >= 20) { resultado += dezenas[Math.floor(n / 10)]; n = n % 10; if (n > 0) resultado += ' e '; }
+    if (n > 0) resultado += unidades[n];
+    return resultado;
+  };
+
+  if (inteiro === 0 && centavos === 0) return 'zero reais';
+
+  let resultado = '';
+  if (inteiro >= 1000) {
+    const mil = Math.floor(inteiro / 1000);
+    resultado += mil === 1 ? 'mil' : converterGrupo(mil) + ' mil';
+    const resto = inteiro % 1000;
+    if (resto > 0) resultado += ' e ' + converterGrupo(resto);
+  } else {
+    resultado += converterGrupo(inteiro);
+  }
+
+  resultado += inteiro === 1 ? ' real' : ' reais';
+
+  if (centavos > 0) {
+    resultado += ' e ' + converterGrupo(centavos);
+    resultado += centavos === 1 ? ' centavo' : ' centavos';
+  }
+
+  return resultado.charAt(0).toUpperCase() + resultado.slice(1);
 }
 
 }

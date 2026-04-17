@@ -24,9 +24,9 @@ public class ClienteDTO {
     @Pattern(regexp = "\\(\\d{2}\\)\\s\\d{4,5}-\\d{4}", message = "Celular deve estar no formato (XX) XXXXX-XXXX")
     private String celular;
     
-    private String ddi = "+55";
+    private String ddi = "55";
     private String celular2;
-    private String ddi2 = "+55";
+    private String ddi2 = "55";
     
     private String endereco;
     
@@ -90,13 +90,26 @@ public class ClienteDTO {
 	}
 	public void setCelular(String celular) {
 		this.celular = celular;
+	}		
+	
+	public String getDdi() {
+		return ddi;
 	}
-	public String getDdi() { return ddi; }
-	public void setDdi(String ddi) { this.ddi = ddi; }
-	public String getCelular2() { return celular2; }
-	public void setCelular2(String celular2) { this.celular2 = celular2; }
-	public String getDdi2() { return ddi2; }
-	public void setDdi2(String ddi2) { this.ddi2 = ddi2; }
+	public void setDdi(String ddi) {
+		this.ddi = ddi;
+	}
+	public String getCelular2() {
+		return celular2;
+	}
+	public void setCelular2(String celular2) {
+		this.celular2 = celular2;
+	}
+	public String getDdi2() {
+		return ddi2;
+	}
+	public void setDdi2(String ddi2) {
+		this.ddi2 = ddi2;
+	}
 	public String getEndereco() {
 		return endereco;
 	}

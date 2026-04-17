@@ -47,20 +47,20 @@ import { Cliente } from '../../models/cliente.model';
               <th>Ações</th>
             </tr>
           </thead>
-            <tbody>
-              <tr *ngFor="let cliente of clientesFiltrados">
-                <td>{{ cliente.nome }}</td>
-                <td>{{ cliente.cpf || '-' }}</td>
-                <td>{{ cliente.ddi || '+55' }} {{ cliente.celular || '-' }}</td>
-  <td *ngIf="cliente.celular2">{{ cliente.ddi2 || '+55' }} {{ cliente.celular2 }}</td>
-  <td *ngIf="!cliente.celular2">-</td>
-                <td>{{ cliente.empresaNome || cliente.empresa?.nomeEmpresa || '-' }}</td>
-                <td>
-                  <button class="btn-edit" (click)="editar(cliente.id!)">Editar</button>
-                  <button class="btn-delete" (click)="excluir(cliente.id!)">Excluir</button>
-                </td>
-              </tr>
-          </tbody>
+           <tbody>
+  <tr *ngFor="let cliente of clientesFiltrados">
+    <td>{{ cliente.nome }}</td>
+    <td>{{ cliente.cpf || '-' }}</td>
+    <td>{{ cliente.ddi || '55' }} {{ cliente.celular || '-' }}</td>
+    <td *ngIf="cliente.celular2">{{ cliente.ddi2 || '55' }} {{ cliente.celular2 }}</td>
+    <td *ngIf="!cliente.celular2">-</td>
+    <td>{{ cliente.empresaNome || cliente.empresa?.nomeEmpresa || '-' }}</td>
+    <td>
+      <button class="btn-edit" (click)="editar(cliente.id!)">Editar</button>
+      <button class="btn-delete" (click)="excluir(cliente.id!)">Excluir</button>
+    </td>
+  </tr>
+</tbody>
         </table>
       </div>
 

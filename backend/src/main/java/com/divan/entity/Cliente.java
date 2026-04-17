@@ -27,13 +27,13 @@ public class Cliente {
     private String celular;
     
     @Column(length = 5)
-    private String ddi = "+55";
+    private String ddi = "55";
 
     @Column(name = "celular2", nullable = true)
     private String celular2;
 
     @Column(length = 5)
-    private String ddi2 = "+55";
+    private String ddi2 = "55";
 
     @Column(name = "credito_aprovado")
     private Boolean creditoAprovado = false;
@@ -74,6 +74,12 @@ public class Cliente {
 
     @Column(name = "autorizado_jantar")
     private Boolean autorizadoJantar = false;
+    
+    @Column(name = "celular_completo", length = 25)
+    private String celularCompleto;
+
+    @Column(name = "celular2_completo", length = 25)
+    private String celular2Completo;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -84,7 +90,8 @@ public class Cliente {
     public String getCelular() { return celular; }
     public void setCelular(String celular) { this.celular = celular; }
             
-    public String getDdi() {
+    
+	public String getDdi() {
 		return ddi;
 	}
 	public void setDdi(String ddi) {
@@ -126,8 +133,20 @@ public class Cliente {
     public void setTipoCliente(String tipoCliente) { this.tipoCliente = tipoCliente; }
     public Boolean getAutorizadoJantar() { return autorizadoJantar; }
     public void setAutorizadoJantar(Boolean autorizadoJantar) { this.autorizadoJantar = autorizadoJantar; }
-
-    @Override
+    
+    public String getCelularCompleto() {
+		return celularCompleto;
+	}
+	public void setCelularCompleto(String celularCompleto) {
+		this.celularCompleto = celularCompleto;
+	}
+	public String getCelular2Completo() {
+		return celular2Completo;
+	}
+	public void setCelular2Completo(String celular2Completo) {
+		this.celular2Completo = celular2Completo;
+	}
+	@Override
     public int hashCode() { return Objects.hash(id); }
 
     @Override

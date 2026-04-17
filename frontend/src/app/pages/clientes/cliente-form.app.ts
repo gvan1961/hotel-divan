@@ -273,25 +273,25 @@ export class ClienteFormApp implements OnInit {
   responsavelSelecionado: any = null;
 
   paises = [
-  { ddi: '+55', flag: '🇧🇷', nome: 'Brasil' },
-  { ddi: '+1', flag: '🇺🇸', nome: 'EUA' },
-  { ddi: '+54', flag: '🇦🇷', nome: 'Argentina' },
-  { ddi: '+595', flag: '🇵🇾', nome: 'Paraguai' },
-  { ddi: '+598', flag: '🇺🇾', nome: 'Uruguai' },
-  { ddi: '+56', flag: '🇨🇱', nome: 'Chile' },
-  { ddi: '+57', flag: '🇨🇴', nome: 'Colômbia' },
-  { ddi: '+51', flag: '🇵🇪', nome: 'Peru' },
-  { ddi: '+58', flag: '🇻🇪', nome: 'Venezuela' },
-  { ddi: '+34', flag: '🇪🇸', nome: 'Espanha' },
-  { ddi: '+351', flag: '🇵🇹', nome: 'Portugal' },
-  { ddi: '+39', flag: '🇮🇹', nome: 'Itália' },
-  { ddi: '+49', flag: '🇩🇪', nome: 'Alemanha' },
-  { ddi: '+33', flag: '🇫🇷', nome: 'França' },
-  { ddi: '+44', flag: '🇬🇧', nome: 'Reino Unido' },
+  { ddi: '55', flag: '🇧🇷', nome: 'Brasil' },
+  { ddi: '1', flag: '🇺🇸', nome: 'EUA' },
+  { ddi: '54', flag: '🇦🇷', nome: 'Argentina' },
+  { ddi: '595', flag: '🇵🇾', nome: 'Paraguai' },
+  { ddi: '598', flag: '🇺🇾', nome: 'Uruguai' },
+  { ddi: '56', flag: '🇨🇱', nome: 'Chile' },
+  { ddi: '57', flag: '🇨🇴', nome: 'Colômbia' },
+  { ddi: '51', flag: '🇵🇪', nome: 'Peru' },
+  { ddi: '58', flag: '🇻🇪', nome: 'Venezuela' },
+  { ddi: '34', flag: '🇪🇸', nome: 'Espanha' },
+  { ddi: '351', flag: '🇵🇹', nome: 'Portugal' },
+  { ddi: '39', flag: '🇮🇹', nome: 'Itália' },
+  { ddi: '49', flag: '🇩🇪', nome: 'Alemanha' },
+  { ddi: '33', flag: '🇫🇷', nome: 'França' },
+  { ddi: '44', flag: '🇬🇧', nome: 'Reino Unido' },
 ];
 
-  ddi = '+55';
-  ddi2 = '+55';
+  ddi = '55';
+  ddi2 = '55';
   celular2 = '';
 
   cliente: ClienteRequest = {
@@ -347,8 +347,8 @@ export class ClienteFormApp implements OnInit {
         tipoCliente: data.tipoCliente === 'FUNCIONARIO' ? TipoCliente.FUNCIONARIO : TipoCliente.HOSPEDE
       };
 
-      this.ddi = data.ddi ?? '+55';
-      this.ddi2 = data.ddi2 ?? '+55';
+      this.ddi = data.ddi ?? '55';
+      this.ddi2 = data.ddi2 ?? '55';
       this.celular2 = data.celular2 ?? '';
 
       this.menorDeIdade = data.menorDeIdade ?? false;

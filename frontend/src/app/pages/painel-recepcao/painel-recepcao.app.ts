@@ -63,7 +63,7 @@ interface Contadores {
           <span class="cnt cnt-todos"
                 [class.ativo]="filtroAtivo === 'todos'"
                 (click)="setFiltro('todos')">
-            todos: <strong>{{ contadores.total }}</strong>
+           todos: <strong>{{ contadores.total }}</strong>
           </span>
           <span class="cnt cnt-disponivel"
                 [class.ativo]="filtroAtivo === 'disponivel'"
@@ -199,6 +199,7 @@ interface Contadores {
           [class.card-limpeza]="getStatusFinal(apt) === 'LIMPEZA'"
           [class.card-disponivel]="getStatusFinal(apt) === 'DISPONIVEL'"
           [class.card-bloqueado]="getStatusFinal(apt) === 'BLOQUEADO' || getStatusFinal(apt) === 'INDISPONIVEL'"
+          [class.card-manutencao]="getStatusFinal(apt) === 'MANUTENCAO'"
           [class.card-atrasado]="apt.reserva?.atrasado">
 
           <!-- HEADER DO CARD -->
@@ -491,6 +492,7 @@ interface Contadores {
 .card-limpeza    .card-header { background: #7f8c8d; }
 .card-disponivel .card-header { background: #117a65; }
 .card-bloqueado  .card-header { background: #626567; }
+.card-manutencao .card-header { background: #e67e22; }
 .card-limpeza    .card-body   { background: #f2f3f4; }
 .card-prereserva .card-body   { background: #d6eaf8; }
 

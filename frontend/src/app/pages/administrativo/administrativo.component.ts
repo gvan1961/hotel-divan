@@ -8,177 +8,197 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
   standalone: true,
   imports: [CommonModule, HasPermissionDirective],
   template: `
-    <div class="container">
-      <div class="header">
-        <h1>⚙️ Área Administrativa</h1>
-        <p class="subtitle">Acesso restrito — funções de gestão do sistema</p>
-      </div>
-
-      <div class="grid">
-
-        <div *hasPermission="'USUARIO_VISUALIZAR'"
-             class="card" (click)="ir('/usuarios')">
-          <div class="card-icon">👤</div>
-          <div class="card-info">
-            <h3>Usuários</h3>
-            <p>Gerenciar usuários do sistema</p>
-          </div>
-          <span class="seta">›</span>
+      <div class="container">
+        <div class="header">
+          <h1>⚙️ Área Administrativa</h1>
+          <p class="subtitle">Acesso restrito — funções de gestão do sistema</p>
         </div>
 
-        <div *hasPermission="'PERFIL_GERENCIAR'"
-             class="card" (click)="ir('/perfis')">
-          <div class="card-icon">🔐</div>
-          <div class="card-info">
-            <h3>Perfis</h3>
-            <p>Permissões e perfis de acesso</p>
-          </div>
-          <span class="seta">›</span>
-        </div>
+        <div class="grid">
 
-        <div *hasPermission="'CONTA_RECEBER_VISUALIZAR'"
-             class="card" (click)="ir('/contas-receber')">
-          <div class="card-icon">💰</div>
-          <div class="card-info">
-            <h3>Contas a Receber</h3>
-            <p>Controle financeiro de contas</p>
+          <div *hasPermission="'USUARIO_VISUALIZAR'"
+              class="card" (click)="ir('/usuarios')">
+            <div class="card-icon">👤</div>
+            <div class="card-info">
+              <h3>Usuários</h3>
+              <p>Gerenciar usuários do sistema</p>
+            </div>
+            <span class="seta">›</span>
           </div>
-          <span class="seta">›</span>
-        </div>
 
-        <div *hasPermission="'CAIXA_VISUALIZAR'"
-             class="card" (click)="ir('/caixa/consulta')">
-          <div class="card-icon">🔍</div>
-          <div class="card-info">
-            <h3>Consulta de Caixas</h3>
-            <p>Histórico e relatórios de caixa</p>
+          <div *hasPermission="'PERFIL_GERENCIAR'"
+              class="card" (click)="ir('/perfis')">
+            <div class="card-icon">🔐</div>
+            <div class="card-info">
+              <h3>Perfis</h3>
+              <p>Permissões e perfis de acesso</p>
+            </div>
+            <span class="seta">›</span>
           </div>
-          <span class="seta">›</span>
-        </div>
 
-        <div *hasPermission="'CAIXA_VISUALIZAR'"
-             class="card" (click)="ir('/vales')">
-          <div class="card-icon">💵</div>
-          <div class="card-info">
-            <h3>Vales</h3>
-            <p>Vales e descontos de funcionários</p>
+          <div *hasPermission="'CONTA_RECEBER_VISUALIZAR'"
+              class="card" (click)="ir('/contas-receber')">
+            <div class="card-icon">💰</div>
+            <div class="card-info">
+              <h3>Contas a Receber</h3>
+              <p>Controle financeiro de contas</p>
+            </div>
+            <span class="seta">›</span>
           </div>
-          <span class="seta">›</span>
-        </div>
 
-           <div *hasPermission="'ROLE_ADMIN'"
-             class="card" (click)="ir('/auditoria')">
-          <div class="card-icon">📋</div>
-          <div class="card-info">
-            <h3>Log de Auditoria</h3>
-            <p>Registro de ações dos funcionários</p>
+          <div *hasPermission="'CAIXA_VISUALIZAR'"
+              class="card" (click)="ir('/caixa/consulta')">
+            <div class="card-icon">🔍</div>
+            <div class="card-info">
+              <h3>Consulta de Caixas</h3>
+              <p>Histórico e relatórios de caixa</p>
+            </div>
+            <span class="seta">›</span>
           </div>
-          <span class="seta">›</span>
-        </div>
 
-        <div *hasPermission="'ROLE_ADMIN'"
-             class="card" (click)="ir('/sorteios')">
-          <div class="card-icon">🎟️</div>
-          <div class="card-info">
-            <h3>Sorteios</h3>
-            <p>Gerenciar campanhas e bilhetes de sorteio</p>
+          <div *hasPermission="'CAIXA_VISUALIZAR'"
+              class="card" (click)="ir('/vales')">
+            <div class="card-icon">💵</div>
+            <div class="card-info">
+              <h3>Vales</h3>
+              <p>Vales e descontos de funcionários</p>
+            </div>
+            <span class="seta">›</span>
           </div>
-          <span class="seta">›</span>
-        </div>
 
-      </div>
+            <div *hasPermission="'ROLE_ADMIN'"
+              class="card" (click)="ir('/auditoria')">
+            <div class="card-icon">📋</div>
+            <div class="card-info">
+              <h3>Log de Auditoria</h3>
+              <p>Registro de ações dos funcionários</p>
+            </div>
+            <span class="seta">›</span>
+          </div>
+
+          <div *hasPermission="'ROLE_ADMIN'"
+              class="card" (click)="ir('/sorteios')">
+            <div class="card-icon">🎟️</div>
+            <div class="card-info">
+              <h3>Sorteios</h3>
+              <p>Gerenciar campanhas e bilhetes de sorteio</p>
+            </div>
+            <span class="seta">›</span>
+          </div>
+
+          <div *hasPermission="'ROLE_ADMIN'"
+      class="card" (click)="ir('/contas-pagar')">
+    <div class="card-icon">💸</div>
+    <div class="card-info">
+      <h3>Contas a Pagar</h3>
+      <p>Controle de contas, boletos e despesas</p>
     </div>
-  `,
-  styles: [`
-    .container {
-      padding: 30px;
-      max-width: 900px;
-      margin: 0 auto;
-    }
+    <span class="seta">›</span>
+  </div>
 
-    .header {
-      margin-bottom: 35px;
-    }
+  <div *hasPermission="'ROLE_ADMIN'"
+      class="card" (click)="ir('/fornecedores')">
+    <div class="card-icon">🏢</div>
+    <div class="card-info">
+      <h3>Fornecedores</h3>
+      <p>Cadastro e gestão de fornecedores</p>
+    </div>
+    <span class="seta">›</span>
+  </div>
 
-    .header h1 {
-      margin: 0 0 8px 0;
-      color: #2c3e50;
-      font-size: 1.8em;
-    }
+        </div>
+      </div>
+    `,
+    styles: [`
+      .container {
+        padding: 30px;
+        max-width: 900px;
+        margin: 0 auto;
+      }
 
-    .subtitle {
-      margin: 0;
-      color: #7f8c8d;
-      font-size: 1em;
-    }
+      .header {
+        margin-bottom: 35px;
+      }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-      gap: 20px;
-    }
+      .header h1 {
+        margin: 0 0 8px 0;
+        color: #2c3e50;
+        font-size: 1.8em;
+      }
 
-    .card {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      background: white;
-      border-radius: 12px;
-      padding: 25px;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      border-left: 5px solid #ffc107;
-      transition: all 0.25s ease;
-    }
+      .subtitle {
+        margin: 0;
+        color: #7f8c8d;
+        font-size: 1em;
+      }
 
-    .card:hover {
-      transform: translateX(6px);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-      border-left-color: #e0a800;
-    }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 20px;
+      }
 
-    .card-icon {
-      font-size: 2.5em;
-      width: 55px;
-      text-align: center;
-      flex-shrink: 0;
-    }
+      .card {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-left: 5px solid #ffc107;
+        transition: all 0.25s ease;
+      }
 
-    .card-info {
-      flex: 1;
-    }
+      .card:hover {
+        transform: translateX(6px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        border-left-color: #e0a800;
+      }
 
-    .card-info h3 {
-      margin: 0 0 5px 0;
-      color: #2c3e50;
-      font-size: 1.1em;
-    }
+      .card-icon {
+        font-size: 2.5em;
+        width: 55px;
+        text-align: center;
+        flex-shrink: 0;
+      }
 
-    .card-info p {
-      margin: 0;
-      color: #7f8c8d;
-      font-size: 0.9em;
-    }
+      .card-info {
+        flex: 1;
+      }
 
-    .seta {
-      font-size: 1.8em;
-      color: #bdc3c7;
-      font-weight: 300;
-    }
+      .card-info h3 {
+        margin: 0 0 5px 0;
+        color: #2c3e50;
+        font-size: 1.1em;
+      }
 
-    .card:hover .seta {
-      color: #ffc107;
-    }
+      .card-info p {
+        margin: 0;
+        color: #7f8c8d;
+        font-size: 0.9em;
+      }
 
-    @media (max-width: 768px) {
-      .grid { grid-template-columns: 1fr; }
-    }
-  `]
-})
-export class AdministrativoComponent {
-  constructor(private router: Router) {}
+      .seta {
+        font-size: 1.8em;
+        color: #bdc3c7;
+        font-weight: 300;
+      }
 
-  ir(rota: string): void {
-    this.router.navigate([rota]);
+      .card:hover .seta {
+        color: #ffc107;
+      }
+
+      @media (max-width: 768px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+    `]
+  })
+  export class AdministrativoComponent {
+    constructor(private router: Router) {}
+
+    ir(rota: string): void {
+      this.router.navigate([rota]);
+    }
   }
-}

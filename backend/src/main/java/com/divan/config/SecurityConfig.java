@@ -141,6 +141,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/permissoes/**").hasRole("ADMIN")
 
                 .requestMatchers("/api/deposito/**").hasAnyRole("ADMIN", "GERENTE", "RECEPCIONISTA")
+                
+                .requestMatchers("/api/contas-pagar/**").hasAnyRole("ADMIN", "GERENTE")
+                .requestMatchers("/api/fornecedores/**").hasAnyRole("ADMIN", "GERENTE")
 
                 // ========== QUALQUER OUTRA REQUISIÇÃO ==========
                 .anyRequest().authenticated()

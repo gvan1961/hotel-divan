@@ -820,8 +820,8 @@ export class ApartamentoListaApp implements OnInit {
   // ✅ Carregar apartamentos
   this.apartamentoService.getAll().subscribe({
     next: (data) => {
-      this.apartamentos = data;
-      this.apartamentosFiltrados = data;
+  this.apartamentos = data.sort((a, b) => a.numeroApartamento.localeCompare(b.numeroApartamento, 'pt-BR', { numeric: true }));
+  this.apartamentosFiltrados = [...this.apartamentos];
       
       // ═══════════════════════════════════════════
       // 🔍 DEBUG - APARTAMENTO 205

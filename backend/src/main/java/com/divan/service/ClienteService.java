@@ -50,6 +50,17 @@ public class ClienteService {
             throw new RuntimeException("CPF já cadastrado");
         }
         
+     // Monta celular completo: DDI + número sem formatação
+        if (cliente.getDdi() != null && cliente.getCelular() != null) {
+            String numeroLimpo = cliente.getCelular().replaceAll("\\D", "");
+            cliente.setCelularCompleto(cliente.getDdi() + numeroLimpo);
+        } 
+
+        if (cliente.getDdi2() != null && cliente.getCelular2() != null) {
+            String numeroLimpo2 = cliente.getCelular2().replaceAll("\\D", "");
+            cliente.setCelular2Completo(cliente.getDdi2() + numeroLimpo2);
+        }
+        
         // Se foi informado ID da empresa, buscar e vincular
         if (empresaId != null) {
             Optional<Empresa> empresaOpt = empresaRepository.findById(empresaId);
@@ -150,16 +161,27 @@ public class ClienteService {
         clienteExistente.setNome(clienteAtualizado.getNome());
         clienteExistente.setCpf(clienteAtualizado.getCpf());
         clienteExistente.setCelular(clienteAtualizado.getCelular());
-        clienteExistente.setDdi(clienteAtualizado.getDdi() != null ? clienteAtualizado.getDdi() : "+55");
+        clienteExistente.setDdi(clienteAtualizado.getDdi() != null ? clienteAtualizado.getDdi() : "55");
         clienteExistente.setCelular2(clienteAtualizado.getCelular2());
-        clienteExistente.setDdi2(clienteAtualizado.getDdi2() != null ? clienteAtualizado.getDdi2() : "+55");
+        clienteExistente.setDdi2(clienteAtualizado.getDdi2() != null ? clienteAtualizado.getDdi2() : "55");
         clienteExistente.setEndereco(clienteAtualizado.getEndereco());
         clienteExistente.setCep(clienteAtualizado.getCep());
         clienteExistente.setCidade(clienteAtualizado.getCidade());
         clienteExistente.setEstado(clienteAtualizado.getEstado());
         clienteExistente.setDataNascimento(clienteAtualizado.getDataNascimento());
-        clienteExistente.setMenorDeIdade(clienteAtualizado.getMenorDeIdade() != null 
+        clienteExistente.setMenorDeIdade(clienteAtualizado.getMenorDeIdade() != null
             ? clienteAtualizado.getMenorDeIdade() : false);
+
+        // Monta celular completo: DDI + número sem formatação
+        if (clienteAtualizado.getDdi() != null && clienteAtualizado.getCelular() != null) {
+            String numeroLimpo = clienteAtualizado.getCelular().replaceAll("\\D", "");
+            clienteExistente.setCelularCompleto(clienteAtualizado.getDdi() + numeroLimpo);
+        }
+
+        if (clienteAtualizado.getDdi2() != null && clienteAtualizado.getCelular2() != null) {
+            String numeroLimpo2 = clienteAtualizado.getCelular2().replaceAll("\\D", "");
+            clienteExistente.setCelular2Completo(clienteAtualizado.getDdi2() + numeroLimpo2);
+        }
 
         if (clienteAtualizado.getCreditoAprovado() != null) {
             clienteExistente.setCreditoAprovado(clienteAtualizado.getCreditoAprovado());

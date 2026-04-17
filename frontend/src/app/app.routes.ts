@@ -54,6 +54,10 @@ import { AdministrativoComponent } from './pages/administrativo/administrativo.c
 import { PainelRecepcaoApp } from './pages/painel-recepcao/painel-recepcao.app';
 import { AuditoriaComponent } from './pages/administrativo/auditoria.component';
 import { SorteioListaApp } from './pages/sorteio/sorteio-lista.app';
+import { ContasPagarListaApp } from './pages/contas-pagar/contas-pagar-lista.app';
+import { ContasPagarFormApp } from './pages/contas-pagar/contas-pagar-form.app';
+import { FornecedorListaApp } from './pages/fornecedores/fornecedor-lista.app';
+import { FornecedorFormApp } from './pages/fornecedores/fornecedor-form.app';
 
 export const routes: Routes = [
   // LOGIN (sem layout)
@@ -167,7 +171,17 @@ export const routes: Routes = [
 
       { path: 'sorteios', component: SorteioListaApp },
 
-      { path: 'administrativo', component: AdministrativoComponent }
+      { path: 'administrativo', component: AdministrativoComponent },
+
+      // ===== CONTAS A PAGAR =====
+{ path: 'contas-pagar', component: ContasPagarListaApp },
+{ path: 'contas-pagar/nova', component: ContasPagarFormApp },
+{ path: 'contas-pagar/editar/:id', component: ContasPagarFormApp },
+
+// ===== FORNECEDORES =====
+{ path: 'fornecedores', component: FornecedorListaApp },
+{ path: 'fornecedores/novo', component: FornecedorFormApp },
+{ path: 'fornecedores/editar/:id', component: FornecedorFormApp }
     ]
   },
 
