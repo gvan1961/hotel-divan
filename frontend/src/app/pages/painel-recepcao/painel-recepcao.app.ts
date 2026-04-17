@@ -128,7 +128,7 @@ interface Contadores {
           placeholder="📺 Filtrar por TV (ex: Smart, 55...)"
           [(ngModel)]="filtroTv"
           (input)="aplicarFiltroLocal()" />
-        <button class="btn-limpar" (click)="limparFiltros()" *ngIf="filtroCamas || filtroTv">
+        <button class="btn-limpar" (click)="limparFiltros()" *ngIf="filtroCamas || filtroTv || buscaReserva">
           ✕ Limpar
         </button>
       </div>
@@ -148,9 +148,17 @@ interface Contadores {
       placeholder="🚗 Buscar Placa: ABC-1234...."
       [(ngModel)]="buscaPlaca"
       (keyup.enter)="buscarNoPainel()" />
-    <button class="btn-buscar" (click)="buscarNoPainel()" [disabled]="buscando">
+    
+    <input
+  class="filtro-input"
+  placeholder="🔢 Buscar por nº da reserva..."
+  [(ngModel)]="buscaReserva"
+  (input)="aplicarFiltroLocal()" />
+   
+  <button class="btn-buscar" (click)="buscarNoPainel()" [disabled]="buscando">
       {{ buscando ? '⏳' : '🔍 Buscar' }}
     </button>
+
     <button class="btn-limpar-busca" (click)="limparBusca()"
             *ngIf="mostrarResultados">✕</button>
   </div>
@@ -206,6 +214,7 @@ interface Contadores {
           <div class="card-header">
             <span class="apt-numero">{{ apt.numero }}</span>
             <span class="apt-tipo" *ngIf="apt.tipo">{{ apt.tipo }}</span>
+           <span class="reserva-num" *ngIf="apt.reserva?.id">#{{ apt.reserva?.id }}</span>
             <div class="header-badges">
               <span class="badge-sai"    *ngIf="isSaiHoje(apt)">SAI HOJE</span>
               <span class="badge-entra"  *ngIf="apt.reserva?.entraHoje && !apt.reserva?.atrasado">ENTRA HOJE</span>
@@ -678,6 +687,16 @@ interface Contadores {
 .resultado-datas { color: #7f8c8d; font-size: 0.8rem; }
 .resultado-placa { color: #e67e22; font-weight: 600; }
 
+.reserva-num {
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: rgba(255,255,255,.2);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: 'Noto Sans', sans-serif;
+  margin-left: auto;
+}
+
   `]
 })
 export class PainelRecepcaoApp implements OnInit, OnDestroy {
@@ -692,10 +711,11 @@ export class PainelRecepcaoApp implements OnInit, OnDestroy {
 
   buscaHospede = '';
   buscaPlaca   = '';
+  buscaReserva = '';
   resultadosBusca: any[] = [];
   buscando = false;
   mostrarResultados = false;
-
+  
   private intervalo: any;
   private apiUrl = '/api/apartamentos/painel';
 
@@ -733,23 +753,26 @@ export class PainelRecepcaoApp implements OnInit, OnDestroy {
   }
 
   aplicarFiltroLocal(): void {
-    this.apartamentosFiltradosLocal = this.apartamentos.filter(apt => {
-      const okCamas = !this.filtroCamas ||
-        (apt.camas?.toLowerCase().includes(this.filtroCamas.toLowerCase()));
-      const okTv = !this.filtroTv ||
-        (apt.tv?.toLowerCase().includes(this.filtroTv.toLowerCase()));
-      return okCamas && okTv;
-    });
-  }
+  this.apartamentosFiltradosLocal = this.apartamentos.filter(apt => {
+    const okCamas = !this.filtroCamas ||
+      (apt.camas?.toLowerCase().includes(this.filtroCamas.toLowerCase()));
+    const okTv = !this.filtroTv ||
+      (apt.tv?.toLowerCase().includes(this.filtroTv.toLowerCase()));
+    const okReserva = !this.buscaReserva ||
+      (apt.reserva?.id?.toString().includes(this.buscaReserva.trim()));
+    return okCamas && okTv && okReserva;
+  });
+}
 
   limparFiltros(): void {
     this.filtroCamas = '';
     this.filtroTv    = '';
+    this.buscaReserva = '';
     this.apartamentosFiltradosLocal = [...this.apartamentos];
   }
 
   apartamentosFiltrados(): ApartamentoCard[] {
-    const lista = (this.filtroCamas || this.filtroTv)
+    const lista = (this.filtroCamas || this.filtroTv || this.buscaReserva)
       ? this.apartamentosFiltradosLocal
       : this.apartamentos;
 

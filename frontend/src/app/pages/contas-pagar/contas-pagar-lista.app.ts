@@ -213,6 +213,8 @@ export class ContasPagarListaApp implements OnInit {
   valorPagamento: number | null = null;
   formaPagamento = '';
 
+  buscaReserva = '';
+
   ngOnInit(): void {
     this.carregar();
   }
