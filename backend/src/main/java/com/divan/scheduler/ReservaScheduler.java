@@ -93,8 +93,16 @@ public class ReservaScheduler {
         System.out.println("   Data/Hora: " + agora);
         System.out.println("═══════════════════════════════════════════");
 
+     //   List<Reserva> reservasVencidas = reservaRepository
+     //       .findByStatusAndDataCheckoutBefore(Reserva.StatusReservaEnum.ATIVA, agora);
+        
         List<Reserva> reservasVencidas = reservaRepository
-            .findByStatusAndDataCheckoutBefore(Reserva.StatusReservaEnum.ATIVA, agora);
+        	    .findByStatusAndDataCheckoutBefore(
+        	        Reserva.StatusReservaEnum.ATIVA, 
+        	        LocalDateTime.now().toLocalDate().atStartOfDay() // ✅ apenas dias anteriores
+        	    );
+        
+        
 
         System.out.println("🔍 Reservas com checkout vencido: " + reservasVencidas.size());
 

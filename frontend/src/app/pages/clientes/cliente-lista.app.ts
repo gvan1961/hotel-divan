@@ -198,16 +198,17 @@ export class ClienteListaApp implements OnInit {
   const termo = this.filtro.toLowerCase().trim();
   
   if (!termo) {
-    // Sem filtro — mostra página atual
     this.clientesFiltrados = [...this.clientes];
     return;
   }
 
   if (termo.length < 2) return;
 
-  // ✅ Busca no backend quando digitar
+  // Remove formatação do CPF para busca
+  const termoBusca = termo.replace(/[.\-\/]/g, '');
+
   this.loading = true;
-  this.http.get<any[]>(`/api/clientes/buscar?termo=${termo}`).subscribe({
+  this.http.get<any[]>(`/api/clientes/buscar?termo=${termoBusca}`).subscribe({
     next: (data) => {
       this.clientesFiltrados = data;
       this.loading = false;

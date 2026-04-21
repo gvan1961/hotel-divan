@@ -56,4 +56,16 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     	    LIMIT 20
     	    """, nativeQuery = true)
     	List<Object[]> buscarPorCpfOuNome(@Param("cpf") String cpf, @Param("nome") String nome);
+    	
+    	@Query(value = """
+    		    SELECT c.id, c.nome, c.cpf, c.celular, e.nome_empresa, c.tipo_cliente
+    		    FROM clientes c
+    		    LEFT JOIN empresas e ON c.empresa_id = e.id
+    		    WHERE REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), '/', '') LIKE :cpf
+    		    OR MATCH(c.nome) AGAINST (:nome IN BOOLEAN MODE)
+    		    LIMIT 50
+    		    """, nativeQuery = true)
+    		List<Object[]> buscarPorCpfParcialOuNome(@Param("cpf") String cpf, @Param("nome") String nome);
 }
+
+

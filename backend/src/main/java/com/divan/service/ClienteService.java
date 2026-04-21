@@ -83,20 +83,12 @@ public class ClienteService {
 
         try {
             List<Object[]> resultados;
-            
-            // ✅ SE CONTÉM NÚMERO — busca por CPF também
+
             String apenasNumeros = termoLimpo.replaceAll("\\D", "");
-            if (apenasNumeros.length() >= 3) {
-                // Formata o CPF para buscar no banco
-                String cpfFormatado = apenasNumeros;
-                if (apenasNumeros.length() == 11) {
-                    cpfFormatado = apenasNumeros.substring(0, 3) + "." +
-                                   apenasNumeros.substring(3, 6) + "." +
-                                   apenasNumeros.substring(6, 9) + "-" +
-                                   apenasNumeros.substring(9);
-                }
-                resultados = clienteRepository.buscarPorCpfOuNome(
-                    "%" + cpfFormatado + "%", termoLimpo + "*");
+            if (apenasNumeros.length() >= 2) {
+                // Busca pelo número parcial no CPF sem formatação E pelo nome
+                resultados = clienteRepository.buscarPorCpfParcialOuNome(
+                    "%" + apenasNumeros + "%", termoLimpo + "*");
             } else {
                 resultados = clienteRepository.buscarPorNomeFull(termoLimpo + "*");
             }
@@ -112,9 +104,11 @@ public class ClienteService {
                 if (row[4] != null) {
                     dto.setEmpresaNome((String) row[4]);
                 }
+                if (row.length > 5 && row[5] != null) {
+                    dto.setTipoCliente((String) row[5]);
+                }
                 return dto;
             }).collect(Collectors.toList());
-
         } catch (Exception e) {
             System.err.println("❌ ERRO na busca: " + e.getMessage());
             e.printStackTrace();

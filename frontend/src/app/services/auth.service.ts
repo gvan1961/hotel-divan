@@ -87,15 +87,14 @@ export class AuthService {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const expiracao = payload.exp * 1000;
-    
+
     if (Date.now() >= expiracao) {
-    console.log('⏰ Token expirado — fazendo logout automático');
-    localStorage.clear();
-    alert('⏰ Sua sessão expirou. Faça login novamente.');
-    this.logout();
-    return false;
-}
-    
+      console.log('⏰ Token expirado — fazendo logout automático');
+      localStorage.clear();
+      this.logout();
+      return false;
+    }
+
     return true;
   } catch (e) {
     console.error('❌ Erro ao verificar token:', e);

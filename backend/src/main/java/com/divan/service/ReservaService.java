@@ -76,6 +76,7 @@ public class ReservaService {
     @Autowired
     private SorteioService sorteioService;    
     
+    
      
     /**
      * Verifica se existe conflito de datas para o apartamento
@@ -550,6 +551,7 @@ public class ReservaService {
         
         dto.setExtratos(reserva.getExtratos());
         dto.setHistoricos(reserva.getHistoricos());
+        dto.setTotalReciboEmitido(reserva.getTotalReciboEmitido() != null ? reserva.getTotalReciboEmitido() : BigDecimal.ZERO);
         
         return dto;
     }

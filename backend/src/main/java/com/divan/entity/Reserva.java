@@ -117,7 +117,8 @@ public class Reserva {
     @Column(name = "assinatura_base64", columnDefinition = "LONGTEXT")
     private String assinaturaBase64;
     
-    
+    @Column(name = "total_recibo_emitido", precision = 10, scale = 2)
+    private BigDecimal totalReciboEmitido = BigDecimal.ZERO;
     
     public Long getId() {
 		return id;
@@ -364,6 +365,17 @@ public class Reserva {
 	public void setNumeroApartamentoResponsavel(String numeroApartamentoResponsavel) {
 		this.numeroApartamentoResponsavel = numeroApartamentoResponsavel;
 	}
+	
+	
+	public BigDecimal getTotalReciboEmitido() {
+		return totalReciboEmitido;
+	}
+
+
+	public void setTotalReciboEmitido(BigDecimal totalReciboEmitido) {
+		this.totalReciboEmitido = totalReciboEmitido;
+	}
+
 
 	@Override
 	public int hashCode() {

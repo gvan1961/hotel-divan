@@ -813,13 +813,15 @@ export class ValeListaComponent implements OnInit {
   }
 
   // Filtro por busca
-  if (this.termoBusca) {
-    const termo = this.termoBusca.toLowerCase();
-    resultado = resultado.filter(v => 
-      (v.clienteNome?.toLowerCase().includes(termo) || false) ||
-      (v.clienteCpf?.includes(termo) || false)
-    );
-  }
+ if (this.termoBusca) {
+  const termo = this.termoBusca.toLowerCase();
+  const termoNumeros = termo.replace(/\D/g, '');
+  resultado = resultado.filter(v =>
+    (v.clienteNome?.toLowerCase().includes(termo) || false) ||
+    (v.clienteCpf?.includes(termo) || false) ||
+    (termoNumeros.length >= 2 && v.clienteCpf?.replace(/\D/g, '').includes(termoNumeros) || false)
+  );
+}
 
   this.valesFiltrados = resultado;
   

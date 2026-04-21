@@ -199,21 +199,13 @@ public class ClienteController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
-    
-    /*
+            
     @GetMapping("/funcionarios/buscar")
     public ResponseEntity<List<ClienteDTO>> buscarFuncionarios(@RequestParam String termo) {
         List<ClienteDTO> clientes = clienteService.buscarPorTermo(termo)
             .stream()
             .filter(c -> "FUNCIONARIO".equals(c.getTipoCliente()))
             .collect(java.util.stream.Collectors.toList());
-        return ResponseEntity.ok(clientes);
-    }
-    */
-    
-    @GetMapping("/funcionarios/buscar")
-    public ResponseEntity<List<Cliente>> buscarFuncionarios(@RequestParam String termo) {
-        List<Cliente> clientes = clienteService.buscarPorNome(termo);
         return ResponseEntity.ok(clientes);
     }
     

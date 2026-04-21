@@ -72,6 +72,11 @@ public class DepositoProvisorioService {
 
         Produto produto = produtoRepository.findById(request.getProdutoId())
                 .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+        
+     // ✅ VERIFICAR ESTOQUE
+        if (produto.getQuantidade() < request.getQuantidade()) {
+            throw new RuntimeException("Estoque insuficiente. Disponível: " + produto.getQuantidade());
+        }
 
         DepositoProvisorioItem item = new DepositoProvisorioItem();
         item.setDeposito(deposito);

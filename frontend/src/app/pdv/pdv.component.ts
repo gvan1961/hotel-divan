@@ -57,7 +57,7 @@ interface ItemCarrinho {
     <input type="text"
           #inputCodigoBarras
           [(ngModel)]="codigoBarras"
-          (keydown.enter)="buscarPorCodigo()"
+          (keydown)="onKeyDown($event)"
           placeholder="📷 Código de barras (Enter para buscar)"
           class="input-codigo-barras"
           autocomplete="off">
@@ -1248,26 +1248,38 @@ interface ItemCarrinho {
     }  
   }
 
+   
     buscarPorCodigo(): void {
-    if (!this.codigoBarras || this.codigoBarras.trim() === '') return;
+  console.log('🔷 Produtos disponíveis:', this.produtos.length);
+  console.log('🔷 Código:', this.codigoBarras);
+  if (!this.codigoBarras || this.codigoBarras.trim() === '') return;
 
-    const codigo = this.codigoBarras.trim();
-    console.log('📷 Buscando código:', codigo);
+  const codigo = this.codigoBarras.trim();
+  console.log('🔷 Código digitado:', codigo);
+  console.log('🔷 Length:', codigo.length);
+  console.log('🔷 CharCodes:', Array.from(codigo).map(c => c.charCodeAt(0)));
 
-    // ✅ BUSCAR PRODUTO POR CÓDIGO DE BARRAS
-    const produto = this.produtos.find(p => 
-      p.codigoBarras === codigo || 
-      p.nomeProduto.toLowerCase() === codigo.toLowerCase()
-    );
+  const produto = this.produtos.find(p => {
+    console.log('Comparando:', JSON.stringify(p.codigoBarras), '===', JSON.stringify(codigo), ':', p.codigoBarras === codigo);
+    return p.codigoBarras === codigo ||
+           p.nomeProduto.toLowerCase() === codigo.toLowerCase();
+  });
 
-    if (produto) {
-      this.adicionarAoCarrinho(produto);
-      console.log('✅ Produto encontrado:', produto.nomeProduto);
-    } else {
-      alert(`❌ Produto não encontrado para o código: ${codigo}`);
-    }
-
-    // ✅ LIMPAR CAMPO APÓS LEITURA
-    this.codigoBarras = '';
+  if (produto) {
+    this.adicionarAoCarrinho(produto);
+    console.log('✅ Produto encontrado:', produto.nomeProduto);
+  } else {
+    alert(`❌ Produto não encontrado para o código: ${codigo}`);
   }
+
+  this.codigoBarras = '';
+}
+
+onKeyDown(event: KeyboardEvent): void {
+  console.log('🔑 Key:', event.key);
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    this.buscarPorCodigo();
+  }
+}
   }

@@ -11,7 +11,7 @@ import { AlertasStateService } from '../../services/alertas-state.service';
 import { ViewChild } from '@angular/core';
 import { SignaturePadComponent } from '../../components/signature-pad/signature-pad.component';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
-
+import { environment } from '../../../environments/environment';
 
   console.log('🚗🚗🚗 ARQUIVO RESERVA-DETALHES CARREGADO! 🚗🚗🚗');
   interface DescontoSimples {
@@ -30,7 +30,7 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
       telefone?: string;
       celular?: string;
       dataNascimento?: string;
-      creditoAprovado?: boolean;     
+      creditoAprovado?: boolean;           
     };
 
     responsavelPagamentoNome?: string;
@@ -61,6 +61,7 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
     totalDiaria: number;
     totalHospedagem: number;
     totalRecebido: number;
+    totalReciboEmitido?: number;
     totalApagar: number;
     totalProduto?: number;
     desconto?: number;
@@ -587,38 +588,39 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
 
           </div>
 
-        <!-- MODAL RECIBO FORMAL -->
+   <!-- MODAL RECIBO FORMAL -->
 <div class="modal-overlay" *ngIf="modalReciboFormal" (click)="fecharModalReciboFormal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <h2>📄 Recibo Formal</h2>
     <div class="info-box">
       <p><strong>Hóspede:</strong> {{ reserva.cliente?.nome }}</p>
-      <p><strong>Total Diárias:</strong> R$ {{ formatarMoeda(reserva.totalDiaria) }}</p>
+      <p><strong>Total Pago:</strong> R$ {{ formatarMoeda(reserva.totalRecebido || 0) }}</p>
+      <p><strong>Já Recebido:</strong> R$ {{ formatarMoeda(reserva.totalReciboEmitido || 0) }}</p>
+      <p><strong>Disponível para Recibo:</strong> R$ {{ formatarMoeda((reserva.totalRecebido || 0) - (reserva.totalReciboEmitido || 0)) }}</p>
     </div>
-    <div class="campo">
-      <label>Valor a imprimir no recibo (R$) *</label>
-      <input type="number"
-             [(ngModel)]="valorRecibo"
-             [max]="reserva.totalDiaria"
-             min="0"
-             step="0.01"
-             placeholder="0,00" />
-      <small>Máximo permitido: R$ {{ formatarMoeda(reserva.totalDiaria) }} (total de diárias)</small>
-      <small *ngIf="valorRecibo > reserva.totalDiaria" style="color: red;">
-        ⚠️ Valor não pode ser superior ao total de diárias
-      </small>
-    </div>
-    <div class="modal-footer">
+      <div class="campo">
+        <label>Valor a imprimir no recibo (R$) *</label>
+        <input type="text"
+        [(ngModel)]="valorReciboTexto"
+        (input)="onValorReciboInput()"
+        placeholder="0,00" />
+        <small>Máximo permitido: R$ {{ formatarMoeda(reserva.totalRecebido || 0) }} (total recebido)</small>
+  <small *ngIf="valorRecibo > (reserva.totalRecebido || 0)" style="color: red;">
+    ⚠️ Valor não pode ser superior ao total recebido
+  </small>
+      </div>
+
+
+      <div class="modal-footer">
       <button class="btn-cancelar-modal" (click)="fecharModalReciboFormal()">Cancelar</button>
       <button class="btn-confirmar"
-              (click)="imprimirReciboFormal()"
-              [disabled]="!valorRecibo || valorRecibo <= 0 || valorRecibo > reserva.totalDiaria">
-        🖨️ Imprimir Recibo
-      </button>
+        (click)="imprimirReciboFormal()"
+        [disabled]="!valorRecibo || valorRecibo <= 0 || valorRecibo > (reserva.totalRecebido || 0)">
+  🖨️ Imprimir Recibo
+</button>
     </div>
   </div>
 </div>
-
         </div>
 
         <!-- HISTÓRICO -->
@@ -2649,6 +2651,8 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
   termoBuscaPlaca = '';
   resultadoBuscaPlaca = '';
   erroBuscaPlaca = '';
+
+  valorReciboTexto = '';
 
   temBilhetes = false;
 
@@ -5489,7 +5493,9 @@ carregarEImprimirBilhetes(): void {
 }
 
 abrirModalReciboFormal(): void {
-  this.valorRecibo = this.reserva?.totalDiaria || 0;
+  const maxValor = this.reserva?.totalRecebido || 0;
+  this.valorRecibo = maxValor;
+  this.valorReciboTexto = maxValor.toFixed(2).replace('.', ',');
   this.modalReciboFormal = true;
 }
 
@@ -5500,13 +5506,39 @@ fecharModalReciboFormal(): void {
 
 imprimirReciboFormal(): void {
   if (!this.reserva) return;
-  if (this.valorRecibo > (this.reserva.totalDiaria || 0)) {
-    alert('Valor não pode ser superior ao total de diárias.');
+
+  if ((this.reserva.totalRecebido || 0) <= 0) {
+    alert('❌ Não é possível emitir recibo sem pagamento registrado.');
+    this.fecharModalReciboFormal();
     return;
   }
 
- const nomeUsuario = this.authService.getUsuarioNome();
-  
+  if (this.valorRecibo <= 0) {
+    alert('❌ Informe um valor válido.');
+    return;
+  }
+
+  if (this.valorRecibo > (this.reserva.totalRecebido || 0)) {
+    alert('Valor não pode ser superior ao total pago.');
+    return;
+  }
+
+  // ✅ Registrar recibo no backend antes de imprimir
+  this.http.post(`${environment.apiUrl}/reservas/${this.reserva.id}/registrar-recibo`,
+    { valorRecibo: this.valorRecibo }).subscribe({
+    next: () => {
+      this.gerarHtmlRecibo();
+    },
+    error: (e) => {
+      alert('❌ ' + (e.error?.erro || 'Erro ao registrar recibo'));
+    }
+  });
+}
+
+gerarHtmlRecibo(): void {
+  if (!this.reserva) return;
+
+  const nomeUsuario = this.authService.getUsuarioNome();
   const valorExtenso = this.valorPorExtenso(this.valorRecibo);
   const checkin = this.formatarData(this.reserva.dataCheckin);
   const checkout = this.formatarData(this.reserva.dataCheckout);
@@ -5515,6 +5547,21 @@ imprimirReciboFormal(): void {
   const cpfHospede = this.reserva.cliente?.cpf || '';
   const apto = this.reserva.apartamento?.numeroApartamento || '';
   const dataHoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const totalHospedagem = this.reserva.totalHospedagem || 0;
+  const isParcial = this.valorRecibo < totalHospedagem;
+
+  const textoPagamento = isParcial
+    ? `a importância de <span class="valor-destaque">R$ ${this.formatarMoeda(this.valorRecibo)}
+      (${valorExtenso})</span>, referente ao <strong>pagamento parcial</strong> da hospedagem no
+      Apartamento <strong>${apto}</strong>, no período de
+      <strong>${checkin}</strong> a <strong>${checkout}</strong>
+      (${diarias} diária${diarias !== 1 ? 's' : ''}),
+      cujo valor total da hospedagem é de <strong>R$ ${this.formatarMoeda(totalHospedagem)}</strong>.`
+    : `a importância de <span class="valor-destaque">R$ ${this.formatarMoeda(this.valorRecibo)}
+      (${valorExtenso})</span>, referente à hospedagem no
+      Apartamento <strong>${apto}</strong>, no período de
+      <strong>${checkin}</strong> a <strong>${checkout}</strong>
+      (${diarias} diária${diarias !== 1 ? 's' : ''}).`;
 
   const html = `
     <!DOCTYPE html>
@@ -5547,16 +5594,12 @@ imprimirReciboFormal(): void {
 
       <div class="numero-recibo">Reserva #${this.reserva.id}</div>
 
-      <div class="titulo-recibo">RECIBO</div>
+      <div class="titulo-recibo">RECIBO${isParcial ? ' PARCIAL' : ''}</div>
 
       <div class="corpo">
         <p>
           Recebi do(a) Sr(a). <strong>${nomeHospede}</strong>${cpfHospede ? ', CPF ' + cpfHospede : ''},
-          a importância de <span class="valor-destaque">R$ ${this.formatarMoeda(this.valorRecibo)}
-          (${valorExtenso})</span>, referente à hospedagem no
-          Apartamento <strong>${apto}</strong>, no período de
-          <strong>${checkin}</strong> a <strong>${checkout}</strong>
-          (${diarias} diária${diarias !== 1 ? 's' : ''}).
+          ${textoPagamento}
         </p>
         <br>
         <p>Por ser expressão da verdade, firmo o presente recibo.</p>
@@ -5626,6 +5669,13 @@ valorPorExtenso(valor: number): string {
   }
 
   return resultado.charAt(0).toUpperCase() + resultado.slice(1);
+}
+
+onValorReciboInput(): void {
+  const limpo = this.valorReciboTexto.replace(/[^\d,]/g, '');
+  this.valorReciboTexto = limpo;
+  const numero = parseFloat(limpo.replace(',', '.'));
+  this.valorRecibo = isNaN(numero) ? 0 : numero;
 }
 
 }

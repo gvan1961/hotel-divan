@@ -324,3 +324,44 @@ input[type="number"].input-valor::placeholder {
   background: #d1ecf1;
   color: #0c5460;
 }
+
+/* ===== MODAL ADICIONAR HÓSPEDE - RESERVA FORM ===== */
+.btns-hospede-existente {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  justify-content: flex-end;
+}
+
+.btn-confirmar-hospede {
+  flex: 1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-confirmar-hospede:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-cancelar-hospede {
+  flex: 1;
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-cancelar-hospede:hover {
+  background: #5a6268;
+}

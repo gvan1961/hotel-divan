@@ -1482,7 +1482,7 @@ import { Diaria } from '../../models/diaria.model';
       margin-top: 15px;
     }
 
-    .form-placa-existente label {
+     .form-placa-existente label {
       display: block;
       margin-bottom: 5px;
       color: #333;
@@ -1505,6 +1505,7 @@ import { Diaria } from '../../models/diaria.model';
       display: flex;
       gap: 10px;
       margin-top: 15px;
+      justify-content: flex-end;
     }
 
     .btn-confirmar-hospede {

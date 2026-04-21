@@ -228,7 +228,7 @@ export class ProdutoFormApp implements OnInit {
   errorMessage = '';
   isEdit = false;
   produtoId?: number;
-
+  
   ngOnInit(): void {
     this.carregarCategorias();
     
@@ -258,12 +258,13 @@ export class ProdutoFormApp implements OnInit {
         console.log('📦 Produto carregado:', data);
         
         this.produto = {
-          nomeProduto: data.nomeProduto,
-          quantidade: data.quantidade,
-          valorVenda: data.valorVenda,
-          valorCompra: data.valorCompra,
-          categoriaId: data.categoria?.id  // ✅ CORRIGIDO: pegar ID do objeto categoria
-        };
+  nomeProduto: data.nomeProduto,
+  quantidade: data.quantidade,
+  valorVenda: data.valorVenda,
+  valorCompra: data.valorCompra,
+  categoriaId: data.categoria?.id,
+  codigoBarras: data.codigoBarras || ''  // ✅ ADICIONAR
+};
         
         console.log('✅ Produto mapeado:', this.produto);
       },

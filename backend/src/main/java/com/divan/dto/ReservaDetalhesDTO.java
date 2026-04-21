@@ -50,6 +50,7 @@ public class ReservaDetalhesDTO {
     private Long responsavelPagamentoId;
     private String numeroApartamentoResponsavel;
     
+    private BigDecimal totalReciboEmitido = BigDecimal.ZERO;
     
     // CLASSES INTERNAS PARA DADOS SIMPLIFICADOS
     
@@ -259,9 +260,15 @@ public class ReservaDetalhesDTO {
 	public void setNumeroApartamentoResponsavel(String numeroApartamentoResponsavel) {
 		this.numeroApartamentoResponsavel = numeroApartamentoResponsavel;
 	}
+	
+	
+	public BigDecimal getTotalReciboEmitido() {
+		return totalReciboEmitido;
+	}
 
-
-
+	public void setTotalReciboEmitido(BigDecimal totalReciboEmitido) {
+		this.totalReciboEmitido = totalReciboEmitido;
+	}
 
 	public static class ClienteSimples {
 		

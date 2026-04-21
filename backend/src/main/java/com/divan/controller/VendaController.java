@@ -28,6 +28,7 @@ public class VendaController {
     @Autowired private VendaService vendaService;
     @Autowired private LogAuditoriaRepository logAuditoriaRepository;
     @Autowired private UsuarioRepository usuarioRepository;
+    @Autowired private FechamentoCaixaRepository caixaRepository;
 
     @GetMapping("/teste")
     public ResponseEntity<String> teste() {
@@ -39,6 +40,7 @@ public class VendaController {
     @PostMapping("/comanda-consumo")
     public ResponseEntity<?> comandaConsumo(@RequestBody Map<String, Object> body) {
         try {
+        	verificarCaixaAberto();
             Long reservaId = Long.parseLong(body.get("reservaId").toString());
             String observacao = body.containsKey("observacao") && body.get("observacao") != null
                 ? body.get("observacao").toString() : "";
@@ -140,6 +142,7 @@ public class VendaController {
     @PostMapping("/a-vista")
     public ResponseEntity<?> vendaAVista(@RequestBody Map<String, Object> body) {
         try {
+        	verificarCaixaAberto();
             String formaPagamentoStr = body.get("formaPagamento").toString();
             String observacao = body.containsKey("observacao") && body.get("observacao") != null
                 ? body.get("observacao").toString() : "";
@@ -297,5 +300,17 @@ public class VendaController {
             e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
+    }
+    
+    private void verificarCaixaAberto() {
+        String login = SecurityContextHolder.getContext().getAuthentication().getName();
+        usuarioRepository.findByUsername(login).ifPresent(usuario -> {
+            boolean caixaAberto = caixaRepository
+                .findByUsuarioIdAndStatus(usuario.getId(), FechamentoCaixa.StatusCaixa.ABERTO)
+                .isPresent();
+            if (!caixaAberto) {
+                throw new RuntimeException("Caixa não aberto. Abra o caixa antes de registrar vendas.");
+            }
+        });
     }
 }

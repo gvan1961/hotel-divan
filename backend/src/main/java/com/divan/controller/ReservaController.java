@@ -1221,5 +1221,40 @@ public class ReservaController {
             return ResponseEntity.ok(new ArrayList<>());
         }
     }
+    
+    @PostMapping("/{id}/registrar-recibo")
+    public ResponseEntity<?> registrarRecibo(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        try {
+            Reserva reserva = reservaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+
+            BigDecimal valorRecibo = new BigDecimal(body.get("valorRecibo").toString());
+            BigDecimal totalReciboEmitido = reserva.getTotalReciboEmitido() != null 
+                ? reserva.getTotalReciboEmitido() : BigDecimal.ZERO;
+            BigDecimal totalRecebido = reserva.getTotalRecebido() != null 
+                ? reserva.getTotalRecebido() : BigDecimal.ZERO;
+
+            BigDecimal saldoDisponivel = totalRecebido.subtract(totalReciboEmitido);
+
+            if (valorRecibo.compareTo(saldoDisponivel) > 0) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "erro", "Valor do recibo excede o saldo disponível para recibo. " +
+                            "Já recibado: R$ " + totalReciboEmitido + 
+                            " | Disponível: R$ " + saldoDisponivel
+                ));
+            }
+
+            reserva.setTotalReciboEmitido(totalReciboEmitido.add(valorRecibo));
+            reservaRepository.save(reserva);
+
+            return ResponseEntity.ok(Map.of(
+                "mensagem", "Recibo registrado",
+                "totalReciboEmitido", reserva.getTotalReciboEmitido(),
+                "saldoDisponivel", totalRecebido.subtract(reserva.getTotalReciboEmitido())
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
         
 }

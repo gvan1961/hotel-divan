@@ -451,19 +451,21 @@ onKeyDown(event: KeyboardEvent): void {
       error: () => {}
     });
 }
-  adicionarItem(): void {
+ adicionarItem(): void {
   if (!this.produtoSelecionado || !this.quantidadeAdicionar) return;
   this.service.adicionarItem(this.produtoSelecionado.id, this.quantidadeAdicionar).subscribe({
     next: () => {
       this.limparProduto();
       this.carregarDeposito();
-      // Volta o foco para o leitor de código
       setTimeout(() => {
         const el = document.querySelector('input[placeholder*="Código"]') as HTMLInputElement;
         if (el) el.focus();
       }, 100);
     },
-    error: (e: any) => alert('Erro ao adicionar: ' + e.error?.message)
+    error: (e: any) => {
+      alert('Erro ao adicionar: ' + e.error?.message);
+      this.quantidadeAdicionar = null;
+    }
   });
 }
 
