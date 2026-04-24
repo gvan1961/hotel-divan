@@ -107,6 +107,16 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
   </div>
 
         </div>
+   <div *hasPermission="'ROLE_ADMIN'"
+     class="card" (click)="ir('/estoque/movimentacoes')">
+  <div class="card-icon">📦</div>
+  <div class="card-info">
+    <h3>Movimentação de Estoque</h3>
+    <p>Entradas e acertos de estoque</p>
+  </div>
+  <span class="seta">›</span>
+</div>
+
       </div>
     `,
     styles: [`

@@ -58,6 +58,7 @@ import { ContasPagarListaApp } from './pages/contas-pagar/contas-pagar-lista.app
 import { ContasPagarFormApp } from './pages/contas-pagar/contas-pagar-form.app';
 import { FornecedorListaApp } from './pages/fornecedores/fornecedor-lista.app';
 import { FornecedorFormApp } from './pages/fornecedores/fornecedor-form.app';
+import { MovimentacaoEstoqueApp } from './pages/estoque/movimentacao-estoque.app';
 
 export const routes: Routes = [
   // LOGIN (sem layout)
@@ -139,6 +140,7 @@ export const routes: Routes = [
 
       // ===== ESTOQUE =====
       { path: 'contagem-estoque', component: ContagemEstoqueComponent },
+      { path: 'estoque/movimentacoes', component: MovimentacaoEstoqueApp },
 
       // ===== CONTAS A RECEBER =====
       { path: 'contas-receber', component: ContasReceberListaApp },
@@ -172,6 +174,7 @@ export const routes: Routes = [
       { path: 'sorteios', component: SorteioListaApp },
 
       { path: 'administrativo', component: AdministrativoComponent },
+
 
       // ===== CONTAS A PAGAR =====
 { path: 'contas-pagar', component: ContasPagarListaApp },
