@@ -99,7 +99,10 @@ import { Diaria } from '../../models/diaria.model';
               </div>
               
               <div class="sem-resultado" *ngIf="mostrarResultados && clientesFiltrados.length === 0 && buscaCliente.length >= 2">
-                ❌ Nenhum cliente encontrado
+               ❌ Nenhum cliente encontrado
+               <button type="button" class="btn-cadastrar-cliente" (click)="abrirModalCadastroRapido()">
+               + Cadastrar "{{ buscaCliente }}" como novo cliente
+               </button>
               </div>
 
               <small class="field-help">Digite pelo menos 2 caracteres para buscar</small>
@@ -339,10 +342,8 @@ import { Diaria } from '../../models/diaria.model';
               (click)="alternarModoModal('cadastrar')">
               ➕ Cadastrar Novo
             </button>
-          </div>
-        
-
-
+          </div>     
+          
           <div *ngIf="modoModalHospede === 'buscar'" class="modal-tab-content">
       <!-- ✅ SE NÃO SELECIONOU AINDA, MOSTRA A BUSCA -->
       <div *ngIf="!hospedeExistenteSelecionado">
@@ -486,6 +487,41 @@ import { Diaria } from '../../models/diaria.model';
           </button>
         </div>
       </div>
+      
+      <!-- MODAL CADASTRO RÁPIDO -->
+      <div class="modal-overlay" *ngIf="modalCadastroRapido" (click)="fecharModalCadastroRapido()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <h2>👤 Cadastro Rápido de Cliente</h2>
+          <div class="form-group">
+            <label>Nome *</label>
+            <input type="text" [(ngModel)]="novoCliente.nome" name="ncNome" placeholder="Nome completo" />
+          </div>
+          <div class="form-group">
+            <label>CPF</label>
+            <input type="text" [(ngModel)]="novoCliente.cpf" name="ncCpf" placeholder="000.000.000-00" maxlength="14" (input)="formatarCpfRapido()" />
+          </div>
+          <div class="form-group">
+            <label>Celular</label>
+            <div style="display:flex; gap:8px">
+              <select [(ngModel)]="novoCliente.ddi" name="ncDdi" style="width:90px; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                <option value="55">🇧🇷 +55</option>
+                <option value="1">🇺🇸 +1</option>
+                <option value="351">🇵🇹 +351</option>
+              </select>
+              <input type="text" [(ngModel)]="novoCliente.celular" name="ncCelular" placeholder="(00) 00000-0000" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:5px;" />
+            </div>
+          </div>
+          <div *ngIf="erroCadastroRapido" style="color:#e74c3c; margin-bottom:12px; font-size:13px;">{{ erroCadastroRapido }}</div>
+          <div class="form-actions">
+            <button type="button" class="btn-cancel" (click)="fecharModalCadastroRapido()">Cancelar</button>
+            <button type="button" class="btn-save" (click)="salvarClienteRapido()" [disabled]="salvandoCliente">
+              {{ salvandoCliente ? 'Salvando...' : '✅ Salvar e Selecionar' }}
+            </button>
+          </div>
+          <button type="button" class="btn-fechar-modal" (click)="fecharModalCadastroRapido()">✕</button>
+        </div>
+      </div>    
+
     `,
       styles: [`
         .container {
@@ -666,11 +702,31 @@ import { Diaria } from '../../models/diaria.model';
         }
 
         .sem-resultado {
-          padding: 20px;
-          text-align: center;
-          color: #e74c3c;
-          font-weight: 500;
-        }
+  padding: 20px;
+  text-align: center;
+  color: #e74c3c;
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-cadastrar-cliente {
+  background: #27ae60;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  width: 100%;
+}
+
+.btn-cadastrar-cliente:hover {
+  background: #219a52;
+}
 
         .info-box {
           background: #e8f5e9;
@@ -1540,6 +1596,23 @@ import { Diaria } from '../../models/diaria.model';
     .btn-cancelar-hospede:hover {
       background: #5a6268;
     }
+
+     .btn-cadastrar-wrapper { margin-top: 8px; }
+.btn-cadastrar-cliente { 
+  background: #27ae60; color: white; border: none; 
+  padding: 8px 16px; border-radius: 5px; cursor: pointer; 
+  font-size: 13px; width: 100%;
+}
+.modal-cadastro { 
+  background: white; border-radius: 8px; padding: 30px; 
+  width: 480px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.modal-cadastro h2 { margin: 0 0 20px; color: #2c3e50; }
+.campo { margin-bottom: 16px; }
+.campo label { display: block; margin-bottom: 6px; font-weight: 600; color: #555; }
+.campo input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+.erro-msg { color: #e74c3c; margin-bottom: 12px; font-size: 13px; } 
+
     }
 
       `]
@@ -1590,7 +1663,7 @@ import { Diaria } from '../../models/diaria.model';
       modalAdicionarHospede = false;
       modoModalHospede: 'buscar' | 'cadastrar' = 'buscar';
       clientesFiltradosModal: any[] = [];
-      termoBuscaHospede = '';
+      termoBuscaHospede = '';                  
 
       novoHospede = {
         nome: '',
@@ -1608,6 +1681,10 @@ import { Diaria } from '../../models/diaria.model';
 
       placaTitular = ''; // ✅ Placa do cliente titular
       hospedeExistenteSelecionado: any = null; // ✅ Para mostrar formulário intermediário
+      modalCadastroRapido = false;
+      salvandoCliente = false;
+      erroCadastroRapido = '';
+      novoCliente = { nome: '', cpf: '', celular: '', ddi: '55' };
       placaHospedeExistente = ''; // ✅ Placa do hóspede existente    
 
       ngOnInit(): void {
@@ -2506,6 +2583,56 @@ import { Diaria } from '../../models/diaria.model';
       this.hospedeExistenteSelecionado = null;
       this.placaHospedeExistente = '';
     }
+
+    abrirModalCadastroRapido(): void {
+  this.novoCliente = { nome: this.buscaCliente, cpf: '', celular: '', ddi: '55' };
+  this.erroCadastroRapido = '';
+  this.modalCadastroRapido = true;
+}
+
+fecharModalCadastroRapido(): void {
+  this.modalCadastroRapido = false;
+  this.erroCadastroRapido = '';
+}
+
+formatarCpfRapido(): void {
+  let cpf = this.novoCliente.cpf.replace(/\D/g, '');
+  if (cpf.length > 3) cpf = cpf.substring(0, 3) + '.' + cpf.substring(3);
+  if (cpf.length > 7) cpf = cpf.substring(0, 7) + '.' + cpf.substring(7);
+  if (cpf.length > 11) cpf = cpf.substring(0, 11) + '-' + cpf.substring(11, 13);
+  this.novoCliente.cpf = cpf;
+}
+
+salvarClienteRapido(): void {
+  if (!this.novoCliente.nome) {
+    this.erroCadastroRapido = 'Nome é obrigatório';
+    return;
+  }
+  this.salvandoCliente = true;
+  this.erroCadastroRapido = '';
+
+  const payload = {
+    nome: this.novoCliente.nome,
+    cpf: this.novoCliente.cpf || null,
+    celular: this.novoCliente.celular || null,
+    ddi: this.novoCliente.ddi || '55',
+    tipoCliente: 'HOSPEDE'
+  };
+
+  this.http.post<any>('/api/clientes', payload).subscribe({
+    next: (cliente) => {
+      this.salvandoCliente = false;
+      this.fecharModalCadastroRapido();
+      this.selecionarCliente(cliente);
+      this.buscaCliente = cliente.nome;
+      this.mostrarResultados = false;
+    },
+    error: (e) => {
+      this.salvandoCliente = false;
+      this.erroCadastroRapido = e.error?.message || e.error?.erro || 'Erro ao cadastrar cliente';
+    }
+  });
+}
 
       voltar(): void {
         if (this.voltarParaMapa) {

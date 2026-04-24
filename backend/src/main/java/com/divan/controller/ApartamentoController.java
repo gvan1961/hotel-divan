@@ -311,8 +311,8 @@ public class ApartamentoController {
             List<Map<String, Object>> cards = new ArrayList<>();
 
             int cntDisponivel = 0, cntOcupado = 0, cntLimpeza = 0,
-                cntBloqueado = 0, cntPreReserva = 0,
-                cntEntraHoje = 0, cntSaiHoje = 0, cntAtrasado = 0;
+            	    cntBloqueado = 0, cntManutencao = 0, cntPreReserva = 0,
+            	    cntEntraHoje = 0, cntSaiHoje = 0, cntAtrasado = 0;
             int cntHospedesOcupados = 0;
 
             for (Apartamento apt : apartamentos) {
@@ -336,10 +336,10 @@ public class ApartamentoController {
                  statusFisico.equals("INDISPONIVEL")) {
                  card.put("reserva", null);
                  switch (statusFisico) {
-                     case "LIMPEZA"     -> cntLimpeza++;
-                     case "MANUTENCAO",
-                          "INDISPONIVEL" -> cntBloqueado++;
-                 }
+                 case "LIMPEZA"      -> cntLimpeza++;
+                 case "MANUTENCAO"   -> cntManutencao++;
+                 case "INDISPONIVEL" -> cntBloqueado++;
+             }
                  cards.add(card);
                  continue; // ✅ PULAR busca de reservas
              }
@@ -421,11 +421,11 @@ public class ApartamentoController {
                     String statusApt = apt.getStatus() != null
                         ? apt.getStatus().name() : "DISPONIVEL";
                     switch (statusApt) {
-                        case "LIMPEZA"    -> cntLimpeza++;
-                        case "MANUTENCAO",
-                             "INDISPONIVEL" -> cntBloqueado++;
-                        default           -> cntDisponivel++;
-                    }
+                    case "LIMPEZA"      -> cntLimpeza++;
+                    case "MANUTENCAO"   -> cntManutencao++;
+                    case "INDISPONIVEL" -> cntBloqueado++;
+                    default             -> cntDisponivel++;
+                }
                 }
                 cards.add(card);
             }
@@ -437,6 +437,7 @@ public class ApartamentoController {
             contadores.put("hospedesOcupados", cntHospedesOcupados);
             contadores.put("limpeza",          cntLimpeza);
             contadores.put("bloqueado",        cntBloqueado);
+            contadores.put("manutencao",       cntManutencao);
             contadores.put("preReserva",       cntPreReserva);
             contadores.put("entraHoje",        cntEntraHoje);
             contadores.put("saiHoje",          cntSaiHoje);

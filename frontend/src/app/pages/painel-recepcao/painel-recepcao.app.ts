@@ -43,6 +43,7 @@ interface Contadores {
   ocupado: number;
   hospedesOcupados: number;
   limpeza: number;
+  manutencao: number;
   bloqueado: number;
   preReserva: number;
   entraHoje: number;
@@ -86,6 +87,11 @@ interface Contadores {
                 (click)="setFiltro('limpeza')">
             em limpeza: <strong>{{ contadores.limpeza }}</strong>
           </span>
+          <span class="cnt cnt-manutencao"
+      [class.ativo]="filtroAtivo === 'manutencao'"
+      (click)="setFiltro('manutencao')">
+  manutenção: <strong>{{ contadores.manutencao }}</strong>
+</span>
           <span class="cnt cnt-bloqueado"
                 [class.ativo]="filtroAtivo === 'bloqueado'"
                 (click)="setFiltro('bloqueado')">
@@ -380,6 +386,7 @@ interface Contadores {
     .cnt-ocupado    { background: #fadbd8; border-color: #e74c3c; color: #c0392b; }
     .cnt-prereserva { background: #d6eaf8; border-color: #2980b9; color: #1a5276; }
     .cnt-limpeza    { background: #fef9e7; border-color: #f39c12; color: #b7770d; }
+    .cnt-manutencao { background: #fdebd0; border-color: #e67e22; color: #a04000; }
     .cnt-bloqueado  { background: #f2f3f4; border-color: #95a5a6; color: #566573; }
     .cnt-entra      { background: #d5f5e3; border-color: #27ae60; color: #1e8449; }
     .cnt-sai        { background: #fdebd0; border-color: #e67e22; color: #a04000; }
@@ -784,6 +791,7 @@ return lista.filter(apt => {
     case 'ocupado':    return s === 'ATIVA' && !apt.reserva?.atrasado;
     case 'prereserva': return s === 'PRE_RESERVA' || apt.temPreReservaFutura === true;
     case 'limpeza':    return s === 'LIMPEZA';
+    case 'manutencao': return s === 'MANUTENCAO';
     case 'bloqueado':  return s === 'BLOQUEADO' || s === 'INDISPONIVEL';
     case 'entraHoje':  return apt.reserva?.entraHoje === true;
     case 'saiHoje':    return this.isSaiHoje(apt);

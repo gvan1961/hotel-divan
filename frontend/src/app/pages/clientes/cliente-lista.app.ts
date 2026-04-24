@@ -17,17 +17,22 @@ import { Cliente } from '../../models/cliente.model';
         <button class="btn-primary" (click)="novo()">+ Novo Cliente</button>
       </div>
 
-      <div class="search-box">
-        <input 
-          type="text" 
-          placeholder="Buscar cliente por nome ou CPF..."
-          [(ngModel)]="filtro"
-          (input)="onFiltrar()"
-        />
-        <span class="total-info">
-          Total: {{ totalElementos }} clientes
-        </span>
-      </div>
+     <div class="search-box">
+  <input 
+    type="text" 
+    placeholder="Buscar cliente por nome ou CPF..."
+    [(ngModel)]="filtro"
+    (input)="onFiltrar()"
+  />
+  <select [(ngModel)]="filtroEmpresa" (change)="filtrarPorEmpresa()" class="filtro-select">
+    <option value="">Todas as empresas</option>
+    <option value="SEM_EMPRESA">Sem empresa</option>
+    <option *ngFor="let emp of empresas" [value]="emp.id">{{ emp.nomeEmpresa }}</option>
+  </select>
+  <span class="total-info">
+    Total: {{ totalElementos }} clientes
+  </span>
+</div>
 
       <div *ngIf="loading" class="loading">Carregando...</div>
 
@@ -107,6 +112,15 @@ import { Cliente } from '../../models/cliente.model';
       border-radius: 5px; 
       font-size: 14px; 
     }
+
+    .filtro-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  min-width: 200px;
+}
+
     .total-info { color: #666; font-size: 0.9em; }
 
     .loading, .empty { text-align: center; padding: 40px; color: #666; }
@@ -165,9 +179,16 @@ export class ClienteListaApp implements OnInit {
   totalElementos = 0;
   tamanhoPagina = 50;
 
+  filtroEmpresa = '';
+  empresas: any[] = [];
+
   ngOnInit(): void {
-    this.carregarPagina(0);
-  }
+  this.carregarPagina(0);
+  this.http.get<any[]>('/api/empresas').subscribe({
+    next: (data) => this.empresas = data.sort((a, b) => a.nomeEmpresa.localeCompare(b.nomeEmpresa, 'pt-BR')),
+    error: () => {}
+  });
+}
 
   carregarPagina(pagina: number): void {
     this.loading = true;
@@ -228,4 +249,29 @@ export class ClienteListaApp implements OnInit {
       });
     }
   }
+
+ filtrarPorEmpresa(): void {
+  if (!this.filtroEmpresa) {
+    this.carregarPagina(0);
+    return;
+  }
+  if (this.filtroEmpresa === 'SEM_EMPRESA') {
+    this.http.get<any[]>('/api/clientes/buscar?termo=*').subscribe({
+      next: (data) => {
+        this.clientesFiltrados = data.filter(c => !c.empresaNome);
+        this.loading = false;
+      },
+      error: () => this.loading = false
+    });
+    return;
+  }
+  // ✅ AQUI — substitua o subscribe existente por este:
+  this.http.get<any[]>(`/api/clientes/empresa/${this.filtroEmpresa}`).subscribe({
+    next: (data) => {
+      this.clientesFiltrados = data.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+      this.loading = false;
+    },
+    error: () => this.loading = false
+  });
+}
 }
