@@ -115,8 +115,9 @@ public class ApartamentoService {
         
         // ✅ SE OCUPADO, BUSCAR RESERVA ATIVA
         if (apartamento.getStatus() == Apartamento.StatusEnum.OCUPADO) {
-            Optional<Reserva> reservaAtiva = reservaRepository
-                .findByApartamentoAndStatus(apartamento, Reserva.StatusReservaEnum.ATIVA);
+        	Optional<Reserva> reservaAtiva = reservaRepository
+        		    .findFirstByApartamentoAndStatusOrderByDataCheckinDesc(
+        		        apartamento, Reserva.StatusReservaEnum.ATIVA);
             
             if (reservaAtiva.isPresent()) {
                 Reserva reserva = reservaAtiva.get();

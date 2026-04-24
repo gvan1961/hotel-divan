@@ -13,8 +13,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.data.repository.query.Param;
-
 @Repository
 public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
@@ -35,13 +33,13 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     List<Cliente> findByApartamento(String numeroApartamento);
 
     @Query(value = """
-    	    SELECT c.id, c.nome, c.cpf, c.celular, e.nome_empresa
-    	    FROM clientes c
-    	    LEFT JOIN empresas e ON c.empresa_id = e.id
-    	    WHERE MATCH(c.nome) AGAINST(:termo IN BOOLEAN MODE)
-    	    LIMIT 20
-    	    """, nativeQuery = true)
-    	List<Object[]> buscarPorNomeFull(@Param("termo") String termo);
+            SELECT c.id, c.nome, c.cpf, c.celular, e.nome_empresa, c.tipo_cliente
+            FROM clientes c
+            LEFT JOIN empresas e ON c.empresa_id = e.id
+            WHERE MATCH(c.nome) AGAINST(:termo IN BOOLEAN MODE)
+            LIMIT 20
+            """, nativeQuery = true)
+        List<Object[]> buscarPorNomeFull(@Param("termo") String termo);
     	
     @EntityGraph(attributePaths = {"empresa", "responsavel"})
     Page<Cliente> findByNomeContainingIgnoreCaseOrCpfContaining(

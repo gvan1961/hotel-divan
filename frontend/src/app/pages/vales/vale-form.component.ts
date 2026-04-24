@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -84,26 +84,25 @@ import { Cliente } from '../../models/cliente.model';
             </select>
           </div>
 
-          <!-- ⭐ VALOR (CORRIGIDO) -->
-          <div class="campo">
-            <label>Valor *</label>
-            <div class="input-group-valor">
-              <span class="prefixo">R$</span>
-              <input 
-                type="text" 
-                [(ngModel)]="valorExibicao"
-                name="valorExibicao"
-                (keypress)="onKeyPress($event)"
-                (focus)="onFocus()"
-                placeholder="0,00"
-                required
-                class="input-valor"
-              />
-            </div>
-            <small class="field-help">Digite o valor do vale em reais</small>
-          </div>
-
-          <!-- DATAS -->
+            <!-- ⭐ VALOR (CORRIGIDO) -->
+           <div class="campo">
+  <label>Valor *</label>
+  <div class="input-group-valor">
+    <span class="prefixo">R$</span>
+    <input 
+      type="number"
+      [(ngModel)]="form.valor"
+      name="valor"
+      min="0.01"
+      step="0.01"
+      placeholder="0,00"
+      class="input-valor"
+    />
+  </div>
+  <small class="field-help">Digite o valor do vale em reais</small>
+</div>
+   
+            <!-- DATAS -->
           <div class="campos-linha">
             <div class="campo">
               <label>Data de Concessão *</label>
@@ -138,7 +137,7 @@ import { Cliente } from '../../models/cliente.model';
 
           <!-- BOTÕES -->
           <div class="form-footer">
-            <button type="button" class="btn-cancelar" (click)="voltar()">
+             <button type="button" class="btn-cancelar" (click)="voltar()">
               Cancelar
             </button>
             <button 
@@ -150,6 +149,7 @@ import { Cliente } from '../../models/cliente.model';
           </div>
         </form>
       </div>
+      <button type="button" (click)="debugForm()">DEBUG</button>
 
       <!-- LOADING -->
       <div class="loading-overlay" *ngIf="loading">
@@ -487,6 +487,7 @@ export class ValeFormComponent implements OnInit {
   private clienteService = inject(ClienteService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private cdr = inject(ChangeDetectorRef);
 
   modoEdicao = false;
   valeId?: number;
@@ -504,7 +505,7 @@ export class ValeFormComponent implements OnInit {
 
   // ⭐ NOVO: Valor para exibição formatada
   valorExibicao = '0,00';
-  valorCentavos = 0;
+  //valorCentavos = 0;
 
   // Busca de funcionário
   termoBuscaFuncionario = '';
@@ -531,31 +532,8 @@ export class ValeFormComponent implements OnInit {
 
   // ⭐ MANIPULAÇÃO DO VALOR (IGUAL À TELA DE PAGAMENTO)
   
-  onKeyPress(event: KeyboardEvent): void {
-    // Permitir apenas números
-    const charCode = event.which ? event.which : event.keyCode;
-    if (charCode < 48 || charCode > 57) {
-      event.preventDefault();
-      return;
-    }
-
-    const digito = String.fromCharCode(charCode);
-    this.valorCentavos = this.valorCentavos * 10 + parseInt(digito);
-    
-    // Atualizar valor
-    this.form.valor = this.valorCentavos / 100;
-    this.valorExibicao = this.formatarValorBR(this.form.valor);
-    
-    event.preventDefault();
-  }
-
-  onFocus(): void {
-    // Limpar valor ao focar (opcional)
-    if (this.valorCentavos === 0) {
-      this.valorExibicao = '';
-    }
-  }
-
+  
+  
   formatarValorBR(valor: number): string {
     return valor.toLocaleString('pt-BR', {
       minimumFractionDigits: 2,
@@ -578,7 +556,7 @@ export class ValeFormComponent implements OnInit {
         };
 
         // ⭐ CONVERTER VALOR PARA CENTAVOS
-        this.valorCentavos = Math.round(vale.valor * 100);
+        //this.valorCentavos = Math.round(vale.valor * 100);
         this.valorExibicao = this.formatarValorBR(vale.valor);
 
         // Carregar funcionário
@@ -652,21 +630,7 @@ export class ValeFormComponent implements OnInit {
     this.totalPendente = 0;
   }
 
- formValido(): boolean {
-  console.log('🔍 Validando formulário:', {
-    clienteId: this.form.clienteId,
-    clienteIdValido: this.form.clienteId > 0,
-    tipoVale: this.form.tipoVale,
-    tipoValeValido: this.form.tipoVale !== null,
-    valor: this.form.valor,
-    valorValido: this.form.valor > 0,
-    valorCentavos: this.valorCentavos,
-    dataConcessao: this.form.dataConcessao,
-    dataConcessaoValida: this.form.dataConcessao !== '',
-    dataVencimento: this.form.dataVencimento,
-    dataVencimentoValida: this.form.dataVencimento !== ''
-  });
-
+  formValido(): boolean {
   return this.form.clienteId > 0 &&
          this.form.tipoVale !== null &&
          this.form.valor > 0 &&
@@ -674,6 +638,15 @@ export class ValeFormComponent implements OnInit {
          this.form.dataVencimento !== '';
 }
 
+   debugForm(): void {
+  console.log('clienteId:', this.form.clienteId);
+  console.log('tipoVale:', this.form.tipoVale);
+  console.log('valor:', this.form.valor);
+  console.log('dataConcessao:', this.form.dataConcessao);
+  console.log('dataVencimento:', this.form.dataVencimento);
+  console.log('formValido:', this.formValido());
+}
+ 
   salvar(): void {
     if (!this.formValido()) {
       alert('⚠️ Preencha todos os campos obrigatórios');
@@ -708,10 +681,14 @@ export class ValeFormComponent implements OnInit {
     this.router.navigate(['/vales']);
   }
 
+  
   obterDataHoje(): string {
     return new Date().toISOString().split('T')[0];
   }
 
+
+
+ 
   obterDataDaqui30Dias(): string {
     const data = new Date();
     data.setDate(data.getDate() + 30);

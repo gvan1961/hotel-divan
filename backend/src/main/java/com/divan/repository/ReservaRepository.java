@@ -77,5 +77,8 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     	    Long apartamentoId,
     	    List<Reserva.StatusReservaEnum> statuses
     	);  
+    
+    Optional<Reserva> findFirstByApartamentoAndStatusOrderByDataCheckinDesc(
+    	    Apartamento apartamento, Reserva.StatusReservaEnum status);
         
 }
