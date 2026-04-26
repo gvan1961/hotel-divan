@@ -6,11 +6,12 @@ import { ValeService } from '../../services/vale.service';
 import { ClienteService } from '../../services/cliente.service';
 import { Vale, ValeRequest, TipoVale, TIPO_VALE_LABELS } from '../../models/vale.model';
 import { Cliente } from '../../models/cliente.model';
+import { CurrencyInputDirective } from '../../directives/currency-input.directive';
 
 @Component({
   selector: 'app-vale-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CurrencyInputDirective],
   template: `
     <div class="container-form">
       <div class="header">
@@ -48,109 +49,104 @@ import { Cliente } from '../../models/cliente.model';
             </div>
 
             <div class="funcionario-selecionado" *ngIf="funcionarioSelecionado">
-              <div class="info-funcionario">
-                <div>
-                  <strong>{{ funcionarioSelecionado.nome }}</strong>
-                  <br>
-                  <small>CPF: {{ funcionarioSelecionado.cpf }}</small>
-                </div>
-                <button 
-                  type="button"
-                  class="btn-limpar"
-                  (click)="limparSelecao()"
-                  *ngIf="!modoEdicao">
-                  ❌
-                </button>
-              </div>
-
-              <!-- TOTAL PENDENTE -->
-              <div class="alerta-pendente" *ngIf="totalPendente > 0">
-                ⚠️ Este funcionário possui <strong>R$ {{ totalPendente | number:'1.2-2' }}</strong> em vales pendentes
-              </div>
-            </div>
-          </div>
-
-          <!-- TIPO DE VALE -->
-          <div class="campo">
-            <label>Tipo de Vale *</label>
-            <select 
-              [(ngModel)]="form.tipoVale"
-              name="tipoVale"
-              required>
-              <option [ngValue]="null">Selecione o tipo</option>
-              <option *ngFor="let tipo of tiposVale" [ngValue]="tipo.valor">
-                {{ tipo.label }}
-              </option>
-            </select>
-          </div>
-
-            <!-- ⭐ VALOR (CORRIGIDO) -->
-           <div class="campo">
-  <label>Valor *</label>
-  <div class="input-group-valor">
-    <span class="prefixo">R$</span>
-    <input 
-      type="number"
-      [(ngModel)]="form.valor"
-      name="valor"
-      min="0.01"
-      step="0.01"
-      placeholder="0,00"
-      class="input-valor"
-    />
+  <div class="info-funcionario">
+    <div>
+      <strong>{{ funcionarioSelecionado.nome }}</strong>
+      <br>
+      <small>CPF: {{ funcionarioSelecionado.cpf }}</small>
+    </div>
+    <button 
+      type="button"
+      class="btn-limpar"
+      (click)="limparSelecao()"
+      *ngIf="!modoEdicao">
+      ❌
+    </button>
   </div>
-  <small class="field-help">Digite o valor do vale em reais</small>
+
+  <!-- TOTAL PENDENTE -->
+  <div class="alerta-pendente" *ngIf="totalPendente > 0">
+    ⚠️ Este funcionário possui <strong>R$ {{ totalPendente | number:'1.2-2' }}</strong> em vales pendentes
+  </div>
 </div>
-   
-            <!-- DATAS -->
-          <div class="campos-linha">
-            <div class="campo">
-              <label>Data de Concessão *</label>
-              <input 
-                type="date"
-                [(ngModel)]="form.dataConcessao"
-                name="dataConcessao"
-                required>
-            </div>
+</div>
 
-            <div class="campo">
-              <label>Data de Vencimento *</label>
-              <input 
-                type="date"
-                [(ngModel)]="form.dataVencimento"
-                name="dataVencimento"
-                [min]="form.dataConcessao"
-                required>
-            </div>
-          </div>
+<!-- TIPO DE VALE -->
+<div class="campo">
+  <label>Tipo de Vale *</label>
+  <select 
+    [(ngModel)]="form.tipoVale"
+    name="tipoVale"
+    required>
+    <option [ngValue]="null">Selecione o tipo</option>
+    <option *ngFor="let tipo of tiposVale" [ngValue]="tipo.valor">
+      {{ tipo.label }}
+    </option>
+  </select>
+</div>
 
-          <!-- OBSERVAÇÃO -->
-          <div class="campo">
-            <label>Observação</label>
-            <textarea 
-              [(ngModel)]="form.observacao"
-              name="observacao"
-              rows="4"
-              placeholder="Informações adicionais sobre o vale...">
-            </textarea>
-          </div>
+<!-- VALOR -->
+<div class="campo">
+  <label>Valor *</label>
+  <input
+    type="text"
+    [(ngModel)]="valorExibicao"
+    name="valor"
+    (input)="onValorInput($event)"
+    (focus)="focarValor()"
+    placeholder="0,00"
+    style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; font-size:14px; box-sizing:border-box; background:white;"
+  />
+</div>
 
-          <!-- BOTÕES -->
-          <div class="form-footer">
-             <button type="button" class="btn-cancelar" (click)="voltar()">
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              class="btn-salvar"
-              [disabled]="!formValido()">
-              {{ modoEdicao ? '💾 Salvar Alterações' : '✅ Criar Vale' }}
-            </button>
-          </div>
-        </form>
-      </div>
-      <button type="button" (click)="debugForm()">DEBUG</button>
+<!-- DATAS -->
+<div class="campos-linha">
+  <div class="campo">
+    <label>Data de Concessão *</label>
+    <input 
+      type="date"
+      [(ngModel)]="form.dataConcessao"
+      name="dataConcessao"
+      required>
+  </div>
 
+  <div class="campo">
+    <label>Data de Vencimento *</label>
+    <input 
+      type="date"
+      [(ngModel)]="form.dataVencimento"
+      name="dataVencimento"
+      [min]="form.dataConcessao"
+      required>
+  </div>
+</div>
+
+<!-- OBSERVAÇÃO -->
+<div class="campo">
+  <label>Observação</label>
+  <textarea 
+    [(ngModel)]="form.observacao"
+    name="observacao"
+    rows="4"
+    placeholder="Informações adicionais sobre o vale...">
+  </textarea>
+</div>
+
+<!-- BOTÕES -->
+<div class="form-footer">
+  <button type="button" class="btn-cancelar" (click)="voltar()">
+    Cancelar
+  </button>
+  <button 
+    type="submit" 
+    class="btn-salvar"
+    [disabled]="!formValido()">
+    {{ modoEdicao ? '💾 Salvar Alterações' : '✅ Criar Vale' }}
+  </button>
+</div>
+</form>
+</div>
+     
       <!-- LOADING -->
       <div class="loading-overlay" *ngIf="loading">
         <div class="spinner"></div>
@@ -191,6 +187,24 @@ import { Cliente } from '../../models/cliente.model';
     .btn-voltar:hover {
       background: #7f8c8d;
     }
+
+  .input-valor {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd !important;
+  border-radius: 5px;
+  font-size: 14px;
+  box-sizing: border-box;
+  background: white !important;
+  display: block !important;
+  min-height: 40px;
+}
+
+.input-valor:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
 
     .card-form {
       background: white;
@@ -495,17 +509,18 @@ export class ValeFormComponent implements OnInit {
 
   // Formulário
   form: ValeRequest = {
-    clienteId: 0,
-    dataConcessao: this.obterDataHoje(),
-    dataVencimento: this.obterDataDaqui30Dias(),
-    tipoVale: null as any,
-    valor: 0,
-    observacao: ''
-  };
+  clienteId: 0,
+  dataConcessao: this.obterDataHoje(),
+  dataVencimento: this.obterDataDaqui30Dias(),
+  tipoVale: null as any,
+  valor: null as any,
+  observacao: ''
+};
 
   // ⭐ NOVO: Valor para exibição formatada
   valorExibicao = '0,00';
   //valorCentavos = 0;
+ 
 
   // Busca de funcionário
   termoBuscaFuncionario = '';
@@ -515,10 +530,11 @@ export class ValeFormComponent implements OnInit {
 
   // Tipos de vale
   tiposVale = [
-    { valor: TipoVale.ADIANTAMENTO, label: TIPO_VALE_LABELS.ADIANTAMENTO },
-    { valor: TipoVale.EMPRESTIMO, label: TIPO_VALE_LABELS.EMPRESTIMO },
-    { valor: TipoVale.OUTROS, label: TIPO_VALE_LABELS.OUTROS }
-  ];
+  { valor: TipoVale.ADIANTAMENTO, label: TIPO_VALE_LABELS.ADIANTAMENTO },
+  { valor: TipoVale.EMPRESTIMO, label: TIPO_VALE_LABELS.EMPRESTIMO },
+  { valor: TipoVale.DESCONTO_FOLHA, label: TIPO_VALE_LABELS.DESCONTO_FOLHA },
+  { valor: TipoVale.OUTROS, label: TIPO_VALE_LABELS.OUTROS }
+];
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -541,27 +557,32 @@ export class ValeFormComponent implements OnInit {
     });
   }
 
-  carregarVale(): void {
-    this.loading = true;
-    
-    this.valeService.buscarPorId(this.valeId!).subscribe({
-      next: (vale: Vale) => {
-        this.form = {
-          clienteId: vale.clienteId,
-          dataConcessao: vale.dataConcessao,
-          dataVencimento: vale.dataVencimento,
-          tipoVale: vale.tipoVale,
-          valor: vale.valor,
-          observacao: vale.observacao || ''
-        };
+ carregarVale(): void {
+  this.loading = true;
+  
+  this.valeService.buscarPorId(this.valeId!).subscribe({
+    next: (vale: Vale) => {
+       console.log('📋 Vale carregado:', vale);
+  console.log('🏷️ tipoVale:', vale.tipoVale);
+  console.log('🏷️ vale completo:', JSON.stringify(vale));
 
-        // ⭐ CONVERTER VALOR PARA CENTAVOS
-        //this.valorCentavos = Math.round(vale.valor * 100);
-        this.valorExibicao = this.formatarValorBR(vale.valor);
+      const clienteId = vale.clienteId || (vale as any).cliente?.id;
 
-        // Carregar funcionário
-        this.clienteService.buscarPorId(vale.clienteId).subscribe({
+      this.form = {
+        clienteId: clienteId,
+        dataConcessao: vale.dataConcessao,
+        dataVencimento: vale.dataVencimento,
+        tipoVale: vale.tipoVale,
+        valor: vale.valor,
+        observacao: vale.observacao || ''
+      };
+
+      this.valorExibicao = this.formatarValorBR(vale.valor);
+
+      if (clienteId) {
+        this.clienteService.buscarPorId(clienteId).subscribe({
           next: (cliente: Cliente) => {
+            console.log('👤 Cliente carregado:', cliente);
             this.funcionarioSelecionado = cliente;
             this.termoBuscaFuncionario = cliente.nome;
             this.carregarTotalPendente(cliente.id!);
@@ -572,14 +593,17 @@ export class ValeFormComponent implements OnInit {
             this.loading = false;
           }
         });
-      },
-      error: (err: any) => {
-        console.error('Erro ao carregar vale:', err);
-        alert('Erro ao carregar vale');
-        this.voltar();
+      } else {
+        this.loading = false;
       }
-    });
-  }
+    },
+    error: (err: any) => {
+      console.error('Erro ao carregar vale:', err);
+      alert('Erro ao carregar vale');
+      this.voltar();
+    }
+  });
+}
 
   buscarFuncionarios(): void {
     if (this.termoBuscaFuncionario.length < 2) {
@@ -638,15 +662,7 @@ export class ValeFormComponent implements OnInit {
          this.form.dataVencimento !== '';
 }
 
-   debugForm(): void {
-  console.log('clienteId:', this.form.clienteId);
-  console.log('tipoVale:', this.form.tipoVale);
-  console.log('valor:', this.form.valor);
-  console.log('dataConcessao:', this.form.dataConcessao);
-  console.log('dataVencimento:', this.form.dataVencimento);
-  console.log('formValido:', this.formValido());
-}
- 
+   
   salvar(): void {
     if (!this.formValido()) {
       alert('⚠️ Preencha todos os campos obrigatórios');
@@ -686,8 +702,25 @@ export class ValeFormComponent implements OnInit {
     return new Date().toISOString().split('T')[0];
   }
 
+  onValorFocus(): void {
+  if (this.valorExibicao === '0,00') {
+    this.valorExibicao = '';
+  }
+}
 
-
+onValorInput(event: any): void {
+  let numeros = event.target.value.replace(/\D/g, '');
+  if (!numeros) numeros = '0';
+  const centavos = parseInt(numeros, 10);
+  const reais = centavos / 100;
+  this.form.valor = reais;
+  this.valorExibicao = reais.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+  
+  focarValor(): void {
+  this.valorExibicao = '0,00';
+  this.form.valor = 0;
+}
  
   obterDataDaqui30Dias(): string {
     const data = new Date();

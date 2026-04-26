@@ -135,6 +135,9 @@ public class ValeController {
         vale.setCliente(cliente);
         vale.setValor(new BigDecimal(body.get("valor").toString()));
 
+        if (body.get("tipoVale") != null)
+            vale.setTipoVale(body.get("tipoVale").toString());
+
         if (body.get("descricao") != null)
             vale.setDescricao(body.get("descricao").toString());
         if (body.get("observacao") != null)
@@ -142,8 +145,6 @@ public class ValeController {
         if (body.get("dataVencimento") != null)
             vale.setDataVencimento(LocalDate.parse(
                 body.get("dataVencimento").toString().substring(0, 10)));
-
-        // ✅ NOVO
         if (body.get("dataConcessao") != null)
             vale.setDataConcessao(LocalDate.parse(
                 body.get("dataConcessao").toString().substring(0, 10)));

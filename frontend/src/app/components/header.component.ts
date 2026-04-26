@@ -18,6 +18,9 @@ import { Subscription } from 'rxjs';
           <span class="user-greeting">
             👤 Olá, <strong>{{ nomeUsuario }}</strong>
           </span>
+          <a href="/ponto" class="btn-ponto" title="Registrar Ponto">
+            ⏱️ Ponto
+          </a>
           <button class="btn-logout" (click)="sair()" title="Sair do sistema">
             🚪 Sair
           </button>
@@ -92,6 +95,25 @@ import { Subscription } from 'rxjs';
       .user-greeting { font-size: 13px; padding: 6px 12px; }
       .btn-logout { font-size: 12px; padding: 6px 15px; }
     }
+      .btn-ponto {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.3s;
+}
+.btn-ponto:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+}
   `]
 })
 export class HeaderComponent implements OnInit, OnDestroy {

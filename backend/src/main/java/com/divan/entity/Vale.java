@@ -45,11 +45,7 @@ public class Vale {
 
     @Column(name = "data_pagamento")
     private LocalDateTime dataPagamento;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private StatusVale status = StatusVale.PENDENTE;
-
+    
     @Column(name = "motivo_cancelamento", length = 500)
     private String motivoCancelamento;
 
@@ -61,10 +57,21 @@ public class Vale {
     
     @Column(name = "data_concessao")
     private LocalDate dataConcessao;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private StatusVale status = StatusVale.PENDENTE;
 
+    public StatusVale getStatus() { return status; }
+    public void setStatus(StatusVale status) { this.status = status; }
+    
     public enum StatusVale {
         PENDENTE, PAGO, VENCIDO, CANCELADO
     }
+    
+    
+    @Column(name = "tipo_vale", length = 30)
+    private String tipoVale;
 
 	public Long getId() {
 		return id;
@@ -121,15 +128,7 @@ public class Vale {
 	public void setDataPagamento(LocalDateTime dataPagamento) {
 		this.dataPagamento = dataPagamento;
 	}
-
-	public StatusVale getStatus() {
-		return status;
-	}
-
-	public void setStatus(StatusVale status) {
-		this.status = status;
-	}
-
+	
 	public String getMotivoCancelamento() {
 		return motivoCancelamento;
 	}
@@ -161,7 +160,18 @@ public class Vale {
 	public void setDataConcessao(LocalDate dataConcessao) {
 		this.dataConcessao = dataConcessao;
 	}
+		
 
+	public String getTipoVale() {
+		return tipoVale;
+	}
+
+	public void setTipoVale(String tipoVale) {
+		this.tipoVale = tipoVale;
+	}
+	
+	
+	
 	@Override
 	public int hashCode() {
 		return Objects.hash(id);

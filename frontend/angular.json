@@ -22,7 +22,15 @@
             "browser": "src/main.ts",
             "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.app.json",
-            "assets": ["src/favicon.ico", "src/assets"],
+            "assets": [
+  "src/favicon.ico", 
+  "src/assets",
+  {
+    "glob": "**/*",
+    "input": "public/models",
+    "output": "models"
+  }
+],
             "styles": ["src/styles.css"],
             "scripts": []
           },

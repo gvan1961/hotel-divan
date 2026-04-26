@@ -145,7 +145,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/contas-pagar/**").hasAnyRole("ADMIN", "GERENTE")
                 .requestMatchers("/api/fornecedores/**").hasAnyRole("ADMIN", "GERENTE")
                 .requestMatchers("/api/estoque/movimentacoes/**").hasAnyRole("ADMIN", "GERENTE")
-
+                .requestMatchers("/api/ponto/registrar").authenticated()
+                .requestMatchers("/api/ponto/relatorio/**").hasAnyRole("ADMIN", "GERENTE")
+                .requestMatchers("/api/ponto/foto/**").hasRole("ADMIN")
+                .requestMatchers("/api/ponto/**").authenticated()
                 // ========== QUALQUER OUTRA REQUISIÇÃO ==========
                 .anyRequest().authenticated()
             );

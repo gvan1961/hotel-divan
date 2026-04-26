@@ -59,6 +59,10 @@ import { ContasPagarFormApp } from './pages/contas-pagar/contas-pagar-form.app';
 import { FornecedorListaApp } from './pages/fornecedores/fornecedor-lista.app';
 import { FornecedorFormApp } from './pages/fornecedores/fornecedor-form.app';
 import { MovimentacaoEstoqueApp } from './pages/estoque/movimentacao-estoque.app';
+import { PontoRegistrarApp } from './pages/ponto/ponto-registrar.app';
+import { PontoRelatorioApp } from './pages/ponto/ponto-relatorio.app';
+import { PontoFotoApp } from './pages/ponto/ponto-foto.app';
+import { roleGuard } from './guards/role.guard';
 
 export const routes: Routes = [
   // LOGIN (sem layout)
@@ -174,6 +178,12 @@ export const routes: Routes = [
       { path: 'sorteios', component: SorteioListaApp },
 
       { path: 'administrativo', component: AdministrativoComponent },
+
+      // ===== PONTO ELETRONICO =====
+
+{ path: 'ponto', component: PontoRegistrarApp },
+{ path: 'ponto/relatorio', component: PontoRelatorioApp },
+{ path: 'ponto/foto', component: PontoFotoApp, canActivate: [roleGuard(['ADMIN', 'GERENTE'])] },
 
 
       // ===== CONTAS A PAGAR =====
