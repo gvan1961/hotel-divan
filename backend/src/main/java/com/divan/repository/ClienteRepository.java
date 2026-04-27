@@ -64,6 +64,8 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     		    LIMIT 50
     		    """, nativeQuery = true)
     		List<Object[]> buscarPorCpfParcialOuNome(@Param("cpf") String cpf, @Param("nome") String nome);
+    		
+    		List<Cliente> findByTipoCliente(String tipoCliente);
 }
 
 

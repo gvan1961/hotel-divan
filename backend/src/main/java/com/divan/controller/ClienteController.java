@@ -209,4 +209,9 @@ public class ClienteController {
         return ResponseEntity.ok(clientes);
     }
     
+    @GetMapping("/funcionarios")
+    public ResponseEntity<List<Cliente>> listarFuncionarios() {
+        return ResponseEntity.ok(clienteRepository.findByTipoCliente("FUNCIONARIO"));
+    }
+    
 }

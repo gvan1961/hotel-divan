@@ -63,6 +63,7 @@ import { PontoRegistrarApp } from './pages/ponto/ponto-registrar.app';
 import { PontoRelatorioApp } from './pages/ponto/ponto-relatorio.app';
 import { PontoFotoApp } from './pages/ponto/ponto-foto.app';
 import { roleGuard } from './guards/role.guard';
+import { PontoAjusteApp } from './pages/ponto/ponto-ajuste.app';
 
 export const routes: Routes = [
   // LOGIN (sem layout)
@@ -184,7 +185,7 @@ export const routes: Routes = [
 { path: 'ponto', component: PontoRegistrarApp },
 { path: 'ponto/relatorio', component: PontoRelatorioApp },
 { path: 'ponto/foto', component: PontoFotoApp, canActivate: [roleGuard(['ADMIN', 'GERENTE'])] },
-
+{ path: 'ponto/ajuste', component: PontoAjusteApp, canActivate: [roleGuard(['ADMIN', 'GERENTE'])] },
 
       // ===== CONTAS A PAGAR =====
 { path: 'contas-pagar', component: ContasPagarListaApp },

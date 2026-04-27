@@ -96,6 +96,90 @@ public class PontoController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+ // ============================================
+ // AJUSTE DE PONTO (ADMIN/GERENTE)
+ // ============================================
+
+ @PostMapping("/ajuste")
+ public ResponseEntity<?> registrarAjuste(@RequestBody Map<String, Object> body) {
+     try {
+         Long clienteId = Long.parseLong(body.get("clienteId").toString());
+         String tipo = body.get("tipo").toString();
+         String dataHoraStr = body.get("dataHora").toString();
+         String motivoAjuste = body.get("motivoAjuste").toString();
+         String ajustadoPor = body.get("ajustadoPor").toString();
+
+         Cliente cliente = clienteRepository.findById(clienteId)
+                 .orElseThrow(() -> new RuntimeException("Funcionário não encontrado"));
+
+         RegistroPonto registro = new RegistroPonto();
+         registro.setCliente(cliente);
+         registro.setTipo(RegistroPonto.TipoPonto.valueOf(tipo));
+         registro.setDataHora(LocalDateTime.parse(dataHoraStr));
+         registro.setAjustado(true);
+         registro.setMotivoAjuste(motivoAjuste);
+         registro.setAjustadoPor(ajustadoPor);
+         registro.setReconhecimentoFacial(false);
+         registro.setObservacao("Ajuste manual: " + motivoAjuste);
+
+         RegistroPonto salvo = registroPontoRepository.save(registro);
+
+         return ResponseEntity.ok(Map.of(
+             "id", salvo.getId(),
+             "funcionario", cliente.getNome(),
+             "tipo", salvo.getTipo(),
+             "dataHora", salvo.getDataHora().toString(),
+             "mensagem", "Ajuste registrado com sucesso!"
+         ));
+     } catch (Exception e) {
+         return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+     }
+ }
+
+ @PutMapping("/ajuste/{id}")
+ public ResponseEntity<?> editarAjuste(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+     try {
+         RegistroPonto registro = registroPontoRepository.findById(id)
+                 .orElseThrow(() -> new RuntimeException("Registro não encontrado"));
+
+         if (body.get("tipo") != null)
+             registro.setTipo(RegistroPonto.TipoPonto.valueOf(body.get("tipo").toString()));
+         if (body.get("dataHora") != null)
+             registro.setDataHora(LocalDateTime.parse(body.get("dataHora").toString()));
+         if (body.get("motivoAjuste") != null)
+             registro.setMotivoAjuste(body.get("motivoAjuste").toString());
+         if (body.get("ajustadoPor") != null)
+             registro.setAjustadoPor(body.get("ajustadoPor").toString());
+
+         registro.setAjustado(true);
+
+         RegistroPonto salvo = registroPontoRepository.save(registro);
+
+         return ResponseEntity.ok(Map.of(
+             "id", salvo.getId(),
+             "mensagem", "Registro atualizado com sucesso!"
+         ));
+     } catch (Exception e) {
+         return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+     }
+ }
+
+ @GetMapping("/ajuste/funcionario/{clienteId}/data/{data}")
+ public ResponseEntity<?> buscarRegistrosPorData(
+         @PathVariable Long clienteId,
+         @PathVariable String data) {
+     try {
+         LocalDateTime inicio = LocalDate.parse(data).atStartOfDay();
+         LocalDateTime fim = LocalDate.parse(data).atTime(23, 59, 59);
+         List<RegistroPonto> registros = registroPontoRepository
+                 .findByClienteIdAndPeriodo(clienteId, inicio, fim);
+         registros.sort(Comparator.comparing(RegistroPonto::getDataHora));
+         return ResponseEntity.ok(registros);
+     } catch (Exception e) {
+         return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+     }
+ }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> excluir(@PathVariable Long id) {
@@ -154,6 +238,8 @@ public class PontoController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    
 
     @DeleteMapping("/fotos/{id}")
     public ResponseEntity<?> excluirFoto(@PathVariable Long id) {

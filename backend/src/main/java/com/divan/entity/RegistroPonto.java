@@ -31,6 +31,15 @@ public class RegistroPonto {
 
     @Column(name = "confianca_reconhecimento")
     private Double confiancaReconhecimento;
+    
+    @Column(name = "ajustado")
+    private Boolean ajustado = false;
+
+    @Column(name = "motivo_ajuste", length = 200)
+    private String motivoAjuste;
+
+    @Column(name = "ajustado_por", length = 100)
+    private String ajustadoPor;
 
     public enum TipoPonto {
         ENTRADA,
@@ -53,7 +62,13 @@ public class RegistroPonto {
     public void setReconhecimentoFacial(Boolean reconhecimentoFacial) { this.reconhecimentoFacial = reconhecimentoFacial; }
     public Double getConfiancaReconhecimento() { return confiancaReconhecimento; }
     public void setConfiancaReconhecimento(Double confiancaReconhecimento) { this.confiancaReconhecimento = confiancaReconhecimento; }
-
+    public Boolean getAjustado() { return ajustado; }
+    public void setAjustado(Boolean ajustado) { this.ajustado = ajustado; }
+    public String getMotivoAjuste() { return motivoAjuste; }
+    public void setMotivoAjuste(String motivoAjuste) { this.motivoAjuste = motivoAjuste; }
+    public String getAjustadoPor() { return ajustadoPor; }
+    public void setAjustadoPor(String ajustadoPor) { this.ajustadoPor = ajustadoPor; }
+    
     @Override
     public int hashCode() { return Objects.hash(id); }
 

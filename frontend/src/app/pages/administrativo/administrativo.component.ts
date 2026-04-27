@@ -125,6 +125,14 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
   </div>
   <span class="seta">›</span>
 </div>
+      <div *hasPermission="'ROLE_ADMIN'" class="card" (click)="ir('/ponto/ajuste')">
+  <div class="card-icon">✏️</div>
+  <div class="card-info">
+    <h3>Ajuste de Ponto</h3>
+    <p>Corrigir registros de ponto dos funcionários</p>
+  </div>
+  <span class="seta">›</span>
+</div>
 
       </div>
     `,
