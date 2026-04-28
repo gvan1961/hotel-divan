@@ -65,6 +65,7 @@ import { ContaPagarService, ContaPagar } from '../../services/conta-pagar.servic
             <tr>
               <th>Descrição</th>
               <th>Fornecedor</th>
+              <th>Dt. Compra</th>
               <th>Categoria</th>
               <th>Vencimento</th>
               <th>Valor</th>
@@ -79,6 +80,7 @@ import { ContaPagarService, ContaPagar } from '../../services/conta-pagar.servic
                 [class.linha-paga]="conta.status === 'PAGA'">
               <td>{{ conta.descricao }}</td>
               <td>{{ conta.fornecedorObj?.nome || conta.fornecedor || '-' }}</td>
+              <td>{{ conta.dataCompra ? formatarData(conta.dataCompra) : '-' }}</td>
               <td>{{ conta.categoria || '-' }}</td>
               <td [class.vencido]="isVencida(conta)">{{ formatarData(conta.dataVencimento) }}</td>
               <td>R$ {{ formatarMoeda(conta.valor) }}</td>

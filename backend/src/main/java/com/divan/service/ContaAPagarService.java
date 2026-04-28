@@ -98,7 +98,8 @@ public class ContaAPagarService {
 
         conta.setDescricao(contaAtualizada.getDescricao());
         conta.setValor(contaAtualizada.getValor());
-        conta.setDataVencimento(contaAtualizada.getDataVencimento());
+        conta.setDataVencimento(contaAtualizada.getDataVencimento());        
+        conta.setDataCompra(contaAtualizada.getDataCompra());
         conta.setCategoria(contaAtualizada.getCategoria());
         conta.setCodigoBarras(contaAtualizada.getCodigoBarras());
         conta.setObservacao(contaAtualizada.getObservacao());

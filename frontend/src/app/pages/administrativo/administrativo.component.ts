@@ -222,7 +222,9 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
       }
     `]
   })
-  export class AdministrativoComponent {
+  export class AdministrativoComponent {  
+
+
     constructor(private router: Router) {}
 
     ir(rota: string): void {

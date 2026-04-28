@@ -67,6 +67,9 @@ public class ContaAPagar {
 
     @Column(name = "criado_em")
     private LocalDateTime criadoEm;
+    
+    @Column(name = "data_compra")
+    private LocalDate dataCompra;
 
     public enum StatusContaEnum {
         EM_ABERTO, PAGA, VENCIDA
@@ -104,6 +107,8 @@ public class ContaAPagar {
     public void setUsuario(Usuario usuario) { this.usuario = usuario; }
     public LocalDateTime getCriadoEm() { return criadoEm; }
     public void setCriadoEm(LocalDateTime criadoEm) { this.criadoEm = criadoEm; }
+    public LocalDate getDataCompra() { return dataCompra; }
+    public void setDataCompra(LocalDate dataCompra) { this.dataCompra = dataCompra; }
 
     @Override
     public int hashCode() { return Objects.hash(id); }

@@ -51,6 +51,11 @@ public class ContaAPagarController {
             conta.setValor(new BigDecimal(body.get("valor").toString()));
             conta.setValorPago(BigDecimal.ZERO);
             conta.setDataVencimento(java.time.LocalDate.parse(body.get("dataVencimento").toString()));
+            
+            if (body.get("dataCompra") != null) {
+                conta.setDataCompra(java.time.LocalDate.parse(body.get("dataCompra").toString()));
+            }
+            
             conta.setCategoria((String) body.get("categoria"));
             conta.setCodigoBarras((String) body.get("codigoBarras"));
             conta.setObservacao((String) body.get("observacao"));
@@ -73,11 +78,13 @@ public class ContaAPagarController {
             conta.setDescricao((String) body.get("descricao"));
             conta.setValor(new BigDecimal(body.get("valor").toString()));
             conta.setDataVencimento(java.time.LocalDate.parse(body.get("dataVencimento").toString()));
+            if (body.get("dataCompra") != null) {
+                conta.setDataCompra(java.time.LocalDate.parse(body.get("dataCompra").toString()));
+            }
             conta.setCategoria((String) body.get("categoria"));
             conta.setCodigoBarras((String) body.get("codigoBarras"));
             conta.setObservacao((String) body.get("observacao"));
             conta.setFornecedor((String) body.get("fornecedor"));
-
             Long fornecedorId = body.get("fornecedorId") != null
                     ? Long.parseLong(body.get("fornecedorId").toString()) : null;
 

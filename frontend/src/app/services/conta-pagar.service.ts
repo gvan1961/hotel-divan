@@ -8,6 +8,7 @@ export interface ContaPagar {
   valor: number;
   valorPago?: number;
   saldo?: number;
+  dataCompra?: string;
   dataVencimento: string;
   dataPagamento?: string;
   status?: string;
