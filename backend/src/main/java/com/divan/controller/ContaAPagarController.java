@@ -23,6 +23,7 @@ public class ContaAPagarController {
 
     @GetMapping
     public ResponseEntity<List<ContaAPagar>> listarTodas() {
+        service.atualizarVencidas();
         return ResponseEntity.ok(service.listarTodas());
     }
 
