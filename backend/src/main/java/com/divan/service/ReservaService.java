@@ -50,6 +50,9 @@ public class ReservaService {
     private ProdutoRepository produtoRepository;  
     
     @Autowired
+    private NotificacaoEmpresaService notificacaoEmpresaService;
+    
+    @Autowired
     private HospedagemHospedeRepository hospedagemHospedeRepository;
     
     @Autowired
@@ -1025,6 +1028,18 @@ public class ReservaService {
         	    " — Cliente: " + reserva.getCliente().getNome() +
         	    " — Valor: R$ " + reserva.getTotalApagar(),
         	    salva);
+        
+     // 📲 Notifica empresa via WhatsApp se for checkout faturado
+        Cliente clienteReserva = salva.getCliente();
+        if (temSaldoDevedor && clienteReserva != null && clienteReserva.getEmpresa() != null) {
+            try {
+            	notificacaoEmpresaService.notificarCheckoutFaturadoAsync(salva.getId());
+                System.out.println("📲 Notificação WhatsApp disparada para empresa: " 
+                    + clienteReserva.getEmpresa().getNomeEmpresa());
+            } catch (Exception e) {
+                System.err.println("⚠️ Erro ao disparar notificação WhatsApp: " + e.getMessage());
+            }
+        }
 
         return salva;
     }

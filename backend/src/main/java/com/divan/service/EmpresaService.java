@@ -17,11 +17,20 @@ public class EmpresaService {
     private EmpresaRepository empresaRepository;
     
     public Empresa salvar(Empresa empresa) {
-        // ✅ VALIDAR CNPJ
         if (empresa.getCnpj() != null && !empresa.getCnpj().isEmpty()) {
-            if (!validarCNPJ(empresa.getCnpj())) {
-                throw new RuntimeException("CNPJ inválido: " + empresa.getCnpj());
+            String cnpjLimpo = empresa.getCnpj().toUpperCase().replaceAll("[^A-Z0-9]", "");
+            
+            if (cnpjLimpo.length() != 14) {
+                throw new RuntimeException("CNPJ deve ter 14 caracteres alfanuméricos");
             }
+            
+            // Valida dígitos apenas se for CNPJ numérico tradicional
+            if (cnpjLimpo.matches("[0-9]{14}")) {
+                if (!validarCNPJ(empresa.getCnpj())) {
+                    throw new RuntimeException("CNPJ inválido: " + empresa.getCnpj());
+                }
+            }
+            
             if (empresaRepository.existsByCnpj(empresa.getCnpj()) && empresa.getId() == null) {
                 throw new RuntimeException("CNPJ já cadastrado");
             }

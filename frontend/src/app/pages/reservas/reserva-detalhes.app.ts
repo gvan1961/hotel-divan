@@ -561,13 +561,14 @@ import { environment } from '../../../environments/environment';
               </button>
             </ng-container>
 
-              <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
-                 <button class="btn-acao btn-recibo-formal"
-                 *ngIf="reserva.status === 'FINALIZADA' || reserva.status === 'ATIVA'"
-                 (click)="abrirModalReciboFormal()">
-                 📄 Recibo Formal
-                 </button>
-               </ng-container>
+             <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
+   <button class="btn-acao btn-recibo-formal"
+   *ngIf="reserva.status === 'ATIVA' && 
+          ((reserva.totalRecebido || 0) - (reserva.totalReciboEmitido || 0)) > 0"
+   (click)="abrirModalReciboFormal()">
+   📄 Recibo Formal
+   </button>
+ </ng-container>
 
             <ng-container *hasPermission="'RESERVA_CANCELAR'">
               <button class="btn-acao btn-cancelar" 
@@ -595,29 +596,32 @@ import { environment } from '../../../environments/environment';
     <div class="info-box">
       <p><strong>Hóspede:</strong> {{ reserva.cliente?.nome }}</p>
       <p><strong>Total Pago:</strong> R$ {{ formatarMoeda(reserva.totalRecebido || 0) }}</p>
-      <p><strong>Já Recebido:</strong> R$ {{ formatarMoeda(reserva.totalReciboEmitido || 0) }}</p>
-      <p><strong>Disponível para Recibo:</strong> R$ {{ formatarMoeda((reserva.totalRecebido || 0) - (reserva.totalReciboEmitido || 0)) }}</p>
+      <p><strong>Já Recibado:</strong> R$ {{ formatarMoeda(reserva.totalReciboEmitido || 0) }}</p>
+      <p><strong>Disponível para Recibo:</strong> 
+        <span style="color: #28a745; font-weight: bold;">
+          R$ {{ formatarMoeda((reserva.totalRecebido || 0) - (reserva.totalReciboEmitido || 0)) }}
+        </span>
+      </p>
     </div>
-      <div class="campo">
-        <label>Valor a imprimir no recibo (R$) *</label>
-        <input type="text"
+    <div class="campo">
+      <label>Valor a imprimir no recibo (R$) *</label>
+      <input type="text"
         [(ngModel)]="valorReciboTexto"
         (input)="onValorReciboInput()"
         placeholder="0,00" />
-        <small>Máximo permitido: R$ {{ formatarMoeda(reserva.totalRecebido || 0) }} (total recebido)</small>
-  <small *ngIf="valorRecibo > (reserva.totalRecebido || 0)" style="color: red;">
-    ⚠️ Valor não pode ser superior ao total recebido
-  </small>
-      </div>
+      <small>Máximo permitido: R$ {{ formatarMoeda((reserva.totalRecebido || 0) - (reserva.totalReciboEmitido || 0)) }} (saldo disponível)</small>
+      <small *ngIf="valorRecibo > ((reserva.totalRecebido || 0) - (reserva.totalReciboEmitido || 0))" style="color: red; display: block;">
+        ⚠️ Valor não pode ser superior ao saldo disponível para recibo
+      </small>
+    </div>
 
-
-      <div class="modal-footer">
+    <div class="modal-footer">
       <button class="btn-cancelar-modal" (click)="fecharModalReciboFormal()">Cancelar</button>
       <button class="btn-confirmar"
         (click)="imprimirReciboFormal()"
-        [disabled]="!valorRecibo || valorRecibo <= 0 || valorRecibo > (reserva.totalRecebido || 0)">
-  🖨️ Imprimir Recibo
-</button>
+        [disabled]="!valorRecibo || valorRecibo <= 0 || valorRecibo > ((reserva.totalRecebido || 0) - (reserva.totalReciboEmitido || 0))">
+        🖨️ Imprimir Recibo
+      </button>
     </div>
   </div>
 </div>
@@ -5493,22 +5497,38 @@ carregarEImprimirBilhetes(): void {
 }
 
 abrirModalReciboFormal(): void {
-  const maxValor = this.reserva?.totalRecebido || 0;
-  this.valorRecibo = maxValor;
-  this.valorReciboTexto = maxValor.toFixed(2).replace('.', ',');
+  if (!this.reserva) return;
+
+  const totalRecebido = this.reserva.totalRecebido || 0;
+  const totalRecibado = this.reserva.totalReciboEmitido || 0;
+  const saldoDisponivel = totalRecebido - totalRecibado;
+
+  if (saldoDisponivel <= 0) {
+    alert('❌ Não há saldo disponível para emitir recibo.\n\nTodo o valor pago já foi recibado.');
+    return;
+  }
+
+  // Pré-preenche com o saldo disponível
+  this.valorRecibo = saldoDisponivel;
+  this.valorReciboTexto = saldoDisponivel.toFixed(2).replace('.', ',');
   this.modalReciboFormal = true;
 }
 
 fecharModalReciboFormal(): void {
   this.modalReciboFormal = false;
   this.valorRecibo = 0;
+  this.valorReciboTexto = '';
 }
 
 imprimirReciboFormal(): void {
   if (!this.reserva) return;
 
-  if ((this.reserva.totalRecebido || 0) <= 0) {
-    alert('❌ Não é possível emitir recibo sem pagamento registrado.');
+  const totalRecebido = this.reserva.totalRecebido || 0;
+  const totalRecibado = this.reserva.totalReciboEmitido || 0;
+  const saldoDisponivel = totalRecebido - totalRecibado;
+
+  if (saldoDisponivel <= 0) {
+    alert('❌ Não há saldo disponível para emitir recibo.');
     this.fecharModalReciboFormal();
     return;
   }
@@ -5518,15 +5538,19 @@ imprimirReciboFormal(): void {
     return;
   }
 
-  if (this.valorRecibo > (this.reserva.totalRecebido || 0)) {
-    alert('Valor não pode ser superior ao total pago.');
+  if (this.valorRecibo > saldoDisponivel) {
+    alert(`❌ Valor não pode ser superior ao saldo disponível.\n\nSaldo: R$ ${saldoDisponivel.toFixed(2).replace('.', ',')}`);
     return;
   }
 
   // ✅ Registrar recibo no backend antes de imprimir
   this.http.post(`${environment.apiUrl}/reservas/${this.reserva.id}/registrar-recibo`,
     { valorRecibo: this.valorRecibo }).subscribe({
-    next: () => {
+    next: (res: any) => {
+      // Atualiza o totalReciboEmitido localmente para refletir na tela
+      if (this.reserva && res?.totalReciboEmitido != null) {
+        this.reserva.totalReciboEmitido = res.totalReciboEmitido;
+      }
       this.gerarHtmlRecibo();
     },
     error: (e) => {

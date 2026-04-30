@@ -163,15 +163,16 @@ public class ApartamentoService {
     
     public List<Apartamento> buscarDisponiveisParaPeriodo(LocalDateTime checkin, LocalDateTime checkout) {
         List<Apartamento> todos = apartamentoRepository.findAll();
-        
+        LocalDateTime agora = LocalDateTime.now();
+
         return todos.stream().filter(apt -> {
-            // Bloqueado/manutenção: nunca disponível
+            // Status físicos que impedem nova reserva
             if (apt.getStatus() == Apartamento.StatusEnum.MANUTENCAO ||
-                apt.getStatus() == Apartamento.StatusEnum.INDISPONIVEL) {
+                apt.getStatus() == Apartamento.StatusEnum.INDISPONIVEL ||
+                apt.getStatus() == Apartamento.StatusEnum.LIMPEZA) {
                 return false;
             }
 
-            // Verificar se existe reserva ativa ou pré-reserva que conflite com o período
             List<Reserva> reservas = reservaRepository.findByApartamentoId(apt.getId());
 
             for (Reserva r : reservas) {
@@ -180,7 +181,13 @@ public class ApartamentoService {
                     continue;
                 }
 
-                // ✅ Comparar apenas datas (sem hora) para permitir mesmo dia
+                // Reserva ATIVA com checkout vencido (atrasada) — apto ocupado fisicamente
+                if (r.getStatus() == Reserva.StatusReservaEnum.ATIVA &&
+                    r.getDataCheckout().isBefore(agora)) {
+                    return false;
+                }
+
+                // Conflito de período (datas se sobrepõem)
                 boolean semConflito =
                     !checkin.toLocalDate().isBefore(r.getDataCheckout().toLocalDate()) ||
                     !checkout.toLocalDate().isAfter(r.getDataCheckin().toLocalDate());

@@ -42,6 +42,40 @@ import { EmpresaRequest } from '../../models/empresa.model';
                    placeholder="(00) 00000-0000" />
           </div>
 
+          <!-- ===== NOVO: Contato Financeiro ===== -->
+          <fieldset class="contato-financeiro">
+            <legend>📲 Contato Financeiro (Notificações de Checkout Faturado)</legend>
+            <p class="hint">
+              Quando uma reserva for finalizada como faturada, este contato receberá uma 
+              mensagem no WhatsApp com o resumo da estadia.
+            </p>
+
+            <div class="form-group">
+              <label>Nome do Contato</label>
+              <input type="text" [(ngModel)]="empresa.contatoFinanceiroNome" 
+                     name="contatoFinanceiroNome" maxlength="100"
+                     placeholder="Ex: Maria Silva (Financeiro)" />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group ddi">
+                <label>DDI</label>
+                <input type="text" [(ngModel)]="empresa.contatoFinanceiroDdi" 
+                       name="contatoFinanceiroDdi" maxlength="3"
+                       placeholder="55" />
+              </div>
+
+              <div class="form-group celular-fin">
+                <label>Celular WhatsApp</label>
+                <input type="text" [(ngModel)]="empresa.contatoFinanceiroCelular" 
+                       name="contatoFinanceiroCelular"
+                       (input)="formatarCelularFinanceiro()" maxlength="15"
+                       placeholder="(00) 00000-0000" />
+              </div>
+            </div>
+          </fieldset>
+          <!-- ===== FIM Contato Financeiro ===== -->
+
           <div *ngIf="errorMessage" class="error-message">
             {{ errorMessage }}
           </div>
@@ -165,6 +199,42 @@ import { EmpresaRequest } from '../../models/empresa.model';
       background: #ccc;
       cursor: not-allowed;
     }
+
+    /* ===== Contato Financeiro ===== */
+    .contato-financeiro {
+      border: 1px solid #d0e1f9;
+      background: #f7fbff;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+
+    .contato-financeiro legend {
+      padding: 0 10px;
+      font-weight: 600;
+      color: #175197;
+      font-size: 15px;
+    }
+
+    .contato-financeiro .hint {
+      font-size: 13px;
+      color: #666;
+      margin: 0 0 15px 0;
+      line-height: 1.5;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 15px;
+    }
+
+    .form-row .ddi {
+      flex: 0 0 80px;
+    }
+
+    .form-row .celular-fin {
+      flex: 1;
+    }
   `]
 })
 export class EmpresaFormApp implements OnInit {
@@ -176,7 +246,10 @@ export class EmpresaFormApp implements OnInit {
     nomeEmpresa: '',
     cnpj: '',
     contato: '',
-    celular: ''
+    celular: '',
+    contatoFinanceiroNome: '',
+    contatoFinanceiroDdi: '55',
+    contatoFinanceiroCelular: ''
   };
 
   loading = false;
@@ -201,7 +274,10 @@ export class EmpresaFormApp implements OnInit {
           nomeEmpresa: data.nomeEmpresa,
           cnpj: data.cnpj,
           contato: data.contato,
-          celular: data.celular
+          celular: data.celular,
+          contatoFinanceiroNome: data.contatoFinanceiroNome || '',
+          contatoFinanceiroDdi: data.contatoFinanceiroDdi || '55',
+          contatoFinanceiroCelular: data.contatoFinanceiroCelular || ''
         };
       },
       error: (err) => {
@@ -223,7 +299,10 @@ export class EmpresaFormApp implements OnInit {
       nomeEmpresa: this.empresa.nomeEmpresa,
       cnpj: this.empresa.cnpj,
       contato: this.empresa.contato,
-      celular: this.empresa.celular
+      celular: this.empresa.celular,
+      contatoFinanceiroNome: this.empresa.contatoFinanceiroNome || undefined,
+      contatoFinanceiroDdi: this.empresa.contatoFinanceiroDdi || undefined,
+      contatoFinanceiroCelular: this.empresa.contatoFinanceiroCelular || undefined
     };
 
     console.log('📤 Enviando empresa:', empresaRequest);
@@ -258,39 +337,37 @@ export class EmpresaFormApp implements OnInit {
       this.errorMessage = 'Preencha todos os campos obrigatórios';
       return false;
     }
+
+    // Se preencheu celular financeiro, valida o formato
+    if (this.empresa.contatoFinanceiroCelular) {
+      const apenasDigitos = this.empresa.contatoFinanceiroCelular.replace(/\D/g, '');
+      if (apenasDigitos.length < 10 || apenasDigitos.length > 11) {
+        this.errorMessage = 'Celular do contato financeiro deve ter 10 ou 11 dígitos';
+        return false;
+      }
+    }
+
     return true;
   }
 
   formatarCnpj(): void {
     if (!this.empresa.cnpj) return;
-    
-    // Remove tudo que não é número
-    let cnpj = this.empresa.cnpj.replace(/\D/g, '');
-    
-    // Adiciona a formatação: 00.000.000/0000-00
-    if (cnpj.length > 2) {
-      cnpj = cnpj.substring(0, 2) + '.' + cnpj.substring(2);
-    }
-    if (cnpj.length > 6) {
-      cnpj = cnpj.substring(0, 6) + '.' + cnpj.substring(6);
-    }
-    if (cnpj.length > 10) {
-      cnpj = cnpj.substring(0, 10) + '/' + cnpj.substring(10);
-    }
-    if (cnpj.length > 15) {
-      cnpj = cnpj.substring(0, 15) + '-' + cnpj.substring(15, 17);
-    }
-    
+
+    let cnpj = this.empresa.cnpj.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    if (cnpj.length > 2) cnpj = cnpj.substring(0, 2) + '.' + cnpj.substring(2);
+    if (cnpj.length > 6) cnpj = cnpj.substring(0, 6) + '.' + cnpj.substring(6);
+    if (cnpj.length > 10) cnpj = cnpj.substring(0, 10) + '/' + cnpj.substring(10);
+    if (cnpj.length > 15) cnpj = cnpj.substring(0, 15) + '-' + cnpj.substring(15, 17);
+
     this.empresa.cnpj = cnpj;
   }
 
   formatarCelular(): void {
     if (!this.empresa.celular) return;
     
-    // Remove tudo que não é número
     let celular = this.empresa.celular.replace(/\D/g, '');
     
-    // Adiciona a formatação: (00) 00000-0000
     if (celular.length > 0) {
       celular = '(' + celular;
     }
@@ -302,6 +379,24 @@ export class EmpresaFormApp implements OnInit {
     }
     
     this.empresa.celular = celular;
+  }
+
+  formatarCelularFinanceiro(): void {
+    if (!this.empresa.contatoFinanceiroCelular) return;
+    
+    let celular = this.empresa.contatoFinanceiroCelular.replace(/\D/g, '');
+    
+    if (celular.length > 0) {
+      celular = '(' + celular;
+    }
+    if (celular.length > 3) {
+      celular = celular.substring(0, 3) + ') ' + celular.substring(3);
+    }
+    if (celular.length > 10) {
+      celular = celular.substring(0, 10) + '-' + celular.substring(10, 14);
+    }
+    
+    this.empresa.contatoFinanceiroCelular = celular;
   }
 
   voltar(): void {

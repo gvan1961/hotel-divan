@@ -4,18 +4,14 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.hibernate.validator.constraints.br.CNPJ;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(name = "empresas")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+
 public class Empresa {
     
     @Id
@@ -26,7 +22,7 @@ public class Empresa {
     @Column(nullable = false, length = 100)
     private String nomeEmpresa;
     
-    @CNPJ(message = "CNPJ inválido")
+    @NotBlank(message = "CNPJ é obrigatório")
     @Column(unique = true, nullable = false)
     private String cnpj;
     
@@ -42,4 +38,107 @@ public class Empresa {
     @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL)
     @JsonIgnoreProperties("empresa")
     private List<Cliente> clientes;
+    
+    @Column(name = "contato_financeiro_nome", length = 100)
+    @Size(max = 100, message = "Nome do contato deve ter no máximo 100 caracteres")
+    private String contatoFinanceiroNome;
+
+    @Column(name = "contato_financeiro_celular", length = 20)
+    @Pattern(regexp = "^$|^\\d{10,11}$", message = "Celular do contato deve conter 10 ou 11 dígitos")
+    private String contatoFinanceiroCelular;
+
+    @Column(name = "contato_financeiro_ddi", length = 5)
+    private String contatoFinanceiroDdi = "55";
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public String getNomeEmpresa() {
+		return nomeEmpresa;
+	}
+
+	public void setNomeEmpresa(String nomeEmpresa) {
+		this.nomeEmpresa = nomeEmpresa;
+	}
+
+	public String getCnpj() {
+		return cnpj;
+	}
+
+	public void setCnpj(String cnpj) {
+		this.cnpj = cnpj;
+	}
+
+	public String getContato() {
+		return contato;
+	}
+
+	public void setContato(String contato) {
+		this.contato = contato;
+	}
+
+	public String getCelular() {
+		return celular;
+	}
+
+	public void setCelular(String celular) {
+		this.celular = celular;
+	}
+
+	public List<Cliente> getClientes() {
+		return clientes;
+	}
+
+	public void setClientes(List<Cliente> clientes) {
+		this.clientes = clientes;
+	}
+	
+	
+
+	public String getContatoFinanceiroNome() {
+		return contatoFinanceiroNome;
+	}
+
+	public void setContatoFinanceiroNome(String contatoFinanceiroNome) {
+		this.contatoFinanceiroNome = contatoFinanceiroNome;
+	}
+
+	public String getContatoFinanceiroCelular() {
+		return contatoFinanceiroCelular;
+	}
+
+	public void setContatoFinanceiroCelular(String contatoFinanceiroCelular) {
+		this.contatoFinanceiroCelular = contatoFinanceiroCelular;
+	}
+
+	public String getContatoFinanceiroDdi() {
+		return contatoFinanceiroDdi;
+	}
+
+	public void setContatoFinanceiroDdi(String contatoFinanceiroDdi) {
+		this.contatoFinanceiroDdi = contatoFinanceiroDdi;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Empresa other = (Empresa) obj;
+		return Objects.equals(id, other.id);
+	}    
+    
 }

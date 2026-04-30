@@ -788,7 +788,7 @@ return lista.filter(apt => {
   const s = this.getStatusFinal(apt);
   switch (this.filtroAtivo) {
     case 'disponivel': return s === 'DISPONIVEL';
-    case 'ocupado':    return s === 'ATIVA' && !apt.reserva?.atrasado;
+    case 'ocupado':    return s === 'ATIVA';
     case 'prereserva': return s === 'PRE_RESERVA' || apt.temPreReservaFutura === true;
     case 'limpeza':    return s === 'LIMPEZA';
     case 'manutencao': return s === 'MANUTENCAO';
@@ -846,9 +846,11 @@ return lista.filter(apt => {
   }
 
   novaReserva(apt: ApartamentoCard): void {
-    if (!apt.id || isNaN(Number(apt.id))) { alert('Apartamento inválido'); return; }
-    this.router.navigate(['/reservas/novo'], { queryParams: { apartamentoId: apt.id } });
-  }
+  if (!apt.id || isNaN(Number(apt.id))) { alert('Apartamento inválido'); return; }
+  this.router.navigate(['/reservas/novo'], { 
+    queryParams: { apartamentoId: apt.id, bloqueado: 'true' } 
+  });
+}
 
   transferirPreReserva(apt: ApartamentoCard): void {
     if (!apt.reserva?.proximaReserva?.id) return;

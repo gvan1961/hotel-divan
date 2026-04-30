@@ -169,16 +169,16 @@ import { Diaria } from '../../models/diaria.model';
               <div class="form-group">
                 <label>Apartamento *</label>
                 
-                <div class="aviso-mapa" *ngIf="apartamentoBloqueado">
-                  <span class="icone">🗺️</span>
-                  <div class="aviso-texto">
-                    <strong>Reserva iniciada pelo Mapa</strong>
-                    <p>Apartamento selecionado automaticamente e não pode ser alterado</p>
-                  </div>
+                  <div class="aviso-mapa" *ngIf="apartamentoBloqueado">
+                    <span class="icone">🔒</span>
+                    <div class="aviso-texto">
+                    <strong>Apartamento pré-selecionado</strong>
+                    <p>Este apartamento foi escolhido na tela anterior e não pode ser alterado aqui</p>
+                   </div>
                 </div>
 
-                <select [(ngModel)]="reserva.apartamentoId" 
-                  name="apartamentoId" 
+                  <select [(ngModel)]="reserva.apartamentoId" 
+                    name="apartamentoId" 
                   required
                   [disabled]="apartamentoBloqueado"
                   (change)="aoSelecionarApartamento()">
@@ -2296,35 +2296,33 @@ import { Diaria } from '../../models/diaria.model';
       console.log('📦 Request completo:', reservaRequest);
       console.log('═══════════════════════════════════════');
 
-      this.reservaService.create(reservaRequest).subscribe({
-        next: (response) => {
-          console.log('✅ Reserva criada com sucesso:', response);
-          this.loading = false;
+    this.reservaService.create(reservaRequest).subscribe({
+  next: (response: any) => {
+    console.log('✅ Reserva criada com sucesso:', response);
+    this.loading = false;
 
-          if (this.voltarParaMapa) {
-            this.router.navigate(['/reservas/mapa']);
-          } else {
-            this.router.navigate(['/reservas']);
-          }
-        },
-        error: (err) => {
-          console.error('❌ Erro ao criar reserva:', err);
-          this.loading = false;
+    // ✅ Sempre ir para os detalhes da reserva criada
+    const reservaId = response?.id;
+    if (reservaId) {
+      this.router.navigate(['/reservas', reservaId]);
+    } else {
+      this.router.navigate(['/reservas']);
+    }
+  },
+  error: (err) => {
+    console.error('❌ Erro ao criar reserva:', err);
+    this.loading = false;
 
-          // ✅ Reserva foi criada mas resposta causou erro de parse
-          if (err.status === 201 || err.status === 200) {
-            console.log('⚠️ Reserva criada mas resposta deu erro de parse — navegando...');
-            if (this.voltarParaMapa) {
-              this.router.navigate(['/reservas/mapa']);
-            } else {
-              this.router.navigate(['/reservas']);
-            }
-            return;
-          }
+    // ✅ Reserva foi criada mas resposta causou erro de parse
+    if (err.status === 201 || err.status === 200) {
+      console.log('⚠️ Reserva criada mas resposta deu erro de parse — navegando para lista...');
+      this.router.navigate(['/reservas']);
+      return;
+    }
 
-          this.errorMessage = err.error?.message || err.error || 'Erro ao criar reserva';
-        }
-      });
+    this.errorMessage = err.error?.message || err.error || 'Erro ao criar reserva';
+  }
+});
     }
     
       aoSelecionarApartamento(): void {
