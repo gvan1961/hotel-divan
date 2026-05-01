@@ -216,17 +216,19 @@ interface Contadores {
           [class.card-manutencao]="getStatusFinal(apt) === 'MANUTENCAO'"
           [class.card-atrasado]="apt.reserva?.atrasado">
 
-          <!-- HEADER DO CARD -->
-          <div class="card-header">
-            <span class="apt-numero">{{ apt.numero }}</span>
-            <span class="apt-tipo" *ngIf="apt.tipo">{{ apt.tipo }}</span>
-           <span class="reserva-num" *ngIf="apt.reserva?.id">#{{ apt.reserva?.id }}</span>
-            <div class="header-badges">
-              <span class="badge-sai"    *ngIf="isSaiHoje(apt)">SAI HOJE</span>
-              <span class="badge-entra"  *ngIf="apt.reserva?.entraHoje && !apt.reserva?.atrasado">ENTRA HOJE</span>
-              <span class="badge-atraso" *ngIf="apt.reserva?.atrasado">ATRASADO</span>
-            </div>
-          </div>
+         <!-- HEADER DO CARD (CLICÁVEL) -->
+<div class="card-header card-header-clicavel"
+     (click)="aoClicarFaixa(apt)"
+     [title]="getTooltipFaixa(apt)">
+  <span class="apt-numero">{{ apt.numero }}</span>
+  <span class="apt-tipo" *ngIf="apt.tipo">{{ apt.tipo }}</span>
+  <span class="reserva-num" *ngIf="apt.reserva?.id">#{{ apt.reserva?.id }}</span>
+  <div class="header-badges">
+    <span class="badge-sai"    *ngIf="isSaiHoje(apt)">SAI HOJE</span>
+    <span class="badge-entra"  *ngIf="apt.reserva?.entraHoje && !apt.reserva?.atrasado">ENTRA HOJE</span>
+    <span class="badge-atraso" *ngIf="apt.reserva?.atrasado">ATRASADO</span>
+  </div>
+</div>
 
           <!-- CORPO DO CARD -->
           <div class="card-body">
@@ -704,6 +706,20 @@ interface Contadores {
   margin-left: auto;
 }
 
+.card-header-clicavel {
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+  user-select: none;
+}
+
+.card-header-clicavel:hover {
+  filter: brightness(0.92);
+}
+
+.card-header-clicavel:active {
+  transform: scale(0.98);
+}
+
   `]
 })
 export class PainelRecepcaoApp implements OnInit, OnDestroy {
@@ -845,12 +861,63 @@ return lista.filter(apt => {
     this.router.navigate(['/pdv'], { queryParams: { origem: 'painel-recepcao' } });
   }
 
-  novaReserva(apt: ApartamentoCard): void {
+ novaReserva(apt: ApartamentoCard): void {
   if (!apt.id || isNaN(Number(apt.id))) { alert('Apartamento inválido'); return; }
-  this.router.navigate(['/reservas/novo'], { 
-    queryParams: { apartamentoId: apt.id, bloqueado: 'true' } 
+  this.router.navigate(['/reservas/novo'], {
+    queryParams: { apartamentoId: apt.id, bloqueado: 'true', origem: 'painel-recepcao' }
   });
 }
+
+   aoClicarFaixa(apt: ApartamentoCard): void {
+    const status = this.getStatusFinal(apt);
+
+    if (status === 'ATIVA' && apt.reserva?.id) {
+      this.router.navigate(['/reservas', apt.reserva.id]);
+      return;
+    }
+
+    if (status === 'PRE_RESERVA') {
+      this.router.navigate(['/reservas/mapa']);
+      return;
+    }
+
+    if (status === 'LIMPEZA') {
+      if (apt.reserva?.id) {
+        this.router.navigate(['/reservas', apt.reserva.id]);
+      } else {
+        alert('🧹 Apartamento em limpeza — sem reserva anterior disponível.');
+      }
+      return;
+    }
+
+    if (status === 'DISPONIVEL') {
+      this.novaReserva(apt);
+      return;
+    }
+
+    if (status === 'MANUTENCAO') {
+      alert('🔧 Apartamento em manutenção.');
+      return;
+    }
+    if (status === 'BLOQUEADO' || status === 'INDISPONIVEL') {
+      alert('🚫 Apartamento indisponível.');
+      return;
+    }
+  }
+
+  getTooltipFaixa(apt: ApartamentoCard): string {
+    const status = this.getStatusFinal(apt);
+    switch (status) {
+      case 'ATIVA':       return 'Clique para ver detalhes da reserva';
+      case 'PRE_RESERVA': return 'Clique para abrir o mapa de reservas';
+      case 'LIMPEZA':     return apt.reserva?.id ? 'Clique para ver a última reserva' : 'Apartamento em limpeza';
+      case 'DISPONIVEL':  return 'Clique para criar nova reserva';
+      case 'MANUTENCAO':  return 'Apartamento em manutenção';
+      case 'BLOQUEADO':
+      case 'INDISPONIVEL': return 'Apartamento indisponível';
+      default: return '';
+    }
+  }
 
   transferirPreReserva(apt: ApartamentoCard): void {
     if (!apt.reserva?.proximaReserva?.id) return;

@@ -1658,13 +1658,14 @@ import { Diaria } from '../../models/diaria.model';
 
       apartamentoBloqueado = false;
       voltarParaMapa = false;
+      origem: string | null = null;
 
       hospedes: any[] = [];
       modalAdicionarHospede = false;
       modoModalHospede: 'buscar' | 'cadastrar' = 'buscar';
       clientesFiltradosModal: any[] = [];
       termoBuscaHospede = '';                  
-
+       
       novoHospede = {
         nome: '',
         cpf: '',
@@ -1697,10 +1698,14 @@ import { Diaria } from '../../models/diaria.model';
           console.log('📋 Query Params recebidos:', params);
 
           if (params['bloqueado'] === 'true') {
-            this.apartamentoBloqueado = true;
-            this.voltarParaMapa = true;
-            console.log('🔒 Apartamento bloqueado (veio do mapa)');
-          }
+  this.apartamentoBloqueado = true;
+  this.voltarParaMapa = true;
+  console.log('🔒 Apartamento bloqueado (veio do mapa)');
+}
+if (params['origem']) {
+  this.origem = params['origem'];
+  console.log('📍 Origem da navegação:', this.origem);
+}
 
           if (params['dataCheckin']) {
             const dataCheckin = new Date(params['dataCheckin'] + 'T14:00:00');
@@ -2632,12 +2637,14 @@ salvarClienteRapido(): void {
   });
 }
 
-      voltar(): void {
-        if (this.voltarParaMapa) {
-          this.router.navigate(['/reservas/mapa']);
-        } else {
-          this.router.navigate(['/reservas']);
-        }
-      }
+     voltar(): void {
+  if (this.origem === 'painel-recepcao') {
+    this.router.navigate(['/painel-recepcao']);
+  } else if (this.voltarParaMapa) {
+    this.router.navigate(['/reservas/mapa']);
+  } else {
+    this.router.navigate(['/reservas']);
+  }
+}
     }
 

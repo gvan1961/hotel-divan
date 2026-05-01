@@ -122,6 +122,7 @@ public class SecurityConfig {
                 // ========== PAGAMENTOS ==========
                 .requestMatchers(HttpMethod.GET, "/api/pagamentos/**").hasAnyAuthority("PAGAMENTO_READ", "VISUALIZAR_PAGAMENTO", "ROLE_ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/pagamentos").hasAnyAuthority("PAGAMENTO_CREATE", "REGISTRAR_PAGAMENTO", "ROLE_ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/pagamentos/adiantamento").hasAnyAuthority("PAGAMENTO_CREATE", "REGISTRAR_PAGAMENTO", "ROLE_ADMIN")
 
                 // ========== DIÁRIAS ==========
                 .requestMatchers(HttpMethod.GET, "/api/diarias/**").hasAnyAuthority("DIARIA_READ", "ROLE_ADMIN")

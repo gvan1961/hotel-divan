@@ -57,6 +57,6 @@ public class ExtratoReserva {
     private Long notaVendaId;
     
     public enum StatusLancamentoEnum {
-        PRODUTO, DIARIA, PAGAMENTO, ESTORNO, TROCO
+        PRODUTO, DIARIA, PAGAMENTO, ESTORNO, TROCO, ADIANTAMENTO, USO_ADIANTAMENTO
     }
 }

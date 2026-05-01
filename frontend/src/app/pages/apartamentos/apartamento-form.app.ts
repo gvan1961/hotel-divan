@@ -77,6 +77,19 @@ import { TipoApartamento } from '../../models/tipo-apartamento.model';
             <small class="field-help">Especificações da TV (marca, tamanho, se é smart, etc.) - Opcional</small>
           </div>
 
+          <div class="form-group cama-casal-campo">
+  <label class="checkbox-label">
+    <input type="checkbox" 
+           [(ngModel)]="apartamento.temCamaDeCasal" 
+           name="temCamaDeCasal" />
+    <span>🛏️ Possui cama de casal</span>
+  </label>
+  <small class="field-help">
+    Quando marcado, o preço da diária para 1 pessoa será cobrado pela tabela "1 pessoa CASAL".
+    Para 2 ou mais pessoas, o preço é o mesmo (não depende da cama).
+  </small>
+</div>
+
           <div class="info-box">
             <strong>💡 Exemplos de descrição de camas:</strong>
             <ul>
@@ -313,6 +326,35 @@ textarea:disabled {
       cursor: not-allowed;
     }
 
+    .cama-casal-campo {
+  background: #fff8e1;
+  border-left: 4px solid #ffc107;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.checkbox-label {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0 !important;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.checkbox-label span {
+  user-select: none;
+}
+
     @media (max-width: 768px) {
       .form-row {
         grid-template-columns: 1fr;
@@ -327,12 +369,14 @@ export class ApartamentoFormApp implements OnInit {
   private route = inject(ActivatedRoute);
 
   apartamento: ApartamentoRequest = {
-    numeroApartamento: '',
-    tipoApartamentoId: 0,
-    capacidade: 1,
-    camasDoApartamento: '',
-    tv: ''
-  };
+  numeroApartamento: '',
+  tipoApartamentoId: 0,
+  capacidade: 1,
+  camasDoApartamento: '',
+  tv: '',
+  temCamaDeCasal: false
+};
+
 
   tiposApartamento: TipoApartamento[] = [];
   loading = false;
@@ -389,12 +433,13 @@ export class ApartamentoFormApp implements OnInit {
       const tipoId = data.tipoApartamento?.id || data.tipoApartamentoId;
       
       this.apartamento = {
-        numeroApartamento: data.numeroApartamento,
-        tipoApartamentoId: Number(tipoId),
-        capacidade: Number(data.capacidade),
-        camasDoApartamento: data.camasDoApartamento || '',
-        tv: data.tv || ''
-      };
+  numeroApartamento: data.numeroApartamento,
+  tipoApartamentoId: Number(tipoId),
+  capacidade: Number(data.capacidade),
+  camasDoApartamento: data.camasDoApartamento || '',
+  tv: data.tv || '',
+  temCamaDeCasal: data.temCamaDeCasal || false
+};
       
       console.log('✅ Apartamento carregado no formulário:', this.apartamento);
     },
@@ -425,12 +470,13 @@ export class ApartamentoFormApp implements OnInit {
     this.errorMessage = '';
 
     const apartamentoRequest: ApartamentoRequest = {
-      numeroApartamento: this.apartamento.numeroApartamento,
-      tipoApartamentoId: Number(this.apartamento.tipoApartamentoId),
-      capacidade: Number(this.apartamento.capacidade),
-      camasDoApartamento: this.apartamento.camasDoApartamento,
-      tv: this.apartamento.tv || undefined
-    };
+  numeroApartamento: this.apartamento.numeroApartamento,
+  tipoApartamentoId: Number(this.apartamento.tipoApartamentoId),
+  capacidade: Number(this.apartamento.capacidade),
+  camasDoApartamento: this.apartamento.camasDoApartamento,
+  tv: this.apartamento.tv || undefined,
+  temCamaDeCasal: this.apartamento.temCamaDeCasal || false
+};
 
     console.log('📤 Request montado:', apartamentoRequest);
 

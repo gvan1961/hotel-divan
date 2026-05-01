@@ -47,6 +47,7 @@ public class DiariaController {
             Diaria diaria = new Diaria();
             diaria.setQuantidade(dto.getQuantidade());
             diaria.setValor(dto.getValor());
+            diaria.setModalidade(dto.getModalidade());  // ✅ ADICIONADA
             
             Diaria diariaSalva = diariaService.salvar(diaria, dto.getTipoApartamentoId());
             
@@ -114,6 +115,7 @@ public class DiariaController {
             Diaria diaria = new Diaria();
             diaria.setQuantidade(dto.getQuantidade());
             diaria.setValor(dto.getValor());
+            diaria.setModalidade(dto.getModalidade());  // ✅ ADICIONADA
             
             Diaria diariaAtualizada = diariaService.atualizar(id, diaria, dto.getTipoApartamentoId());
             
@@ -145,6 +147,7 @@ public class DiariaController {
         dto.setDescricaoTipoApartamento(diaria.getTipoApartamento().getDescricao());
         dto.setQuantidade(diaria.getQuantidade());
         dto.setValor(diaria.getValor());
+        dto.setModalidade(diaria.getModalidade());  // ✅ ADICIONADA
         return dto;
     }
 }

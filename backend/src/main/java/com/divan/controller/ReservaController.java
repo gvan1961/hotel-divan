@@ -1,5 +1,6 @@
 package com.divan.controller;
 
+import com.divan.service.DiariaService;
 import com.divan.repository.ApartamentoRepository;
 import com.divan.repository.BilheteSorteioRepository;
 import com.divan.repository.ClienteRepository;
@@ -89,6 +90,9 @@ public class ReservaController {
     
     @Autowired
     private SorteioService sorteioService;
+    
+    @Autowired
+    private DiariaService diariaService;
     
     @Autowired
     private BilheteSorteioRepository bilheteSorteioRepository;
@@ -644,11 +648,10 @@ public class ReservaController {
             int novaQuantidade = reserva.getQuantidadeHospede() + 1;
 
             // ✅ BUSCAR DIÁRIA PARA A NOVA QUANTIDADE
-            TipoApartamento tipoApartamento = reserva.getApartamento().getTipoApartamento();
+            Apartamento apartamento = reserva.getApartamento();
+            TipoApartamento tipoApartamento = apartamento.getTipoApartamento();
 
-            Optional<Diaria> novaDiariaOpt = diariaRepository
-                .findByTipoApartamentoAndQuantidade(tipoApartamento, novaQuantidade);
-
+            Optional<Diaria> novaDiariaOpt = diariaService.buscarDiariaPara(apartamento, novaQuantidade);
             // ✅ CALCULAR DIFERENÇA DE VALOR
             BigDecimal valorDiariaAtual = reserva.getDiaria().getValor();
             BigDecimal valorDiariaNova;
@@ -797,12 +800,12 @@ public class ReservaController {
             }
 
             // ✅ BUSCAR DIÁRIA PARA A NOVA QUANTIDADE
-            TipoApartamento tipoApartamento = reserva.getApartamento().getTipoApartamento();
+            Apartamento apartamento = reserva.getApartamento();
+            TipoApartamento tipoApartamento = apartamento.getTipoApartamento();
             BigDecimal valorDiariaAtual = reserva.getDiaria().getValor();
             BigDecimal valorDiariaNova;
 
-            Optional<Diaria> novaDiariaOpt = diariaRepository
-                .findByTipoApartamentoAndQuantidade(tipoApartamento, novaQuantidade);
+            Optional<Diaria> novaDiariaOpt = diariaService.buscarDiariaPara(apartamento, novaQuantidade);
 
             if (novaDiariaOpt.isPresent()) {
                 valorDiariaNova = novaDiariaOpt.get().getValor();
@@ -1251,6 +1254,20 @@ public class ReservaController {
                 "mensagem", "Recibo registrado",
                 "totalReciboEmitido", reserva.getTotalReciboEmitido(),
                 "saldoDisponivel", totalRecebido.subtract(reserva.getTotalReciboEmitido())
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+    
+    @PatchMapping("/{id}/devolver-troco")
+    public ResponseEntity<?> devolverTroco(@PathVariable Long id) {
+        try {
+            Reserva reserva = reservaService.devolverTroco(id);
+            return ResponseEntity.ok(Map.of(
+                "mensagem", "Crédito devolvido com sucesso",
+                "reservaId", reserva.getId(),
+                "totalApagar", reserva.getTotalApagar()
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));

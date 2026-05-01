@@ -120,6 +120,9 @@ public class Reserva {
     @Column(name = "total_recibo_emitido", precision = 10, scale = 2)
     private BigDecimal totalReciboEmitido = BigDecimal.ZERO;
     
+    @Column(name = "saldo_adiantamento", precision = 10, scale = 2)
+    private BigDecimal saldoAdiantamento = BigDecimal.ZERO;
+    
     public Long getId() {
 		return id;
 	}
@@ -374,8 +377,16 @@ public class Reserva {
 
 	public void setTotalReciboEmitido(BigDecimal totalReciboEmitido) {
 		this.totalReciboEmitido = totalReciboEmitido;
+	}		
+
+	
+	public BigDecimal getSaldoAdiantamento() {
+	    return saldoAdiantamento != null ? saldoAdiantamento : BigDecimal.ZERO;
 	}
 
+	public void setSaldoAdiantamento(BigDecimal saldoAdiantamento) {
+		this.saldoAdiantamento = saldoAdiantamento;
+	}
 
 	@Override
 	public int hashCode() {

@@ -80,6 +80,47 @@ public class PagamentoController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    @PostMapping("/adiantamento")
+    public ResponseEntity<?> processarAdiantamento(@Valid @RequestBody PagamentoRequestDTO dto) {
+        try {
+            // ✅ VERIFICAR CAIXA ABERTO (mesma lógica do pagamento normal)
+            String login = SecurityContextHolder.getContext().getAuthentication().getName();
+            var usuarioOpt = usuarioRepository.findByUsername(login);
+            if (usuarioOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Usuário não encontrado"));
+            }
+
+            Long usuarioId = usuarioOpt.get().getId();
+            boolean caixaAberto = caixaRepository
+                .findByUsuarioIdAndStatus(usuarioId, FechamentoCaixa.StatusCaixa.ABERTO)
+                .isPresent();
+
+            if (!caixaAberto) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("erro", "Caixa não aberto. Abra o caixa antes de registrar adiantamentos."));
+            }
+
+            // Buscar reserva
+            Optional<Reserva> reservaOpt = reservaService.buscarPorId(dto.getReservaId());
+            if (reservaOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Reserva não encontrada"));
+            }
+
+            // Criar pagamento (será marcado como ADIANTAMENTO no service)
+            Pagamento pagamento = new Pagamento();
+            pagamento.setReserva(reservaOpt.get());
+            pagamento.setValor(dto.getValor());
+            pagamento.setFormaPagamento(dto.getFormaPagamento());
+            pagamento.setObservacao(dto.getObservacao());
+
+            Pagamento adiantamentoProcessado = pagamentoService.processarAdiantamento(pagamento);
+            return ResponseEntity.status(HttpStatus.CREATED).body(adiantamentoProcessado);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
 
     @GetMapping("/reserva/{reservaId}")
     public ResponseEntity<List<Pagamento>> buscarPorReserva(@PathVariable Long reservaId) {

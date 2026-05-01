@@ -11,7 +11,7 @@ import com.divan.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.divan.service.DiariaService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -33,6 +33,8 @@ import com.divan.repository.ContaAReceberRepository;
 @Transactional
 public class ReservaService {	
 	
+	@Autowired
+	private DiariaService diariaService;	
     
     @Autowired
     private ReservaRepository reservaRepository;
@@ -78,8 +80,7 @@ public class ReservaService {
     
     @Autowired
     private SorteioService sorteioService;    
-    
-    
+        
      
     /**
      * Verifica se existe conflito de datas para o apartamento
@@ -193,23 +194,30 @@ public class ReservaService {
         reserva.setQuantidadeDiaria((int) dias);
         
         // Buscar diária correta baseada em TIPO + QUANTIDADE DE HÓSPEDES
-        TipoApartamento tipoApartamento = reserva.getApartamento().getTipoApartamento();
+        Apartamento apartamento = reserva.getApartamento();
         Integer quantidadeHospedes = reserva.getQuantidadeHospede();
-        
-        Diaria diariaAtualizada = diariaRepository.findByTipoApartamentoAndQuantidade(tipoApartamento, quantidadeHospedes)
+
+        Diaria diariaAtualizada = diariaService.buscarDiariaPara(apartamento, quantidadeHospedes)
             .orElseThrow(() -> new RuntimeException(
-                String.format("Nenhuma diária cadastrada para o tipo '%s' com %d hóspede(s)", 
-                    tipoApartamento.getTipo(), 
-                    quantidadeHospedes)
+                String.format("Nenhuma diária cadastrada para o tipo '%s' com %d hóspede(s)%s",
+                    apartamento.getTipoApartamento().getTipo(),
+                    quantidadeHospedes,
+                    quantidadeHospedes == 1 
+                        ? " (modalidade " + (apartamento.getTemCamaDeCasal() ? "CASAL" : "SOLTEIRO") + ")"
+                        : "")
             ));
-        
+
         reserva.setDiaria(diariaAtualizada);
-        
+
         // Calcular total (valor já inclui quantidade de hóspedes)
         BigDecimal valorDiaria = diariaAtualizada.getValor();
         BigDecimal totalDiaria = valorDiaria.multiply(new BigDecimal(dias));
-        
+
         reserva.setTotalDiaria(totalDiaria);
+        
+        
+        
+        
         
         // Recalcular total da hospedagem (diárias + consumo)
         BigDecimal totalConsumo = reserva.getTotalProduto();
@@ -335,14 +343,18 @@ public class ReservaService {
         reserva.setQuantidadeDiaria((int) dias);
 
         // ✅ BUSCAR DIÁRIA
-        TipoApartamento tipoApartamento = reserva.getApartamento().getTipoApartamento();
+        Apartamento apartamento = reserva.getApartamento();
+        TipoApartamento tipoApartamento = apartamento.getTipoApartamento();
         Integer quantidadeHospedes = reserva.getQuantidadeHospede();
 
-        Diaria diariaEscolhida = diariaRepository.findByTipoApartamentoAndQuantidade(tipoApartamento, quantidadeHospedes)
+        Diaria diariaEscolhida = diariaService.buscarDiariaPara(apartamento, quantidadeHospedes)
             .orElseThrow(() -> new RuntimeException(
-                String.format("Nenhuma diária cadastrada para o tipo '%s' com %d hóspede(s)",
+                String.format("Nenhuma diária cadastrada para o tipo '%s' com %d hóspede(s)%s",
                     tipoApartamento.getTipo(),
-                    quantidadeHospedes)
+                    quantidadeHospedes,
+                    quantidadeHospedes == 1
+                        ? " (modalidade " + (apartamento.getTemCamaDeCasal() ? "CASAL" : "SOLTEIRO") + ")"
+                        : "")
             ));
 
         reserva.setDiaria(diariaEscolhida);
@@ -369,7 +381,6 @@ public class ReservaService {
             reserva.setStatus(Reserva.StatusReservaEnum.ATIVA);
             System.out.println("✅ Reserva criada como ATIVA");
 
-            Apartamento apartamento = reserva.getApartamento();
             apartamento.setStatus(Apartamento.StatusEnum.OCUPADO);
             apartamentoRepository.save(apartamento);
             System.out.println("   Apartamento " + apartamento.getNumeroApartamento() + " → OCUPADO");
@@ -555,7 +566,7 @@ public class ReservaService {
         dto.setExtratos(reserva.getExtratos());
         dto.setHistoricos(reserva.getHistoricos());
         dto.setTotalReciboEmitido(reserva.getTotalReciboEmitido() != null ? reserva.getTotalReciboEmitido() : BigDecimal.ZERO);
-        
+        dto.setSaldoAdiantamento(reserva.getSaldoAdiantamento() != null ? reserva.getSaldoAdiantamento() : BigDecimal.ZERO);        
         return dto;
     }
     
@@ -584,12 +595,15 @@ public class ReservaService {
         reserva.setQuantidadeHospede(novaQuantidade);
         
         // Buscar nova diária
-        TipoApartamento tipoApartamento = reserva.getApartamento().getTipoApartamento();
-        Diaria diariaAtualizada = diariaRepository.findByTipoApartamentoAndQuantidade(tipoApartamento, novaQuantidade)
+        Apartamento apartamento = reserva.getApartamento();
+        Diaria diariaAtualizada = diariaService.buscarDiariaPara(apartamento, novaQuantidade)
             .orElseThrow(() -> new RuntimeException(
-                String.format("Nenhuma diária cadastrada para o tipo '%s' com %d hóspede(s)", 
-                    tipoApartamento.getTipo(), 
-                    novaQuantidade)
+                String.format("Nenhuma diária cadastrada para o tipo '%s' com %d hóspede(s)%s",
+                    apartamento.getTipoApartamento().getTipo(),
+                    novaQuantidade,
+                    novaQuantidade == 1 
+                        ? " (modalidade " + (apartamento.getTemCamaDeCasal() ? "CASAL" : "SOLTEIRO") + ")"
+                        : "")
             ));
         
         reserva.setDiaria(diariaAtualizada);
@@ -628,14 +642,16 @@ public class ReservaService {
     }
     
     private void ajustarDiariasFuturas(Reserva reserva, LocalDateTime dataInicio, Integer qtdAnterior, Integer qtdNova) {
-        // Buscar diária antiga e nova
-        TipoApartamento tipoApartamento = reserva.getApartamento().getTipoApartamento();
+        // Buscar diária antiga e nova (considera cama de casal quando 1 hóspede)
+        Apartamento apartamento = reserva.getApartamento();
         
-        Diaria diariaAntiga = diariaRepository.findByTipoApartamentoAndQuantidade(tipoApartamento, qtdAnterior)
+        Diaria diariaAntiga = diariaService.buscarDiariaPara(apartamento, qtdAnterior)
             .orElseThrow(() -> new RuntimeException("Diária antiga não encontrada"));
         
-        Diaria diariaNova = diariaRepository.findByTipoApartamentoAndQuantidade(tipoApartamento, qtdNova)
-            .orElseThrow(() -> new RuntimeException("Diária nova não encontrada"));
+        Diaria diariaNova = diariaService.buscarDiariaPara(apartamento, qtdNova)
+            .orElseThrow(() -> new RuntimeException("Diária nova não encontrada"));     
+        
+        
         
         BigDecimal valorAntigo = diariaAntiga.getValor();
         BigDecimal valorNovo = diariaNova.getValor();
@@ -1255,14 +1271,16 @@ public class ReservaService {
         
         TipoApartamento novoTipo = novoApartamento.getTipoApartamento();
         TipoApartamento tipoAntigo = apartamentoAntigo.getTipoApartamento();
-        
-        Diaria novaDiaria = diariaRepository.findByTipoApartamentoAndQuantidade(
-                novoTipo, 
-                reserva.getQuantidadeHospede())
+        Integer qtdHospedes = reserva.getQuantidadeHospede();
+
+        Diaria novaDiaria = diariaService.buscarDiariaPara(novoApartamento, qtdHospedes)
             .orElseThrow(() -> new RuntimeException(
-                String.format("Nenhuma diária cadastrada para tipo '%s' com %d hóspede(s)", 
-                    novoTipo.getTipo(), 
-                    reserva.getQuantidadeHospede())
+                String.format("Nenhuma diária cadastrada para tipo '%s' com %d hóspede(s)%s",
+                    novoTipo.getTipo(),
+                    qtdHospedes,
+                    qtdHospedes == 1 
+                        ? " (modalidade " + (novoApartamento.getTemCamaDeCasal() ? "CASAL" : "SOLTEIRO") + ")"
+                        : "")
             ));
         
         Diaria diariaAntiga = reserva.getDiaria();
@@ -1626,6 +1644,59 @@ public class ReservaService {
 
         return resultado;
     }
+    
+    @Transactional
+    public Reserva devolverTroco(Long reservaId) {
+        System.out.println("═══════════════════════════════════════════");
+        System.out.println("💰 DEVOLVENDO CRÉDITO/TROCO - Reserva #" + reservaId);
+        System.out.println("═══════════════════════════════════════════");
+
+        Reserva reserva = reservaRepository.findById(reservaId)
+            .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+
+        // Validações
+        if (reserva.getStatus() != Reserva.StatusReservaEnum.ATIVA) {
+            throw new RuntimeException("Apenas reservas ATIVAS podem ter crédito devolvido");
+        }
+
+        if (reserva.getTotalApagar().compareTo(BigDecimal.ZERO) >= 0) {
+            throw new RuntimeException("Não há crédito a devolver. Saldo atual: R$ " + reserva.getTotalApagar());
+        }
+
+        // Valor do crédito (saldo negativo → positivo)
+        BigDecimal valorCredito = reserva.getTotalApagar().abs();
+
+        System.out.println("📊 ANTES:");
+        System.out.println("   Total Recebido: R$ " + reserva.getTotalRecebido());
+        System.out.println("   Total A Pagar: R$ " + reserva.getTotalApagar());
+        System.out.println("   Crédito a devolver: R$ " + valorCredito);
+
+        // Reduz totalRecebido (cliente está levando o dinheiro)
+        reserva.setTotalRecebido(reserva.getTotalRecebido().subtract(valorCredito));
+        reserva.setTotalApagar(reserva.getTotalHospedagem()
+            .subtract(reserva.getTotalRecebido())
+            .subtract(reserva.getDesconto()));
+        Reserva salva = reservaRepository.save(reserva);
+
+        // Cria extrato como TROCO (positivo, abate o crédito)
+        ExtratoReserva extrato = new ExtratoReserva();
+        extrato.setReserva(salva);
+        extrato.setDataHoraLancamento(LocalDateTime.now());
+        extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.TROCO);
+        extrato.setTotalLancamento(valorCredito); // POSITIVO: zera o saldo negativo
+        extrato.setDescricao("Devolução de crédito/troco ao cliente");
+        extrato.setValorUnitario(valorCredito);
+        extrato.setQuantidade(1);
+        extratoReservaRepository.save(extrato);
+
+        System.out.println("📊 DEPOIS:");
+        System.out.println("   Total Recebido: R$ " + salva.getTotalRecebido());
+        System.out.println("   Total A Pagar: R$ " + salva.getTotalApagar());
+        System.out.println("✅ Crédito devolvido!");
+        System.out.println("═══════════════════════════════════════════");
+
+        return salva;
+    }
 
     @Transactional
     public Reserva finalizarReservaPaga(Long reservaId) {
@@ -1645,6 +1716,15 @@ public class ReservaService {
             throw new RuntimeException(
                 "Reserva possui saldo devedor de R$ " + reserva.getTotalApagar() +
                 ". Use 'Finalizar Faturada' ou registre o pagamento antes."
+            );           
+            
+        }
+        
+        if (reserva.getTotalApagar().compareTo(BigDecimal.ZERO) < 0) {
+            BigDecimal credito = reserva.getTotalApagar().abs();
+            throw new RuntimeException(
+                "Cliente possui crédito de R$ " + credito +
+                ". Devolva o crédito antes de finalizar a reserva."
             );
         }
 
@@ -1723,6 +1803,17 @@ public class ReservaService {
             .orElseThrow(() -> new RuntimeException("Hóspede não encontrado"));
 
         Reserva reservaOrigem = hospede.getReserva();
+        
+        // ✅ NOVA VALIDAÇÃO — proteção contra transferência individual em reserva de 1 hóspede
+        if (reservaOrigem.getQuantidadeHospede() != null && reservaOrigem.getQuantidadeHospede() <= 1) {
+            throw new RuntimeException(
+                "Esta reserva possui apenas 1 hóspede. " +
+                "Use 'Transferir Apartamento' para mover toda a reserva, " +
+                "em vez de 'Transferir Hóspede Individual'."
+            );
+        }
+        
+        
         Apartamento aptoOrigem = reservaOrigem.getApartamento();
         Apartamento aptoDestino = apartamentoRepository.findById(novoApartamentoId)
             .orElseThrow(() -> new RuntimeException("Apartamento de destino não encontrado"));
@@ -1748,9 +1839,13 @@ public class ReservaService {
             if (dias < 1) dias = 1;
             novaReserva.setQuantidadeDiaria((int) dias);
 
-            TipoApartamento tipo = aptoDestino.getTipoApartamento();
-            Diaria diaria = diariaRepository.findByTipoApartamentoAndQuantidade(tipo, 1)
-                .orElseThrow(() -> new RuntimeException("Diária não encontrada para o apartamento destino"));
+         // Considera cama de casal do apartamento destino para 1 hóspede
+            Diaria diaria = diariaService.buscarDiariaPara(aptoDestino, 1)
+                .orElseThrow(() -> new RuntimeException(
+                    "Diária não encontrada para o apartamento destino " + 
+                    aptoDestino.getNumeroApartamento() + 
+                    " (modalidade " + (aptoDestino.getTemCamaDeCasal() ? "CASAL" : "SOLTEIRO") + ")"
+                ));
 
             novaReserva.setDiaria(diaria);
             BigDecimal totalDiaria = diaria.getValor().multiply(BigDecimal.valueOf(dias));

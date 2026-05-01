@@ -5,12 +5,18 @@ export interface Diaria {
   descricaoTipoApartamento?: string;
   quantidade: number;
   valor: number;
+  
+  // ✅ NOVO — só preenchido quando quantidade = 1
+  modalidade?: 'SOLTEIRO' | 'CASAL' | null;
 }
 
 export interface DiariaRequest {
   tipoApartamentoId: number;
   quantidade: number;
   valor: number;
+  
+  // ✅ NOVO — obrigatório quando quantidade = 1
+  modalidade?: 'SOLTEIRO' | 'CASAL' | null;
 }
 
 export interface DiariaResponse {
@@ -20,4 +26,7 @@ export interface DiariaResponse {
   descricaoTipoApartamento: string;
   quantidade: number;
   valor: number;
+  
+  // ✅ NOVO
+  modalidade?: 'SOLTEIRO' | 'CASAL' | null;
 }

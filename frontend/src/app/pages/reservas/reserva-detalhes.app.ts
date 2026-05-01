@@ -23,6 +23,7 @@ import { environment } from '../../../environments/environment';
 
   interface ReservaDetalhes {
     id: number;
+    saldoAdiantamento?: number;  
     cliente?: {
       id: number;
       nome: string;
@@ -30,7 +31,7 @@ import { environment } from '../../../environments/environment';
       telefone?: string;
       celular?: string;
       dataNascimento?: string;
-      creditoAprovado?: boolean;           
+      creditoAprovado?: boolean;                  
     };
 
     responsavelPagamentoNome?: string;
@@ -342,8 +343,13 @@ import { environment } from '../../../environments/environment';
         <!-- GRID NORMAL (EXTRATO) -->
         <div class="grid">
           <div class="card extrato-card" *ngIf="reserva.extratos && reserva.extratos.length > 0">
-            <h2>📊 Extrato — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong></h2>
-            <table class="tabela-extrato">
+           <h2 class="extrato-titulo-toggle" (click)="toggleExtrato()" 
+    [title]="extratoExpandido ? 'Clique para ocultar' : 'Clique para mostrar'">
+  <span class="seta-toggle">{{ extratoExpandido ? '▼' : '▶' }}</span>
+  📊 Extrato — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong>
+  <span class="contador-extrato">({{ reserva.extratos.length }} lançamentos)</span>
+</h2>
+<table class="tabela-extrato" *ngIf="extratoExpandido">
               <thead>
                 <tr>
                   <th>Data</th>
@@ -466,13 +472,14 @@ import { environment } from '../../../environments/environment';
               </div>
               <div class="hospede-acoes" 
                   *ngIf="reserva.status === 'ATIVA' && hospede.status !== 'CHECKOUT_REALIZADO'">
-                <button 
-                  type="button"
-                  class="btn-acao-hospede btn-transferir-hospede"
-                  (click)="abrirModalTransferirHospede(hospede)"
-                  title="Transferir para outro apartamento">
-                  🔄
-                </button>
+                <button
+  type="button"
+  class="btn-acao-hospede btn-transferir-hospede"
+  *ngIf="(reserva.quantidadeHospede || 0) > 1"
+  (click)="abrirModalTransferirHospede(hospede)"
+  title="Transferir para outro apartamento">
+  🔄
+</button>
                 <button 
                   type="button"
                   class="btn-acao-hospede btn-checkout-hospede"
@@ -528,6 +535,15 @@ import { environment } from '../../../environments/environment';
                 💳 Registrar Pagamento
               </button>
             </ng-container>
+
+            <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
+  <button class="btn-acao btn-adiantamento"
+          *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) <= 0"
+          (click)="abrirModalAdiantamento()">
+    💵 Registrar Adiantamento
+  </button>
+</ng-container>
+
             <ng-container *hasPermission="'RESERVA_EDITAR'">
               <button class="btn-acao btn-transferir" 
                       *ngIf="reserva.status === 'ATIVA'"
@@ -539,7 +555,7 @@ import { environment } from '../../../environments/environment';
               <button class="btn-acao btn-troco"
                       *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) < 0"
                       (click)="devolverTroco()">
-                💰 Devolver Troco R$ {{ formatarMoeda((reserva.totalApagar || 0) * -1) }}
+                💰 Crédito R$ {{ formatarMoeda((reserva.totalApagar || 0) * -1) }}
               </button>
             </ng-container>
             <ng-container *hasPermission="'RESERVA_FINALIZAR'">
@@ -838,6 +854,43 @@ import { environment } from '../../../environments/environment';
             <div class="modal-footer">
               <button class="btn-cancelar-modal" (click)="fecharModalPagamento()">Cancelar</button>
               <button class="btn-confirmar" (click)="salvarPagamento()">Confirmar Pagamento</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODAL ADIANTAMENTO -->
+        <div class="modal-overlay" *ngIf="modalAdiantamento" (click)="fecharModalAdiantamento()">
+          <div class="modal-content" (click)="$event.stopPropagation()">
+            <h2>💵 Registrar Adiantamento</h2>
+            
+            <div class="info-box-adiantamento">
+              <p><strong>📌 O que é Adiantamento?</strong></p>
+              <p>Crédito do hóspede para abater consumos futuros (jantar, frigobar, etc).</p>
+             
+            </div>
+            
+            <div class="campo">
+              <label>Valor do Adiantamento *</label>
+              <input type="text" [(ngModel)]="adiantValor" appCurrencyInput placeholder="R$ 0,00">
+            </div>
+            
+            <div class="campo">
+              <label>Forma de Pagamento *</label>
+              <select [(ngModel)]="adiantFormaPagamento">
+                <option value="">Selecione...</option>
+                <option *ngFor="let forma of formasPagamento" [value]="forma.codigo">{{ forma.nome }}</option>
+              </select>
+            </div>
+            
+            <div class="campo">
+              <label>Observação</label>
+              <textarea [(ngModel)]="adiantObs" rows="3" 
+                        placeholder="Ex: Adiantamento para jantar do dia 15"></textarea>
+            </div>
+            
+            <div class="modal-footer">
+              <button class="btn-cancelar-modal" (click)="fecharModalAdiantamento()">Cancelar</button>
+              <button class="btn-confirmar" (click)="salvarAdiantamento()">💵 Confirmar Adiantamento</button>
             </div>
           </div>
         </div>
@@ -2565,6 +2618,7 @@ import { environment } from '../../../environments/environment';
     reserva: ReservaDetalhes | null = null;
     reservaId: number = 0;
     loading = false;
+    extratoExpandido = false;
     erro = '';
 
     // ALTERAR CHECKOUT
@@ -2604,6 +2658,11 @@ import { environment } from '../../../environments/environment';
       { codigo: 'CARTAO_CREDITO', nome: 'Cartão Crédito' },
       { codigo: 'TRANSFERENCIA_BANCARIA', nome: 'Transferência' }
     ];
+
+    modalAdiantamento = false;
+    adiantValor: number = 0;
+    adiantFormaPagamento = '';
+    adiantObs = '';
 
     // CONSUMO
     modalConsumo = false;
@@ -3783,6 +3842,80 @@ ngOnDestroy(): void {
         }
       });
     }
+
+    // ============= ADIANTAMENTO =============
+abrirModalAdiantamento(): void {
+  if (!this.reserva) return;
+  this.adiantValor = 0;
+  this.adiantFormaPagamento = '';
+  this.adiantObs = '';
+  this.modalAdiantamento = true;
+}
+
+fecharModalAdiantamento(): void {
+  this.modalAdiantamento = false;
+}
+
+salvarAdiantamento(): void {
+  console.log('═══════════════════════════════════════════');
+  console.log('💵 INICIANDO SALVAMENTO DE ADIANTAMENTO');
+  console.log('═══════════════════════════════════════════');
+
+  if (!this.reserva) {
+    alert('Reserva não encontrada');
+    return;
+  }
+
+  if (!this.adiantFormaPagamento) {
+    alert('Selecione uma forma de pagamento');
+    return;
+  }
+
+  if (this.adiantValor <= 0) {
+    alert('Valor inválido');
+    return;
+  }
+
+  const dto = {
+    reservaId: this.reserva.id,
+    valor: this.adiantValor,
+    formaPagamento: this.adiantFormaPagamento,
+    observacao: this.adiantObs || undefined
+  };
+
+  console.log('📦 DTO preparado:', dto);
+
+  this.http.post('/api/pagamentos/adiantamento', dto).subscribe({
+    next: (response: any) => {
+      console.log('✅ Adiantamento registrado:', response);
+      alert('✅ Adiantamento registrado com sucesso!');
+      this.fecharModalAdiantamento();
+      if (this.reserva) {
+        this.carregarReserva(this.reserva.id);
+      }
+    },
+    error: (err: any) => {
+      console.error('❌ Erro ao registrar adiantamento:', err);
+
+      let mensagemErro = 'Erro ao registrar adiantamento';
+
+      if (err.status === 403 && err.error?.tipo === 'CAIXA_FECHADO') {
+        alert('⚠️ CAIXA FECHADO!\n\nAbra o caixa antes de registrar adiantamento.');
+        return;
+      }
+
+      if (err.error?.erro) {
+        mensagemErro = err.error.erro;
+      } else if (err.error?.message) {
+        mensagemErro = err.error.message;
+      } else if (typeof err.error === 'string') {
+        mensagemErro = err.error;
+      }
+
+      alert('❌ ' + mensagemErro);
+    }
+  });
+} 
 
     // ============= CONSUMO =============
     abrirModalConsumo(): void {
@@ -5293,7 +5426,7 @@ ngOnDestroy(): void {
     
     const valorTroco = Math.abs(this.reserva.totalApagar || 0);
     
-    if (!confirm(`💰 Devolver troco de R$ ${this.formatarMoeda(valorTroco)} ao cliente?\n\nEsta ação será registrada no extrato.`)) return;
+    if (!confirm(`💰 Devolver crédito de R$ ${this.formatarMoeda(valorTroco)} ao cliente?\n\nEsta ação será registrada no extrato.`)) return;
     
     this.http.patch(`/api/reservas/${this.reserva.id}/devolver-troco`, {}).subscribe({
       next: () => {
@@ -5693,6 +5826,10 @@ valorPorExtenso(valor: number): string {
   }
 
   return resultado.charAt(0).toUpperCase() + resultado.slice(1);
+}
+
+toggleExtrato(): void {
+  this.extratoExpandido = !this.extratoExpandido;
 }
 
 onValorReciboInput(): void {

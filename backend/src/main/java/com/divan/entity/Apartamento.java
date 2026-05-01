@@ -51,6 +51,11 @@ public class Apartamento {
     @JsonIgnoreProperties("apartamento")
     private List<Reserva> reservas;
     
+    @Column(name = "tem_cama_de_casal", nullable = false)
+    private Boolean temCamaDeCasal = false;
+    
+    
+    
     public enum StatusEnum {
         DISPONIVEL,
         OCUPADO,
@@ -122,6 +127,14 @@ public class Apartamento {
 
 	public void setReservas(List<Reserva> reservas) {
 		this.reservas = reservas;
+	}		
+
+	public Boolean getTemCamaDeCasal() {
+		return temCamaDeCasal;
+	}
+
+	public void setTemCamaDeCasal(Boolean temCamaDeCasal) {
+		this.temCamaDeCasal = temCamaDeCasal;
 	}
 
 	@Override

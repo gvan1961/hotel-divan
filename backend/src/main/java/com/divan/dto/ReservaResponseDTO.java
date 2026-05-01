@@ -40,6 +40,8 @@ public class ReservaResponseDTO {
     private List<ExtratoReserva> extratos;
     private List<HistoricoHospede> historicos;
     private BigDecimal totalReciboEmitido = BigDecimal.ZERO;
+    private BigDecimal saldoAdiantamento = BigDecimal.ZERO;
+    
 	public Long getId() {
 		return id;
 	}
@@ -165,6 +167,12 @@ public class ReservaResponseDTO {
 	}
 	public void setTotalReciboEmitido(BigDecimal totalReciboEmitido) {
 		this.totalReciboEmitido = totalReciboEmitido;
-	}        
-        
+	}
+	public BigDecimal getSaldoAdiantamento() {
+		return saldoAdiantamento;
+	}
+	public void setSaldoAdiantamento(BigDecimal saldoAdiantamento) {
+		this.saldoAdiantamento = saldoAdiantamento;
+	}   
+		        
 }

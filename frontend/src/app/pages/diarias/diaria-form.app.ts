@@ -32,33 +32,48 @@ import { TipoApartamento } from '../../models/tipo-apartamento.model';
           </div>
 
           <div class="form-row">
-            <div class="form-group">
-              <label>Quantidade de Hóspedes *</label>
-              <input type="number" [(ngModel)]="diaria.quantidade" 
-                     name="quantidade" required min="1" max="10"
-                     placeholder="Ex: 1, 2, 3..." />
-              <small class="field-help">Número de pessoas que ocuparão o apartamento</small>
-            </div>
+  <div class="form-group">
+    <label>Quantidade de Hóspedes *</label>
+    <input type="number" [(ngModel)]="diaria.quantidade" 
+           name="quantidade" required min="1" max="10"
+           (ngModelChange)="onQuantidadeChange()"
+           placeholder="Ex: 1, 2, 3..." />
+    <small class="field-help">Número de pessoas que ocuparão o apartamento</small>
+  </div>
 
-            <div class="form-group">
-              <label>Valor da Diária (R$) *</label>
-              <input type="number" [(ngModel)]="diaria.valor" 
-                     name="valor" required min="0.01" step="0.01"
-                     placeholder="Ex: 150.00" />
-              <small class="field-help">Valor cobrado por dia</small>
-            </div>
-          </div>
+  <div class="form-group">
+    <label>Valor da Diária (R$) *</label>
+    <input type="number" [(ngModel)]="diaria.valor" 
+           name="valor" required min="0.01" step="0.01"
+           placeholder="Ex: 150.00" />
+    <small class="field-help">Valor cobrado por dia</small>
+  </div>
+</div>
+
+<!-- ✅ Modalidade — só aparece quando quantidade = 1 -->
+<div class="form-group modalidade-campo" *ngIf="diaria.quantidade == 1">
+  <label>Modalidade da Cama *</label>
+  <select [(ngModel)]="diaria.modalidade" name="modalidade" required>
+    <option [ngValue]="null">Selecione a modalidade</option>
+    <option value="SOLTEIRO">🛏️ Cama de Solteiro</option>
+    <option value="CASAL">👫 Cama de Casal</option>
+  </select>
+  <small class="field-help">
+    Para 1 pessoa, o preço varia conforme o tipo de cama.
+    Apartamento com cama de casal cobra "1 pessoa CASAL", apto sem cama de casal cobra "1 pessoa SOLTEIRO".
+  </small>
+</div>
 
           <div class="info-box">
-            <strong>💡 Dica:</strong>
-            <p>Cada combinação de Tipo + Quantidade é única. Você pode ter:</p>
-            <ul>
-              <li>Tipo A + 1 hóspede = R$ 100,00</li>
-              <li>Tipo A + 2 hóspedes = R$ 150,00</li>
-              <li>Tipo A + 3 hóspedes = R$ 180,00</li>
-              <li>Tipo B + 1 hóspede = R$ 80,00</li>
-            </ul>
-          </div>
+  <strong>💡 Dica:</strong>
+  <p>Cada combinação de Tipo + Quantidade (+ Modalidade quando 1 pessoa) é única:</p>
+  <ul>
+    <li>Tipo A + 1 hóspede + SOLTEIRO = R$ 115,00</li>
+    <li>Tipo A + 1 hóspede + CASAL = R$ 130,00</li>
+    <li>Tipo A + 2 hóspedes = R$ 155,00</li>
+    <li>Tipo A + 3 hóspedes = R$ 200,00</li>
+  </ul>
+</div>
 
           <div *ngIf="errorMessage" class="error-message">
             {{ errorMessage }}
@@ -229,8 +244,21 @@ import { TipoApartamento } from '../../models/tipo-apartamento.model';
         grid-template-columns: 1fr;
       }
     }
+
+    .modalidade-campo {
+  background: #fff8e1;
+  border-left: 4px solid #ffc107;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.modalidade-campo label {
+  color: #f57c00;
+  font-weight: 700;
+}
   `]
-})
+})  
 export class DiariaFormApp implements OnInit {
   private diariaService = inject(DiariaService);
   private tipoApartamentoService = inject(TipoApartamentoService);
@@ -238,10 +266,11 @@ export class DiariaFormApp implements OnInit {
   private route = inject(ActivatedRoute);
 
   diaria: DiariaRequest = {
-    tipoApartamentoId: 0,
-    quantidade: 1,
-    valor: 0
-  };
+  tipoApartamentoId: 0,
+  quantidade: 1,
+  valor: 0,
+  modalidade: 'SOLTEIRO'  // padrão para 1 hóspede
+};
 
   tiposApartamento: TipoApartamento[] = [];
   loading = false;
@@ -285,10 +314,11 @@ export class DiariaFormApp implements OnInit {
         console.log('📥 Dados recebidos do backend:', data);
         
         this.diaria = {
-          tipoApartamentoId: data.tipoApartamentoId,
-          quantidade: data.quantidade,
-          valor: data.valor
-        };
+    tipoApartamentoId: data.tipoApartamentoId,
+    quantidade: data.quantidade,
+    valor: data.valor,
+    modalidade: data.modalidade || null
+  };  
         
         console.log('✅ Diária carregada no formulário:', this.diaria);
       },
@@ -312,10 +342,11 @@ export class DiariaFormApp implements OnInit {
     this.errorMessage = '';
 
     const diariaRequest: DiariaRequest = {
-      tipoApartamentoId: Number(this.diaria.tipoApartamentoId),
-      quantidade: Number(this.diaria.quantidade),
-      valor: Number(this.diaria.valor)
-    };
+  tipoApartamentoId: Number(this.diaria.tipoApartamentoId),
+  quantidade: Number(this.diaria.quantidade),
+  valor: Number(this.diaria.valor),
+  modalidade: Number(this.diaria.quantidade) === 1 ? this.diaria.modalidade : null
+};
 
     console.log('📤 Request montado:', diariaRequest);
 
@@ -354,10 +385,26 @@ export class DiariaFormApp implements OnInit {
       this.errorMessage = 'Valor deve ser maior que zero';
       return false;
     }
+
+    // ✅ NOVO — Para 1 pessoa, modalidade é obrigatória
+  if (Number(this.diaria.quantidade) === 1 && !this.diaria.modalidade) {
+    this.errorMessage = 'Para 1 hóspede, selecione a modalidade (Solteiro ou Casal)';
+    return false;
+  }
     
     console.log('✅ Formulário válido');
     return true;
   }
+
+  onQuantidadeChange(): void {
+  // Para 2+ hóspedes, modalidade não se aplica → limpa
+  if (Number(this.diaria.quantidade) > 1) {
+    this.diaria.modalidade = null;
+  } else if (Number(this.diaria.quantidade) === 1 && !this.diaria.modalidade) {
+    // Para 1 hóspede, sugere SOLTEIRO como padrão se ainda não tiver escolhido
+    this.diaria.modalidade = 'SOLTEIRO';
+  }
+}
 
   voltar(): void {
     this.router.navigate(['/diarias']);

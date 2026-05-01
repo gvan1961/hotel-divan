@@ -51,6 +51,7 @@ public class ApartamentoService {
         apartamento.setCapacidade(dto.getCapacidade());
         apartamento.setCamasDoApartamento(dto.getCamasDoApartamento());
         apartamento.setTv(dto.getTv());
+        apartamento.setTemCamaDeCasal(dto.getTemCamaDeCasal() != null ? dto.getTemCamaDeCasal() : false);  // ✅ NOVO
         apartamento.setStatus(Apartamento.StatusEnum.DISPONIVEL);
         
         Apartamento salvo = apartamentoRepository.save(apartamento);
@@ -82,6 +83,7 @@ public class ApartamentoService {
         apartamento.setCapacidade(dto.getCapacidade());
         apartamento.setCamasDoApartamento(dto.getCamasDoApartamento());
         apartamento.setTv(dto.getTv());
+        apartamento.setTemCamaDeCasal(dto.getTemCamaDeCasal() != null ? dto.getTemCamaDeCasal() : false);
         
         Apartamento atualizado = apartamentoRepository.save(apartamento);
         System.out.println("✅ Apartamento atualizado: " + atualizado.getId());
@@ -112,6 +114,7 @@ public class ApartamentoService {
         dto.setCamasDoApartamento(apartamento.getCamasDoApartamento());
         dto.setTv(apartamento.getTv());
         dto.setStatus(apartamento.getStatus());
+        dto.setTemCamaDeCasal(apartamento.getTemCamaDeCasal());
         
         // ✅ SE OCUPADO, BUSCAR RESERVA ATIVA
         if (apartamento.getStatus() == Apartamento.StatusEnum.OCUPADO) {

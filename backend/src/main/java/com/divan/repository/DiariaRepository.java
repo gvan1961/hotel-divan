@@ -10,15 +10,27 @@ import java.util.Optional;
 
 @Repository
 public interface DiariaRepository extends JpaRepository<Diaria, Long> {
-    
+
     List<Diaria> findByTipoApartamento(TipoApartamento tipoApartamento);
-           
+
     List<Diaria> findByTipoApartamentoOrderByQuantidade(TipoApartamento tipoApartamento);
-    
+
     boolean existsByTipoApartamentoAndQuantidade(TipoApartamento tipoApartamento, Integer quantidade);
-        
+
     List<Diaria> findByTipoApartamentoOrderByQuantidadeAsc(TipoApartamento tipoApartamento);
-    
+
     Optional<Diaria> findByTipoApartamentoAndQuantidade(TipoApartamento tipoApartamento, Integer quantidade);
-    
+
+    // ✅ NOVOS — para busca por modalidade quando quantidade = 1
+    Optional<Diaria> findByTipoApartamentoAndQuantidadeAndModalidade(
+        TipoApartamento tipoApartamento, 
+        Integer quantidade, 
+        Diaria.ModalidadeEnum modalidade
+    );
+
+    boolean existsByTipoApartamentoAndQuantidadeAndModalidade(
+        TipoApartamento tipoApartamento, 
+        Integer quantidade, 
+        Diaria.ModalidadeEnum modalidade
+    );
 }

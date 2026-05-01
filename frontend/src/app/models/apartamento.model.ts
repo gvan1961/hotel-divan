@@ -10,18 +10,12 @@ export interface Apartamento {
   capacidade: number;
   camasDoApartamento: string;
   tv?: string;
-  status?: StatusApartamento;  
+  status?: StatusApartamento;
+  
+  // ✅ NOVO — sinaliza que apartamento tem cama de casal
+  temCamaDeCasal?: boolean;
 
   reservaAtiva?: {
-    reservaId: number;
-    nomeHospede: string;
-    quantidadeHospede: number;
-    dataCheckin: string;
-    dataCheckout: string;
-    status?: string;  // ← ADICIONADO
-  };
-
-  preReservaFutura?: {  // ← ADICIONE ESTE CAMPO
     reservaId: number;
     nomeHospede: string;
     quantidadeHospede: number;
@@ -30,6 +24,14 @@ export interface Apartamento {
     status?: string;
   };
 
+  preReservaFutura?: {
+    reservaId: number;
+    nomeHospede: string;
+    quantidadeHospede: number;
+    dataCheckin: string;
+    dataCheckout: string;
+    status?: string;
+  };
 }
 
 export interface ApartamentoRequest {
@@ -38,4 +40,7 @@ export interface ApartamentoRequest {
   capacidade: number;
   camasDoApartamento: string;
   tv?: string;
+  
+  // ✅ NOVO — para o request também
+  temCamaDeCasal?: boolean;
 }

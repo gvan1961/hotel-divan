@@ -54,19 +54,10 @@ import { FornecedorService, Fornecedor } from '../../services/fornecedor.service
           </div>
         </div>
 
-        <div class="form-group">
-          <label>Valor (R$) *</label>
-          <input type="text"
-          [(ngModel)]="valorFormatado"
-          name="valor"
-          (input)="onValorInput($event)"
-          placeholder="0,00" />
-        </div>
-
-          <div class="form-row">
-  <div class="form-group">
-    <label>Valor (R$) *</label>
-    <input type="text"
+         <div class="form-row">
+           <div class="form-group">
+           <label>Valor (R$) *</label>
+           <input type="text"
            [(ngModel)]="valorFormatado"
            name="valor"
            (input)="onValorInput($event)"
@@ -75,14 +66,15 @@ import { FornecedorService, Fornecedor } from '../../services/fornecedor.service
   <div class="form-group">
     <label>Data da Compra *</label>
     <input type="date" [(ngModel)]="conta.dataCompra" name="dataCompra"
-           (change)="onDataCompraChange()" />
+       (change)="onDataCompraChange()"
+       min="2020-01-01" max="2099-12-31" />
   </div>
 </div>
 <div class="form-row">
   <div class="form-group">
     <label>Data de Vencimento *</label>
     <input type="date" [(ngModel)]="conta.dataVencimento" name="dataVencimento"
-           [min]="conta.dataCompra" />
+       [min]="conta.dataCompra || '2020-01-01'" max="2099-12-31" />
   </div>
 </div>
 
@@ -329,6 +321,17 @@ export class ContasPagarFormApp implements OnInit {
     if (!this.conta.descricao) { this.errorMessage = 'Descrição é obrigatória'; return; }
     if (!this.conta.valor || this.conta.valor <= 0) { this.errorMessage = 'Valor é obrigatório'; return; }
     if (!this.conta.dataVencimento) { this.errorMessage = 'Data de vencimento é obrigatória'; return; }
+
+    // ✅ Validar formato das datas (ano com 4 dígitos)
+const regexData = /^\d{4}-\d{2}-\d{2}$/;
+if (this.conta.dataCompra && !regexData.test(this.conta.dataCompra)) {
+  this.errorMessage = 'Data da compra inválida. Use o formato AAAA-MM-DD com ano de 4 dígitos.';
+  return;
+}
+if (this.conta.dataVencimento && !regexData.test(this.conta.dataVencimento)) {
+  this.errorMessage = 'Data de vencimento inválida. Use o formato AAAA-MM-DD com ano de 4 dígitos.';
+  return;
+}
 
     if (this.conta.dataVencimento < (this.conta.dataCompra || '')) {
       this.errorMessage = 'Data de vencimento não pode ser menor que a data da compra';
