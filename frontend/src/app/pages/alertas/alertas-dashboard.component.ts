@@ -84,14 +84,20 @@ import { Subscription, interval } from 'rxjs';
           (click)="abaAtiva = 'checkouts'">
           ⏰ Checkouts Vencidos ({{ totalCheckoutsVencidos }})
         </button>
+
         <button 
-          class="aba" 
+          class="aba"
           [class.ativa]="abaAtiva === 'noshow'"
           (click)="abaAtiva = 'noshow'">
           🔴 No-Show ({{ totalNoShows }})
         </button>
+        <button
+          class="aba"
+          [class.ativa]="abaAtiva === 'renovacoes'"
+          (click)="abaAtiva = 'renovacoes'">
+          🔄 Renovações Auto. ({{ totalRenovacoesAutomaticas }})
+        </button>
       </div>
-
       <!-- ===== LOADING ===== -->
       <div *ngIf="carregando" class="loading">
         <div class="spinner"></div>
@@ -318,11 +324,52 @@ import { Subscription, interval } from 'rxjs';
     title="Enviar SMS (em breve)">
     📱 SMS
   </button>
+ 
 </div>
+   </div>
           </div>
         </div>
-      </div> 
 
+        <!-- ABA: RENOVAÇÕES AUTOMÁTICAS -->
+        <div *ngIf="abaAtiva === 'renovacoes'">
+          <div *ngIf="renovacoesAutomaticas.length === 0" class="sem-alertas-aba">
+            ✅ Nenhuma renovação automática pendente
+          </div>
+          <div *ngFor="let alerta of renovacoesAutomaticas" class="card-alerta"
+               [style.border-left-color]="obterCor(alerta.nivelGravidade)">
+            <div class="alerta-header">
+              <div class="alerta-tipo">
+                <span class="alerta-icone">{{ obterIcone(alerta.tipoAlerta) }}</span>
+                <span class="alerta-titulo">{{ alerta.titulo }}</span>
+              </div>
+              <div class="alerta-gravidade" [style.background]="obterCor(alerta.nivelGravidade)">
+                {{ alerta.nivelGravidade }}
+              </div>
+            </div>
+            <div class="alerta-info">
+              <div class="info-linha">
+                <strong>Apartamento:</strong> {{ alerta.numeroApartamento }} ({{ alerta.tipoApartamento }})
+              </div>
+              <div class="info-linha">
+                <strong>Hóspede:</strong> {{ alerta.clienteNome }}
+              </div>
+              <div class="info-linha">
+                <strong>Novo Checkout:</strong> {{ alerta.dataCheckout | date:'dd/MM/yyyy HH:mm' }}
+              </div>
+              <div class="info-linha alerta-destaque">
+                <strong>🔄 Diária renovada automaticamente — verificar com o hóspede</strong>
+              </div>
+            </div>
+            <div class="alerta-descricao">{{ alerta.descricao }}</div>
+            <div class="alerta-acoes" *ngIf="alerta.reservaId">
+              <button class="btn-detalhes" (click)="verDetalhesReserva(alerta.reservaId!)">
+                📋 Ver Reserva
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
       <!-- ===== MODAL DE PRORROGAÇÃO ===== -->
       <div *ngIf="modalProrrogacao" class="modal-overlay" (click)="fecharModalProrrogacao()">
         <div class="modal-box" (click)="$event.stopPropagation()">
@@ -421,8 +468,7 @@ import { Subscription, interval } from 'rxjs';
               ✅ Confirmar
             </button>
           </div>
-
-        </div>
+        
       </div>
 
     </div>
