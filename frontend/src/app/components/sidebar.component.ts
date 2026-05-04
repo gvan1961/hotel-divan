@@ -28,14 +28,7 @@ import { HasPermissionDirective } from '../directives/has-permission.directive';
             <span class="icon">🏨</span>
             <span class="label">Painel Recepção</span>
           </a>
-
-
-        <!-- DASHBOARD -->
-        <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
-          <span class="icon">📊</span>
-          <span class="label">Dashboard</span>
-        </a>
-
+     
         <!-- ALERTAS -->
         <a routerLink="/alertas" routerLinkActive="active" class="nav-item nav-item-alertas">
           <span class="icon">🚨</span>

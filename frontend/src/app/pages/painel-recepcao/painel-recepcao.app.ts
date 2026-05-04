@@ -21,6 +21,7 @@ interface Reserva {
   saiHoje: boolean;
   entraHoje: boolean;
   atrasado: boolean;
+  renovacaoAutomatica: boolean;
   proximaReserva?: ProximaReserva;
 }
 
@@ -225,11 +226,11 @@ interface Contadores {
   <span class="reserva-num" *ngIf="apt.reserva?.id">#{{ apt.reserva?.id }}</span>
   <div class="header-badges">
     <span class="badge-sai"    *ngIf="isSaiHoje(apt)">SAI HOJE</span>
-    <span class="badge-entra"  *ngIf="apt.reserva?.entraHoje && !apt.reserva?.atrasado">ENTRA HOJE</span>
-    <span class="badge-atraso" *ngIf="apt.reserva?.atrasado">ATRASADO</span>
+     <span class="badge-entra"  *ngIf="apt.reserva?.entraHoje && !apt.reserva?.atrasado">ENTRA HOJE</span>
+     <span class="badge-atraso" *ngIf="apt.reserva?.atrasado && !apt.reserva?.renovacaoAutomatica">ATRASADO</span>
+    <span class="badge-renovacao" *ngIf="apt.reserva?.renovacaoAutomatica">🔄 RENOVAÇÃO AUTOMÁTICA</span>
   </div>
 </div>
-
           <!-- CORPO DO CARD -->
           <div class="card-body">
 
@@ -295,16 +296,17 @@ interface Contadores {
             </ng-container>
 
             <!-- ATRASADO -->
-            <ng-container *ngIf="apt.reserva?.atrasado">
-              <button class="btn-acao btn-checkout-atraso" (click)="irCheckout(apt)">🚪 Fazer Checkout</button>
-              <button class="btn-icone" (click)="irParaReserva(apt)" title="Ver detalhes">📋</button>
+           <ng-container *ngIf="apt.reserva?.atrasado">
+              <div class="aviso-atraso" [title]="'Checkout previsto: ' + formatarData(apt.reserva!.dataCheckout)">
+                ⚠️ CHECKOUT ATRASADO {{ calcularHorasAtraso(apt.reserva!.dataCheckout) }}
+              </div>
+              <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒</button>
+              <button class="btn-icone" title="Ver detalhes" (click)="irParaReserva(apt)">📋</button>
             </ng-container>
 
             <!-- ATIVA (não atrasado) -->
             <ng-container *ngIf="getStatusFinal(apt) === 'ATIVA' && !apt.reserva?.atrasado">
-              <button class="btn-icone" title="Checkout"          (click)="irCheckout(apt)">🚪</button>
-              <button class="btn-icone" title="Ver extrato"       (click)="irParaReserva(apt)">📋</button>
-              <button class="btn-icone" title="Adicionar produto" (click)="irParaReserva(apt)">🛒</button>
+              <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒</button>
               <button class="btn-icone" title="Hóspedes"          (click)="irParaReserva(apt)">👥</button>
               <button class="btn-icone" title="Transferir"        (click)="irParaReserva(apt)">➜</button>
             </ng-container>
@@ -569,7 +571,49 @@ interface Contadores {
     .btn-liberar         { background: #1e6b45; color: #fff; }
     .btn-ativar          { background: #1a5276; color: #fff; }
     .btn-reservar        { background: #117a65; color: #fff; }
-    .btn-checkout-atraso { background: #922b21; color: #fff; }
+      .btn-checkout-atraso { background: #922b21; color: #fff; }
+
+    .aviso-atraso {
+      background: #c0392b;
+      color: #fff;
+      font-weight: 800;
+      padding: 8px 12px;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 0.85em;
+      margin-bottom: 6px;
+      animation: pulsar-atraso 1.5s infinite;
+      letter-spacing: 0.5px;
+    }
+
+    /* ✅ TARJA RENOVAÇÃO AUTOMÁTICA */
+    .badge-renovacao {
+      background: #e67e22;
+      color: white;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.78em;
+      letter-spacing: 0.5px;
+      animation: pulsar-renovacao 1.8s infinite;
+      display: inline-block;
+      box-shadow: 0 2px 6px rgba(230, 126, 34, 0.4);
+    }
+    @keyframes pulsar-renovacao {
+      0%, 100% { 
+        background: #e67e22;
+        transform: scale(1);
+      }
+      50% { 
+        background: #f39c12;
+        transform: scale(1.04);
+      }
+    }
+
+    @keyframes pulsar-atraso {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.7); }
+      50% { box-shadow: 0 0 0 8px rgba(192, 57, 43, 0); }
+    }
 
     .btn-icone {
       background: #f4f6f7; border: 1px solid #e0e0e0;
@@ -847,6 +891,22 @@ return lista.filter(apt => {
     return `${dia}/${mes}/${ano}`;
   }
 
+  calcularHorasAtraso(dataCheckout: string): string {
+    if (!dataCheckout) return '';
+    const [ano, mes, dia] = dataCheckout.split('-').map(Number);
+    // Checkout padrão é meio-dia (12h)
+    const dataCheckoutCompleta = new Date(ano, mes - 1, dia, 12, 0, 0);
+    const agora = new Date();
+    const diffMs = agora.getTime() - dataCheckoutCompleta.getTime();
+    const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
+    
+    if (diffHoras < 1) return '< 1h';
+    if (diffHoras < 24) return `${diffHoras}h`;
+    const dias = Math.floor(diffHoras / 24);
+    const horas = diffHoras % 24;
+    return horas > 0 ? `${dias}d ${horas}h` : `${dias}d`;
+  }
+
   // ── NAVEGAÇÃO ────────────────────────────────
 
   irParaReserva(apt: ApartamentoCard): void {
@@ -857,8 +917,23 @@ return lista.filter(apt => {
     if (apt.reserva?.id) this.router.navigate(['/reservas', apt.reserva.id]);
   }
 
-  irParaPDV(): void {
+   irParaPDV(): void {
     this.router.navigate(['/pdv'], { queryParams: { origem: 'painel-recepcao' } });
+  }
+
+  irParaPDVComApartamento(apt: ApartamentoCard): void {
+    if (!apt.id || isNaN(Number(apt.id))) {
+      alert('Apartamento inválido');
+      return;
+    }
+    this.router.navigate(['/pdv'], {
+      queryParams: {
+        origem: 'painel-recepcao',
+        apartamentoId: apt.id,
+        numeroApartamento: apt.numero,
+        reservaId: apt.reserva?.id || ''
+      }
+    });
   }
 
  novaReserva(apt: ApartamentoCard): void {

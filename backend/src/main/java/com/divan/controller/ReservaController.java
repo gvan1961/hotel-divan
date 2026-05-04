@@ -370,6 +370,34 @@ public class ReservaController {
         return ResponseEntity.ok(reservas);
     }
     
+    /**
+     * Lista reservas que tiveram renovação automática (flag = true).
+     * Usado pelo Painel Recepção (tarja) e Sino do Sidebar.
+     */
+    @GetMapping("/renovadas-automaticamente")
+    public ResponseEntity<?> listarRenovadasAutomaticamente() {
+        try {
+            List<Reserva> reservas = reservaRepository.findAllByRenovacaoAutomaticaTrueAndStatus(
+                Reserva.StatusReservaEnum.ATIVA
+            );
+            
+            List<Map<String, Object>> resposta = reservas.stream().map(r -> {
+                Map<String, Object> dto = new java.util.HashMap<>();
+                dto.put("id", r.getId());
+                dto.put("apartamentoId", r.getApartamento().getId());
+                dto.put("numeroApartamento", r.getApartamento().getNumeroApartamento());
+                dto.put("clienteNome", r.getCliente().getNome());
+                dto.put("dataCheckout", r.getDataCheckout());
+                dto.put("totalApagar", r.getTotalApagar());
+                return dto;
+            }).collect(java.util.stream.Collectors.toList());
+            
+            return ResponseEntity.ok(resposta);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("erro", e.getMessage()));
+        }
+    }
+    
     @PatchMapping("/{id}/alterar-hospedes")
     public ResponseEntity<?> alterarQuantidadeHospedes(
             @PathVariable Long id, 
@@ -902,6 +930,67 @@ public class ReservaController {
 
         } catch (Exception e) {
             e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+    
+    /**
+     * ✅ ESTORNO DE PRODUTO DO EXTRATO
+     * Cria lançamento de estorno negativo no extrato da reserva.
+     * NÃO verifica estoque — é estorno financeiro apenas.
+     */
+    @PostMapping("/estornos/consumo-apartamento")
+    public ResponseEntity<?> estornarConsumoApartamento(@RequestBody Map<String, Object> body) {
+        try {
+            Long extratoId = Long.valueOf(body.get("extratoId").toString());
+            String motivo = body.get("motivo").toString();
+
+            // Busca o lançamento original
+            ExtratoReserva extratoOriginal = extratoReservaRepository.findById(extratoId)
+                .orElseThrow(() -> new RuntimeException("Lançamento não encontrado: " + extratoId));
+
+            // Valida que é um lançamento de PRODUTO
+            if (extratoOriginal.getStatusLancamento() != ExtratoReserva.StatusLancamentoEnum.PRODUTO) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "erro", "Apenas lançamentos de PRODUTO podem ser estornados. Tipo atual: " 
+                        + extratoOriginal.getStatusLancamento()
+                ));
+            }
+
+            Reserva reserva = extratoOriginal.getReserva();
+
+            // ✅ Cria lançamento de ESTORNO com valor NEGATIVO
+            ExtratoReserva extratoEstorno = new ExtratoReserva();
+            extratoEstorno.setReserva(reserva);
+            extratoEstorno.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
+            extratoEstorno.setDescricao("ESTORNO: " + extratoOriginal.getDescricao() + " — Motivo: " + motivo);
+            extratoEstorno.setQuantidade(extratoOriginal.getQuantidade());
+            extratoEstorno.setValorUnitario(extratoOriginal.getValorUnitario());
+            extratoEstorno.setTotalLancamento(extratoOriginal.getTotalLancamento().negate()); // ✅ NEGATIVO
+            extratoEstorno.setDataHoraLancamento(LocalDateTime.now());
+            extratoEstorno.setNotaVendaId(null);
+
+            extratoReservaRepository.save(extratoEstorno);
+
+            // ✅ Atualiza totais da reserva
+            BigDecimal valorEstorno = extratoOriginal.getTotalLancamento();
+            reserva.setTotalHospedagem(reserva.getTotalHospedagem().subtract(valorEstorno));
+            reserva.setTotalApagar(reserva.getTotalApagar().subtract(valorEstorno));
+
+            reservaRepository.save(reserva);
+
+            System.out.println("✅ Estorno realizado — Extrato #" + extratoId 
+                + " — Valor: R$ " + valorEstorno 
+                + " — Motivo: " + motivo);
+
+            return ResponseEntity.ok(Map.of(
+                "mensagem", "Estorno realizado com sucesso",
+                "extratoEstornoId", extratoEstorno.getId(),
+                "valorEstornado", valorEstorno
+            ));
+
+        } catch (Exception e) {
+            System.err.println("❌ Erro no estorno: " + e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }

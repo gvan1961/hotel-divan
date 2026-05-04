@@ -44,7 +44,8 @@ export interface TodosAlertasResponse {
   conflitos: AlertaDTO[];
   checkoutsVencidos: AlertaDTO[];
   noShows: AlertaDTO[];
-  preReservasEmRisco: AlertaDTO[]; // ✅ NOVO
+  preReservasEmRisco: AlertaDTO[];
+  renovacoesAutomaticas: AlertaDTO[]; // ✅ NOVO
 }
 
 @Injectable({
@@ -127,9 +128,9 @@ buscarTodosAlertas(): Observable<TodosAlertasResponse> {
   return (alertas.conflitos?.length || 0) +
          (alertas.checkoutsVencidos?.length || 0) +
          (alertas.noShows?.length || 0) +
-         (alertas.preReservasEmRisco?.length || 0); // ✅ NOVO
+         (alertas.preReservasEmRisco?.length || 0) +
+         (alertas.renovacoesAutomaticas?.length || 0); // ✅ NOVO
 }
-
   /**
    * 🎨 OBTER COR POR GRAVIDADE
    */
@@ -151,6 +152,7 @@ buscarTodosAlertas(): Observable<TodosAlertasResponse> {
       case 'CONFLITO_PRE_RESERVA': return '🚨';
       case 'CHECKOUT_VENCIDO': return '⏰';
       case 'NO_SHOW': return '🔴';
+      case 'RENOVACAO_AUTOMATICA': return '🔄';
       default: return '⚠️';
     }
   }
@@ -163,6 +165,7 @@ buscarTodosAlertas(): Observable<TodosAlertasResponse> {
       case 'CONFLITO_PRE_RESERVA': return 'Conflito de Reserva';
       case 'CHECKOUT_VENCIDO': return 'Checkout Vencido';
       case 'NO_SHOW': return 'Não Compareceu (No-Show)';
+      case 'RENOVACAO_AUTOMATICA': return 'Renovação Automática';
       default: return 'Alerta';
     }
   }

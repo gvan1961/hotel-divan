@@ -32,7 +32,7 @@ export class UsuarioListaComponent implements OnInit {
     email: '',
     password: '',
     ativo: true,
-    perfilIds: []
+    perfisIds: []
   };
   
   // FILTROS
@@ -100,7 +100,7 @@ export class UsuarioListaComponent implements OnInit {
       email: '',
       password: '',
       ativo: true,
-      perfilIds: []
+      perfisIds: []
     };
     this.mostrarModal = true;
   }
@@ -118,7 +118,7 @@ export class UsuarioListaComponent implements OnInit {
         email: u.email,
         password: '',
         ativo: u.ativo,
-        perfilIds: u.perfis?.map((p: any) => p.id) || []
+        perfisIds: u.perfis?.map((p: any) => p.id) || []
       };
       this.mostrarModal = true;
     },
@@ -167,7 +167,7 @@ export class UsuarioListaComponent implements OnInit {
       return false;
     }
     
-    if (this.formulario.perfilIds.length === 0) {
+    if (this.formulario.perfisIds.length === 0) {
       alert('Selecione pelo menos um perfil!');
       return false;
     }
@@ -240,16 +240,16 @@ export class UsuarioListaComponent implements OnInit {
   }
   
   togglePerfil(perfilId: number): void {
-    const index = this.formulario.perfilIds.indexOf(perfilId);
+    const index = this.formulario.perfisIds.indexOf(perfilId);
     if (index > -1) {
-      this.formulario.perfilIds.splice(index, 1);
+      this.formulario.perfisIds.splice(index, 1);
     } else {
-      this.formulario.perfilIds.push(perfilId);
+      this.formulario.perfisIds.push(perfilId);
     }
   }
   
   perfilSelecionado(perfilId: number): boolean {
-    return this.formulario.perfilIds.includes(perfilId);
+    return this.formulario.perfisIds.includes(perfilId);
   }
 
   voltar(): void {

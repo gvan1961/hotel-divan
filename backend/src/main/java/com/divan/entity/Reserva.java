@@ -89,6 +89,9 @@ public class Reserva {
     @Column(nullable = false)
     private StatusReservaEnum status = StatusReservaEnum.ATIVA;
     
+    @Column(name = "renovacao_automatica", nullable = false)
+    private Boolean renovacaoAutomatica = false;
+    
     @OneToMany(mappedBy = "reserva", cascade = CascadeType.ALL)
     @JsonIgnoreProperties("reserva")
     private List<ExtratoReserva> extratos;
@@ -385,8 +388,20 @@ public class Reserva {
 	}
 
 	public void setSaldoAdiantamento(BigDecimal saldoAdiantamento) {
-		this.saldoAdiantamento = saldoAdiantamento;
+}
+
+	
+	public Boolean getRenovacaoAutomatica() {
+		return renovacaoAutomatica;
 	}
+
+
+
+	public void setRenovacaoAutomatica(Boolean renovacaoAutomatica) {
+		this.renovacaoAutomatica = renovacaoAutomatica;
+	}
+
+
 
 	@Override
 	public int hashCode() {

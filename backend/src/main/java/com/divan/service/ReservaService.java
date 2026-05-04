@@ -753,7 +753,13 @@ public class ReservaService {
         
         // Atualizar data de checkout
         reserva.setDataCheckout(novaDataCheckout);
-        
+
+        // ✅ Se nova data é futura, regulariza a situação — zera renovação automática
+        if (novaDataCheckout.isAfter(LocalDateTime.now())) {
+            reserva.setRenovacaoAutomatica(false);
+            System.out.println("✅ Renovação automática zerada — checkout regularizado para: " + novaDataCheckout.toLocalDate());
+        }
+
         // Recalcular valores
         recalcularValores(reserva);
         
@@ -1025,6 +1031,7 @@ public class ReservaService {
 
         // Finalizar reserva
         reserva.setStatus(Reserva.StatusReservaEnum.FINALIZADA);
+        reserva.setRenovacaoAutomatica(false);
 
         // Liberar apartamento para limpeza
         Apartamento apartamento = reserva.getApartamento();
@@ -1749,6 +1756,7 @@ public class ReservaService {
 
         // ✅ FINALIZAR RESERVA
         reserva.setStatus(Reserva.StatusReservaEnum.FINALIZADA);
+        reserva.setRenovacaoAutomatica(false);
         reserva.setDataCheckoutReal(LocalDateTime.now());
         reservaRepository.save(reserva);
 

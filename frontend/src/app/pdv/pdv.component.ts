@@ -42,6 +42,15 @@ interface ItemCarrinho {
   </button>
       </div>
 
+      <!-- ✅ FAIXA DE APARTAMENTO SELECIONADO -->
+      <div class="faixa-apartamento" *ngIf="reservaSelecionadaInfo">
+        <span class="faixa-icone">🏨</span>
+        <span class="faixa-texto">
+          Lançamento no <strong>Apartamento {{ reservaSelecionadaInfo.apto }}</strong>
+          — <strong>{{ reservaSelecionadaInfo.hospede }}</strong>
+        </span>
+      </div>
+
       <div class="grid-pdv">
         <!-- PRODUTOS -->
         <div class="card produtos-card">
@@ -136,32 +145,35 @@ interface ItemCarrinho {
           </div>
 
           <!-- TIPOS DE VENDA -->
-          <div class="tipo-venda">
-            <label>
-              <input type="radio" 
-                    [(ngModel)]="tipoVenda" 
+         <div class="tipo-venda" [class.modo-apartamento-bloqueado]="origem === 'painel-recepcao'">
+            <label [class.opcao-desabilitada]="origem === 'painel-recepcao'">
+              <input type="radio"
+                    [(ngModel)]="tipoVenda"
                     value="VISTA"
+                    [disabled]="origem === 'painel-recepcao'"
                     (change)="mudarTipoVenda()">
               💵 À Vista
             </label>
             <label>
-              <input type="radio" 
-                    [(ngModel)]="tipoVenda" 
+              <input type="radio"
+                    [(ngModel)]="tipoVenda"
                     value="APARTAMENTO"
                     (change)="mudarTipoVenda()">
               🏨 Apartamento
             </label>
-            <label>
-              <input type="radio" 
-                    [(ngModel)]="tipoVenda" 
+            <label [class.opcao-desabilitada]="origem === 'painel-recepcao'">
+              <input type="radio"
+                    [(ngModel)]="tipoVenda"
                     value="FATURADO"
+                    [disabled]="origem === 'painel-recepcao'"
                     (change)="mudarTipoVenda()">
               💳 Faturado
             </label>
-            <label>
-              <input type="radio" 
-                    [(ngModel)]="tipoVenda" 
+            <label [class.opcao-desabilitada]="origem === 'painel-recepcao'">
+              <input type="radio"
+                    [(ngModel)]="tipoVenda"
                     value="FUNCIONARIO"
+                    [disabled]="origem === 'painel-recepcao'"
                     (change)="mudarTipoVenda()">
               👷 Funcionário
             </label>
@@ -309,6 +321,30 @@ interface ItemCarrinho {
         margin: 0 auto;
         background: #f5f7fa;
         min-height: 100vh;
+      }
+
+        /* ✅ FAIXA DE APARTAMENTO SELECIONADO */
+      .faixa-apartamento {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: linear-gradient(135deg, #2980b9 0%, #1abc9c 100%);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 10px;
+        margin: 0 0 16px 0;
+        box-shadow: 0 4px 12px rgba(41, 128, 185, 0.3);
+        font-size: 1.1em;
+      }
+      .faixa-apartamento .faixa-icone {
+        font-size: 2em;
+      }
+      .faixa-apartamento .faixa-texto {
+        flex: 1;
+      }
+      .faixa-apartamento strong {
+        font-weight: 800;
+        letter-spacing: 0.5px;
       }
 
       .header {
@@ -566,16 +602,33 @@ interface ItemCarrinho {
         flex-wrap: wrap;
       }
 
-      .tipo-venda label {
+       .tipo-venda label {
         display: flex;
         align-items: center;
         gap: 8px;
         cursor: pointer;
         font-weight: 600;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: all 0.2s;
       }
-
+      /* ✅ Opção desabilitada (vindo do Painel Recepção) */
+      .tipo-venda label.opcao-desabilitada {
+        opacity: 0.35;
+        cursor: not-allowed;
+        text-decoration: line-through;
+      }
+      .tipo-venda label.opcao-desabilitada input {
+        cursor: not-allowed;
+      }
+      /* ✅ Destaque na opção Apartamento quando vem do Painel */
+      .tipo-venda.modo-apartamento-bloqueado label:not(.opcao-desabilitada) {
+        background: #d4edda;
+        border: 2px solid #28a745;
+        font-weight: 800;
+        color: #155724;
+      }
       .campo { margin-bottom: 20px; }
-
       .campo label {
         display: block;
         margin-bottom: 8px;
@@ -700,18 +753,36 @@ interface ItemCarrinho {
     reservas: any[] = [];
     reservaSelecionadaId = 0;
     apartamentoNomeVenda = '';
-
+    reservaIdPreSelecionada = 0;
     origem: string = '';
+
+    // ✅ Getter para mostrar info da reserva selecionada
+    get reservaSelecionadaInfo(): { apto: string; hospede: string } | null {
+      if (!this.reservaSelecionadaId || this.reservaSelecionadaId === 0) return null;
+      const reserva = this.reservas.find(r => r.id === Number(this.reservaSelecionadaId));
+      if (!reserva) return null;
+      return {
+        apto: reserva.apartamento?.numeroApartamento || '?',
+        hospede: reserva.cliente?.nome || 'Sem nome'
+      };
+    }
     codigoBarras = '';
 
     constructor(private route: ActivatedRoute) {}
 
     ngOnInit(): void {
-
       this.route.queryParams.subscribe(params => {
-      this.origem = params['origem'] || '';
-    });
-
+        this.origem = params['origem'] || '';
+        const reservaIdParam = params['reservaId'];
+        const apartamentoIdParam = params['apartamentoId'];
+        if (reservaIdParam) {
+          this.reservaIdPreSelecionada = Number(reservaIdParam);
+          this.tipoVenda = 'APARTAMENTO';
+        } else if (apartamentoIdParam) {
+          // Tem apartamento mas sem reserva — só ativa o modo APARTAMENTO
+          this.tipoVenda = 'APARTAMENTO';
+        }
+      });
       this.carregarProdutos();
       this.carregarClientesComCredito();
       this.carregarReservasAtivas();
@@ -730,18 +801,26 @@ interface ItemCarrinho {
       });
     }
 
-    carregarClientesComCredito(): void {
-    this.http.get<Cliente[]>('/api/clientes').subscribe({
-      next: (data) => {
-        console.log('🔍 Clientes carregados:', data); // ← ver o que vem da API
+   carregarClientesComCredito(): void {
+    // ✅ Solicita TODOS os clientes via paginação grande para filtrar localmente
+    this.http.get<any>('/api/clientes?size=10000').subscribe({
+      next: (response) => {
+        // ✅ A API retorna { clientes: [...], totalPaginas, totalElementos, paginaAtual }
+        const data: Cliente[] = response.clientes || response;
         
-        this.clientesComCredito = data.filter(c => 
+        if (!Array.isArray(data)) {
+          console.error('❌ Formato inesperado da API de clientes:', response);
+          this.clientesComCredito = [];
+          this.clientesFuncionarios = [];
+          return;
+        }
+        
+        this.clientesComCredito = data.filter(c =>
           c.creditoAprovado === true && c.tipoCliente !== 'FUNCIONARIO'
         );
-        this.clientesFuncionarios = data.filter(c => 
+        this.clientesFuncionarios = data.filter(c =>
           c.tipoCliente === 'FUNCIONARIO'
         );
-
         console.log('👤 Com crédito:', this.clientesComCredito.length);
         console.log('👷 Funcionários:', this.clientesFuncionarios.length);
       },
@@ -827,12 +906,15 @@ interface ItemCarrinho {
       this.totalCarrinho = this.carrinho.reduce((sum, item) => sum + item.total, 0);
     }
 
-    abrirModalFinalizacao(): void {
-      this.tipoVenda = 'VISTA';
+     abrirModalFinalizacao(): void {
+      // ✅ Só reseta tipoVenda se NÃO veio do Painel Recepção
+      if (this.origem !== 'painel-recepcao') {
+        this.tipoVenda = 'VISTA';
+        this.clienteSelecionadoId = 0;
+      }
       this.formaPagamento = '';
       this.valorPago = this.totalCarrinho;
       this.troco = 0;
-      this.clienteSelecionadoId = 0;
       this.observacao = '';
       this.modalFinalizacao = true;
     }
@@ -929,6 +1011,17 @@ interface ItemCarrinho {
       next: (data) => {
         this.reservas = data;
         console.log('🏨 Reservas ativas:', this.reservas.length);
+        
+        // ✅ Pré-seleciona a reserva se veio do Painel Recepção
+        if (this.reservaIdPreSelecionada > 0) {
+          const reservaExiste = this.reservas.find(r => r.id === this.reservaIdPreSelecionada);
+          if (reservaExiste) {
+            this.reservaSelecionadaId = this.reservaIdPreSelecionada;
+            console.log('✅ Reserva pré-selecionada:', this.reservaIdPreSelecionada);
+          } else {
+            console.warn('⚠️ Reserva pré-selecionada não encontrada nas ativas');
+          }
+        }
       },
       error: (err) => console.error('❌ Erro ao carregar reservas:', err)
     });
@@ -987,6 +1080,11 @@ interface ItemCarrinho {
       this.clienteNomeVenda = '';
       this.troco = 0;
       this.valorPago = 0;
+      
+      // ✅ Volta para o Painel Recepção quando veio de lá
+      if (this.origem === 'painel-recepcao') {
+        this.router.navigate(['/painel-recepcao']);
+      }
     }
 
     realizarVendaApartamento(): void {
@@ -1280,6 +1378,6 @@ onKeyDown(event: KeyboardEvent): void {
   if (event.key === 'Enter') {
     event.preventDefault();
     this.buscarPorCodigo();
-  }
+  }   
 }
   }

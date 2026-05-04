@@ -45,6 +45,16 @@ public class UsuarioController {
             u.setEmail(body.get("email").toString());
             u.setPassword(passwordEncoder.encode(body.get("password").toString()));
             u.setAtivo(Boolean.parseBoolean(body.getOrDefault("ativo", true).toString()));
+            
+            // ✅ PROCESSAR PERFIS no criar
+            if (body.get("perfisIds") != null) {
+                @SuppressWarnings("unchecked")
+                List<Integer> perfisIds = (List<Integer>) body.get("perfisIds");
+                List<Long> ids = perfisIds.stream().map(Long::valueOf).collect(java.util.stream.Collectors.toList());
+                List<com.divan.entity.Perfil> perfis = perfilRepository.findAllById(ids);
+                u.setPerfis(new java.util.HashSet<>(perfis));
+            }
+            
             return ResponseEntity.ok(usuarioRepository.save(u));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
@@ -63,10 +73,10 @@ public class UsuarioController {
             u.setAtivo(Boolean.valueOf(body.getOrDefault("ativo", "true").toString()));
 
             // ✅ SALVAR PERFIS
-            if (body.get("perfilIds") != null) {
-            	@SuppressWarnings("unchecked")
-                List<Integer> perfilIds = (List<Integer>) body.get("perfilIds");
-                List<Long> ids = perfilIds.stream().map(Long::valueOf).collect(java.util.stream.Collectors.toList());
+            if (body.get("perfisIds") != null) {
+                @SuppressWarnings("unchecked")
+                List<Integer> perfisIds = (List<Integer>) body.get("perfisIds");
+                List<Long> ids = perfisIds.stream().map(Long::valueOf).collect(java.util.stream.Collectors.toList());
                 List<com.divan.entity.Perfil> perfis = perfilRepository.findAllById(ids);
                 u.setPerfis(new java.util.HashSet<>(perfis));
             }

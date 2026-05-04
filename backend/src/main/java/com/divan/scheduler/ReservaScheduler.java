@@ -131,17 +131,19 @@ public class ReservaScheduler {
                 extrato.setTotalLancamento(valorDiaria);
                 extrato.setNotaVendaId(null);
 
-                extratoReservaRepository.save(extrato);
+                extratoReservaRepository.saveAndFlush(extrato);
 
-                LocalDateTime novoCheckout = reserva.getDataCheckout().plusDays(1);
-                reserva.setDataCheckout(novoCheckout);
-                reserva.setQuantidadeDiaria(reserva.getQuantidadeDiaria() + 1);
-
-                reserva.setTotalDiaria(reserva.getTotalDiaria().add(valorDiaria));
-                reserva.setTotalHospedagem(reserva.getTotalHospedagem().add(valorDiaria));
-                reserva.setTotalApagar(reserva.getTotalApagar().add(valorDiaria));
-
-                reservaRepository.save(reserva);
+                // ✅ Recarrega a reserva fresca do banco para evitar conflito de snapshot JPA
+                Reserva reservaAtualizada = reservaRepository.findById(reserva.getId()).orElse(reserva);
+                
+                LocalDateTime novoCheckout = reservaAtualizada.getDataCheckout().plusDays(1);
+                reservaAtualizada.setDataCheckout(novoCheckout);
+                reservaAtualizada.setQuantidadeDiaria(reservaAtualizada.getQuantidadeDiaria() + 1);
+                reservaAtualizada.setTotalDiaria(reservaAtualizada.getTotalDiaria().add(valorDiaria));
+                reservaAtualizada.setTotalHospedagem(reservaAtualizada.getTotalHospedagem().add(valorDiaria));
+                reservaAtualizada.setTotalApagar(reservaAtualizada.getTotalApagar().add(valorDiaria));
+                reservaAtualizada.setRenovacaoAutomatica(true);
+                reservaRepository.saveAndFlush(reservaAtualizada);
 
                 System.out.println("✅ Diária extra lançada: R$ " + valorDiaria);
                 System.out.println("📅 Novo checkout: " + novoCheckout.toLocalDate());
@@ -156,6 +158,106 @@ public class ReservaScheduler {
         System.out.println("═══════════════════════════════════════════");
         System.out.println("✅ SCHEDULER 12:01 CONCLUÍDO");
         System.out.println("   Processadas: " + processadas);
+        System.out.println("═══════════════════════════════════════════");
+    }
+    
+    /**
+     * 🕐 Renova automaticamente diárias de reservas com checkout
+     * vencido HOJE (após 2h de tolerância).
+     * 
+     * Roda todo dia às 14h05.
+     * - 14h00 = checkout 12h00 + 2h de tolerância
+     * - 14h05 = margem para garantir
+     * 
+     * Para checkouts de DIAS ANTERIORES, ver o job das 12h01.
+     */
+    @Scheduled(cron = "0 5 14 * * *")
+    @Transactional
+    public void renovarDiariaPorTolerancia() {
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime inicioHoje = agora.toLocalDate().atStartOfDay();
+        LocalDateTime fimHoje = agora.toLocalDate().atTime(23, 59, 59);
+
+        System.out.println("═══════════════════════════════════════════");
+        System.out.println("⏰ SCHEDULER 14:05 — RENOVAÇÃO POR TOLERÂNCIA");
+        System.out.println("   Data/Hora: " + agora);
+        System.out.println("   Faixa de busca: " + inicioHoje + " até " + fimHoje);
+        System.out.println("═══════════════════════════════════════════");
+
+        // Busca reservas ATIVAS cujo checkout é HOJE (entre 00:00 e 23:59)
+        List<Reserva> reservasHoje = reservaRepository
+            .findByStatusAndDataCheckoutBetween(
+                Reserva.StatusReservaEnum.ATIVA,
+                inicioHoje,
+                fimHoje
+            );
+
+        System.out.println("🔍 Reservas com checkout HOJE: " + reservasHoje.size());
+
+        int processadas = 0;
+        int ignoradas = 0;
+
+        for (Reserva reserva : reservasHoje) {
+            try {
+                // ✅ Só renova se já passou da hora do checkout (e da tolerância)
+                if (reserva.getDataCheckout().isAfter(agora)) {
+                    System.out.println("⏭️ Reserva #" + reserva.getId() 
+                        + " — checkout ainda futuro (" + reserva.getDataCheckout() + ")");
+                    ignoradas++;
+                    continue;
+                }
+
+                System.out.println("───────────────────────────────────────────");
+                System.out.println("📋 Renovando reserva #" + reserva.getId());
+                System.out.println("   Apt: " + reserva.getApartamento().getNumeroApartamento());
+                System.out.println("   Cliente: " + reserva.getCliente().getNome());
+                System.out.println("   Checkout previsto: " + reserva.getDataCheckout());
+
+                BigDecimal valorDiaria = reserva.getDiaria().getValor();
+
+                ExtratoReserva extrato = new ExtratoReserva();
+                extrato.setReserva(reserva);
+                extrato.setDataHoraLancamento(agora);
+                extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.DIARIA);
+                extrato.setDescricao(String.format(
+                    "Diária extra — renovação automática (tolerância 2h excedida) %02d/%02d/%d",
+                    agora.getDayOfMonth(),
+                    agora.getMonthValue(),
+                    agora.getYear()
+                ));
+                extrato.setQuantidade(1);
+                extrato.setValorUnitario(valorDiaria);
+                extrato.setTotalLancamento(valorDiaria);
+                extrato.setNotaVendaId(null);
+
+                extratoReservaRepository.saveAndFlush(extrato);
+
+                // ✅ Recarrega a reserva fresca do banco para evitar conflito de snapshot JPA
+                Reserva reservaAtualizada = reservaRepository.findById(reserva.getId()).orElse(reserva);
+
+                LocalDateTime novoCheckout = reservaAtualizada.getDataCheckout().plusDays(1);
+                reservaAtualizada.setDataCheckout(novoCheckout);
+                reservaAtualizada.setQuantidadeDiaria(reservaAtualizada.getQuantidadeDiaria() + 1);
+                reservaAtualizada.setTotalDiaria(reservaAtualizada.getTotalDiaria().add(valorDiaria));
+                reservaAtualizada.setTotalHospedagem(reservaAtualizada.getTotalHospedagem().add(valorDiaria));
+                reservaAtualizada.setTotalApagar(reservaAtualizada.getTotalApagar().add(valorDiaria));
+                reservaAtualizada.setRenovacaoAutomatica(true);
+                reservaRepository.saveAndFlush(reservaAtualizada);
+
+                System.out.println("✅ Diária extra lançada: R$ " + valorDiaria);
+                System.out.println("📅 Novo checkout: " + novoCheckout.toLocalDate());
+
+                processadas++;
+
+            } catch (Exception e) {
+                System.err.println("❌ Erro na reserva #" + reserva.getId() + ": " + e.getMessage());
+            }
+        }
+
+        System.out.println("═══════════════════════════════════════════");
+        System.out.println("✅ SCHEDULER 14:05 CONCLUÍDO");
+        System.out.println("   Renovadas: " + processadas);
+        System.out.println("   Ignoradas (futuras): " + ignoradas);
         System.out.println("═══════════════════════════════════════════");
     }
 

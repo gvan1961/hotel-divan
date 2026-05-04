@@ -27,11 +27,12 @@ public class AlertasController {
         // Checkouts vencidos
         List<Reserva> reservasAtrasadas = reservaRepository
             .findByStatusAndDataCheckoutBefore(StatusReservaEnum.ATIVA, agora);
-
         // No-shows
         List<Reserva> noShowReservas = reservaRepository
             .findByStatusAndDataCheckinBefore(StatusReservaEnum.PRE_RESERVA, agora);
-
+        // ✅ Renovações automáticas pendentes de checkout
+        List<Reserva> renovadasAuto = reservaRepository
+            .findAllByRenovacaoAutomaticaTrueAndStatus(StatusReservaEnum.ATIVA);
         // Converte para AlertaDTO
         List<AlertaDTO> checkoutsVencidos = new ArrayList<>();
         for (Reserva r : reservasAtrasadas) {
@@ -83,12 +84,36 @@ public class AlertasController {
             noShows.add(dto);
         }
 
+     // ✅ Converte renovações automáticas para AlertaDTO
+        List<AlertaDTO> renovacoesAutomaticas = new ArrayList<>();
+        for (Reserva r : renovadasAuto) {
+            AlertaDTO dto = new AlertaDTO();
+            dto.setTipoAlerta("RENOVACAO_AUTOMATICA");
+            dto.setNivelGravidade("MEDIO");
+            dto.setTitulo("Renovação Automática");
+            dto.setDescricao("Hóspede ultrapassou tolerância de checkout. Diária renovada automaticamente.");
+            dto.setRecomendacao("Verificar com o hóspede se ele de fato continuará hospedado.");
+            dto.setReservaId(r.getId());
+            dto.setClienteNome(r.getCliente() != null ? r.getCliente().getNome() : "N/A");
+            dto.setStatusReserva(r.getStatus().name());
+            dto.setDataCheckin(r.getDataCheckin());
+            dto.setDataCheckout(r.getDataCheckout());
+            if (r.getApartamento() != null) {
+                dto.setApartamentoId(r.getApartamento().getId());
+                dto.setNumeroApartamento(r.getApartamento().getNumeroApartamento());
+                if (r.getApartamento().getTipoApartamento() != null) {
+                    dto.setTipoApartamento(r.getApartamento().getTipoApartamento().getDescricao());
+                }
+            }
+            renovacoesAutomaticas.add(dto);
+        }
+
         Map<String, Object> response = new HashMap<>();
         response.put("conflitos", new ArrayList<>());
         response.put("checkoutsVencidos", checkoutsVencidos);
         response.put("noShows", noShows);
         response.put("preReservasEmRisco", new ArrayList<>());
-
+        response.put("renovacoesAutomaticas", renovacoesAutomaticas);
         return ResponseEntity.ok(response);
     }
 }

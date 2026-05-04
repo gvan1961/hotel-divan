@@ -44,8 +44,11 @@ public class Empresa {
     private String contatoFinanceiroNome;
 
     @Column(name = "contato_financeiro_celular", length = 20)
-    @Pattern(regexp = "^$|^\\d{10,11}$", message = "Celular do contato deve conter 10 ou 11 dígitos")
-    private String contatoFinanceiroCelular;
+    @Pattern(
+            regexp = "^$|^\\(\\d{2}\\)\\s\\d{4,5}-\\d{4}$|^\\d{10,11}$",
+            message = "Celular do contato deve estar no formato (XX) XXXXX-XXXX ou conter 10/11 dígitos"
+        )
+        private String contatoFinanceiroCelular;
 
     @Column(name = "contato_financeiro_ddi", length = 5)
     private String contatoFinanceiroDdi = "55";
@@ -123,6 +126,8 @@ public class Empresa {
 	public void setContatoFinanceiroDdi(String contatoFinanceiroDdi) {
 		this.contatoFinanceiroDdi = contatoFinanceiroDdi;
 	}
+	
+	
 
 	@Override
 	public int hashCode() {

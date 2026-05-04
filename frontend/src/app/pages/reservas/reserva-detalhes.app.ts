@@ -343,13 +343,13 @@ import { environment } from '../../../environments/environment';
         <!-- GRID NORMAL (EXTRATO) -->
         <div class="grid">
           <div class="card extrato-card" *ngIf="reserva.extratos && reserva.extratos.length > 0">
-           <h2 class="extrato-titulo-toggle" (click)="toggleExtrato()" 
-    [title]="extratoExpandido ? 'Clique para ocultar' : 'Clique para mostrar'">
-  <span class="seta-toggle">{{ extratoExpandido ? '▼' : '▶' }}</span>
-  📊 Extrato — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong>
-  <span class="contador-extrato">({{ reserva.extratos.length }} lançamentos)</span>
-</h2>
-<table class="tabela-extrato" *ngIf="extratoExpandido">
+             <h2 class="extrato-titulo-toggle" (click)="toggleExtrato()" 
+                [title]="extratoExpandido ? 'Clique para ocultar' : 'Clique para mostrar'">
+              <span class="seta-toggle">{{ extratoExpandido ? '▼' : '▶' }}</span>
+              📊 Extrato — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong>
+              <span class="contador-extrato">({{ reserva.extratos.length }} lançamentos)</span>
+            </h2>
+            <table class="tabela-extrato" *ngIf="extratoExpandido">
               <thead>
                 <tr>
                   <th>Data</th>
@@ -479,22 +479,23 @@ import { environment } from '../../../environments/environment';
   (click)="abrirModalTransferirHospede(hospede)"
   title="Transferir para outro apartamento">
   🔄
+  </button>
+                 <button
+  type="button"
+  class="btn-acao-hospede btn-checkout-hospede"
+  *ngIf="(reserva.quantidadeHospede || 0) > 1"
+  (click)="confirmarRemocaoHospede(hospede)"
+  [title]="hospede.titular ? 'Fazer checkout do titular (próximo será promovido)' : 'Fazer checkout do hóspede'">
+  🚪
 </button>
-                <button 
-                  type="button"
-                  class="btn-acao-hospede btn-checkout-hospede"
-                  (click)="confirmarRemocaoHospede(hospede)"
-                  [title]="hospede.titular ? 'Fazer checkout do titular (próximo será promovido)' : 'Fazer checkout do hóspede'">
-                  🚪
-                </button>
+                </div>
+                <span class="hospede-finalizado" 
+                      *ngIf="hospede.status === 'CHECKOUT_REALIZADO'">
+                  ✅
+                </span>
               </div>
-              <span class="hospede-finalizado" 
-                    *ngIf="hospede.status === 'CHECKOUT_REALIZADO'">
-                ✅
-              </span>
             </div>
           </div>
-        </div>
 
         <!-- CARD DE AÇÕES -->
         <div class="card acoes-card">
@@ -566,7 +567,7 @@ import { environment } from '../../../environments/environment';
                         'btn-finalizar':      (reserva.totalApagar || 0) > 0
                       }"
                       (click)="finalizarCheckout()">
-                {{ (reserva.totalApagar || 0) <= 0 ? '💚 Finalizar Paga' : '✅ Finalizar Faturada' }}
+                {{ (reserva.totalApagar || 0) <= 0 ? '💚 Finalizar Paga à vista' : '✅ Débito em Conta' }}
               </button>
             </ng-container>
             <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
@@ -1334,10 +1335,11 @@ import { environment } from '../../../environments/environment';
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       }
 
-      .card-mini h2 {
+       .card-mini h2 {
         margin: 0 0 12px 0;
         color: #2c3e50;
-        font-size: 1em;
+        font-size: 1.15em;
+        font-weight: 700;
         border-bottom: 2px solid #667eea;
         padding-bottom: 8px;
       }
@@ -1347,9 +1349,9 @@ import { environment } from '../../../environments/environment';
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 6px 0;
+        padding: 8px 0;
         border-bottom: 1px solid #f0f0f0;
-        font-size: 0.85em;
+        font-size: 1em;
       }
 
       .info-item-mini:last-child {
@@ -1357,31 +1359,33 @@ import { environment } from '../../../environments/environment';
       }
 
       .info-item-mini .label {
-        color: #7f8c8d;
-        font-weight: 500;
-        font-size: 0.9em;
-        min-width: 65px;
+        color: #555;
+        font-weight: 600;
+        font-size: 1.05em;
+        min-width: 75px;
       }
 
       .info-item-mini .value,
       .info-item-mini .value-pequeno {
-        color: #2c3e50;
-        font-weight: 600;
-        font-size: 0.9em;
+        color: #1a1a1a;
+        font-weight: 700;
+        font-size: 1.05em;
         text-align: right;
         flex: 1;
         word-wrap: break-word;
       }
 
       .info-item-mini .value-pequeno {
-        font-size: 0.85em;
+        font-size: 1em;
       }
 
       .info-item-mini .value-destaque {
-        color: #2c3e50;
-        font-weight: 700;
-        font-size: 1em;
-      }
+        color: #1a1a1a;
+        font-weight: 800;
+        font-size: 1.15em;
+      }  
+      
+
 
       /* ✅ DESTAQUE MINI */
       .destaque-mini {
@@ -1607,14 +1611,14 @@ import { environment } from '../../../environments/environment';
         color: #0c5460;
       }
 
-      .btn-estornar {
+        .btn-estornar {
         background: #e74c3c;
         color: white;
         border: none;
-        padding: 6px 12px;
+        padding: 3px 7px;
         border-radius: 4px;
         cursor: pointer;
-        font-size: 0.85em;
+        font-size: 0.75em;
         font-weight: 600;
         transition: all 0.3s;
       }
@@ -5412,12 +5416,11 @@ salvarAdiantamento(): void {
 
   jaFoiEstornado(extrato: any): boolean {
     if (!this.reserva?.extratos) return false;
-    
-    // Verificar se existe um lançamento de ESTORNO referenciando este extrato
-    return this.reserva.extratos.some(e => 
-      e.statusLancamento === 'ESTORNO' && 
+    // ✅ Sempre compara pelo id único do extrato original
+    return this.reserva.extratos.some(e =>
+      e.statusLancamento === 'ESTORNO' &&
       e.totalLancamento < 0 &&
-      e.descricao?.includes(extrato.descricao)
+      e.descricao?.includes('[extratoId:' + extrato.id + ']')
     );
   }
 

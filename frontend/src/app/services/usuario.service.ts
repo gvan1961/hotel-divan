@@ -21,7 +21,7 @@ export interface UsuarioRequest {
   email: string;
   password: string;
   ativo: boolean;
-  perfilIds: number[];
+  perfisIds: number[];
 }
 
 @Injectable({

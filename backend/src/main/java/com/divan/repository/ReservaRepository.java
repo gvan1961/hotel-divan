@@ -80,5 +80,13 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     
     Optional<Reserva> findFirstByApartamentoAndStatusOrderByDataCheckinDesc(
     	    Apartamento apartamento, Reserva.StatusReservaEnum status);
+    
+    List<Reserva> findByStatusAndDataCheckoutBetween(
+            Reserva.StatusReservaEnum status, 
+            LocalDateTime inicio, 
+            LocalDateTime fim
+        );
+    
+    List<Reserva> findAllByRenovacaoAutomaticaTrueAndStatus(Reserva.StatusReservaEnum status);
         
 }

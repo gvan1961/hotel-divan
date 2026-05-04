@@ -54,6 +54,13 @@ import { Subscription, interval } from 'rxjs';
           </div>
         </div>
 
+         <div class="card-resumo renovacao" (click)="abaAtiva = 'renovacoes'" style="cursor:pointer">
+          <div class="card-icon">🔄</div>
+          <div class="card-info">
+            <div class="card-numero">{{ totalRenovacoesAutomaticas }}</div>
+            <div class="card-label">Renovações Automáticas</div>
+          </div>
+        </div>
         <div class="card-resumo total">
           <div class="card-icon">📊</div>
           <div class="card-info">
@@ -680,9 +687,14 @@ import { Subscription, interval } from 'rxjs';
       margin-bottom: 20px;
     }
 
-    .info-linha {
-      color: #555;
-      font-size: 0.95em;
+ .info-linha {
+      color: #333;
+      font-size: 1.15em;
+      line-height: 1.6;
+      margin-bottom: 4px;
+    }
+    .info-linha strong {
+      font-weight: 600;
     }
 
     .info-linha.alerta-destaque {
@@ -1200,12 +1212,14 @@ export class AlertasDashboardComponent implements OnInit, OnDestroy {
   conflitos: AlertaDTO[] = [];
   checkoutsVencidos: AlertaDTO[] = [];
   noShows: AlertaDTO[] = [];
+  renovacoesAutomaticas: AlertaDTO[] = [];
 
   // Totais
   totalConflitos = 0;
   totalCheckoutsVencidos = 0;
   totalNoShows = 0;
-  totalGeral = 0;  
+  totalRenovacoesAutomaticas = 0;
+  totalGeral = 0;
 
   modalProrrogacao = false;
   alertaSelecionado: AlertaDTO | null = null;
@@ -1266,14 +1280,15 @@ export class AlertasDashboardComponent implements OnInit, OnDestroy {
 
     this.alertasService.buscarTodosAlertas().subscribe({
       next: (response) => {
-        this.conflitos = response.conflitos || [];
+          this.conflitos = response.conflitos || [];
         this.checkoutsVencidos = response.checkoutsVencidos || [];
         this.noShows = response.noShows || [];
-
+        this.renovacoesAutomaticas = response.renovacoesAutomaticas || [];
         this.totalConflitos = this.conflitos.length;
         this.totalCheckoutsVencidos = this.checkoutsVencidos.length;
         this.totalNoShows = this.noShows.length;
-        this.totalGeral = this.totalConflitos + this.totalCheckoutsVencidos + this.totalNoShows;
+        this.totalRenovacoesAutomaticas = this.renovacoesAutomaticas.length;
+        this.totalGeral = this.totalConflitos + this.totalCheckoutsVencidos + this.totalNoShows + this.totalRenovacoesAutomaticas;
 
         this.ultimaAtualizacao = new Date();
         this.carregando = false;

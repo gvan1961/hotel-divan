@@ -66,6 +66,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/api/alertas/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/estornos/**").hasAnyAuthority("ESTORNAR_PAGAMENTO", "ROLE_ADMIN", "GERENTE")
                 .requestMatchers("/error").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 

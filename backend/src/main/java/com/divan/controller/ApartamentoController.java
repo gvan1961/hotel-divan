@@ -385,7 +385,8 @@ public class ApartamentoController {
                     res.put("saiHoje",          saiHoje);
                     res.put("entraHoje",        entraHoje);
                     res.put("atrasado",         atrasado);
-
+                    res.put("renovacaoAutomatica", r.getRenovacaoAutomatica() != null && r.getRenovacaoAutomatica());
+                  
                     // ✅ PRÓXIMA RESERVA (se ATIVA e tem pré-reserva futura)
                     if (r.getStatus() == Reserva.StatusReservaEnum.ATIVA
                             && !todasPreReservas.isEmpty()) {
