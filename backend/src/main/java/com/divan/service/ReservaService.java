@@ -405,19 +405,23 @@ public class ReservaService {
 
         // ✅ ADICIONAR CLIENTE TITULAR COMO HÓSPEDE
      // ✅ ADICIONAR CLIENTE TITULAR COMO HÓSPEDE APENAS SE RESERVA ATIVA
-     // PRÉ-RESERVA: titular será adicionado somente ao ativar o check-in
-     if (salva.getStatus() == Reserva.StatusReservaEnum.ATIVA) {
-         HospedagemHospede hospedeTitular = new HospedagemHospede();
-         hospedeTitular.setReserva(salva);
-         hospedeTitular.setCliente(reserva.getCliente());
-         hospedeTitular.setTitular(true);
-         hospedeTitular.setStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
-         hospedeTitular.setDataHoraEntrada(LocalDateTime.now());
-         hospedagemHospedeRepository.save(hospedeTitular);
-         System.out.println("✅ Titular adicionado como hóspede: " + reserva.getCliente().getNome());
-     } else {
-         System.out.println("📅 PRÉ-RESERVA — titular será adicionado ao fazer check-in");
-     }
+     // PRÉ-RESERVA: titular será adicionado somente ao ativar o check-in      
+                        
+        HospedagemHospede hospedeTitular = new HospedagemHospede();
+        hospedeTitular.setReserva(salva);
+        hospedeTitular.setCliente(reserva.getCliente());
+        hospedeTitular.setTitular(true);
+        hospedeTitular.setStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
+        hospedeTitular.setDataHoraEntrada(LocalDateTime.now());
+        hospedagemHospedeRepository.save(hospedeTitular);
+        System.out.println("✅ Titular adicionado: " + reserva.getCliente().getNome() +
+            " | Status: " + salva.getStatus());
+
+        if (salva.getStatus() == Reserva.StatusReservaEnum.ATIVA) {
+            Apartamento apt = reserva.getApartamento();
+            apt.setStatus(Apartamento.StatusEnum.OCUPADO);
+            apartamentoRepository.save(apt);
+        }
         // ✅ CRIAR LANÇAMENTOS DE DIÁRIAS DIA A DIA
         criarExtratosDiarias(salva, dataInicioDiarias, reserva.getDataCheckout());
 

@@ -119,6 +119,13 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
           class="btn-comanda">
           📝 {{ hospede.nomeCompleto.split(' ')[0] }}
         </button>
+
+        <!-- ✅ BOTÃO VER CONSUMO DE HOJE -->
+        <button 
+          (click)="verConsumoHoje(apto)"
+          class="btn-ver-consumo">
+          👁️ Consumo
+        </button>
       </div>
 
     </div>
@@ -196,6 +203,60 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
 
     </div>
   </div>
+
+  <!-- ✅ MODAL VER CONSUMO DE HOJE -->
+  <div *ngIf="modalConsumo" class="modal-overlay" (click)="modalConsumo = false">
+    <div class="modal-content modal-consumo" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h3>👁️ Consumo Hoje — Apt {{ aptoConsulta }}</h3>
+        <button class="btn-fechar" (click)="modalConsumo = false">✕</button>
+      </div>
+
+      <div class="consumo-body">
+        <!-- CARREGANDO -->
+        <div *ngIf="carregandoConsumo" class="temp-message">⏳ Carregando...</div>
+
+        <!-- VAZIO -->
+        <div *ngIf="!carregandoConsumo && consumoHoje.length === 0" class="consumo-vazio">
+          🍽️ Nenhum produto lançado hoje para este apartamento.
+        </div>
+
+        <!-- TABELA DE CONSUMO -->
+        <table *ngIf="!carregandoConsumo && consumoHoje.length > 0" class="tabela-consumo">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Qtd</th>
+              <th>Total</th>
+              <th>Hora</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of consumoHoje">
+              <td>{{ item.descricao }}</td>
+              <td class="td-center">{{ item.quantidade }}</td>
+              <td class="td-valor">R$ {{ item.total.toFixed(2) }}</td>
+              <td class="td-hora">{{ formatarHora(item.hora) }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="tr-total">
+              <td colspan="2"><strong>TOTAL DO DIA:</strong></td>
+              <td class="td-valor"><strong>R$ {{ totalConsumoHoje().toFixed(2) }}</strong></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="modalConsumo = false">Fechar</button>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 `,
   styles: [`
@@ -242,7 +303,7 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
   color: #f44336;
 }
 
-/* ✅ LISTA DE APARTAMENTOS - UMA LINHA POR APARTAMENTO */
+/* ✅ LISTA DE APARTAMENTOS */
 .apartamentos-lista {
   display: flex;
   flex-direction: column;
@@ -326,6 +387,22 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
   background-color: #1976D2;
 }
 
+/* ✅ BOTÃO VER CONSUMO */
+.btn-ver-consumo {
+  padding: 8px 14px;
+  background-color: #9c27b0;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.btn-ver-consumo:hover {
+  background-color: #7b1fa2;
+}
+
 /* MODAL */
 .modal-overlay {
   position: fixed;
@@ -335,9 +412,10 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   z-index: 1000;
+  padding-left: 16px;
 }
 
 .modal-content {
@@ -349,6 +427,10 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.modal-consumo {
+  max-width: 550px;
 }
 
 .modal-header {
@@ -380,22 +462,6 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
   padding: 20px;
   overflow-y: auto;
   flex: 1;
-}
-
-.info-hospede {
-  background-color: #f5f5f5;
-  padding: 15px;
-  border-radius: 5px;
-  margin-bottom: 20px;
-}
-
-.info-hospede p {
-  margin: 5px 0;
-}
-
-.produtos-section h4 {
-  margin-bottom: 15px;
-  color: #333;
 }
 
 .temp-message {
@@ -462,11 +528,16 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 
 .produto-nome {
   font-weight: 500;
   color: #333;
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .produto-preco {
@@ -489,17 +560,6 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
 }
 
 /* ITENS SELECIONADOS */
-.selecionados-section {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 2px solid #ddd;
-}
-
-.selecionados-section h4 {
-  margin-bottom: 15px;
-  color: #333;
-}
-
 .selecionados-lista {
   display: flex;
   flex-direction: column;
@@ -508,41 +568,48 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
 }
 
 .item-selecionado {
-  padding: 12px;
-  background-color: #e8f5e9;
-  border-radius: 5px;
-  border-left: 4px solid #4CAF50;
-}
-
-.item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  padding: 8px;
+  background: #e8f5e9;
+  border-radius: 6px;
+  border-left: 3px solid #4CAF50;
+  margin-bottom: 8px;
 }
 
 .item-nome {
-  font-weight: 500;
-  color: #333;
+  display: block;
+  font-weight: 600;
+  font-size: 0.9em;
+  margin-bottom: 4px;
 }
 
 .item-controles {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
-.input-quantidade {
-  width: 60px;
-  padding: 5px;
-  border: 1px solid #ddd;
+.btn-qtd {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #ccc;
   border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.item-qty {
+  min-width: 20px;
   text-align: center;
+  font-weight: bold;
 }
 
 .item-subtotal {
+  flex: 1;
+  text-align: right;
   color: #4CAF50;
   font-weight: bold;
-  flex: 1;
+  font-size: 0.9em;
 }
 
 .btn-remover {
@@ -725,7 +792,7 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
   margin: 30px 0;
 }
 
-   .modal-dois-paineis {
+.modal-dois-paineis {
   width: 95%;
   max-width: 900px;
   max-height: 85vh;
@@ -777,51 +844,77 @@ import { JantarService, HospedeJantar } from '../../services/jantar.service';
   font-style: italic;
 }
 
-.item-selecionado {
-  padding: 8px;
-  background: #e8f5e9;
-  border-radius: 6px;
-  border-left: 3px solid #4CAF50;
-  margin-bottom: 8px;
+/* ✅ MODAL CONSUMO HOJE */
+.consumo-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
 }
 
-.item-nome {
-  display: block;
+.consumo-vazio {
+  text-align: center;
+  color: #aaa;
+  padding: 30px;
+  font-size: 1em;
+  font-style: italic;
+}
+
+.tabela-consumo {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabela-consumo thead tr {
+  background: #f3e5f5;
+}
+
+.tabela-consumo th {
+  padding: 10px 12px;
+  text-align: left;
   font-weight: 600;
+  color: #6a1b9a;
+  border-bottom: 2px solid #ce93d8;
   font-size: 0.9em;
-  margin-bottom: 4px;
 }
 
-.item-controles {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.tabela-consumo td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.95em;
 }
 
-.btn-qtd {
-  width: 26px;
-  height: 26px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  font-weight: bold;
+.tabela-consumo tbody tr:hover td {
+  background: #fce4ec;
 }
 
-.item-qty {
-  min-width: 20px;
+.td-center {
   text-align: center;
   font-weight: bold;
 }
 
-.item-subtotal {
-  flex: 1;
+.td-valor {
   text-align: right;
   color: #4CAF50;
   font-weight: bold;
-  font-size: 0.9em;
 }
 
+.td-hora {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+}
+
+.tr-total td {
+  background: #e8f5e9;
+  padding: 12px;
+  border-top: 2px solid #4CAF50;
+  font-size: 1em;
+}
+
+.tr-total .td-valor {
+  font-size: 1.1em;
+  color: #2e7d32;
+}
   `]
 })
 export class JantarListaComponent implements OnInit {
@@ -829,7 +922,7 @@ export class JantarListaComponent implements OnInit {
   loading = false;
   erro = '';
 
-  // Modal
+  // Modal comanda
   modalAberto = false;
   hospedeSelecionado: HospedeJantar | null = null;
   apartamentoSelecionado = '';
@@ -839,9 +932,16 @@ export class JantarListaComponent implements OnInit {
   produtosCarregando = false;
   produtosSelecionados: { produto: any, quantidade: number }[] = [];
 
+  // Busca
   nomeBusca = '';
   apartamentoBusca = '';
   resultadoBusca: any = null;
+
+  // ✅ Modal consumo hoje
+  modalConsumo = false;
+  aptoConsulta = '';
+  consumoHoje: any[] = [];
+  carregandoConsumo = false;
 
   constructor(
     private jantarService: JantarService,
@@ -884,7 +984,6 @@ export class JantarListaComponent implements OnInit {
   }
 
   abrirModalComanda(hospede: HospedeJantar, numeroApartamento: string) {
-    console.log('🍽️ Abrindo modal para:', hospede.nomeCompleto, '- Apto:', numeroApartamento);
     this.hospedeSelecionado = hospede;
     this.apartamentoSelecionado = numeroApartamento;
     this.modalAberto = true;
@@ -895,7 +994,6 @@ export class JantarListaComponent implements OnInit {
     this.produtosCarregando = true;
     this.http.get<any[]>('/api/jantar/produtos-restaurante').subscribe({
       next: (produtos) => {
-        console.log('✅ Produtos carregados:', produtos);
         this.produtos = produtos;
         this.produtosCarregando = false;
       },
@@ -934,10 +1032,6 @@ export class JantarListaComponent implements OnInit {
   }
 
   confirmarComanda() {
-    console.log('🔍 DEBUG - hospedeSelecionado:', this.hospedeSelecionado);
-    console.log('🔍 DEBUG - hospedeSelecionado.id:', this.hospedeSelecionado?.id);
-    console.log('🔍 DEBUG - hospedeSelecionado.hospedagemHospedeId:', this.hospedeSelecionado?.hospedagemHospedeId);
-
     if (this.produtosSelecionados.length === 0) {
       alert('Selecione pelo menos um produto!');
       return;
@@ -960,7 +1054,22 @@ export class JantarListaComponent implements OnInit {
       },
       error: (error) => {
         console.error('❌ Erro ao salvar comanda:', error);
-        alert('❌ Erro ao salvar comanda:\n' + (error.error || error.message));
+
+        let mensagem = 'Erro ao salvar comanda';
+
+        if (error.error) {
+          if (typeof error.error === 'string') {
+            mensagem = error.error;
+          } else if (error.error.erro) {
+            mensagem = error.error.erro;
+          } else if (error.error.message) {
+            mensagem = error.error.message;
+          }
+        } else if (error.message) {
+          mensagem = error.message;
+        }
+
+        alert('❌ ' + mensagem);
       }
     });
   }
@@ -976,7 +1085,6 @@ export class JantarListaComponent implements OnInit {
 
     this.jantarService.buscarHospede(this.nomeBusca.trim(), this.apartamentoBusca.trim()).subscribe({
       next: (resultado) => {
-        console.log('✅ Resultado da busca:', resultado);
         this.resultadoBusca = resultado;
       },
       error: (error) => {
@@ -993,7 +1101,6 @@ export class JantarListaComponent implements OnInit {
   }
 
   abrirModalComandaBusca(hospede: any) {
-    console.log('🍽️ Abrindo modal para hóspede da busca:', hospede);
     this.hospedeSelecionado = {
       id: hospede.hospedagemHospedeId || hospede.id,
       hospedagemHospedeId: hospede.hospedagemHospedeId || hospede.id,
@@ -1015,5 +1122,43 @@ export class JantarListaComponent implements OnInit {
     this.apartamentoSelecionado = '';
     this.produtos = [];
     this.produtosSelecionados = [];
+  }
+
+  // ✅ VER CONSUMO DE HOJE
+  verConsumoHoje(apto: any): void {
+    this.aptoConsulta = apto.numeroApartamento;
+    this.modalConsumo = true;
+    this.carregandoConsumo = true;
+    this.consumoHoje = [];
+
+    const reservaId = apto.hospedes[0]?.apartamentoId;
+
+    if (!reservaId) {
+      this.carregandoConsumo = false;
+      return;
+    }
+
+    this.http.get<any[]>(`/api/jantar/consumo-hoje/${reservaId}`).subscribe({
+      next: (data) => {
+        this.consumoHoje = data;
+        this.carregandoConsumo = false;
+      },
+      error: (err) => {
+        console.error('❌ Erro ao carregar consumo:', err);
+        this.carregandoConsumo = false;
+      }
+    });
+  }
+
+  totalConsumoHoje(): number {
+    return this.consumoHoje.reduce((sum, item) => sum + (item.total || 0), 0);
+  }
+
+  formatarHora(dataHora: string): string {
+    if (!dataHora) return '-';
+    return new Date(dataHora).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 }

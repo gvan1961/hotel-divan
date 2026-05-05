@@ -233,6 +233,8 @@ public class PagamentoService {
         resumo.setTotalCartaoDebito(totaisPorForma.get(Pagamento.FormaPagamentoEnum.CARTAO_DEBITO));
         resumo.setTotalCartaoCredito(totaisPorForma.get(Pagamento.FormaPagamentoEnum.CARTAO_CREDITO));
         resumo.setTotalTransferencia(totaisPorForma.get(Pagamento.FormaPagamentoEnum.TRANSFERENCIA_BANCARIA));
+        resumo.setTotalLinkPix(totaisPorForma.get(Pagamento.FormaPagamentoEnum.LINK_PIX));       // ← adicionar
+        resumo.setTotalLinkCartao(totaisPorForma.get(Pagamento.FormaPagamentoEnum.LINK_CARTAO)); // ← adicionar
         resumo.setTotalGeral(totalGeral);
         resumo.setQuantidadePagamentos(pagamentos.size());
 

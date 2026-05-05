@@ -1,14 +1,19 @@
 package com.divan.controller;
 
+import com.divan.entity.ExtratoReserva;
 import com.divan.entity.Produto;
+import com.divan.repository.ExtratoReservaRepository;
 import com.divan.repository.ProdutoRepository;
 import com.divan.service.JantarService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/jantar")
@@ -17,6 +22,9 @@ public class JantarController {
 
     @Autowired
     private JantarService jantarService;
+    
+    @Autowired
+    private ExtratoReservaRepository extratoReservaRepository;
 
     @Autowired
     private ProdutoRepository produtoRepository;
@@ -163,6 +171,36 @@ public class JantarController {
             return ResponseEntity.ok(resultado);
         } catch (Exception e) {
             e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/consumo-hoje/{reservaId}")
+    public ResponseEntity<?> getConsumoDhoje(@PathVariable Long reservaId) {
+        try {
+            LocalDateTime inicioDia = LocalDate.now().atStartOfDay();
+            LocalDateTime fimDia = LocalDate.now().atTime(23, 59, 59);
+
+            List<ExtratoReserva> extratos = extratoReservaRepository
+                .findByReservaIdAndStatusLancamentoAndDataHoraLancamentoBetween(
+                    reservaId,
+                    ExtratoReserva.StatusLancamentoEnum.PRODUTO,
+                    inicioDia,
+                    fimDia
+                );
+
+            List<Map<String, Object>> resultado = extratos.stream()
+                .map(e -> Map.of(
+                    "descricao",  (Object) e.getDescricao(),
+                    "quantidade", (Object) e.getQuantidade(),
+                    "valorUnitario", (Object) e.getValorUnitario(),
+                    "total",      (Object) e.getTotalLancamento(),
+                    "hora",       (Object) e.getDataHoraLancamento()
+                ))
+                .collect(Collectors.toList());
+
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }

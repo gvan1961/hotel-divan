@@ -159,8 +159,16 @@ public class JantarService {
             Produto produto = produtoRepository.findById(produtoId)
                 .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + produtoId));
 
+            if (produto.getQuantidade() <= 0) {
+                throw new RuntimeException(
+                    "❌ Produto '" + produto.getNomeProduto() + "' está com ESTOQUE ZERO."
+                );
+            }
             if (produto.getQuantidade() < quantidade) {
-                throw new RuntimeException("Estoque insuficiente para: " + produto.getNomeProduto());
+                throw new RuntimeException(
+                    "❌ Estoque insuficiente para '" + produto.getNomeProduto() + 
+                    "'. Disponível: " + produto.getQuantidade() + " | Solicitado: " + quantidade
+                );
             }
 
             BigDecimal valorUnitario = produto.getValorVenda();

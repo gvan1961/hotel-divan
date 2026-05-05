@@ -39,4 +39,11 @@ public interface ExtratoReservaRepository extends JpaRepository<ExtratoReserva, 
     	    LocalDateTime inicio,
     	    LocalDateTime fim
     	);
+    
+    List<ExtratoReserva> findByReservaIdAndStatusLancamentoAndDataHoraLancamentoBetween(
+    	    Long reservaId,
+    	    ExtratoReserva.StatusLancamentoEnum status,
+    	    LocalDateTime inicio,
+    	    LocalDateTime fim
+    	);
 }

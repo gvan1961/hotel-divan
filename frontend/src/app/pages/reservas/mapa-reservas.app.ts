@@ -263,13 +263,15 @@ interface ApartamentoMapa {
           <div class="campo">
             <label>Forma de Pagamento *</label>
             <select [(ngModel)]="pagPreReservaFormaPagamento">
-              <option value="">Selecione...</option>
-              <option value="DINHEIRO">💵 Dinheiro</option>
-              <option value="PIX">📱 PIX</option>
-              <option value="CARTAO_DEBITO">💳 Cartão Débito</option>
-              <option value="CARTAO_CREDITO">💳 Cartão Crédito</option>
-              <option value="TRANSFERENCIA_BANCARIA">🏦 Transferência</option>
-            </select>
+  <option value="">Selecione...</option>
+  <option value="DINHEIRO">💵 Dinheiro</option>
+  <option value="PIX">📱 PIX</option>
+  <option value="CARTAO_DEBITO">💳 Cartão Débito</option>
+  <option value="CARTAO_CREDITO">💳 Cartão Crédito</option>
+  <option value="TRANSFERENCIA_BANCARIA">🏦 Transferência</option>
+  <option value="LINK_PIX">🔗 Link Pix</option>
+  <option value="LINK_CARTAO">🔗 Link Cartão</option>
+</select>
           </div>
 
           <div class="campo">

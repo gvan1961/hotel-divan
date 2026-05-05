@@ -1177,14 +1177,24 @@ public class ReservaController {
             apartamentoRepository.save(apartamento);
 
             // ✅ ADICIONAR TITULAR EM HOSPEDAGEM_HOSPEDES AO ATIVAR
-            HospedagemHospede hospedeTitular = new HospedagemHospede();
-            hospedeTitular.setReserva(reserva);
-            hospedeTitular.setCliente(reserva.getCliente());
-            hospedeTitular.setTitular(true);
-            hospedeTitular.setStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
-            hospedeTitular.setDataHoraEntrada(LocalDateTime.now());
-            hospedagemHospedeRepository.save(hospedeTitular);
-            System.out.println("✅ Titular adicionado ao ativar pré-reserva: " + reserva.getCliente().getNome());
+            boolean titularJaExiste = hospedagemHospedeRepository
+            	    .findByReservaId(reserva.getId())
+            	    .stream()
+            	    .anyMatch(h -> h.getCliente().getId().equals(reserva.getCliente().getId())
+            	               && h.isTitular());
+
+            	if (!titularJaExiste) {
+            	    HospedagemHospede hospedeTitular = new HospedagemHospede();
+            	    hospedeTitular.setReserva(reserva);
+            	    hospedeTitular.setCliente(reserva.getCliente());
+            	    hospedeTitular.setTitular(true);
+            	    hospedeTitular.setStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
+            	    hospedeTitular.setDataHoraEntrada(LocalDateTime.now());
+            	    hospedagemHospedeRepository.save(hospedeTitular);
+            	    System.out.println("✅ Titular adicionado ao ativar pré-reserva: " + reserva.getCliente().getNome());
+            	} else {
+            	    System.out.println("ℹ️ Titular já existia em hospedagem_hospedes — mantido.");
+            	}
 
             return ResponseEntity.ok(Map.of(
                 "mensagem", "Pré-reserva #" + id + " ativada com sucesso!",

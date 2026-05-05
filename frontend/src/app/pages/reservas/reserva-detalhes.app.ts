@@ -2656,12 +2656,14 @@ import { environment } from '../../../environments/environment';
     pagFormaPagamento = '';
     pagObs = '';
     formasPagamento = [
-      { codigo: 'DINHEIRO', nome: 'Dinheiro' },
-      { codigo: 'PIX', nome: 'PIX' },
-      { codigo: 'CARTAO_DEBITO', nome: 'Cartão Débito' },
-      { codigo: 'CARTAO_CREDITO', nome: 'Cartão Crédito' },
-      { codigo: 'TRANSFERENCIA_BANCARIA', nome: 'Transferência' }
-    ];
+  { codigo: 'DINHEIRO',              nome: 'Dinheiro' },
+  { codigo: 'PIX',                   nome: 'PIX' },
+  { codigo: 'CARTAO_DEBITO',         nome: 'Cartão Débito' },
+  { codigo: 'CARTAO_CREDITO',        nome: 'Cartão Crédito' },
+  { codigo: 'TRANSFERENCIA_BANCARIA', nome: 'Transferência' },
+  { codigo: 'LINK_PIX',              nome: 'Link Pix' },
+  { codigo: 'LINK_CARTAO',           nome: 'Link Cartão' },
+];
 
     modalAdiantamento = false;
     adiantValor: number = 0;
@@ -2738,11 +2740,28 @@ import { environment } from '../../../environments/environment';
 
     // ✅ Atualizar a cada 30 segundos
     this.intervaloAtualizacao = setInterval(() => {
-      this.carregarReserva(this.reservaId);
-    }, 30000);
+  this.atualizarSilencioso(this.reservaId);
+}, 30000);
   } else {
     this.erro = 'ID da reserva não fornecido';
   }
+}
+
+atualizarSilencioso(id: number): void {
+  this.http.get<ReservaDetalhes>(`/api/reservas/${id}`).subscribe({
+    next: (data) => {
+      if (!this.reserva) return;
+      // ✅ Atualiza só os valores financeiros, sem resetar a tela
+      this.reserva.totalApagar    = data.totalApagar;
+      this.reserva.totalRecebido  = data.totalRecebido;
+      this.reserva.totalHospedagem = data.totalHospedagem;
+      this.reserva.totalDiaria    = data.totalDiaria;
+      this.reserva.totalProduto   = data.totalProduto;
+      this.reserva.extratos       = data.extratos;
+      this.reserva.status         = data.status;
+    },
+    error: () => {} // silencia erros no background
+  });
 }
 
 ngOnDestroy(): void {
