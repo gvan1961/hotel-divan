@@ -71,7 +71,7 @@ import { HttpClient } from '@angular/common/http';
   ⚠️ Este CPF já está cadastrado para outro cliente
 </small>
 </div>  
-</div>
+</div> 
 
          <!-- RESPONSÁVEL — aparece apenas para menores -->
           <div class="form-group responsavel-group" *ngIf="menorDeIdade">
@@ -361,6 +361,15 @@ export class ClienteFormApp implements OnInit {
         autorizadoJantar: data.autorizadoJantar ?? false,
         tipoCliente: data.tipoCliente === 'FUNCIONARIO' ? TipoCliente.FUNCIONARIO : TipoCliente.HOSPEDE
       };
+
+      // ✅ FORMATAR CPF AO CARREGAR
+      if (this.cliente.cpf && this.cliente.cpf.replace(/\D/g, '').length === 11) {
+        const cpf = this.cliente.cpf.replace(/\D/g, '');
+        this.cliente.cpf = cpf.substring(0,3) + '.' +
+                           cpf.substring(3,6) + '.' +
+                           cpf.substring(6,9) + '-' +
+                           cpf.substring(9);
+      }
 
       this.ddi = data.ddi ?? '55';
       this.ddi2 = data.ddi2 ?? '55';

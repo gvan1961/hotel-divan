@@ -191,23 +191,24 @@ export class ClienteListaApp implements OnInit {
 }
 
   carregarPagina(pagina: number): void {
-    this.loading = true;
-    this.http.get<any>(`/api/clientes?page=${pagina}&size=${this.tamanhoPagina}`).subscribe({
-      next: (data) => {
-        this.clientes = data.clientes.sort((a: Cliente, b: Cliente) => 
-          a.nome.localeCompare(b.nome, 'pt-BR'));
-        this.clientesFiltrados = [...this.clientes];
-        this.paginaAtual = data.paginaAtual;
-        this.totalPaginas = data.totalPaginas;
-        this.totalElementos = data.totalElementos;
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error('Erro ao carregar clientes', err);
-        this.loading = false;
-      }
-    });
-  }
+  this.loading = true;
+  this.http.get<any>(`/api/clientes?page=${pagina}&size=${this.tamanhoPagina}`).subscribe({
+    next: (data) => {
+      this.clientes = data.clientes
+        .sort((a: Cliente, b: Cliente) => a.nome.localeCompare(b.nome, 'pt-BR'))
+        .map((c: any) => ({ ...c, cpf: this.formatarCpf(c.cpf) })); // ← adicionar
+      this.clientesFiltrados = [...this.clientes];
+      this.paginaAtual = data.paginaAtual;
+      this.totalPaginas = data.totalPaginas;
+      this.totalElementos = data.totalElementos;
+      this.loading = false;
+    },
+    error: (err) => {
+      console.error('Erro ao carregar clientes', err);
+      this.loading = false;
+    }
+  });
+} 
 
   irParaPagina(pagina: number): void {
     if (pagina >= 0 && pagina < this.totalPaginas) {
@@ -231,7 +232,7 @@ export class ClienteListaApp implements OnInit {
   this.loading = true;
   this.http.get<any[]>(`/api/clientes/buscar?termo=${termoBusca}`).subscribe({
     next: (data) => {
-      this.clientesFiltrados = data;
+      this.clientesFiltrados = data.map((c: any) => ({ ...c, cpf: this.formatarCpf(c.cpf) }));
       this.loading = false;
     },
     error: () => this.loading = false
@@ -250,6 +251,18 @@ export class ClienteListaApp implements OnInit {
     }
   }
 
+  formatarCpf(cpf: string | null | undefined): string {
+  if (!cpf) return '';
+  const numeros = cpf.replace(/\D/g, '');
+  if (numeros.length !== 11) return cpf;
+  return numeros.substring(0,3) + '.' +
+         numeros.substring(3,6) + '.' +
+         numeros.substring(6,9) + '-' +
+         numeros.substring(9);
+}
+
+
+
  filtrarPorEmpresa(): void {
   if (!this.filtroEmpresa) {
     this.carregarPagina(0);
@@ -267,10 +280,12 @@ export class ClienteListaApp implements OnInit {
   }
   // ✅ AQUI — substitua o subscribe existente por este:
   this.http.get<any[]>(`/api/clientes/empresa/${this.filtroEmpresa}`).subscribe({
-    next: (data) => {
-      this.clientesFiltrados = data.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-      this.loading = false;
-    },
+  next: (data) => {
+    this.clientesFiltrados = data
+      .sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR'))
+      .map((c: any) => ({ ...c, cpf: this.formatarCpf(c.cpf) }));
+    this.loading = false;
+  },
     error: () => this.loading = false
   });
 }
