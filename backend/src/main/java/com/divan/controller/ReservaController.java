@@ -12,6 +12,7 @@ import com.divan.entity.ExtratoReserva;
 import com.divan.entity.Diaria;
 import com.divan.entity.TipoApartamento;
 import com.divan.repository.DiariaRepository;
+import com.divan.repository.EmpresaRepository;
 import com.divan.repository.ExtratoReservaRepository;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -65,9 +66,6 @@ public class ReservaController {
 	private ApartamentoRepository apartamentoRepository;
 			
 	@Autowired
-	private DiariaRepository diariaRepository;
-		
-	@Autowired
 	private ExtratoReservaRepository extratoReservaRepository;
 	
 	@Autowired
@@ -96,6 +94,9 @@ public class ReservaController {
     
     @Autowired
     private BilheteSorteioRepository bilheteSorteioRepository;
+    
+    @Autowired
+    private EmpresaRepository empresaRepository;
     
     @PostMapping
     public ResponseEntity<?> criarReserva(@Valid @RequestBody ReservaRequestDTO dto) {
@@ -620,12 +621,39 @@ public class ReservaController {
             if (cadastrarNovo) {
                 Cliente novoCliente = new Cliente();
                 novoCliente.setNome(body.get("nome").toString());
+                novoCliente.setTipoCliente("HOSPEDE");
                 novoCliente.setCpf(body.containsKey("cpf") && body.get("cpf") != null
                     ? body.get("cpf").toString() : null);
                 novoCliente.setCelular(body.containsKey("celular") && body.get("celular") != null
                     ? body.get("celular").toString() : null);
-                novoCliente = clienteRepository.save(novoCliente);
-                hospede.setCliente(novoCliente);
+                novoCliente.setEndereco(body.containsKey("endereco") && body.get("endereco") != null
+                    ? body.get("endereco").toString() : null);
+                novoCliente.setCep(body.containsKey("cep") && body.get("cep") != null
+                    ? body.get("cep").toString() : null);
+                novoCliente.setCidade(body.containsKey("cidade") && body.get("cidade") != null
+                    ? body.get("cidade").toString() : null);
+                novoCliente.setEstado(body.containsKey("estado") && body.get("estado") != null
+                    ? body.get("estado").toString() : null);
+                novoCliente.setCreditoAprovado(body.containsKey("creditoAprovado")
+                    ? Boolean.parseBoolean(body.get("creditoAprovado").toString()) : false);
+                novoCliente.setAutorizadoJantar(body.containsKey("autorizadoJantar")
+                    ? Boolean.parseBoolean(body.get("autorizadoJantar").toString()) : true);
+                novoCliente.setMenorDeIdade(body.containsKey("menorDeIdade")
+                    ? Boolean.parseBoolean(body.get("menorDeIdade").toString()) : false);
+
+                // ✅ VINCULAR EMPRESA
+                if (body.containsKey("empresaId") && body.get("empresaId") != null) {
+                    try {
+                        Long empresaId = Long.parseLong(body.get("empresaId").toString());
+                        empresaRepository.findById(empresaId).ifPresent(emp -> {
+                            novoCliente.setEmpresa(emp);
+                            novoCliente.setCreditoAprovado(true);
+                        });
+                    } catch (NumberFormatException ignored) {}
+                }
+
+                Cliente clienteSalvo = clienteRepository.save(novoCliente);
+                hospede.setCliente(clienteSalvo);
             } else {
                 Long clienteId = Long.parseLong(body.get("clienteId").toString());
                 Cliente cliente = clienteRepository.findById(clienteId)

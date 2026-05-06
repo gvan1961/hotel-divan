@@ -567,7 +567,7 @@ import { environment } from '../../../environments/environment';
                         'btn-finalizar':      (reserva.totalApagar || 0) > 0
                       }"
                       (click)="finalizarCheckout()">
-                {{ (reserva.totalApagar || 0) <= 0 ? '💚 Finalizar Paga à vista' : '✅ Débito em Conta' }}
+                {{ (reserva.totalApagar || 0) <= 0 ? '💚 CheckOut de Pagamento à vista' : '✅ Débito em Conta' }}
               </button>
             </ng-container>
             <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
@@ -747,42 +747,114 @@ import { environment } from '../../../environments/environment';
                 ❌ Nenhum cliente encontrado
               </div>
             </div>
-            <div *ngIf="modoModalHospede === 'cadastrar'" class="modal-tab-content">
-              <div class="form-group">
-                <label>Nome Completo *</label>
-                <input type="text" [(ngModel)]="novoHospede.nome" placeholder="Nome completo do hóspede">
-              </div>
-              <div class="form-group">
-                <label>CPF <small>(opcional)</small></label>
-                <input type="text" [(ngModel)]="novoHospede.cpf" placeholder="000.000.000-00">
-              </div>
-              <div class="form-group">
-                <label>Celular</label>
-                <input type="text" [(ngModel)]="novoHospede.celular" placeholder="(00) 00000-0000">
-              </div>
-              <div class="form-group">
-                <label>🚗 Placa do Carro <small>(opcional)</small></label>
-                <input 
-                  type="text"
-                  [(ngModel)]="novoHospede.placaCarro"
-                  (input)="formatarPlaca()"
-                  placeholder="ABC-1234"
-                  maxlength="8"
-                  style="text-transform: uppercase;"
-                  class="input-placa">
-                <small class="form-text-hint">Formato: ABC-1234 ou ABC-1D23 (Mercosul)</small>
-              </div>
-              <div class="info-cadastro">
-                ℹ️ Somente o nome é obrigatório. CPF é opcional para menores de idade.
-              </div>
-              <button type="button" class="btn-salvar-hospede" (click)="salvarNovoHospede()">
-                ✅ Adicionar Hóspede
-              </button>
-            </div>
-            <button type="button" class="btn-fechar-modal" (click)="fecharModalAdicionarHospede()">✕</button>
-          </div>
-        </div>
+    <div *ngIf="modoModalHospede === 'cadastrar'" class="modal-tab-content">
 
+  <!-- MENOR DE IDADE -->
+  <div class="form-group checkbox-group">
+    <label class="checkbox-label">
+      <input type="checkbox" [(ngModel)]="novoHospede.menorDeIdade" (change)="onNovoHospedeMenorChange()">
+      <span>👶 Menor de Idade (sem CPF)</span>
+    </label>
+  </div>
+
+  <!-- NOME -->
+  <div class="form-group">
+    <label>Nome Completo *</label>
+    <input type="text" [(ngModel)]="novoHospede.nome" placeholder="Nome completo do hóspede">
+  </div>
+
+  <!-- CPF -->
+  <div class="form-group" *ngIf="!novoHospede.menorDeIdade">
+    <label>CPF <small>(opcional)</small></label>
+    <input type="text" [(ngModel)]="novoHospede.cpf" placeholder="000.000.000-00" maxlength="14">
+  </div>
+
+  <!-- CELULAR -->
+  <div class="form-group">
+    <label>Celular</label>
+    <input type="text" [(ngModel)]="novoHospede.celular" placeholder="(00) 00000-0000">
+  </div>
+
+  <!-- DATA DE NASCIMENTO -->
+  <div class="form-group">
+    <label>Data de Nascimento</label>
+    <input type="date" [(ngModel)]="novoHospede.dataNascimento">
+  </div>
+
+  <!-- ENDEREÇO -->
+  <div class="form-group">
+    <label>Endereço</label>
+    <input type="text" [(ngModel)]="novoHospede.endereco" placeholder="Rua, número, bairro">
+  </div>
+
+  <!-- CEP / CIDADE / ESTADO -->
+  <div style="display:flex; gap:10px;">
+    <div class="form-group" style="flex:1">
+      <label>CEP</label>
+      <input type="text" [(ngModel)]="novoHospede.cep" placeholder="00000-000" maxlength="9">
+    </div>
+    <div class="form-group" style="flex:2">
+      <label>Cidade</label>
+      <input type="text" [(ngModel)]="novoHospede.cidade" placeholder="Cidade">
+    </div>
+    <div class="form-group" style="flex:1">
+      <label>Estado</label>
+      <input type="text" [(ngModel)]="novoHospede.estado" placeholder="UF" maxlength="2">
+    </div>
+  </div>
+
+  <!-- EMPRESA -->
+  <div class="form-group">
+    <label>Empresa <small>(opcional)</small></label>
+    <select [(ngModel)]="novoHospede.empresaId">
+      <option [ngValue]="null">Sem empresa</option>
+      <option *ngFor="let emp of empresas" [ngValue]="emp.id">
+        {{ emp.nomeEmpresa }}
+      </option>
+    </select>
+  </div>
+
+  <!-- PLACA -->
+  <div class="form-group">
+    <label>🚗 Placa do Carro <small>(opcional)</small></label>
+    <input 
+      type="text"
+      [(ngModel)]="novoHospede.placaCarro"
+      (input)="formatarPlaca()"
+      placeholder="ABC-1234"
+      maxlength="8"
+      style="text-transform: uppercase;"
+      class="input-placa">
+    <small class="form-text-hint">Formato: ABC-1234 ou ABC-1D23 (Mercosul)</small>
+  </div>
+
+  <!-- CRÉDITO E JANTAR -->
+  <div style="display:flex; gap:20px; flex-wrap:wrap;">
+    <div class="form-group checkbox-group">
+      <label class="checkbox-label">
+        <input type="checkbox" [(ngModel)]="novoHospede.creditoAprovado">
+        <span>✅ Crédito Aprovado</span>
+      </label>
+    </div>
+    <div class="form-group checkbox-group">
+      <label class="checkbox-label">
+        <input type="checkbox" [(ngModel)]="novoHospede.autorizadoJantar">
+        <span>🍽️ Autorizado Jantar</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="info-cadastro">
+    ℹ️ Somente o nome é obrigatório. CPF é opcional para menores de idade.
+  </div>
+
+  <button type="button" class="btn-salvar-hospede" (click)="salvarNovoHospede()">
+    ✅ Adicionar Hóspede
+  </button>
+</div>
+<button type="button" class="btn-fechar-modal" (click)="fecharModalAdicionarHospede()">✕</button>
+</div>
+</div>
         <!-- MODAL ALTERAR CHECKOUT -->
         <div class="modal-overlay" *ngIf="modalAlterarCheckout" (click)="fecharModalAlterarCheckout()">
           <div class="modal-content" (click)="$event.stopPropagation()">
@@ -2641,12 +2713,23 @@ import { environment } from '../../../environments/environment';
   clientesFiltradosModal: any[] = [];
   termoBuscaHospede = '';
 
-  novoHospede = {
-    nome: '',
-    cpf: '',
-    celular: '',
-    placaCarro: ''
-  };
+ novoHospede: any = {
+  nome: '',
+  cpf: '',
+  celular: '',
+  placaCarro: '',
+  dataNascimento: '',
+  endereco: '',
+  cep: '',
+  cidade: '',
+  estado: '',
+  empresaId: null,
+  creditoAprovado: false,
+  autorizadoJantar: true,
+  menorDeIdade: false
+};
+
+  empresas: any[] = [];
 
   hospedes: any[] = [];
 
@@ -2737,6 +2820,7 @@ import { environment } from '../../../environments/environment';
   if (id) {
     this.reservaId = Number(id);
     this.carregarReserva(this.reservaId);
+    this.carregarEmpresas();
 
     // ✅ Atualizar a cada 30 segundos
     this.intervaloAtualizacao = setInterval(() => {
@@ -4648,12 +4732,21 @@ salvarAdiantamento(): void {
     if (!this.reserva) return;
     
     const request = {
-      nome: this.novoHospede.nome,
-      cpf: this.novoHospede.cpf,
-      celular: this.novoHospede.celular,
-      placaCarro: this.novoHospede.placaCarro || null,
-      cadastrarNovo: true
-    };
+  nome: this.novoHospede.nome,
+  cpf: this.novoHospede.menorDeIdade ? null : this.novoHospede.cpf,
+  celular: this.novoHospede.celular,
+  placaCarro: this.novoHospede.placaCarro || null,
+  dataNascimento: this.novoHospede.dataNascimento || null,
+  endereco: this.novoHospede.endereco || null,
+  cep: this.novoHospede.cep || null,
+  cidade: this.novoHospede.cidade || null,
+  estado: this.novoHospede.estado || null,
+  empresaId: this.novoHospede.empresaId || null,
+  creditoAprovado: this.novoHospede.creditoAprovado,
+  autorizadoJantar: this.novoHospede.autorizadoJantar,
+  menorDeIdade: this.novoHospede.menorDeIdade,
+  cadastrarNovo: true
+};
     
     // ✅ CORRIGIDO: Adicionar ( depois de post
     this.http.post(`/api/reservas/${this.reserva.id}/hospedes`, request).subscribe({
@@ -4670,14 +4763,29 @@ salvarAdiantamento(): void {
   }
 
     limparFormularioNovoHospede(): void {
-      this.novoHospede = {
-        nome: '',
-        cpf: '',
-        celular: '',
-        placaCarro: ''
-      };
-    }
-    
+  this.novoHospede = {
+    nome: '',
+    cpf: '',
+    celular: '',
+    placaCarro: '',
+    dataNascimento: '',
+    endereco: '',
+    cep: '',
+    cidade: '',
+    estado: '',
+    empresaId: null,
+    creditoAprovado: false,
+    autorizadoJantar: true,
+    menorDeIdade: false
+  };
+}
+   
+   onNovoHospedeMenorChange(): void {
+  if (this.novoHospede.menorDeIdade) {
+    this.novoHospede.cpf = '';
+  }
+}
+
     /**
    * 🚗 VALIDAR PLACA BRASILEIRA
    */
@@ -5517,6 +5625,14 @@ salvarAdiantamento(): void {
         error: (err) => alert('Erro: ' + (err.error?.erro || err.message))
       });
   }
+
+  carregarEmpresas(): void {
+  this.http.get<any[]>('/api/empresas').subscribe({
+    next: (data) => this.empresas = data.sort((a, b) => 
+      a.nomeEmpresa.localeCompare(b.nomeEmpresa, 'pt-BR')),
+    error: () => {}
+  });
+}
 
   buscarPorPlaca(): void {
     this.resultadoBuscaPlaca = '';
