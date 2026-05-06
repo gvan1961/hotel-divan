@@ -29,15 +29,16 @@ export class FechamentoCaixaComponent implements OnInit {
 vendasDetalhadas: any = null;
 carregandoVendas = false;
 formasPagamentoVendas = [
-  { key: 'DINHEIRO', nome: 'Dinheiro', icone: '💵' },
-  { key: 'PIX', nome: 'PIX', icone: '📱' },
-  { key: 'CARTAO_DEBITO', nome: 'Cartão de Débito', icone: '💳' },
+  { key: 'DINHEIRO',    nome: 'Dinheiro',     icone: '💵' },
+  { key: 'PIX',         nome: 'PIX',          icone: '📱' },
+  { key: 'CARTAO_DEBITO',  nome: 'Cartão de Débito',  icone: '💳' },
   { key: 'CARTAO_CREDITO', nome: 'Cartão de Crédito', icone: '💳' },
-  { key: 'TRANSFERENCIA', nome: 'Transferência', icone: '🏦' },
-  { key: 'FATURADO', nome: 'Faturado', icone: '📄' },
-  { key: 'APARTAMENTO',    nome: 'Apartamento',      icone: '🏨' },
+  { key: 'TRANSFERENCIA',  nome: 'Transferência',      icone: '🏦' },
+  { key: 'FATURADO',    nome: 'Faturado',     icone: '📄' },
+  { key: 'LINK_PIX',    nome: 'Link Pix',     icone: '🔗' },    // ← adicionar
+  { key: 'LINK_CARTAO', nome: 'Link Cartão',  icone: '🔗' },    // ← adicionar
+  { key: 'APARTAMENTO', nome: 'Apartamento',  icone: '🏨' },
 ];
-  
   // Abas
   abaAtiva: string = 'resumo'; // resumo, movimentacao, apartamentos, detalhes
  // resumoCompleto: any = null;
@@ -308,28 +309,29 @@ formatarDataHoraSimples(data: string): string {
   // ✅ MÉTODOS DE CÁLCULO DE TOTAIS
   
   calcularTotalFormasPagamento(): number {
-    if (!this.caixa) return 0;
-    
-    return (
-      (this.caixa.totalDinheiro || 0) +
-      (this.caixa.totalPix || 0) +
-      (this.caixa.totalCartaoDebito || 0) +
-      (this.caixa.totalCartaoCredito || 0) +
-      (this.caixa.totalTransferencia || 0) +
-      (this.caixa.totalFaturado || 0)
-    );
-  }
-
-  calcularTotalRecebidoAVista(): number {
   if (!this.caixa) return 0;
-  
   return (
     (this.caixa.totalDinheiro || 0) +
     (this.caixa.totalPix || 0) +
     (this.caixa.totalCartaoDebito || 0) +
     (this.caixa.totalCartaoCredito || 0) +
-    (this.caixa.totalTransferencia || 0)
-    // ❌ NÃO somar totalFaturado aqui
+    (this.caixa.totalTransferencia || 0) +
+    (this.caixa.totalFaturado || 0) +
+    (this.caixa.totalLinkPix || 0) +      // ← adicionar
+    (this.caixa.totalLinkCartao || 0)     // ← adicionar
+  );
+}
+
+  calcularTotalRecebidoAVista(): number {
+  if (!this.caixa) return 0;
+  return (
+    (this.caixa.totalDinheiro || 0) +
+    (this.caixa.totalPix || 0) +
+    (this.caixa.totalCartaoDebito || 0) +
+    (this.caixa.totalCartaoCredito || 0) +
+    (this.caixa.totalTransferencia || 0) +
+    (this.caixa.totalLinkPix || 0) +      // ← adicionar
+    (this.caixa.totalLinkCartao || 0)     // ← adicionar
   );
 }
   

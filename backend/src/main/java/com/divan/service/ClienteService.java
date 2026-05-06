@@ -35,45 +35,46 @@ public class ClienteService {
     private HospedagemHospedeRepository hospedagemHospedeRepository;
     
     public Cliente salvar(Cliente cliente, Long empresaId, Long responsavelId) {
-    	
-    	// ✅ VALIDAR CPF
+
+        // ✅ 1. LIMPAR CPF — remove pontos e traço
+        if (cliente.getCpf() != null && !cliente.getCpf().isEmpty()) {
+            cliente.setCpf(cliente.getCpf().replaceAll("[^0-9]", ""));
+        }
+
+        // ✅ 2. VALIDAR E VERIFICAR DUPLICATA
         if (cliente.getCpf() != null && !cliente.getCpf().isEmpty()) {
             if (!validarCPF(cliente.getCpf())) {
                 throw new RuntimeException("CPF inválido: " + cliente.getCpf());
             }
-            if (clienteRepository.existsByCpf(cliente.getCpf()) && cliente.getId() == null) {
-                throw new RuntimeException("CPF já cadastrado");
+            Optional<Cliente> existente = clienteRepository.findByCpf(cliente.getCpf());
+            if (existente.isPresent() && !existente.get().getId().equals(cliente.getId())) {
+                throw new RuntimeException("CPF já cadastrado para outro cliente");
             }
         }
-    	
-        if (clienteRepository.existsByCpf(cliente.getCpf()) && cliente.getId() == null) {
-            throw new RuntimeException("CPF já cadastrado");
-        }
-        
-     // Monta celular completo: DDI + número sem formatação
+
+        // ✅ 3. MONTA CELULAR COMPLETO: DDI + número sem formatação
         if (cliente.getDdi() != null && cliente.getCelular() != null) {
             String numeroLimpo = cliente.getCelular().replaceAll("\\D", "");
             cliente.setCelularCompleto(cliente.getDdi() + numeroLimpo);
-        } 
+        }
 
         if (cliente.getDdi2() != null && cliente.getCelular2() != null) {
             String numeroLimpo2 = cliente.getCelular2().replaceAll("\\D", "");
             cliente.setCelular2Completo(cliente.getDdi2() + numeroLimpo2);
         }
-        
-        // Se foi informado ID da empresa, buscar e vincular
+
+        // ✅ 4. VINCULAR EMPRESA E APROVAR CRÉDITO
         if (empresaId != null) {
             Optional<Empresa> empresaOpt = empresaRepository.findById(empresaId);
             if (empresaOpt.isEmpty()) {
                 throw new RuntimeException("Empresa não encontrada");
             }
             cliente.setEmpresa(empresaOpt.get());
-            // ✅ CRÉDITO APROVADO AUTOMATICAMENTE POR VÍNCULO COM EMPRESA
             cliente.setCreditoAprovado(true);
-            System.out.println("✅ Crédito aprovado automaticamente — empresa: " 
+            System.out.println("✅ Crédito aprovado automaticamente — empresa: "
                 + empresaOpt.get().getNomeEmpresa());
         }
-        
+
         return clienteRepository.save(cliente);
     }
     

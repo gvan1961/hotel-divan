@@ -30,9 +30,9 @@ public class Empresa {
     @Column(nullable = false, length = 100)
     private String contato;
     
-    @Pattern(regexp = "\\(\\d{2}\\)\\s\\d{4,5}-\\d{4}", message = "Celular deve estar no formato (XX) XXXXX-XXXX")
-    @Column(nullable = false)
-    private String celular;
+    @Pattern(regexp = "(\\+\\d{1,3}\\s?)?\\(\\d{2}\\)\\s\\d{4,5}-\\d{4}", 
+            message = "Celular deve estar no formato (XX) XXXXX-XXXX")
+   private String celular;
     
     // IMPORTANTE: JsonIgnoreProperties evita o loop infinito
     @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL)

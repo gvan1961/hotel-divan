@@ -61,7 +61,8 @@ public class NotaVenda {
     private Status status;
     
     public enum FormaPagamentoEnum {
-        DINHEIRO, PIX, CARTAO_DEBITO, CARTAO_CREDITO, TRANSFERENCIA_BANCARIA, FATURADO
+        DINHEIRO, PIX, CARTAO_DEBITO, CARTAO_CREDITO, 
+        TRANSFERENCIA_BANCARIA, FATURADO, LINK_PIX, LINK_CARTAO  // ← adicionar
     }
 
 	public Long getId() {

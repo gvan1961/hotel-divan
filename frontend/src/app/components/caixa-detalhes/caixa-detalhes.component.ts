@@ -125,7 +125,15 @@ import { CaixaConsultaService } from '../../services/caixa-consulta.service';
               <span class="forma-label">📄 Faturado:</span>
               <span class="forma-valor">R$ {{ caixa.totalFaturado | number:'1.2-2' }}</span>
             </div>
-          </div>
+              <div class="forma-item">
+    <span class="forma-label">🔗 Link Pix:</span>
+    <span class="forma-valor">R$ {{ caixa.totalLinkPix | number:'1.2-2' }}</span>
+  </div>
+  <div class="forma-item">
+    <span class="forma-label">🔗 Link Cartão:</span>
+    <span class="forma-valor">R$ {{ caixa.totalLinkCartao | number:'1.2-2' }}</span>
+  </div>
+            </div>
         </div>
       </div>
 

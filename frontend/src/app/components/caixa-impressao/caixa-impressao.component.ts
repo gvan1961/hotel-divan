@@ -100,6 +100,15 @@ import { CaixaConsultaService } from '../../services/caixa-consulta.service';
               <td>📄 Faturado:</td>
               <td class="valor">R$ {{ caixa.totalFaturado | number:'1.2-2' }}</td>
             </tr>
+<tr>
+  <td>🔗 Link Pix:</td>
+  <td class="valor">R$ {{ caixa.totalLinkPix | number:'1.2-2' }}</td>
+</tr>
+<tr>
+  <td>🔗 Link Cartão:</td>
+  <td class="valor">R$ {{ caixa.totalLinkCartao | number:'1.2-2' }}</td>
+</tr>
+            
           </table>
         </div>
 

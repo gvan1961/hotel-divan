@@ -99,6 +99,8 @@ export class RelatorioDetalhadoCaixaComponent implements OnInit {
         if (venda.pagamentos.cartaoCredito> 0) pagamentos += `Cre:${this.formatarValor(venda.pagamentos.cartaoCredito)} `;
         if (venda.pagamentos.transferencia> 0) pagamentos += `Transf:${this.formatarValor(venda.pagamentos.transferencia)} `;
         if (venda.pagamentos.faturado     > 0) pagamentos += `Fat:${this.formatarValor(venda.pagamentos.faturado)} `;
+        if (venda.pagamentos.linkPix       > 0) pagamentos += `LPix:${this.formatarValor(venda.pagamentos.linkPix)} `;    // ← adicionar
+        if (venda.pagamentos.linkCartao    > 0) pagamentos += `LCart:${this.formatarValor(venda.pagamentos.linkCartao)} `; // ← adicionar
 
         apartamentosHtml += `
           <div class="apto">
@@ -208,7 +210,8 @@ export class RelatorioDetalhadoCaixaComponent implements OnInit {
         <div class="linha"><span>C. Credito:</span><span>${this.formatarValor(tg.cartaoCredito || 0)}</span></div>
         <div class="linha"><span>Transferencia:</span><span>${this.formatarValor(tg.transferencia || 0)}</span></div>
         <div class="linha"><span>Faturado:</span><span>${this.formatarValor(tg.faturado || 0)}</span></div>
-
+        ${(tg.linkPix    || 0) > 0 ? `<div class="linha"><span>🔗 Link Pix:</span><span>${this.formatarValor(tg.linkPix)}</span></div>` : ''}
+        ${(tg.linkCartao || 0) > 0 ? `<div class="linha"><span>🔗 Link Cartao:</span><span>${this.formatarValor(tg.linkCartao)}</span></div>` : ''}
         <div class="separador">================================</div>
 
         <div class="linha total"><span>TOTAL GERAL:</span><span>${this.formatarValor(tg.total || 0)}</span></div>

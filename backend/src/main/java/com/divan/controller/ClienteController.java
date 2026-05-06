@@ -83,6 +83,19 @@ public class ClienteController {
                       .orElse(ResponseEntity.notFound().build());
     }
     
+    @GetMapping("/cpf/verificar")
+    public ResponseEntity<?> verificarCpfDuplicado(
+            @RequestParam String cpf,
+            @RequestParam(required = false) Long id) {
+
+        Optional<Cliente> existente = clienteRepository.findByCpf(cpf);
+
+        boolean duplicado = existente.isPresent() &&
+                            !existente.get().getId().equals(id);
+
+        return ResponseEntity.ok(Map.of("duplicado", duplicado));
+    }
+    
     @GetMapping("/cpf/{cpf}")
     public ResponseEntity<Cliente> buscarPorCpf(@PathVariable String cpf) {
         Optional<Cliente> cliente = clienteService.buscarPorCpf(cpf);

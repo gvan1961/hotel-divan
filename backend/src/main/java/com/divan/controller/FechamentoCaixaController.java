@@ -142,6 +142,8 @@ public class FechamentoCaixaController {
                     pags.put("cartaoCredito", BigDecimal.ZERO);
                     pags.put("transferencia", BigDecimal.ZERO);
                     pags.put("faturado",      BigDecimal.ZERO);
+                    pags.put("linkPix",       BigDecimal.ZERO);  
+                    pags.put("linkCartao",    BigDecimal.ZERO); 
                     m.put("pagamentos", pags);
                     m.put("total", BigDecimal.ZERO);
                     return m;
@@ -156,6 +158,9 @@ public class FechamentoCaixaController {
                     case CARTAO_CREDITO       -> "cartaoCredito";
                     case TRANSFERENCIA_BANCARIA -> "transferencia";
                     case FATURADO             -> "faturado";
+                    case LINK_PIX    -> "linkPix";
+                    case LINK_CARTAO -> "linkCartao";
+
                     default                   -> null;
                 };
                 if (key != null) pags.merge(key, p.getValor(), BigDecimal::add);
@@ -168,6 +173,8 @@ public class FechamentoCaixaController {
             BigDecimal srDinheiro = BigDecimal.ZERO, srPix = BigDecimal.ZERO,
                        srDebito   = BigDecimal.ZERO, srCredito = BigDecimal.ZERO,
                        srTransf   = BigDecimal.ZERO, srFaturado = BigDecimal.ZERO;
+            BigDecimal srLinkPix    = BigDecimal.ZERO;
+            BigDecimal srLinkCartao = BigDecimal.ZERO;
             for (Pagamento p : pagamentos) {
                 if (p.getFormaPagamento() == null) continue;
                 switch (p.getFormaPagamento()) {
@@ -177,12 +184,15 @@ public class FechamentoCaixaController {
                     case CARTAO_CREDITO       -> srCredito   = srCredito.add(p.getValor());
                     case TRANSFERENCIA_BANCARIA -> srTransf  = srTransf.add(p.getValor());
                     case FATURADO             -> srFaturado  = srFaturado.add(p.getValor());
+                    case LINK_PIX    -> srLinkPix    = srLinkPix.add(p.getValor());
+                    case LINK_CARTAO -> srLinkCartao = srLinkCartao.add(p.getValor());
                     default -> {}
                 }
             }
             BigDecimal srTotal = srDinheiro.add(srPix).add(srDebito)
-                .add(srCredito).add(srTransf).add(srFaturado);
-
+            	    .add(srCredito).add(srTransf).add(srFaturado)
+            	    .add(srLinkPix).add(srLinkCartao);
+            
             Map<String, Object> subtotalReservas = new LinkedHashMap<>();
             subtotalReservas.put("dinheiro",      srDinheiro);
             subtotalReservas.put("pix",           srPix);
@@ -190,6 +200,8 @@ public class FechamentoCaixaController {
             subtotalReservas.put("cartaoCredito", srCredito);
             subtotalReservas.put("transferencia", srTransf);
             subtotalReservas.put("faturado",      srFaturado);
+            subtotalReservas.put("linkPix",    srLinkPix);
+            subtotalReservas.put("linkCartao", srLinkCartao);
             subtotalReservas.put("total",         srTotal);
 
             // === VENDAS AVULSAS PDV ===
@@ -201,6 +213,8 @@ public class FechamentoCaixaController {
             BigDecimal avDinheiro = BigDecimal.ZERO, avPix = BigDecimal.ZERO,
                        avDebito   = BigDecimal.ZERO, avCredito = BigDecimal.ZERO,
                        avTransf   = BigDecimal.ZERO, avFaturado = BigDecimal.ZERO;
+            BigDecimal avLinkPix    = BigDecimal.ZERO;
+            BigDecimal avLinkCartao = BigDecimal.ZERO;
 
             // Vendas faturadas com produtos (para listar no relatório)
             List<Map<String, Object>> vendasAvulsasFaturadas = new ArrayList<>();
@@ -214,6 +228,8 @@ public class FechamentoCaixaController {
                     case CARTAO_CREDITO       -> avCredito  = avCredito.add(nv.getTotal());
                     case TRANSFERENCIA_BANCARIA -> avTransf = avTransf.add(nv.getTotal());
                     case FATURADO             -> avFaturado = avFaturado.add(nv.getTotal());
+                    case LINK_PIX    -> avLinkPix    = avLinkPix.add(nv.getTotal());
+                    case LINK_CARTAO -> avLinkCartao = avLinkCartao.add(nv.getTotal());
                     default -> {}
                 }
 
@@ -262,6 +278,8 @@ public class FechamentoCaixaController {
             totalGeral.put("cartaoCredito", srCredito.add(avCredito));
             totalGeral.put("transferencia", srTransf.add(avTransf));
             totalGeral.put("faturado",      srFaturado.add(avFaturado));
+            totalGeral.put("linkPix",    srLinkPix.add(avLinkPix));
+            totalGeral.put("linkCartao", srLinkCartao.add(avLinkCartao));
             totalGeral.put("total",         srTotal.add(avTotal));
 
             // === MONTAR RESPOSTA ===
@@ -404,7 +422,8 @@ public class FechamentoCaixaController {
         BigDecimal totalCredito  = somarPorForma(pagamentos, Pagamento.FormaPagamentoEnum.CARTAO_CREDITO);
         BigDecimal totalTransf   = somarPorForma(pagamentos, Pagamento.FormaPagamentoEnum.TRANSFERENCIA_BANCARIA);
         BigDecimal totalFaturado = somarPorForma(pagamentos, Pagamento.FormaPagamentoEnum.FATURADO);
-
+        BigDecimal totalLinkPix    = somarPorForma(pagamentos, Pagamento.FormaPagamentoEnum.LINK_PIX);
+        BigDecimal totalLinkCartao = somarPorForma(pagamentos, Pagamento.FormaPagamentoEnum.LINK_CARTAO);
         // === VENDAS AVULSAS DO PDV (VISTA + FATURADO) ===
         List<NotaVenda> vendasAvulsas = notaVendaRepository.findByTipoVendaInAndPeriodo(
             List.of(NotaVenda.TipoVendaEnum.VISTA, NotaVenda.TipoVendaEnum.FATURADO),
@@ -417,6 +436,8 @@ public class FechamentoCaixaController {
         BigDecimal avCredito       = BigDecimal.ZERO;
         BigDecimal avTransferencia = BigDecimal.ZERO;
         BigDecimal avFaturado      = BigDecimal.ZERO;
+        BigDecimal avLinkPix    = BigDecimal.ZERO;
+        BigDecimal avLinkCartao = BigDecimal.ZERO;
 
         for (NotaVenda nv : vendasAvulsas) {
             if (nv.getTotal() == null || nv.getFormaPagamento() == null) continue;
@@ -427,6 +448,8 @@ public class FechamentoCaixaController {
                 case CARTAO_CREDITO       -> avCredito       = avCredito.add(nv.getTotal());
                 case TRANSFERENCIA_BANCARIA -> avTransferencia = avTransferencia.add(nv.getTotal());
                 case FATURADO             -> avFaturado      = avFaturado.add(nv.getTotal());
+                case LINK_PIX    -> avLinkPix    = avLinkPix.add(nv.getTotal());
+                case LINK_CARTAO -> avLinkCartao = avLinkCartao.add(nv.getTotal());
                 default -> {}
             }
         }
@@ -441,8 +464,13 @@ public class FechamentoCaixaController {
         BigDecimal gtCredito  = totalCredito.add(avCredito);
         BigDecimal gtTransf   = totalTransf.add(avTransferencia);
         BigDecimal gtFaturado = totalFaturado.add(avFaturado);
+        BigDecimal gtLinkPix    = totalLinkPix.add(avLinkPix);
+        BigDecimal gtLinkCartao = totalLinkCartao.add(avLinkCartao);
+
+        
         BigDecimal gtTotal    = gtDinheiro.add(gtPix).add(gtDebito)
-            .add(gtCredito).add(gtTransf).add(gtFaturado);
+            .add(gtCredito).add(gtTransf).add(gtFaturado)
+            .add(gtLinkPix).add(gtLinkCartao);
 
         // === MAPA DE VENDAS AVULSAS (para o frontend) ===
         Map<String, Object> vendasAvulsasMap = new LinkedHashMap<>();
@@ -452,6 +480,9 @@ public class FechamentoCaixaController {
         vendasAvulsasMap.put("cartaoCredito", avCredito);
         vendasAvulsasMap.put("transferencia", avTransferencia);
         vendasAvulsasMap.put("faturado",      avFaturado);
+        vendasAvulsasMap.put("linkPix",    avLinkPix);
+        vendasAvulsasMap.put("linkCartao", avLinkCartao);
+
         vendasAvulsasMap.put("total",         avTotal);
 
         Map<String, Object> dto = new HashMap<>();
@@ -470,6 +501,8 @@ public class FechamentoCaixaController {
         dto.put("totalCartaoDebito",   gtDebito);
         dto.put("totalCartaoCredito",  gtCredito);
         dto.put("totalTransferencia",  gtTransf);
+        dto.put("totalLinkPix",    gtLinkPix);
+        dto.put("totalLinkCartao", gtLinkCartao);
         dto.put("totalFaturado",       gtFaturado);
         dto.put("totalLiquido",        gtTotal);
         dto.put("totalBruto",          gtTotal);

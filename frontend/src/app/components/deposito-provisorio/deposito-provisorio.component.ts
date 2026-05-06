@@ -10,11 +10,17 @@ import { environment } from '../../../environments/environment';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-  <!-- Botão flutuante -->
-  <div class="btn-deposito" (click)="abrirModal()" [class.tem-itens]="deposito && (deposito.itens?.length ?? 0) > 0" title="Depósito Provisório">
-    <span class="icone">📦</span>
-    <span class="badge" *ngIf="totalPendente > 0">{{ totalPendente }}</span>
-  </div>
+  <div class="btn-deposito"
+     (click)="onBtnClick()"
+     (mousedown)="iniciarDrag($event)"
+     (touchstart)="iniciarDragTouch($event)"
+     [class.tem-itens]="deposito && (deposito.itens?.length ?? 0) > 0"
+     [style.bottom]="posY + 'px'"
+     [style.right]="posX + 'px'"
+     title="Depósito Provisório (arraste para mover)">
+  <span class="icone">📦</span>
+  <span class="badge" *ngIf="totalPendente > 0">{{ totalPendente }}</span>
+</div>
 
   <!-- Modal principal -->
   <div class="modal-overlay" *ngIf="modalAberto" (click)="fecharModal()">
@@ -180,21 +186,22 @@ import { environment } from '../../../environments/environment';
 `,
   styles: [`
   .btn-deposito {
-    position: fixed;
-    bottom: 28px;
-    right: 28px;
-    width: 64px;
-    height: 64px;
-    background: #1565c0;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
-    z-index: 1000;
-    transition: background 0.2s;
-  }
+  position: fixed;
+  width: 64px;
+  height: 64px;
+  background: #1565c0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  z-index: 1000;
+  transition: background 0.2s;
+  user-select: none;
+  touch-action: none; /* ← importante para tablet */
+}
+.btn-deposito:active { cursor: grabbing; }
   .btn-deposito.tem-itens { background: #e65100; }
   .btn-deposito:hover { filter: brightness(1.15); }
   .icone { font-size: 28px; }
@@ -364,6 +371,11 @@ export class DepositoProvisorioComponent implements OnInit {
 
   termoCodigo = '';
 
+  posX = 28;
+posY = 28;
+private arrastando = false;
+private moveu = false;
+
 
   constructor(
     private service: DepositoProvisorioService,
@@ -371,8 +383,79 @@ export class DepositoProvisorioComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.carregarDeposito();
+  this.carregarDeposito();
+  this.carregarPosicao();
+}
+
+carregarPosicao(): void {
+  const salvo = localStorage.getItem('deposito-btn-pos');
+  if (salvo) {
+    const pos = JSON.parse(salvo);
+    this.posX = pos.x;
+    this.posY = pos.y;
   }
+}
+
+iniciarDrag(event: MouseEvent): void {
+  this.arrastando = true;
+  this.moveu = false;
+  event.preventDefault();
+
+  const mover = (e: MouseEvent) => {
+    this.moveu = true;
+    // Calcula posição a partir da direita e de baixo
+    this.posX = window.innerWidth - e.clientX - 32;
+    this.posY = window.innerHeight - e.clientY - 32;
+
+    // Limites para não sair da tela
+    this.posX = Math.max(8, Math.min(this.posX, window.innerWidth - 72));
+    this.posY = Math.max(8, Math.min(this.posY, window.innerHeight - 72));
+  };
+
+  const soltar = () => {
+    this.arrastando = false;
+    localStorage.setItem('deposito-btn-pos', 
+      JSON.stringify({ x: this.posX, y: this.posY }));
+    window.removeEventListener('mousemove', mover);
+    window.removeEventListener('mouseup', soltar);
+  };
+
+  window.addEventListener('mousemove', mover);
+  window.addEventListener('mouseup', soltar);
+}
+
+iniciarDragTouch(event: TouchEvent): void {
+  this.moveu = false;
+  event.preventDefault();
+
+  const mover = (e: TouchEvent) => {
+    const touch = e.touches[0];
+    this.moveu = true;
+    this.posX = window.innerWidth - touch.clientX - 32;
+    this.posY = window.innerHeight - touch.clientY - 32;
+
+    // Limites para não sair da tela
+    this.posX = Math.max(8, Math.min(this.posX, window.innerWidth - 72));
+    this.posY = Math.max(8, Math.min(this.posY, window.innerHeight - 72));
+  };
+
+  const soltar = () => {
+    localStorage.setItem('deposito-btn-pos',
+      JSON.stringify({ x: this.posX, y: this.posY }));
+    window.removeEventListener('touchmove', mover);
+    window.removeEventListener('touchend', soltar);
+  };
+
+  window.addEventListener('touchmove', mover, { passive: false });
+  window.addEventListener('touchend', soltar);
+}
+
+// ✅ Só abre o modal se não arrastou
+onBtnClick(): void {
+  if (!this.moveu) {
+    this.abrirModal();
+  }
+}
 
   @HostListener('window:keydown', ['$event'])
 onKeyDown(event: KeyboardEvent): void {

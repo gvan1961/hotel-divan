@@ -24,6 +24,8 @@ export interface FechamentoCaixaDTO {
   totalCartaoCredito: number;
   totalTransferencia: number;
   totalFaturado: number;
+  totalLinkPix: number;    
+  totalLinkCartao: number; 
   
   quantidadeCheckins: number;
   quantidadeCheckouts: number;

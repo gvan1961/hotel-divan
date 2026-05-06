@@ -57,14 +57,21 @@ import { HttpClient } from '@angular/common/http';
             </div>
 
             <!-- CPF — oculto para menores -->
-            <div class="form-group" *ngIf="!menorDeIdade">
-              <label>CPF *</label>
-              <input type="text" [(ngModel)]="cliente.cpf" name="cpf"
-                     [required]="!menorDeIdade"
-                     (input)="formatarCpf()" maxlength="14"
-                     placeholder="000.000.000-00" />
-            </div>
-          </div>
+           <div class="form-group" *ngIf="!menorDeIdade">
+  <label>CPF *</label>
+  <input type="text" [(ngModel)]="cliente.cpf" name="cpf"
+         [required]="!menorDeIdade"
+         (input)="formatarCpf()" maxlength="14"
+         placeholder="000.000.000-00"
+         [class.input-erro]="cpfInvalido" />
+  <small *ngIf="cpfInvalido" style="color: red; margin-top: 4px; display: block;">
+    ⚠️ CPF inválido — verifique os dígitos
+  </small>
+  <small *ngIf="cpfDuplicado" style="color: red; margin-top: 4px; display: block;">
+  ⚠️ Este CPF já está cadastrado para outro cliente
+</small>
+</div>  
+</div>
 
          <!-- RESPONSÁVEL — aparece apenas para menores -->
           <div class="form-group responsavel-group" *ngIf="menorDeIdade">
@@ -255,6 +262,10 @@ import { HttpClient } from '@angular/common/http';
     .btn-save:hover:not(:disabled) { background: #5568d3; }
     .btn-save:disabled { background: #ccc; cursor: not-allowed; }
     @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
+    .input-erro {
+  border-color: #f44336 !important;
+  background-color: #fff5f5;
+}
   `]
 })
 export class ClienteFormApp implements OnInit {
@@ -310,6 +321,10 @@ export class ClienteFormApp implements OnInit {
   errorMessage = '';
   isEdit = false;
   clienteId?: number;
+
+  cpfInvalido = false;
+  cpfDuplicado = false;
+
 
   ngOnInit(): void {
     this.carregarEmpresas();
@@ -483,14 +498,77 @@ export class ClienteFormApp implements OnInit {
     this.cliente.cep = cep;
   }
 
-  formatarCpf(): void {
-    if (!this.cliente.cpf) return;
-    let cpf = this.cliente.cpf.replace(/\D/g, '');
-    if (cpf.length > 3) cpf = cpf.substring(0, 3) + '.' + cpf.substring(3);
-    if (cpf.length > 7) cpf = cpf.substring(0, 7) + '.' + cpf.substring(7);
-    if (cpf.length > 11) cpf = cpf.substring(0, 11) + '-' + cpf.substring(11, 13);
-    this.cliente.cpf = cpf;
+ formatarCpf(): void {
+  if (!this.cliente.cpf) {
+    this.cpfInvalido = false;
+    this.cpfDuplicado = false;
+    return;
   }
+
+  // ✅ Pega só números
+  let numeros = this.cliente.cpf.replace(/\D/g, '');
+  if (numeros.length > 11) numeros = numeros.substring(0, 11);
+
+  // ✅ Aplica máscara usando substring
+  let cpf = numeros;
+  if (numeros.length > 9) {
+    cpf = numeros.substring(0, 3) + '.' +
+          numeros.substring(3, 6) + '.' +
+          numeros.substring(6, 9) + '-' +
+          numeros.substring(9);
+  } else if (numeros.length > 6) {
+    cpf = numeros.substring(0, 3) + '.' +
+          numeros.substring(3, 6) + '.' +
+          numeros.substring(6);
+  } else if (numeros.length > 3) {
+    cpf = numeros.substring(0, 3) + '.' +
+          numeros.substring(3);
+  }
+
+  this.cliente.cpf = cpf;
+
+  // ✅ Validar só quando completar 11 dígitos
+  if (numeros.length === 11) {
+    this.cpfInvalido = !this.isCpfValido(numeros);
+
+    // ✅ Se formato válido, verificar duplicata no backend
+    if (!this.cpfInvalido) {
+      this.verificarCpfDuplicado(numeros);
+    }
+  } else {
+    this.cpfInvalido = false;
+    this.cpfDuplicado = false;
+  }
+}
+
+verificarCpfDuplicado(cpf: string): void {
+  const id = this.isEdit ? this.clienteId : null;
+  const url = id 
+    ? `/api/clientes/cpf/verificar?cpf=${cpf}&id=${id}`
+    : `/api/clientes/cpf/verificar?cpf=${cpf}`;
+    
+  this.http.get<any>(url).subscribe({
+    next: (res) => {
+      this.cpfDuplicado = res.duplicado;
+    },
+    error: () => {
+      this.cpfDuplicado = false;
+    }
+  });
+}
+
+isCpfValido(cpf: string): boolean {
+  if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+  let soma = 0;
+  for (let i = 0; i < 9; i++) soma += parseInt(cpf[i]) * (10 - i);
+  let dig1 = 11 - (soma % 11);
+  if (dig1 >= 10) dig1 = 0;
+  soma = 0;
+  for (let i = 0; i < 10; i++) soma += parseInt(cpf[i]) * (11 - i);
+  let dig2 = 11 - (soma % 11);
+  if (dig2 >= 10) dig2 = 0;
+  return parseInt(cpf[9]) === dig1 && parseInt(cpf[10]) === dig2;
+}
 
   formatarCelular(): void {
     if (!this.cliente.celular) return;

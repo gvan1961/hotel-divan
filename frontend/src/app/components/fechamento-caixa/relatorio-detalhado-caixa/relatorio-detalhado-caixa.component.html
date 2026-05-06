@@ -102,44 +102,63 @@
               <span class="pagamento-icon">📄</span>
               <span class="pagamento-nome">Faturado</span>
               <span class="pagamento-valor">{{ formatarMoeda(venda.pagamentos.faturado) }}</span>
-            </div>
+            </div>  
+            <div class="pagamento-item" *ngIf="venda.pagamentos.linkPix > 0">
+  <span class="pagamento-icon">🔗</span>
+  <span class="pagamento-nome">Link Pix</span>
+  <span class="pagamento-valor">{{ formatarMoeda(venda.pagamentos.linkPix) }}</span>
+</div>
+<div class="pagamento-item" *ngIf="venda.pagamentos.linkCartao > 0">
+  <span class="pagamento-icon">🔗</span>
+  <span class="pagamento-nome">Link Cartão</span>
+  <span class="pagamento-valor">{{ formatarMoeda(venda.pagamentos.linkCartao) }}</span>
+</div>         
           </div>
         </div>
 
         <!-- SUBTOTAL RESERVAS -->
         <div class="subtotal-box">
-          <h3>📊 SUBTOTAL RESERVAS</h3>
-          <div class="subtotal-grid">
-            <div class="subtotal-item">
-              <span>💵 Dinheiro:</span>
-              <strong>{{ formatarMoeda(relatorio.subtotalReservas.dinheiro) }}</strong>
-            </div>
-            <div class="subtotal-item">
-              <span>📱 PIX:</span>
-              <strong>{{ formatarMoeda(relatorio.subtotalReservas.pix) }}</strong>
-            </div>
-            <div class="subtotal-item">
-              <span>💳 C. Débito:</span>
-              <strong>{{ formatarMoeda(relatorio.subtotalReservas.cartaoDebito) }}</strong>
-            </div>
-            <div class="subtotal-item">
-              <span>💳 C. Crédito:</span>
-              <strong>{{ formatarMoeda(relatorio.subtotalReservas.cartaoCredito) }}</strong>
-            </div>
-            <div class="subtotal-item">
-              <span>🏦 Transferência:</span>
-              <strong>{{ formatarMoeda(relatorio.subtotalReservas.transferencia) }}</strong>
-            </div>
-            <div class="subtotal-item">
-              <span>📄 Faturado:</span>
-              <strong>{{ formatarMoeda(relatorio.subtotalReservas.faturado) }}</strong>
-            </div>
-          </div>
-          <div class="subtotal-total">
-            <span>TOTAL:</span>
-            <strong>{{ formatarMoeda(relatorio.subtotalReservas.total) }}</strong>
-          </div>
-        </div>
+  <h3>📊 SUBTOTAL RESERVAS</h3>
+  <div class="subtotal-grid">
+    <div class="subtotal-item">
+      <span>💵 Dinheiro:</span>
+      <strong>{{ formatarMoeda(relatorio.subtotalReservas.dinheiro) }}</strong>
+    </div>
+    <div class="subtotal-item">
+      <span>📱 PIX:</span>
+      <strong>{{ formatarMoeda(relatorio.subtotalReservas.pix) }}</strong>
+    </div>
+    <div class="subtotal-item">
+      <span>💳 C. Débito:</span>
+      <strong>{{ formatarMoeda(relatorio.subtotalReservas.cartaoDebito) }}</strong>
+    </div>
+    <div class="subtotal-item">
+      <span>💳 C. Crédito:</span>
+      <strong>{{ formatarMoeda(relatorio.subtotalReservas.cartaoCredito) }}</strong>
+    </div>
+    <div class="subtotal-item">
+      <span>🏦 Transferência:</span>
+      <strong>{{ formatarMoeda(relatorio.subtotalReservas.transferencia) }}</strong>
+    </div>
+    <div class="subtotal-item">
+      <span>📄 Faturado:</span>
+      <strong>{{ formatarMoeda(relatorio.subtotalReservas.faturado) }}</strong>
+    </div>
+    <!-- ✅ ADICIONAR AQUI -->
+    <div class="subtotal-item" *ngIf="relatorio.subtotalReservas.linkPix > 0">
+      <span>🔗 Link Pix:</span>
+      <strong>{{ formatarMoeda(relatorio.subtotalReservas.linkPix) }}</strong>
+    </div>
+    <div class="subtotal-item" *ngIf="relatorio.subtotalReservas.linkCartao > 0">
+      <span>🔗 Link Cartão:</span>
+      <strong>{{ formatarMoeda(relatorio.subtotalReservas.linkCartao) }}</strong>
+    </div>
+  </div>
+  <div class="subtotal-total">
+    <span>TOTAL:</span>
+    <strong>{{ formatarMoeda(relatorio.subtotalReservas.total) }}</strong>
+  </div>
+</div>
 
       </div>
     </div>
@@ -217,7 +236,16 @@
             <span>📄 Faturado:</span>
             <strong>{{ formatarMoeda(relatorio.vendasAvulsas.faturado) }}</strong>
           </div>
+          <div class="subtotal-item" *ngIf="relatorio.vendasAvulsas.linkPix > 0">
+            <span>🔗 Link Pix:</span>
+            <strong>{{ formatarMoeda(relatorio.vendasAvulsas.linkPix) }}</strong>
+          </div>
+          <div class="subtotal-item" *ngIf="relatorio.vendasAvulsas.linkCartao > 0">
+            <span>🔗 Link Cartão:</span>
+            <strong>{{ formatarMoeda(relatorio.vendasAvulsas.linkCartao) }}</strong>
+          </div>
         </div>
+       
         <div class="subtotal-total">
           <span>TOTAL:</span>
           <strong>{{ formatarMoeda(relatorio.vendasAvulsas.total) }}</strong>
@@ -229,60 +257,75 @@
     <!-- ═══════════════════════════════════════════ -->
     <!-- RESUMO GERAL DO CAIXA                      -->
     <!-- ═══════════════════════════════════════════ -->
-    <div class="total-geral-box">
-      <h2>💰 RESUMO GERAL DO CAIXA</h2>
-      <p class="alerta-cobranca">⚠️ Valores a cobrar do recepcionista:</p>
+   <div class="total-geral-box">
+  <h2>💰 RESUMO GERAL DO CAIXA</h2>
+  <p class="alerta-cobranca">⚠️ Valores a cobrar do recepcionista:</p>
 
-      <div class="total-geral-grid">
-        <div class="total-item destaque-dinheiro">
-          <span class="total-icon">💵</span>
-          <div class="total-info">
-            <span class="total-nome">DINHEIRO</span>
-            <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.dinheiro) }}</span>
-          </div>
-        </div>
-        <div class="total-item">
-          <span class="total-icon">📱</span>
-          <div class="total-info">
-            <span class="total-nome">PIX</span>
-            <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.pix) }}</span>
-          </div>
-        </div>
-        <div class="total-item">
-          <span class="total-icon">💳</span>
-          <div class="total-info">
-            <span class="total-nome">CARTÃO DÉBITO</span>
-            <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.cartaoDebito) }}</span>
-          </div>
-        </div>
-        <div class="total-item">
-          <span class="total-icon">💳</span>
-          <div class="total-info">
-            <span class="total-nome">CARTÃO CRÉDITO</span>
-            <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.cartaoCredito) }}</span>
-          </div>
-        </div>
-        <div class="total-item">
-          <span class="total-icon">🏦</span>
-          <div class="total-info">
-            <span class="total-nome">TRANSFERÊNCIA</span>
-            <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.transferencia) }}</span>
-          </div>
-        </div>
-        <div class="total-item">
-          <span class="total-icon">📄</span>
-          <div class="total-info">
-            <span class="total-nome">FATURADO</span>
-            <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.faturado) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="total-final">
-        <span>TOTAL GERAL:</span>
-        <strong>{{ formatarMoeda(relatorio.totalGeral.total) }}</strong>
+  <div class="total-geral-grid">
+    <div class="total-item destaque-dinheiro">
+      <span class="total-icon">💵</span>
+      <div class="total-info">
+        <span class="total-nome">DINHEIRO</span>
+        <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.dinheiro) }}</span>
       </div>
     </div>
+    <div class="total-item">
+      <span class="total-icon">📱</span>
+      <div class="total-info">
+        <span class="total-nome">PIX</span>
+        <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.pix) }}</span>
+      </div>
+    </div>
+    <div class="total-item">
+      <span class="total-icon">💳</span>
+      <div class="total-info">
+        <span class="total-nome">CARTÃO DÉBITO</span>
+        <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.cartaoDebito) }}</span>
+      </div>
+    </div>
+    <div class="total-item">
+      <span class="total-icon">💳</span>
+      <div class="total-info">
+        <span class="total-nome">CARTÃO CRÉDITO</span>
+        <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.cartaoCredito) }}</span>
+      </div>
+    </div>
+    <div class="total-item">
+      <span class="total-icon">🏦</span>
+      <div class="total-info">
+        <span class="total-nome">TRANSFERÊNCIA</span>
+        <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.transferencia) }}</span>
+      </div>
+    </div>
+    <div class="total-item">
+      <span class="total-icon">📄</span>
+      <div class="total-info">
+        <span class="total-nome">FATURADO</span>
+        <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.faturado) }}</span>
+      </div>
+    </div>
+    <!-- ✅ LINK PIX E LINK CARTÃO -->
+    <div class="total-item" *ngIf="(relatorio.totalGeral.linkPix || 0) > 0">
+      <span class="total-icon">🔗</span>
+      <div class="total-info">
+        <span class="total-nome">LINK PIX</span>
+        <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.linkPix) }}</span>
+      </div>
+    </div>
+    <div class="total-item" *ngIf="(relatorio.totalGeral.linkCartao || 0) > 0">
+      <span class="total-icon">🔗</span>
+      <div class="total-info">
+        <span class="total-nome">LINK CARTÃO</span>
+        <span class="total-valor">{{ formatarMoeda(relatorio.totalGeral.linkCartao) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="total-final">
+    <span>TOTAL GERAL:</span>
+    <strong>{{ formatarMoeda(relatorio.totalGeral.total) }}</strong>
+  </div>
+</div>
 
   </div>
 

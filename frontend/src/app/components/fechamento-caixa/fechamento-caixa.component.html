@@ -166,6 +166,21 @@
               <span class="forma-valor">R$ {{ formatarMoeda(caixa.totalTransferencia) }}</span>
             </div>
           </div>
+
+          <div class="forma-item" *ngIf="(caixa.totalLinkPix || 0) > 0">
+  <div class="forma-icon">🔗</div>
+  <div class="forma-info">
+    <span class="forma-label">Link Pix</span>
+    <span class="forma-valor">R$ {{ formatarMoeda(caixa.totalLinkPix) }}</span>
+  </div>
+</div>
+        <div class="forma-item" *ngIf="(caixa.totalLinkCartao || 0) > 0">
+  <div class="forma-icon">🔗</div>
+  <div class="forma-info">
+    <span class="forma-label">Link Cartão</span>
+    <span class="forma-valor">R$ {{ formatarMoeda(caixa.totalLinkCartao) }}</span>
+  </div>
+</div>
           
         </div>
         

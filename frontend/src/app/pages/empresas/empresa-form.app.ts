@@ -288,49 +288,52 @@ export class EmpresaFormApp implements OnInit {
   }
 
   salvar(): void {
-    if (!this.validarFormulario()) {
-      return;
-    }
-
-    this.loading = true;
-    this.errorMessage = '';
-
-    const empresaRequest: EmpresaRequest = {
-      nomeEmpresa: this.empresa.nomeEmpresa,
-      cnpj: this.empresa.cnpj,
-      contato: this.empresa.contato,
-      celular: this.empresa.celular,
-      contatoFinanceiroNome: this.empresa.contatoFinanceiroNome || undefined,
-      contatoFinanceiroDdi: this.empresa.contatoFinanceiroDdi || undefined,
-      contatoFinanceiroCelular: this.empresa.contatoFinanceiroCelular || undefined
-    };
-
-    console.log('📤 Enviando empresa:', empresaRequest);
-
-    const request = this.isEdit
-      ? this.empresaService.update(this.empresaId!, empresaRequest)
-      : this.empresaService.create(empresaRequest);
-
-    request.subscribe({
-      next: () => {
-        console.log('✅ Empresa salva com sucesso!');
-        this.router.navigate(['/empresas']);
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('❌ ERRO COMPLETO:', err);
-        console.error('   Status:', err.status);
-        console.error('   Mensagem:', err.error);
-        
-        if (err.status === 401 || err.status === 403) {
-          this.errorMessage = 'Acesso não autorizado. Verifique suas permissões.';
-        } else {
-          this.errorMessage = err.error?.message || 'Erro ao salvar empresa';
-        }
-      }
-    });
+  if (!this.validarFormulario()) {
+    return;
   }
 
+  this.loading = true;
+  this.errorMessage = '';
+
+  // ✅ Remover DDI do celular antes de enviar
+  let celularLimpo = this.empresa.celular || '';
+  celularLimpo = celularLimpo.replace(/^\+\d{1,3}\s?/, '').trim();
+
+  const empresaRequest: EmpresaRequest = {
+    nomeEmpresa: this.empresa.nomeEmpresa,
+    cnpj: this.empresa.cnpj,
+    contato: this.empresa.contato,
+    celular: celularLimpo,  // ← usa o celular sem DDI
+    contatoFinanceiroNome: this.empresa.contatoFinanceiroNome || undefined,
+    contatoFinanceiroDdi: this.empresa.contatoFinanceiroDdi || undefined,
+    contatoFinanceiroCelular: this.empresa.contatoFinanceiroCelular || undefined
+  };
+
+  console.log('📤 Enviando empresa:', empresaRequest);
+
+  const request = this.isEdit
+    ? this.empresaService.update(this.empresaId!, empresaRequest)
+    : this.empresaService.create(empresaRequest);
+
+  request.subscribe({
+    next: () => {
+      console.log('✅ Empresa salva com sucesso!');
+      this.router.navigate(['/empresas']);
+    },
+    error: (err) => {
+      this.loading = false;
+      console.error('❌ ERRO COMPLETO:', err);
+      console.error('   Status:', err.status);
+      console.error('   Mensagem:', err.error);
+      
+      if (err.status === 401 || err.status === 403) {
+        this.errorMessage = 'Acesso não autorizado. Verifique suas permissões.';
+      } else {
+        this.errorMessage = err.error?.message || 'Erro ao salvar empresa';
+      }
+    }
+  });
+}
   validarFormulario(): boolean {
     if (!this.empresa.nomeEmpresa || !this.empresa.cnpj || 
         !this.empresa.contato || !this.empresa.celular) {
@@ -364,22 +367,18 @@ export class EmpresaFormApp implements OnInit {
   }
 
   formatarCelular(): void {
-    if (!this.empresa.celular) return;
-    
-    let celular = this.empresa.celular.replace(/\D/g, '');
-    
-    if (celular.length > 0) {
-      celular = '(' + celular;
-    }
-    if (celular.length > 3) {
-      celular = celular.substring(0, 3) + ') ' + celular.substring(3);
-    }
-    if (celular.length > 10) {
-      celular = celular.substring(0, 10) + '-' + celular.substring(10, 14);
-    }
-    
-    this.empresa.celular = celular;
-  }
+  if (!this.empresa.celular) return;
+
+  // ✅ Remove DDI antes de formatar
+  let celular = this.empresa.celular.replace(/^\+\d{1,3}\s?/, '');
+  celular = celular.replace(/\D/g, '');
+
+  if (celular.length > 0) celular = '(' + celular;
+  if (celular.length > 3) celular = celular.substring(0, 3) + ') ' + celular.substring(3);
+  if (celular.length > 10) celular = celular.substring(0, 10) + '-' + celular.substring(10, 14);
+
+  this.empresa.celular = celular;
+}
 
   formatarCelularFinanceiro(): void {
     if (!this.empresa.contatoFinanceiroCelular) return;
