@@ -1097,6 +1097,23 @@ motivoCancelamento = '';
     this.voltarParaHoje();
   }
 
+  verDetalhesReserva(): void {
+  if (!this.reservaSelecionada) {
+    alert('❌ Erro: Nenhuma reserva selecionada');
+    return;
+  }
+
+  const reservaId = this.reservaSelecionada.id;
+
+  setTimeout(() => {
+    this.fecharModal();
+  }, 100);
+
+  setTimeout(() => {
+    this.router.navigate(['/reservas', reservaId]);
+  }, 200);
+}
+
   voltarParaHoje(): void {
   // ✅ Usar data LOCAL (não UTC)
   const agora = new Date();
@@ -1485,18 +1502,11 @@ getPosicaoNaReserva(apt: ApartamentoMapa, data: string): string {
 
   console.log('✅ Não há reserva nesta data específica');
 
-  // ✅ 2. VERIFICAR SE O APARTAMENTO ESTÁ EM MANUTENÇÃO OU INDISPONÍVEL
-  if (this.apartamentoSelecionado.status === 'MANUTENCAO') {
-    console.log('❌ Apartamento em MANUTENÇÃO');
-    console.log('═══════════════════════════════════════');
-    return false;
-  }
-
   if (this.apartamentoSelecionado.status === 'INDISPONIVEL') {
-    console.log('❌ Apartamento INDISPONÍVEL');
-    console.log('═══════════════════════════════════════');
-    return false;
-  }
+  console.log('❌ Apartamento INDISPONÍVEL');
+  console.log('═══════════════════════════════════════');
+  return false;
+}
 
   console.log('✅ Status do apartamento permite reserva');
 
@@ -1522,94 +1532,65 @@ getPosicaoNaReserva(apt: ApartamentoMapa, data: string): string {
   return true;
 }
 
-  criarNovaReserva(): void {
-    console.log('═══════════════════════════════════════');
-    console.log('➕ CRIAR NOVA RESERVA - INICIANDO');
-    
-    const apartamentoId = this.apartamentoSelecionado?.id;
-    const apartamentoNumero = this.apartamentoSelecionado?.numeroApartamento;
-    const dataCheckin = this.dataSelecionada;
+ criarNovaReserva(): void {
+  console.log('═══════════════════════════════════════');
+  console.log('➕ CRIAR NOVA RESERVA - INICIANDO');
+  
+  const apartamentoId = this.apartamentoSelecionado?.id;
+  const apartamentoNumero = this.apartamentoSelecionado?.numeroApartamento;
+  const dataCheckin = this.dataSelecionada;
+  const statusApartamento = this.apartamentoSelecionado?.status;
 
-    console.log('📋 Valores capturados:');
-    console.log('   Apartamento ID:', apartamentoId);
-    console.log('   Apartamento Nº:', apartamentoNumero);
-    console.log('   Data:', dataCheckin);
-
-    if (!apartamentoId || !dataCheckin) {
-      console.error('❌ ERRO: Dados incompletos!');
-      alert('❌ Erro: Dados incompletos para criar a reserva');
-      return;
-    }
-
-    const queryParams = {
-      apartamentoId: apartamentoId.toString(),
-      dataCheckin: dataCheckin,
-      bloqueado: 'true'
-    };
-
-    console.log('📤 Query Params:', queryParams);
-    console.log('🔒 Fechando modal...');
-    this.fecharModal();
-
-    console.log('🚀 Navegando para /reservas/novo...');
-    
-    setTimeout(() => {
-      this.router.navigate(['/reservas/novo'], {
-        queryParams: queryParams
-      }).then(
-        (success) => {
-          console.log('✅ Navegação concluída:', success);
-        },
-        (error) => {
-          console.error('❌ ERRO na navegação:', error);
-          alert('❌ Erro ao navegar: ' + error);
-        }
-      );
-    }, 50);
-
-    console.log('═══════════════════════════════════════');
+  // ✅ AVISO SE APARTAMENTO EM MANUTENÇÃO — permite continuar
+  if (statusApartamento === 'MANUTENCAO') {
+    const continuar = confirm(
+      `⚠️ ATENÇÃO!\n\n` +
+      `O apartamento ${apartamentoNumero} está em MANUTENÇÃO.\n\n` +
+      `Você pode criar a pré-reserva se a manutenção for concluída antes do check-in.\n\n` +
+      `Deseja continuar mesmo assim?`
+    );
+    if (!continuar) return;
   }
 
-  verDetalhesReserva(): void {
-    console.log('═══════════════════════════════════════');
-    console.log('🔍 VER DETALHES COMPLETOS');
-    console.log('═══════════════════════════════════════');
-    
-    if (!this.reservaSelecionada) {
-      console.error('❌ ERRO: Nenhuma reserva selecionada');
-      alert('❌ Erro: Nenhuma reserva selecionada');
-      return;
-    }
+  console.log('📋 Valores capturados:');
+  console.log('   Apartamento ID:', apartamentoId);
+  console.log('   Apartamento Nº:', apartamentoNumero);
+  console.log('   Data:', dataCheckin);
 
-    const reservaId = this.reservaSelecionada.id;
-    
-    console.log('📋 Reserva selecionada:');
-    console.log('   ID:', reservaId);
-    console.log('   Cliente:', this.reservaSelecionada.clienteNome);
-    console.log('   Apartamento:', this.reservaSelecionada.apartamentoNumero);
-    console.log('   Status:', this.reservaSelecionada.status);
-    
-    console.log('🚀 Navegando para: /reservas/' + reservaId);
-    
-    setTimeout(() => {
-      this.fecharModal();
-    }, 100);
-    
-    setTimeout(() => {
-      this.router.navigate(['/reservas', reservaId]).then(
-        (success) => {
-          console.log('✅ Navegação concluída com SUCESSO:', success);
-          console.log('═══════════════════════════════════════');
-        },
-        (error) => {
-          console.error('❌ ERRO na navegação:', error);
-          console.log('═══════════════════════════════════════');
-          alert('❌ Erro ao abrir detalhes da reserva: ' + error);
-        }
-      );
-    }, 200);
+  if (!apartamentoId || !dataCheckin) {
+    console.error('❌ ERRO: Dados incompletos!');
+    alert('❌ Erro: Dados incompletos para criar a reserva');
+    return;
   }
 
+  const queryParams = {
+    apartamentoId: apartamentoId.toString(),
+    dataCheckin: dataCheckin,
+    bloqueado: 'true'
+  };
+
+  console.log('📤 Query Params:', queryParams);
+  console.log('🔒 Fechando modal...');
+  this.fecharModal();
+
+  console.log('🚀 Navegando para /reservas/novo...');
+  
+  setTimeout(() => {
+    this.router.navigate(['/reservas/novo'], {
+      queryParams: queryParams
+    }).then(
+      (success) => {
+        console.log('✅ Navegação concluída:', success);
+      },
+      (error) => {
+        console.error('❌ ERRO na navegação:', error);
+        alert('❌ Erro ao navegar: ' + error);
+      }
+    );
+  }, 50);
+
+  console.log('═══════════════════════════════════════');
+}
   fecharModal(): void {
     this.modalDetalhes = false;
     

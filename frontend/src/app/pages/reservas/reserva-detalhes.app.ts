@@ -1068,7 +1068,7 @@ import { environment } from '../../../environments/environment';
                 <label>Produto Correto *</label>
                 <select [(ngModel)]="produtoCorretoId">
                   <option value="0">Selecione um produto...</option>
-                  <option *ngFor="let produto de produtos" [value]="produto.id">
+                  <option *ngFor="let produto of produtos" [value]="produto.id">
                     {{ produto.nomeProduto }} - R$ {{ formatarMoeda(produto.valorVenda) }} 
                     (Estoque: {{ produto.quantidade }})
                   </option>

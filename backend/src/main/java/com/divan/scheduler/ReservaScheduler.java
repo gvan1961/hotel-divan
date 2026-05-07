@@ -93,16 +93,11 @@ public class ReservaScheduler {
         System.out.println("   Data/Hora: " + agora);
         System.out.println("═══════════════════════════════════════════");
 
-     //   List<Reserva> reservasVencidas = reservaRepository
-     //       .findByStatusAndDataCheckoutBefore(Reserva.StatusReservaEnum.ATIVA, agora);
-        
         List<Reserva> reservasVencidas = reservaRepository
-        	    .findByStatusAndDataCheckoutBefore(
-        	        Reserva.StatusReservaEnum.ATIVA, 
-        	        LocalDateTime.now().toLocalDate().atStartOfDay() // ✅ apenas dias anteriores
-        	    );
-        
-        
+            .findByStatusAndDataCheckoutBefore(
+                Reserva.StatusReservaEnum.ATIVA,
+                LocalDateTime.now().toLocalDate().atStartOfDay()
+            );
 
         System.out.println("🔍 Reservas com checkout vencido: " + reservasVencidas.size());
 
@@ -116,6 +111,24 @@ public class ReservaScheduler {
                 System.out.println("   Cliente: " + reserva.getCliente().getNome());
                 System.out.println("   Checkout vencido: " + reserva.getDataCheckout());
 
+                // ✅ VERIFICAR SE JÁ EXISTE OUTRA RESERVA NO NOVO PERÍODO
+                LocalDateTime novoCheckoutVerif = reserva.getDataCheckout().plusDays(1);
+                List<Reserva> conflitos = reservaRepository.findByApartamentoIdAndStatusIn(
+                    reserva.getApartamento().getId(),
+                    List.of(Reserva.StatusReservaEnum.ATIVA, Reserva.StatusReservaEnum.PRE_RESERVA)
+                );
+
+                boolean temConflito = conflitos.stream()
+                    .filter(r -> !r.getId().equals(reserva.getId()))
+                    .anyMatch(r -> reserva.getDataCheckout().isBefore(r.getDataCheckout())
+                               && novoCheckoutVerif.isAfter(r.getDataCheckin()));
+
+                if (temConflito) {
+                    System.out.println("⚠️ Reserva #" + reserva.getId()
+                        + " NÃO renovada — conflito com outra reserva no novo período");
+                    continue;
+                }
+
                 BigDecimal valorDiaria = reserva.getDiaria().getValor();
 
                 ExtratoReserva extrato = new ExtratoReserva();
@@ -123,9 +136,7 @@ public class ReservaScheduler {
                 extrato.setDataHoraLancamento(agora.toLocalDate().atTime(12, 1));
                 extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.DIARIA);
                 extrato.setDescricao(String.format("Diária extra — permanência após 12:01 de %02d/%02d/%d",
-                    agora.getDayOfMonth(),
-                    agora.getMonthValue(),
-                    agora.getYear()));
+                    agora.getDayOfMonth(), agora.getMonthValue(), agora.getYear()));
                 extrato.setQuantidade(1);
                 extrato.setValorUnitario(valorDiaria);
                 extrato.setTotalLancamento(valorDiaria);
@@ -133,9 +144,8 @@ public class ReservaScheduler {
 
                 extratoReservaRepository.saveAndFlush(extrato);
 
-                // ✅ Recarrega a reserva fresca do banco para evitar conflito de snapshot JPA
                 Reserva reservaAtualizada = reservaRepository.findById(reserva.getId()).orElse(reserva);
-                
+
                 LocalDateTime novoCheckout = reservaAtualizada.getDataCheckout().plusDays(1);
                 reservaAtualizada.setDataCheckout(novoCheckout);
                 reservaAtualizada.setQuantidadeDiaria(reservaAtualizada.getQuantidadeDiaria() + 1);
@@ -181,10 +191,8 @@ public class ReservaScheduler {
         System.out.println("═══════════════════════════════════════════");
         System.out.println("⏰ SCHEDULER 14:05 — RENOVAÇÃO POR TOLERÂNCIA");
         System.out.println("   Data/Hora: " + agora);
-        System.out.println("   Faixa de busca: " + inicioHoje + " até " + fimHoje);
         System.out.println("═══════════════════════════════════════════");
 
-        // Busca reservas ATIVAS cujo checkout é HOJE (entre 00:00 e 23:59)
         List<Reserva> reservasHoje = reservaRepository
             .findByStatusAndDataCheckoutBetween(
                 Reserva.StatusReservaEnum.ATIVA,
@@ -199,10 +207,28 @@ public class ReservaScheduler {
 
         for (Reserva reserva : reservasHoje) {
             try {
-                // ✅ Só renova se já passou da hora do checkout (e da tolerância)
                 if (reserva.getDataCheckout().isAfter(agora)) {
-                    System.out.println("⏭️ Reserva #" + reserva.getId() 
+                    System.out.println("⏭️ Reserva #" + reserva.getId()
                         + " — checkout ainda futuro (" + reserva.getDataCheckout() + ")");
+                    ignoradas++;
+                    continue;
+                }
+
+                // ✅ VERIFICAR SE JÁ EXISTE OUTRA RESERVA NO NOVO PERÍODO
+                LocalDateTime novoCheckoutVerif = reserva.getDataCheckout().plusDays(1);
+                List<Reserva> conflitos = reservaRepository.findByApartamentoIdAndStatusIn(
+                    reserva.getApartamento().getId(),
+                    List.of(Reserva.StatusReservaEnum.ATIVA, Reserva.StatusReservaEnum.PRE_RESERVA)
+                );
+
+                boolean temConflito = conflitos.stream()
+                    .filter(r -> !r.getId().equals(reserva.getId()))
+                    .anyMatch(r -> reserva.getDataCheckout().isBefore(r.getDataCheckout())
+                               && novoCheckoutVerif.isAfter(r.getDataCheckin()));
+
+                if (temConflito) {
+                    System.out.println("⚠️ Reserva #" + reserva.getId()
+                        + " NÃO renovada — conflito com outra reserva no novo período");
                     ignoradas++;
                     continue;
                 }
@@ -221,10 +247,7 @@ public class ReservaScheduler {
                 extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.DIARIA);
                 extrato.setDescricao(String.format(
                     "Diária extra — renovação automática (tolerância 2h excedida) %02d/%02d/%d",
-                    agora.getDayOfMonth(),
-                    agora.getMonthValue(),
-                    agora.getYear()
-                ));
+                    agora.getDayOfMonth(), agora.getMonthValue(), agora.getYear()));
                 extrato.setQuantidade(1);
                 extrato.setValorUnitario(valorDiaria);
                 extrato.setTotalLancamento(valorDiaria);
@@ -232,7 +255,6 @@ public class ReservaScheduler {
 
                 extratoReservaRepository.saveAndFlush(extrato);
 
-                // ✅ Recarrega a reserva fresca do banco para evitar conflito de snapshot JPA
                 Reserva reservaAtualizada = reservaRepository.findById(reserva.getId()).orElse(reserva);
 
                 LocalDateTime novoCheckout = reservaAtualizada.getDataCheckout().plusDays(1);
@@ -257,7 +279,7 @@ public class ReservaScheduler {
         System.out.println("═══════════════════════════════════════════");
         System.out.println("✅ SCHEDULER 14:05 CONCLUÍDO");
         System.out.println("   Renovadas: " + processadas);
-        System.out.println("   Ignoradas (futuras): " + ignoradas);
+        System.out.println("   Ignoradas: " + ignoradas);
         System.out.println("═══════════════════════════════════════════");
     }
 

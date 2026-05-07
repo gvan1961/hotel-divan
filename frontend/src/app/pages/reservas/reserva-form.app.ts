@@ -422,80 +422,67 @@ import { Diaria } from '../../models/diaria.model';
 
 
 
-          <div *ngIf="modoModalHospede === 'cadastrar'" class="modal-tab-content">
-            <div class="form-group">
-              <label>Nome Completo *</label>
-              <input 
-                type="text"
-                [(ngModel)]="novoHospede.nome"
-                placeholder="Nome completo do hóspede">
-            </div>
+         <div *ngIf="modoModalHospede === 'cadastrar'" class="modal-tab-content">
+  <div class="form-group">
+    <label>Nome Completo *</label>
+    <input type="text" [(ngModel)]="novoHospede.nome" placeholder="Nome completo do hóspede">
+  </div>
 
-            <div class="form-group">
-  <label>CPF <small>(opcional para menores)</small></label>
-  <input 
-    type="text"
-    [(ngModel)]="novoHospede.cpf"
-    (input)="formatarCpfNovoHospede()"
-    placeholder="000.000.000-00"
-    maxlength="14">
-</div>
+  <div class="form-group">
+    <label>CPF <small>(opcional para menores)</small></label>
+    <input type="text" [(ngModel)]="novoHospede.cpf" (input)="formatarCpfNovoHospede()"
+      placeholder="000.000.000-00" maxlength="14">
+  </div>
 
-            <div class="form-group">
-  <label>Telefone</label>
-  <input 
-    type="text"
-    [(ngModel)]="novoHospede.telefone"
-    (input)="formatarTelefoneHospede()"
-    placeholder="(00) 00000-0000"
-    maxlength="15">
-</div>
+  <div class="form-group">
+    <label>Telefone</label>
+    <input type="text" [(ngModel)]="novoHospede.telefone" (input)="formatarTelefoneHospede()"
+      placeholder="(00) 00000-0000" maxlength="15">
+  </div>
 
-    <!-- 🚨 TESTE: ESSA CAIXA DEVE APARECER -->
-    <div style="background: red; color: white; padding: 15px; margin: 10px 0; font-weight: bold; text-align: center;">
-      🚨 SE VOCÊ VÊ ISSO, O HTML ESTÁ SENDO LIDO!
-    </div>
+  <!-- ✅ CAMPO PLACA DO CARRO -->
+  <div class="form-group">
+    <label>🚗 Placa do Carro <small>(opcional)</small></label>
+    <input type="text" [(ngModel)]="novoHospede.placaCarro" (input)="formatarPlaca()"
+      placeholder="ABC-1234" maxlength="8"
+      style="text-transform: uppercase; font-family: 'Courier New', monospace; font-weight: bold; letter-spacing: 1px;">
+    <small class="field-help">Formato: ABC-1234 ou ABC-1D23 (Mercosul)</small>
+  </div>
 
-    <!-- ✅ CAMPO PLACA DO CARRO -->
-    <div class="form-group">
-      <label>
-        🚗 Placa do Carro 
-        <small>(opcional)</small>
+  <!-- ✅ EMPRESA -->
+  <div class="form-group">
+    <label>Empresa <small>(opcional)</small></label>
+    <select [(ngModel)]="novoHospede.empresaId">
+      <option [ngValue]="null">Sem empresa</option>
+      <option *ngFor="let emp of empresas" [ngValue]="emp.id">{{ emp.nomeEmpresa }}</option>
+    </select>
+  </div>
+
+  <!-- ✅ CRÉDITO E JANTAR -->
+  <div style="display:flex; gap:20px; flex-wrap:wrap;">
+    <div class="form-group checkbox-group">
+      <label class="checkbox-label">
+        <input type="checkbox" [(ngModel)]="novoHospede.creditoAprovado">
+        <span>✅ Crédito Aprovado</span>
       </label>
-      <input 
-        type="text"
-        [(ngModel)]="novoHospede.placaCarro"
-        (input)="formatarPlaca()"
-        placeholder="ABC-1234"
-        maxlength="8"
-        style="text-transform: uppercase; font-family: 'Courier New', monospace; font-weight: bold; letter-spacing: 1px;">
-      <small class="field-help">
-        Formato: ABC-1234 ou ABC-1D23 (Mercosul)
-      </small>
     </div>
-
-    <div class="info-cadastro">
-      ℹ️ Somente o nome é obrigatório. CPF é opcional para menores de idade.
+    <div class="form-group checkbox-group">
+      <label class="checkbox-label">
+        <input type="checkbox" [(ngModel)]="novoHospede.autorizadoJantar">
+        <span>🍽️ Autorizado Jantar</span>
+      </label>
     </div>
+  </div>
 
-            <button 
-              type="button"
-              class="btn-salvar-hospede"
-              (click)="salvarNovoHospede()">
-              ✅ Adicionar Hóspede
-            </button>
-          </div>     
+  <div class="info-cadastro">
+    ℹ️ Somente o nome é obrigatório. CPF é opcional para menores de idade.
+  </div>
 
-          <button type="button" class="btn-fechar-modal" (click)="fecharModalAdicionarHospede()">
-            ✕
-          </button>
-        </div>
-      </div>
-      
-      
-
-
-     
+  <button type="button" class="btn-salvar-hospede" (click)="salvarNovoHospede()">
+    ✅ Adicionar Hóspede
+  </button>
+</div>  
+           
      <!-- MODAL CADASTRO RÁPIDO -->
 <div class="modal-overlay" *ngIf="modalCadastroRapido" (click)="fecharModalCadastroRapido()">
   <div class="modal-content" (click)="$event.stopPropagation()">
@@ -1756,13 +1743,15 @@ import { Diaria } from '../../models/diaria.model';
       clientesFiltradosModal: any[] = [];
       termoBuscaHospede = '';                  
        
-      novoHospede = {
-        nome: '',
-        cpf: '',
-        telefone: '',
-        placaCarro: ''
-      };
-
+      novoHospede: any = {
+  nome: '',
+  cpf: '',
+  telefone: '',
+  placaCarro: '',
+  empresaId: null,
+  creditoAprovado: false,
+  autorizadoJantar: false
+};
       checkinData = '';
   checkinHora = '14';
   checkinMinuto = '00';
@@ -1916,87 +1905,96 @@ if (params['origem']) {
       }
 
       carregarApartamentos(): void {
-      console.log('📋 Carregando apartamentos disponíveis...');
-      
-      if (this.reserva.dataCheckin && this.reserva.dataCheckout) {
-        // ✅ Converter para ISO sem adicionar timezone
-        const checkinDate = new Date(this.reserva.dataCheckin);
-        const checkoutDate = new Date(this.reserva.dataCheckout);
+  console.log('📋 Carregando apartamentos disponíveis...');
+  
+  if (this.reserva.dataCheckin && this.reserva.dataCheckout) {
+    const checkinISO = this.reserva.dataCheckin + ':00';
+    const checkoutISO = this.reserva.dataCheckout + ':00';
+    const url = `/api/apartamentos/disponiveis?dataInicio=${checkinISO}&dataFim=${checkoutISO}`;
+    
+    console.log('═══════════════════════════════════════');
+    console.log('🔍 BUSCANDO APARTAMENTOS DISPONÍVEIS');
+    console.log('🌐 URL:', url);
+    console.log('═══════════════════════════════════════');
+    
+    this.http.get<any[]>(url).subscribe({
+      next: (data) => {
+        this.apartamentos = data.sort((a, b) => {
+          const numA = parseInt(a.numeroApartamento) || 0;
+          const numB = parseInt(b.numeroApartamento) || 0;
+          return numA - numB;
+        });
+        console.log('✅ Apartamentos DISPONÍVEIS carregados:', this.apartamentos.length);
         
-        const checkinISO = this.reserva.dataCheckin + ':00';
-        const checkoutISO = this.reserva.dataCheckout + ':00';
+        if (data.length === 0) {
+          console.warn('⚠️ Nenhum apartamento disponível para o período!');
+          alert('⚠️ Nenhum apartamento disponível para este período!\n\nTente outras datas.');
+        }
         
-        // ✅ USAR NOVO ENDPOINT COM FILTROS
-        const url = `/api/apartamentos/disponiveis?dataInicio=${checkinISO}&dataFim=${checkoutISO}`;
-        
-        console.log('═══════════════════════════════════════');
-        console.log('🔍 BUSCANDO APARTAMENTOS DISPONÍVEIS');
-        console.log('═══════════════════════════════════════');
-        console.log('🕐 Check-in digitado:', this.reserva.dataCheckin);
-        console.log('📤 Check-in enviado:', checkinISO);
-        console.log('🕐 Check-out digitado:', this.reserva.dataCheckout);
-        console.log('📤 Check-out enviado:', checkoutISO);
-        console.log('🌐 URL:', url);
-        console.log('═══════════════════════════════════════');
-        
-        this.http.get<any[]>(url).subscribe({
-          next: (data) => {
-      this.apartamentos = data.sort((a, b) => {
-        const numA = parseInt(a.numeroApartamento) || 0;
-        const numB = parseInt(b.numeroApartamento) || 0;
-        return numA - numB;
-      });
-            console.log('✅ Apartamentos DISPONÍVEIS carregados:', this.apartamentos.length);
+        // ✅ Se veio do mapa com apartamento pré-selecionado
+        this.route.queryParams.subscribe(params => {
+          if (params['apartamentoId']) {
+            const apartamentoId = Number(params['apartamentoId']);
+            const apartamentoDisponivel = this.apartamentos.find(a => a.id === apartamentoId);
             
-            if (data.length === 0) {
-              console.warn('⚠️ Nenhum apartamento disponível para o período!');
-              alert('⚠️ Nenhum apartamento disponível para este período!\n\nTente outras datas.');
-            }
-            
-            // ✅ Se veio do mapa com apartamento pré-selecionado
-            this.route.queryParams.subscribe(params => {
-              if (params['apartamentoId']) {
-                const apartamentoId = Number(params['apartamentoId']);
-                
-                // Verificar se o apartamento está na lista de disponíveis
-                const apartamentoDisponivel = this.apartamentos.find(a => a.id === apartamentoId);
-                
-                if (apartamentoDisponivel) {
-                  // ✅ APARTAMENTO DISPONÍVEL
-                  this.reserva.apartamentoId = apartamentoId;
-                  this.onApartamentoChange();
-                  console.log('✅ Apartamento do mapa selecionado:', apartamentoId);
-                  
-                } else {
-                  // ❌ APARTAMENTO NÃO DISPONÍVEL
-                  console.warn('⚠️ Apartamento do mapa não está disponível para este período');
-                  
-                  // ✅ DESBLOQUEAR para permitir escolha de outro apartamento
+            if (apartamentoDisponivel) {
+              // ✅ APARTAMENTO DISPONÍVEL
+              this.reserva.apartamentoId = apartamentoId;
+              this.onApartamentoChange();
+              console.log('✅ Apartamento do mapa selecionado:', apartamentoId);
+            } else {
+              // ❌ NÃO ESTÁ NA LISTA — verificar se é manutenção
+              console.warn('⚠️ Apartamento do mapa não está disponível para este período');
+
+              this.http.get<any>(`/api/apartamentos/${apartamentoId}`).subscribe({
+                next: (apt) => {
+                  if (apt.status === 'MANUTENCAO' || apt.status === 'LIMPEZA') {
+                    // ✅ MANUTENÇÃO — permite com aviso
+                    const continuar = confirm(
+                      `⚠️ ATENÇÃO!\n\n` +
+                      `O apartamento ${apt.numeroApartamento} está em ${apt.status === 'MANUTENCAO' ? 'MANUTENÇÃO' : 'LIMPEZA'}.\n\n` +
+                      `Você pode criar a pré-reserva se a manutenção for concluída antes do check-in.\n\n` +
+                      `Deseja continuar mesmo assim?`
+                    );
+                    if (continuar) {
+                      this.apartamentos.push(apt);
+                      this.reserva.apartamentoId = apartamentoId;
+                      this.apartamentoBloqueado = true;
+                      this.onApartamentoChange();
+                    } else {
+                      this.apartamentoBloqueado = false;
+                    }
+                  } else {
+                    // ❌ CONFLITO DE RESERVA — não permite
+                    this.apartamentoBloqueado = false;
+                    alert(
+                      `⚠️ APARTAMENTO NÃO DISPONÍVEL!\n\n` +
+                      `O apartamento selecionado tem outra reserva neste período.\n\n` +
+                      `OPÇÕES:\n` +
+                      `1️⃣ Escolha OUTRO apartamento da lista\n` +
+                      `2️⃣ Ou altere as DATAS para liberar este apartamento`
+                    );
+                  }
+                },
+                error: () => {
                   this.apartamentoBloqueado = false;
-                  
-                  // ✅ MOSTRAR BANNER DE AVISO
-                  alert(
-                    `⚠️ APARTAMENTO NÃO DISPONÍVEL!\n\n` +
-                    `O apartamento selecionado no mapa tem outra reserva neste período.\n\n` +
-                    `OPÇÕES:\n` +
-                    `1️⃣ Escolha OUTRO apartamento da lista\n` +
-                    `2️⃣ Ou altere as DATAS para liberar este apartamento`
-                  );
                 }
-              }
-            });
-          },
-          error: (err) => {
-            console.error('❌ Erro ao carregar apartamentos:', err);
-            alert('❌ Erro ao carregar apartamentos disponíveis');
-            this.apartamentos = [];
+              });
+            }
           }
         });
-      } else {
-        console.log('⏳ Aguardando datas para buscar apartamentos');
+      },
+      error: (err) => {
+        console.error('❌ Erro ao carregar apartamentos:', err);
+        alert('❌ Erro ao carregar apartamentos disponíveis');
         this.apartamentos = [];
       }
-    }
+    });
+  } else {
+    console.log('⏳ Aguardando datas para buscar apartamentos');
+    this.apartamentos = [];
+  }
+}
 
       /**
      * 📅 RECARREGAR APARTAMENTOS AO MUDAR CHECK-IN
@@ -2303,13 +2301,16 @@ if (params['origem']) {
       }
 
       limparFormularioNovoHospede(): void {
-        this.novoHospede = {
-          nome: '',
-          cpf: '',
-          telefone: '',
-          placaCarro: ''
-        };
-      }
+  this.novoHospede = {
+    nome: '',
+    cpf: '',
+    telefone: '',
+    placaCarro: '',
+    empresaId: null,
+    creditoAprovado: false,
+    autorizadoJantar: false
+  };
+}
 
       salvarNovoHospede(): void {
         if (!this.novoHospede.nome || this.novoHospede.nome.trim() === '') {
