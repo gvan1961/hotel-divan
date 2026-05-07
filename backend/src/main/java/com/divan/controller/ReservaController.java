@@ -11,7 +11,6 @@ import com.divan.entity.Cliente;
 import com.divan.entity.ExtratoReserva;
 import com.divan.entity.Diaria;
 import com.divan.entity.TipoApartamento;
-import com.divan.repository.DiariaRepository;
 import com.divan.repository.EmpresaRepository;
 import com.divan.repository.ExtratoReservaRepository;
 import java.math.BigDecimal;
@@ -428,7 +427,7 @@ public class ReservaController {
             Reserva reserva = reservaService.cancelarReserva(id, motivo);
             return ResponseEntity.ok(reserva);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
     

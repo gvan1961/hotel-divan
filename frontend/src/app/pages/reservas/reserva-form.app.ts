@@ -432,20 +432,24 @@ import { Diaria } from '../../models/diaria.model';
             </div>
 
             <div class="form-group">
-              <label>CPF <small>(opcional para menores)</small></label>
-              <input 
-                type="text"
-                [(ngModel)]="novoHospede.cpf"
-                placeholder="000.000.000-00">
-            </div>
+  <label>CPF <small>(opcional para menores)</small></label>
+  <input 
+    type="text"
+    [(ngModel)]="novoHospede.cpf"
+    (input)="formatarCpfNovoHospede()"
+    placeholder="000.000.000-00"
+    maxlength="14">
+</div>
 
             <div class="form-group">
-      <label>Telefone</label>
-      <input 
-        type="text"
-        [(ngModel)]="novoHospede.telefone"
-        placeholder="(00) 00000-0000">
-    </div>
+  <label>Telefone</label>
+  <input 
+    type="text"
+    [(ngModel)]="novoHospede.telefone"
+    (input)="formatarTelefoneHospede()"
+    placeholder="(00) 00000-0000"
+    maxlength="15">
+</div>
 
     <!-- 🚨 TESTE: ESSA CAIXA DEVE APARECER -->
     <div style="background: red; color: white; padding: 15px; margin: 10px 0; font-weight: bold; text-align: center;">
@@ -488,39 +492,125 @@ import { Diaria } from '../../models/diaria.model';
         </div>
       </div>
       
-      <!-- MODAL CADASTRO RÁPIDO -->
-      <div class="modal-overlay" *ngIf="modalCadastroRapido" (click)="fecharModalCadastroRapido()">
-        <div class="modal-content" (click)="$event.stopPropagation()">
-          <h2>👤 Cadastro Rápido de Cliente</h2>
-          <div class="form-group">
-            <label>Nome *</label>
-            <input type="text" [(ngModel)]="novoCliente.nome" name="ncNome" placeholder="Nome completo" />
-          </div>
-          <div class="form-group">
-            <label>CPF</label>
-            <input type="text" [(ngModel)]="novoCliente.cpf" name="ncCpf" placeholder="000.000.000-00" maxlength="14" (input)="formatarCpfRapido()" />
-          </div>
-          <div class="form-group">
-            <label>Celular</label>
-            <div style="display:flex; gap:8px">
-              <select [(ngModel)]="novoCliente.ddi" name="ncDdi" style="width:90px; padding:10px; border:1px solid #ddd; border-radius:5px;">
-                <option value="55">🇧🇷 +55</option>
-                <option value="1">🇺🇸 +1</option>
-                <option value="351">🇵🇹 +351</option>
-              </select>
-              <input type="text" [(ngModel)]="novoCliente.celular" name="ncCelular" placeholder="(00) 00000-0000" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:5px;" />
-            </div>
-          </div>
-          <div *ngIf="erroCadastroRapido" style="color:#e74c3c; margin-bottom:12px; font-size:13px;">{{ erroCadastroRapido }}</div>
-          <div class="form-actions">
-            <button type="button" class="btn-cancel" (click)="fecharModalCadastroRapido()">Cancelar</button>
-            <button type="button" class="btn-save" (click)="salvarClienteRapido()" [disabled]="salvandoCliente">
-              {{ salvandoCliente ? 'Salvando...' : '✅ Salvar e Selecionar' }}
-            </button>
-          </div>
-          <button type="button" class="btn-fechar-modal" (click)="fecharModalCadastroRapido()">✕</button>
-        </div>
-      </div>    
+      
+
+
+     
+     <!-- MODAL CADASTRO RÁPIDO -->
+<div class="modal-overlay" *ngIf="modalCadastroRapido" (click)="fecharModalCadastroRapido()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <h2>👤 Cadastro Rápido de Cliente</h2>
+
+    <!-- MENOR DE IDADE -->
+    <div class="form-group checkbox-group">
+      <label class="checkbox-label">
+        <input type="checkbox" [(ngModel)]="novoCliente.menorDeIdade" name="ncMenor">
+        <span>👶 Menor de Idade (sem CPF)</span>
+      </label>
+    </div>
+
+    <!-- NOME -->
+    <div class="form-group">
+      <label>Nome *</label>
+      <input type="text" [(ngModel)]="novoCliente.nome" name="ncNome" placeholder="Nome completo" />
+    </div>
+
+    <!-- CPF -->
+    <div class="form-group" *ngIf="!novoCliente.menorDeIdade">
+      <label>CPF</label>
+      <input type="text" [(ngModel)]="novoCliente.cpf" name="ncCpf" placeholder="000.000.000-00" maxlength="14" (input)="formatarCpfRapido()" />
+    </div>
+
+    <!-- CELULAR -->
+    <div class="form-group">
+      <label>Celular</label>
+      <div style="display:flex; gap:8px">
+        <select [(ngModel)]="novoCliente.ddi" name="ncDdi" style="width:90px; padding:10px; border:1px solid #ddd; border-radius:5px;">
+          <option value="55">🇧🇷 +55</option>
+          <option value="1">🇺🇸 +1</option>
+          <option value="351">🇵🇹 +351</option>
+        </select>
+        <input type="text" [(ngModel)]="novoCliente.celular" name="ncCelular" 
+  placeholder="(00) 00000-0000" 
+  (input)="formatarCelularRapido()"
+  maxlength="15"
+  style="flex:1; padding:10px; border:1px solid #ddd; border-radius:5px;" />
+      </div>
+    </div>
+
+    <!-- DATA DE NASCIMENTO -->
+    <div class="form-group">
+      <label>Data de Nascimento</label>
+      <input type="date" [(ngModel)]="novoCliente.dataNascimento" name="ncNascimento" />
+    </div>
+
+    <!-- ENDEREÇO -->
+    <div class="form-group">
+      <label>Endereço</label>
+      <input type="text" [(ngModel)]="novoCliente.endereco" name="ncEndereco" placeholder="Rua, número, bairro" />
+    </div>
+
+    <!-- CEP / CIDADE / ESTADO -->
+    <div style="display:flex; gap:10px;">
+      <div class="form-group" style="flex:1">
+        <label>CEP</label>
+        <input type="text" [(ngModel)]="novoCliente.cep" name="ncCep" placeholder="00000-000" maxlength="9" />
+      </div>
+      <div class="form-group" style="flex:2">
+        <label>Cidade</label>
+        <input type="text" [(ngModel)]="novoCliente.cidade" name="ncCidade" placeholder="Cidade" />
+      </div>
+      <div class="form-group" style="flex:1">
+        <label>Estado</label>
+        <input type="text" [(ngModel)]="novoCliente.estado" name="ncEstado" placeholder="UF" maxlength="2" />
+      </div>
+    </div>
+
+    <!-- EMPRESA -->
+    <div class="form-group">
+      <label>Empresa <small>(opcional)</small></label>
+      <select [(ngModel)]="novoCliente.empresaId" name="ncEmpresa">
+        <option [ngValue]="null">Sem empresa</option>
+        <option *ngFor="let emp of empresas" [ngValue]="emp.id">{{ emp.nomeEmpresa }}</option>
+      </select>
+    </div>
+
+    <!-- PLACA -->
+    <div class="form-group">
+      <label>🚗 Placa do Carro <small>(opcional)</small></label>
+      <input type="text" [(ngModel)]="novoCliente.placaCarro" name="ncPlaca"
+        placeholder="ABC-1234" maxlength="8" style="text-transform: uppercase;" />
+    </div>
+
+    <!-- CRÉDITO E JANTAR -->
+    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+      <div class="form-group checkbox-group">
+        <label class="checkbox-label">
+          <input type="checkbox" [(ngModel)]="novoCliente.creditoAprovado" name="ncCredito">
+          <span>✅ Crédito Aprovado</span>
+        </label>
+      </div>
+      <div class="form-group checkbox-group">
+        <label class="checkbox-label">
+          <input type="checkbox" [(ngModel)]="novoCliente.autorizadoJantar" name="ncJantar">
+          <span>🍽️ Autorizado Jantar</span>
+        </label>
+      </div>
+    </div>
+
+    <div *ngIf="erroCadastroRapido" style="color:#e74c3c; margin-bottom:12px; font-size:13px;">
+      {{ erroCadastroRapido }}
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn-cancel" (click)="fecharModalCadastroRapido()">Cancelar</button>
+      <button type="button" class="btn-save" (click)="salvarClienteRapido()" [disabled]="salvandoCliente">
+        {{ salvandoCliente ? 'Salvando...' : '✅ Salvar e Selecionar' }}
+      </button>
+    </div>
+    <button type="button" class="btn-fechar-modal" (click)="fecharModalCadastroRapido()">✕</button>
+  </div>
+</div>  
 
     `,
       styles: [`
@@ -1633,7 +1723,7 @@ import { Diaria } from '../../models/diaria.model';
         dataCheckin: '',
         dataCheckout: ''
       };
-
+      empresas: any[] = [];
       apartamentos: Apartamento[] = [];
       apartamentoSelecionado: Apartamento | null = null;
       diarias: Diaria[] = [];
@@ -1684,15 +1774,31 @@ import { Diaria } from '../../models/diaria.model';
       hospedeExistenteSelecionado: any = null; // ✅ Para mostrar formulário intermediário
       modalCadastroRapido = false;
       salvandoCliente = false;
-      erroCadastroRapido = '';
-      novoCliente = { nome: '', cpf: '', celular: '', ddi: '55' };
-      placaHospedeExistente = ''; // ✅ Placa do hóspede existente    
+      erroCadastroRapido = '';      
+      placaHospedeExistente = ''; // ✅ Placa do hóspede existente   
+      novoCliente: any = {
+  nome: '',
+  cpf: '',
+  celular: '',
+  ddi: '55',
+  dataNascimento: '',
+  endereco: '',
+  cep: '',
+  cidade: '',
+  estado: '',
+  empresaId: null,
+  placaCarro: '',
+  creditoAprovado: false,
+  autorizadoJantar: false,
+  menorDeIdade: false
+}; 
 
       ngOnInit(): void {
         console.log('🔵 Inicializando ReservaForm');
         
         this.setDatasPadrao();
         this.definirDataMinima();
+        this.carregarEmpresas();
         
         this.route.queryParams.subscribe(params => {
           console.log('📋 Query Params recebidos:', params);
@@ -1786,6 +1892,15 @@ if (params['origem']) {
         const minutes = String(date.getMinutes()).padStart(2, '0');
         return `${year}-${month}-${day}T${hours}:${minutes}`;
       }
+
+      formatarTelefoneHospede(): void {
+  if (!this.novoHospede.telefone) return;
+  let cel = this.novoHospede.telefone.replace(/\D/g, '').substring(0, 11); // ← limita 11 dígitos
+  if (cel.length > 0) cel = '(' + cel;
+  if (cel.length > 3) cel = cel.substring(0, 3) + ') ' + cel.substring(3);
+  if (cel.length > 10) cel = cel.substring(0, 10) + '-' + cel.substring(10, 15);
+  this.novoHospede.telefone = cel;
+}
 
       formatarDataHora(dataHora: string): string {
         if (!dataHora) return '';
@@ -1904,6 +2019,14 @@ if (params['origem']) {
         this.carregarApartamentos();
       }
     }
+
+    carregarEmpresas(): void {
+  this.http.get<any[]>('/api/empresas').subscribe({
+    next: (data) => this.empresas = data.sort((a, b) =>
+      a.nomeEmpresa.localeCompare(b.nomeEmpresa, 'pt-BR')),
+    error: () => {}
+  });
+}
 
     /**
      * 📅 RECARREGAR APARTAMENTOS AO MUDAR CHECK-OUT
@@ -2586,11 +2709,34 @@ if (params['origem']) {
       this.hospedeExistenteSelecionado = null;
       this.placaHospedeExistente = '';
     }
-
-    abrirModalCadastroRapido(): void {
-  this.novoCliente = { nome: this.buscaCliente, cpf: '', celular: '', ddi: '55' };
+abrirModalCadastroRapido(): void {
+  this.novoCliente = {
+    nome: this.buscaCliente,
+    cpf: '',
+    celular: '',
+    ddi: '55',
+    dataNascimento: '',
+    endereco: '',
+    cep: '',
+    cidade: '',
+    estado: '',
+    empresaId: null,
+    placaCarro: '',
+    creditoAprovado: false,
+    autorizadoJantar: false,
+    menorDeIdade: false
+  };
   this.erroCadastroRapido = '';
   this.modalCadastroRapido = true;
+}
+
+formatarCelularRapido(): void {
+  if (!this.novoCliente.celular) return;
+  let cel = this.novoCliente.celular.replace(/\D/g, '').substring(0, 11); // ← limita 11 dígitos
+  if (cel.length > 0) cel = '(' + cel;
+  if (cel.length > 3) cel = cel.substring(0, 3) + ') ' + cel.substring(3);
+  if (cel.length > 10) cel = cel.substring(0, 10) + '-' + cel.substring(10, 15);
+  this.novoCliente.celular = cel;
 }
 
 fecharModalCadastroRapido(): void {
@@ -2615,12 +2761,21 @@ salvarClienteRapido(): void {
   this.erroCadastroRapido = '';
 
   const payload = {
-    nome: this.novoCliente.nome,
-    cpf: this.novoCliente.cpf || null,
-    celular: this.novoCliente.celular || null,
-    ddi: this.novoCliente.ddi || '55',
-    tipoCliente: 'HOSPEDE'
-  };
+  nome: this.novoCliente.nome,
+  cpf: this.novoCliente.menorDeIdade ? null : (this.novoCliente.cpf || null),
+  celular: this.novoCliente.celular || null,
+  ddi: this.novoCliente.ddi || '55',
+  dataNascimento: this.novoCliente.dataNascimento || null,
+  endereco: this.novoCliente.endereco || null,
+  cep: this.novoCliente.cep || null,
+  cidade: this.novoCliente.cidade || null,
+  estado: this.novoCliente.estado || null,
+  empresaId: this.novoCliente.empresaId || null,
+  creditoAprovado: this.novoCliente.creditoAprovado || false,
+  autorizadoJantar: this.novoCliente.autorizadoJantar || false,
+  menorDeIdade: this.novoCliente.menorDeIdade || false,
+  tipoCliente: 'HOSPEDE'
+};
 
   this.http.post<any>('/api/clientes', payload).subscribe({
     next: (cliente) => {
@@ -2635,6 +2790,16 @@ salvarClienteRapido(): void {
       this.erroCadastroRapido = e.error?.message || e.error?.erro || 'Erro ao cadastrar cliente';
     }
   });
+}
+
+
+     formatarCpfNovoHospede(): void {
+  if (!this.novoHospede.cpf) return;
+  let cpf = this.novoHospede.cpf.replace(/\D/g, '').substring(0, 11);
+  if (cpf.length > 3) cpf = cpf.substring(0, 3) + '.' + cpf.substring(3);
+  if (cpf.length > 7) cpf = cpf.substring(0, 7) + '.' + cpf.substring(7);
+  if (cpf.length > 11) cpf = cpf.substring(0, 11) + '-' + cpf.substring(11, 13);
+  this.novoHospede.cpf = cpf;
 }
 
      voltar(): void {

@@ -11,7 +11,6 @@ import com.divan.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.divan.service.DiariaService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -1143,14 +1142,32 @@ public class ReservaService {
     public Reserva cancelarReserva(Long reservaId, String motivo) {
         Reserva reserva = reservaRepository.findById(reservaId)
             .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
-        
+
+        // ✅ REGRA 1: Não cancelar reserva ATIVA
+        if (reserva.getStatus() == Reserva.StatusReservaEnum.ATIVA) {
+            throw new RuntimeException(
+                "❌ Reserva ATIVA não pode ser cancelada.\n\n" +
+                "Faça o checkout antes de cancelar."
+            );
+        }
+
+        // ✅ REGRA 2: Não cancelar se tiver valores recebidos
+        BigDecimal totalRecebido = reserva.getTotalRecebido();
+        if (totalRecebido != null && totalRecebido.compareTo(BigDecimal.ZERO) > 0) {
+            throw new RuntimeException(
+                "❌ Reserva com pagamentos recebidos não pode ser cancelada.\n\n" +
+                "Total recebido: R$ " + totalRecebido + "\n\n" +
+                "Estorne os pagamentos antes de cancelar."
+            );
+        }
+
         reserva.setStatus(Reserva.StatusReservaEnum.CANCELADA);
-        
+
         // Liberar apartamento
         Apartamento apartamento = reserva.getApartamento();
         apartamento.setStatus(Apartamento.StatusEnum.DISPONIVEL);
         apartamentoRepository.save(apartamento);
-        
+
         // Devolver produtos ao estoque
         if (reserva.getNotasVenda() != null) {
             for (NotaVenda nota : reserva.getNotasVenda()) {
@@ -1163,12 +1180,21 @@ public class ReservaService {
                 }
             }
         }
-        
+
         Reserva salva = reservaRepository.save(reserva);
-        
+
+        // ✅ REGRA 3: Registrar no Log de Auditoria
+        logAuditoriaService.registrar(
+            "CANCELAMENTO",
+            "Reserva cancelada — Apt " + apartamento.getNumeroApartamento() +
+            " — Cliente: " + reserva.getCliente().getNome() +
+            " — Motivo: " + motivo,
+            salva
+        );
+
         System.out.println("❌ Reserva cancelada: " + reservaId);
         System.out.println("💬 Motivo: " + motivo);
-        
+
         return salva;
     }
     

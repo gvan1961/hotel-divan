@@ -1711,57 +1711,50 @@ getPosicaoNaReserva(apt: ApartamentoMapa, data: string): string {
   }
 
   confirmarPagamentoPreReserva(): void {
-    if (!this.reservaSelecionada) return;
+  if (!this.reservaSelecionada) return;
 
-    if (!this.pagPreReservaFormaPagamento) {
-      alert('⚠️ Selecione uma forma de pagamento');
-      return;
-    }
-
-    if (this.pagPreReservaValor <= 0) {
-      alert('⚠️ Valor inválido');
-      return;
-    }
-
-    const dto = {
-      reservaId: this.reservaSelecionada.id,
-      valor: this.pagPreReservaValor,
-      formaPagamento: this.pagPreReservaFormaPagamento,
-      observacao: this.pagPreReservaObs || undefined
-    };
-
-    console.log('💳 Processando pagamento de pré-reserva:', dto);
-
-    this.http.post('/api/pagamentos/pre-reserva', dto).subscribe({
-      next: () => {
-        alert('✅ Pagamento registrado! Reserva ativada com sucesso!');
-        this.fecharModalPagamento();
-        
-        this.reservaSelecionada = null;
-        this.apartamentoSelecionado = null;
-        this.dataSelecionada = '';
-        
-        this.carregarMapa();
-      },
-      error: (err: any) => {
-        console.error('❌ Erro:', err);
-        
-        let mensagemErro = 'Erro ao processar pagamento';
-        
-        if (err.error) {
-          if (typeof err.error === 'string') {
-            mensagemErro = err.error;
-          } else if (err.error.message) {
-            mensagemErro = err.error.message;
-          } else if (err.error.erro) {
-            mensagemErro = err.error.erro;
-          }
-        }
-        
-        alert('❌ Erro: ' + mensagemErro);
-      }
-    });
+  if (!this.pagPreReservaFormaPagamento) {
+    alert('⚠️ Selecione uma forma de pagamento');
+    return;
   }
+
+  if (this.pagPreReservaValor <= 0) {
+    alert('⚠️ Valor inválido');
+    return;
+  }
+
+  const dto = {
+    reservaId: this.reservaSelecionada.id,
+    valor: this.pagPreReservaValor,
+    formaPagamento: this.pagPreReservaFormaPagamento,
+    observacao: this.pagPreReservaObs || undefined
+  };
+
+  this.http.post<any>('/api/pagamentos/pre-reserva', dto).subscribe({
+    next: (response) => {
+      if (response.ativada) {
+        alert('✅ Pagamento registrado e reserva ATIVADA automaticamente!');
+      } else {
+        alert('✅ Pagamento registrado na pré-reserva!');
+      }
+      this.fecharModalPagamento();
+      this.reservaSelecionada = null;
+      this.apartamentoSelecionado = null;
+      this.dataSelecionada = '';
+      this.carregarMapa();
+    },
+    error: (err: any) => {
+      console.error('❌ Erro:', err);
+      let mensagemErro = 'Erro ao processar pagamento';
+      if (err.error) {
+        if (typeof err.error === 'string') mensagemErro = err.error;
+        else if (err.error.erro) mensagemErro = err.error.erro;
+        else if (err.error.message) mensagemErro = err.error.message;
+      }
+      alert('❌ Erro: ' + mensagemErro);
+    }
+  });
+}
 
   // ============= CANCELAR PRÉ-RESERVA =============
 abrirModalCancelar(): void {

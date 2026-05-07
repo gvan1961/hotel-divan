@@ -418,9 +418,7 @@ import { environment } from '../../../environments/environment';
               (click)="abrirModalAdicionarHospede()">
               ➕ Adicionar Hóspede
             </button>
-          </div>
-
-          
+          </div>          
 
           <div class="lista-hospedes">
             <div class="hospede-item" 
@@ -588,12 +586,12 @@ import { environment } from '../../../environments/environment';
  </ng-container>
 
             <ng-container *hasPermission="'RESERVA_CANCELAR'">
-              <button class="btn-acao btn-cancelar" 
-                      *ngIf="reserva.status === 'ATIVA'"
-                      (click)="cancelarReserva()">
-                ❌ Cancelar Reserva
-              </button>
-            </ng-container>
+  <button class="btn-acao btn-cancelar" 
+          *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
+          (click)="cancelarReserva()">
+    ❌ Cancelar Reserva
+  </button>
+</ng-container>
 
             <!-- ✅ NOVO - BILHETES DE SORTEIO -->
 <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
@@ -4369,8 +4367,8 @@ salvarAdiantamento(): void {
           this.carregarReserva(this.reserva!.id);
         },
         error: (err: any) => {
-          alert('❌ Erro: ' + (err.error?.message || err.message));
-        }
+         alert('❌ ' + (err.error?.erro || err.error?.message || err.message || 'Erro ao cancelar reserva'));
+       }
         
       });
       

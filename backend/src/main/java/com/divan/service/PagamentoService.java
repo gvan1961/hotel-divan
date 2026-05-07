@@ -63,10 +63,11 @@ public class PagamentoService {
         System.out.println("   Total A Pagar: R$ " + reserva.getTotalApagar());
         System.out.println("   Valor do Pagamento: R$ " + pagamento.getValor());
 
-        if (reserva.getStatus() != Reserva.StatusReservaEnum.ATIVA) {
+        if (reserva.getStatus() != Reserva.StatusReservaEnum.ATIVA 
+                && reserva.getStatus() != Reserva.StatusReservaEnum.PRE_RESERVA) {
             throw new RuntimeException("Não é possível adicionar pagamento a uma reserva não ativa");
         }
-
+        
         if (pagamento.getValor().compareTo(reserva.getTotalApagar()) > 0) {
             throw new RuntimeException("Valor do pagamento excede o saldo devedor de R$ " + reserva.getTotalApagar());
         }
