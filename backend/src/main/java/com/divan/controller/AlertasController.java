@@ -107,13 +107,68 @@ public class AlertasController {
             }
             renovacoesAutomaticas.add(dto);
         }
+        
+     // ✅ PRÉ-RESERVAS COM CONFLITO (apartamento ocupado no dia do check-in)
+        LocalDateTime inicioDia = agora.toLocalDate().atStartOfDay();
+        LocalDateTime fimDia = agora.toLocalDate().atTime(23, 59, 59);
 
+        List<Reserva> preReservasHoje = reservaRepository
+            .findByStatusAndDataCheckinBetween(
+                StatusReservaEnum.PRE_RESERVA,
+                inicioDia,
+                fimDia
+            );
+
+        List<AlertaDTO> preReservasConflito = new ArrayList<>();
+        for (Reserva r : preReservasHoje) {
+            if (r.getApartamento() == null) continue;
+
+            // Verifica se há reserva ATIVA no mesmo apartamento
+            Optional<Reserva> reservaAtiva = reservaRepository
+                .findByApartamentoId(r.getApartamento().getId())
+                .stream()
+                .filter(ra -> ra.getStatus() == StatusReservaEnum.ATIVA
+                           && !ra.getId().equals(r.getId()))
+                .findFirst();
+
+            if (reservaAtiva.isPresent()) {
+                Reserva ocupante = reservaAtiva.get();
+                AlertaDTO dto = new AlertaDTO();
+                dto.setTipoAlerta("PRE_RESERVA_CONFLITO");
+                dto.setNivelGravidade("ALTO");
+                dto.setTitulo("Conflito de Pré-Reserva");
+                dto.setDescricao(
+                    "Pré-reserva #" + r.getId() + " de " + 
+                    (r.getCliente() != null ? r.getCliente().getNome() : "N/A") +
+                    " prevista para hoje, mas Apt " + r.getApartamento().getNumeroApartamento() +
+                    " está OCUPADO por " + 
+                    (ocupante.getCliente() != null ? ocupante.getCliente().getNome() : "N/A") +
+                    " (Reserva #" + ocupante.getId() + ")."
+                );
+                dto.setRecomendacao(
+                    "Decida: Transferir hóspede atual ou transferir apartamento da pré-reserva."
+                );
+                dto.setReservaId(r.getId());
+                dto.setClienteNome(r.getCliente() != null ? r.getCliente().getNome() : "N/A");
+                dto.setStatusReserva(r.getStatus().name());
+                dto.setDataCheckin(r.getDataCheckin());
+                dto.setDataCheckout(r.getDataCheckout());
+                dto.setApartamentoId(r.getApartamento().getId());
+                dto.setNumeroApartamento(r.getApartamento().getNumeroApartamento());
+                if (r.getApartamento().getTipoApartamento() != null) {
+                    dto.setTipoApartamento(r.getApartamento().getTipoApartamento().getDescricao());
+                }
+                preReservasConflito.add(dto);
+            }
+        }       
+        
         Map<String, Object> response = new HashMap<>();
         response.put("conflitos", new ArrayList<>());
         response.put("checkoutsVencidos", checkoutsVencidos);
         response.put("noShows", noShows);
-        response.put("preReservasEmRisco", new ArrayList<>());
+        response.put("preReservasEmRisco", preReservasConflito); // ← substituir ArrayList vazio
         response.put("renovacoesAutomaticas", renovacoesAutomaticas);
+        response.put("preReservasConflito", preReservasConflito);
         return ResponseEntity.ok(response);
     }
 }

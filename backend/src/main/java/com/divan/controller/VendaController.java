@@ -9,6 +9,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,10 +26,10 @@ public class VendaController {
     @Autowired private NotaVendaRepository notaVendaRepository;
     @Autowired private ItemVendaRepository itemVendaRepository;
     @Autowired private ExtratoReservaRepository extratoReservaRepository;
-    @Autowired private VendaService vendaService;
     @Autowired private LogAuditoriaRepository logAuditoriaRepository;
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private FechamentoCaixaRepository caixaRepository;
+    @Autowired private ValeRepository valeRepository;
 
     @GetMapping("/teste")
     public ResponseEntity<String> teste() {
@@ -218,6 +219,108 @@ public class VendaController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    @SuppressWarnings("unchecked")
+    @PostMapping("/funcionario")
+    public ResponseEntity<?> vendaFuncionario(@RequestBody Map<String, Object> body,
+                                               @RequestParam(required = false) Long usuarioId) {
+        try {
+            verificarCaixaAberto();
+            
+            Long clienteId = Long.parseLong(body.get("clienteId").toString());
+            String observacao = body.containsKey("observacao") && body.get("observacao") != null
+                ? body.get("observacao").toString() : "";
+            List<Map<String, Object>> itens = (List<Map<String, Object>>) body.get("itens");
+
+            Cliente cliente = clienteRepository.findById(clienteId)
+                .orElseThrow(() -> new RuntimeException("Funcionário não encontrado"));
+
+            BigDecimal totalNota = BigDecimal.ZERO;
+
+            // ✅ CRIAR NOTA DE VENDA
+            NotaVenda nota = new NotaVenda();
+            nota.setDataHoraVenda(LocalDateTime.now());
+            nota.setTipoVenda(NotaVenda.TipoVendaEnum.FATURADO);
+            nota.setFormaPagamento(NotaVenda.FormaPagamentoEnum.FATURADO);
+            nota.setStatus(NotaVenda.Status.FECHADA);
+            nota.setObservacao("PDV Funcionário - " + cliente.getNome() +
+                (observacao.isBlank() ? "" : " - " + observacao));
+            nota.setTotal(BigDecimal.ZERO);
+            nota.setItens(new ArrayList<>());
+            notaVendaRepository.save(nota);
+
+            for (Map<String, Object> itemMap : itens) {
+                Long produtoId = Long.parseLong(itemMap.get("produtoId").toString());
+                int quantidade = Integer.parseInt(itemMap.get("quantidade").toString());
+                BigDecimal valorUnitario = new BigDecimal(itemMap.get("valorUnitario").toString());
+
+                Produto produto = produtoRepository.findById(produtoId)
+                    .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + produtoId));
+
+                if (produto.getQuantidade() < quantidade)
+                    throw new RuntimeException("Estoque insuficiente para: " + produto.getNomeProduto());
+
+                BigDecimal totalItem = valorUnitario.multiply(BigDecimal.valueOf(quantidade));
+
+                ItemVenda itemVenda = new ItemVenda();
+                itemVenda.setNotaVenda(nota);
+                itemVenda.setProduto(produto);
+                itemVenda.setQuantidade(quantidade);
+                itemVenda.setValorUnitario(valorUnitario);
+                itemVenda.setTotalItem(totalItem);
+                itemVendaRepository.save(itemVenda);
+
+                produto.setQuantidade(produto.getQuantidade() - quantidade);
+                produtoRepository.save(produto);
+
+                totalNota = totalNota.add(totalItem);
+            }
+
+            nota.setTotal(totalNota);
+            notaVendaRepository.save(nota);
+
+            // ✅ CRIAR VALE PARA DESCONTO EM FOLHA
+            Vale vale = new Vale();
+            vale.setCliente(cliente);
+            vale.setValor(totalNota);
+            vale.setTipoVale("PRODUTO");
+            vale.setDescricao("PDV - Produtos: " + itens.size() + " item(ns)" +
+                (observacao.isBlank() ? "" : " - " + observacao));
+            vale.setObservacao("Gerado automaticamente pelo PDV");
+            vale.setDataEmissao(LocalDateTime.now());
+            vale.setDataConcessao(LocalDate.now());
+            vale.setDataVencimento(LocalDate.now().plusDays(30));
+            vale.setStatus(Vale.StatusVale.PENDENTE);
+            valeRepository.save(vale);
+
+            // ✅ LOG AUDITORIA
+            try {
+                String username = SecurityContextHolder.getContext().getAuthentication().getName();
+                LogAuditoria log = new LogAuditoria();
+                log.setAcao("PDV_VENDA_FUNCIONARIO");
+                log.setDescricao("Funcionário: " + cliente.getNome()
+                    + " — Total: R$ " + totalNota
+                    + " — Vale #" + vale.getId());
+                log.setDataHora(LocalDateTime.now());
+                usuarioRepository.findByUsername(username).ifPresent(log::setUsuario);
+                logAuditoriaRepository.save(log);
+            } catch (Exception logEx) {
+                System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+            }
+
+            return ResponseEntity.ok(Map.of(
+                "notaVendaId", nota.getId(),
+                "valeId", vale.getId(),
+                "total", totalNota,
+                "clienteNome", cliente.getNome(),
+                "mensagem", "Venda registrada e vale gerado com sucesso"
+            ));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
 
     // ─── VENDA FATURADA (PDV CRÉDITO) ──────────────────────
     @SuppressWarnings("unchecked")
@@ -301,6 +404,8 @@ public class VendaController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    
     
     private void verificarCaixaAberto() {
         String login = SecurityContextHolder.getContext().getAuthentication().getName();

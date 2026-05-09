@@ -5,9 +5,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -126,23 +123,23 @@ public class Reserva {
     @Column(name = "saldo_adiantamento", precision = 10, scale = 2)
     private BigDecimal saldoAdiantamento = BigDecimal.ZERO;
     
+    @Column(name = "data_criacao")
+    private LocalDateTime dataCriacao;
+
+    @Column(name = "criado_por", length = 100)
+    private String criadoPor;
+    
     public Long getId() {
 		return id;
 	}
-
-
 
 	public void setId(Long id) {
 		this.id = id;
 	}
 
-
-
 	public Apartamento getApartamento() {
 		return apartamento;
 	}
-
-
 
 	public void setApartamento(Apartamento apartamento) {
 		this.apartamento = apartamento;
@@ -172,42 +169,30 @@ public class Reserva {
 		this.diaria = diaria;
 	}
 
-
-
 	public LocalDateTime getDataCheckin() {
 		return dataCheckin;
 	}
-
-
 
 	public void setDataCheckin(LocalDateTime dataCheckin) {
 		this.dataCheckin = dataCheckin;
 	}
 
-
-
 	public LocalDateTime getDataCheckout() {
 		return dataCheckout;
 	}
 
-
-
 	public void setDataCheckout(LocalDateTime dataCheckout) {
 		this.dataCheckout = dataCheckout;
 	}
-
-
 
 	public LocalDateTime getDataCheckoutReal() {
 		return dataCheckoutReal;
 	}
 
 
-
 	public void setDataCheckoutReal(LocalDateTime dataCheckoutReal) {
 		this.dataCheckoutReal = dataCheckoutReal;
 	}
-
 
 
 	public Integer getQuantidadeDiaria() {
@@ -401,7 +386,21 @@ public class Reserva {
 		this.renovacaoAutomatica = renovacaoAutomatica;
 	}
 
+	public LocalDateTime getDataCriacao() {
+		return dataCriacao;
+	}
 
+	public void setDataCriacao(LocalDateTime dataCriacao) {
+		this.dataCriacao = dataCriacao;
+	}
+
+	public String getCriadoPor() {
+		return criadoPor;
+	}
+
+	public void setCriadoPor(String criadoPor) {
+		this.criadoPor = criadoPor;
+	}
 
 	@Override
 	public int hashCode() {

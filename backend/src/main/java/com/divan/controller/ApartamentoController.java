@@ -331,20 +331,60 @@ public class ApartamentoController {
              // ✅ SE APARTAMENTO ESTÁ EM LIMPEZA, MANUTENÇÃO OU BLOQUEADO
              // NÃO mostrar reserva — status físico tem prioridade
              String statusFisico = apt.getStatus() != null ? apt.getStatus().name() : "DISPONIVEL";
+        
+             
              if (statusFisico.equals("LIMPEZA") || 
-                 statusFisico.equals("MANUTENCAO") || 
-                 statusFisico.equals("INDISPONIVEL")) {
-                 card.put("reserva", null);
-                 switch (statusFisico) {
-                 case "LIMPEZA"      -> cntLimpeza++;
-                 case "MANUTENCAO"   -> cntManutencao++;
-                 case "INDISPONIVEL" -> cntBloqueado++;
-             }
-                 cards.add(card);
-                 continue; // ✅ PULAR busca de reservas
-             }
+            		    statusFisico.equals("MANUTENCAO") || 
+            		    statusFisico.equals("INDISPONIVEL")) {
+            		    
+            		    // ✅ SE LIMPEZA — buscar última reserva finalizada para exibir no card
+            		    if (statusFisico.equals("LIMPEZA")) {
+            		        List<Reserva> ultimasReservas = reservaRepository
+            		            .findByApartamentoIdAndStatusIn(apt.getId(),
+            		                List.of(Reserva.StatusReservaEnum.FINALIZADA))
+            		            .stream()
+            		            .sorted(Comparator.comparing(Reserva::getDataCheckout).reversed())
+            		            .limit(1)
+            		            .collect(Collectors.toList());
 
-                
+            		        if (!ultimasReservas.isEmpty()) {
+            		            Reserva r = ultimasReservas.get(0);
+            		            Map<String, Object> res = new LinkedHashMap<>();
+            		            res.put("id",               r.getId());
+            		            res.put("status",           "LIMPEZA"); // ← status visual do card
+            		            res.put("clienteNome",      r.getCliente() != null ? r.getCliente().getNome() : "-");
+            		            res.put("dataCheckin",      r.getDataCheckin().toLocalDate().toString());
+            		            res.put("dataCheckout",     r.getDataCheckout().toLocalDate().toString());
+            		            res.put("quantidadeHospedes", r.getQuantidadeHospede());
+            		            res.put("saiHoje",          false);
+            		            res.put("entraHoje",        false);
+            		            res.put("atrasado",         false);
+            		            res.put("renovacaoAutomatica", false);
+            		            res.put("somenteLeitura",   true); // ← flag para frontend bloquear edição
+            		            card.put("reserva", res);
+            		        } else {
+            		            card.put("reserva", null);
+            		        }
+            		        cntLimpeza++;
+            		    } else {
+            		        card.put("reserva", null);
+            		        switch (statusFisico) {
+            		            case "MANUTENCAO"   -> cntManutencao++;
+            		            case "INDISPONIVEL" -> cntBloqueado++;
+            		        }
+            		    }
+
+            		    // ✅ VERIFICAR PRÉ-RESERVA FUTURA MESMO EM LIMPEZA
+            		    List<Reserva> preReservasLimpeza = reservaRepository
+            		        .findByApartamentoIdAndStatusIn(apt.getId(),
+            		            List.of(Reserva.StatusReservaEnum.PRE_RESERVA));
+            		    card.put("temPreReservaFutura", !preReservasLimpeza.isEmpty());
+
+            		    cards.add(card);
+            		    continue;
+            		}
+             
+             
                 
                 // ✅ TODAS as pré-reservas (para contar)
                 List<Reserva> todasPreReservas = reservaRepository

@@ -88,5 +88,11 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
         );
     
     List<Reserva> findAllByRenovacaoAutomaticaTrueAndStatus(Reserva.StatusReservaEnum status);
+    
+    List<Reserva> findByStatusAndDataCheckinBetween(
+    	    Reserva.StatusReservaEnum status,
+    	    LocalDateTime inicio,
+    	    LocalDateTime fim
+    	);
         
 }

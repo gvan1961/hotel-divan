@@ -9,6 +9,7 @@ import com.divan.dto.TransferenciaApartamentoDTO;
 import com.divan.entity.*;
 import com.divan.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -399,6 +400,15 @@ public class ReservaService {
         }
         reserva.getNotasVenda().add(notaVenda);
 
+     // ✅ REGISTRAR DATA DE CRIAÇÃO E USUÁRIO
+        reserva.setDataCriacao(LocalDateTime.now());
+        try {
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            reserva.setCriadoPor(username);
+        } catch (Exception e) {
+            reserva.setCriadoPor("sistema");
+        }
+        
         // ✅ SALVAR RESERVA
         Reserva salva = reservaRepository.save(reserva);
 

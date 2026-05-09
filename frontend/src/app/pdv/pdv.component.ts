@@ -1,10 +1,10 @@
-import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../app/services/auth.service';
- 
+import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, inject } from '@angular/core';
+
 interface Produto {
   id: number;
   nomeProduto: string;
@@ -145,39 +145,20 @@ interface ItemCarrinho {
           </div>
 
           <!-- TIPOS DE VENDA -->
-         <div class="tipo-venda" [class.modo-apartamento-bloqueado]="origem === 'painel-recepcao'">
-            <label [class.opcao-desabilitada]="origem === 'painel-recepcao'">
-              <input type="radio"
-                    [(ngModel)]="tipoVenda"
-                    value="VISTA"
-                    [disabled]="origem === 'painel-recepcao'"
-                    (change)="mudarTipoVenda()">
-              💵 À Vista
-            </label>
-            <label>
-              <input type="radio"
-                    [(ngModel)]="tipoVenda"
-                    value="APARTAMENTO"
-                    (change)="mudarTipoVenda()">
-              🏨 Apartamento
-            </label>
-            <label [class.opcao-desabilitada]="origem === 'painel-recepcao'">
-              <input type="radio"
-                    [(ngModel)]="tipoVenda"
-                    value="FATURADO"
-                    [disabled]="origem === 'painel-recepcao'"
-                    (change)="mudarTipoVenda()">
-              💳 Faturado
-            </label>
-            <label [class.opcao-desabilitada]="origem === 'painel-recepcao'">
-              <input type="radio"
-                    [(ngModel)]="tipoVenda"
-                    value="FUNCIONARIO"
-                    [disabled]="origem === 'painel-recepcao'"
-                    (change)="mudarTipoVenda()">
-              👷 Funcionário
-            </label>
-          </div>
+    <div class="tipo-venda">
+  <label *ngIf="reservaIdPreSelecionada === 0">
+    <input type="radio" [(ngModel)]="tipoVenda" value="VISTA" (change)="mudarTipoVenda()">
+    💵 À Vista
+  </label>
+  <label>
+    <input type="radio" [(ngModel)]="tipoVenda" value="APARTAMENTO" (change)="mudarTipoVenda()">
+    🏨 Apartamento
+  </label>
+  <label *ngIf="reservaIdPreSelecionada === 0">
+    <input type="radio" [(ngModel)]="tipoVenda" value="FUNCIONARIO" (change)="mudarTipoVenda()">
+    👷 Funcionário
+  </label>
+</div>
 
           <!-- VENDA À VISTA -->
           <div *ngIf="tipoVenda === 'VISTA'" class="form-vista">
@@ -205,21 +186,65 @@ interface ItemCarrinho {
             </div>
           </div>
 
+
+
+
+
           <!-- VENDA APARTAMENTO -->
-          <div *ngIf="tipoVenda === 'APARTAMENTO'" class="form-apartamento">
-            <div class="campo">
-              <label>Apartamento / Hóspede *</label>
-              <select [(ngModel)]="reservaSelecionadaId">
-                <option value="0">Selecione...</option>
-                <option *ngFor="let reserva of reservas" [value]="reserva.id">
-                  Apto {{ reserva.apartamento?.numeroApartamento }} - {{ reserva.cliente?.nome }}
-                </option>
-              </select>
-            </div>
-            <div class="alerta-credito" *ngIf="reservaSelecionadaId > 0">
-              🏨 Valor será lançado no extrato do apartamento
-            </div>
-          </div>
+       <div *ngIf="tipoVenda === 'APARTAMENTO'" class="form-apartamento">
+
+  <!-- ✅ SE VEIO DO CARD DO PAINEL RECEPÇÃO — apartamento já definido -->
+  <div *ngIf="reservaIdPreSelecionada > 0 && reservaSelecionadaId > 0">
+    <div class="alerta-credito" style="background:#d5f5e3; border-color:#27ae60; color:#1e8449; margin-bottom:10px;">
+      🏨 Apartamento já selecionado: <strong>{{ reservaSelecionadaInfo?.apto }}</strong>
+    </div>
+
+    <!-- HÓSPEDES DO APARTAMENTO -->
+    <div *ngIf="hospedesDoApartamento.length > 0" class="hospedes-apartamento">
+      <label>👥 Hóspedes do Apartamento</label>
+      <div *ngFor="let h of hospedesDoApartamento" class="hospede-linha-pdv">
+        <span>{{ h.titular ? '👑' : '👤' }} {{ h.nome }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ SE VEIO DO PDV NORMAL — busca por apartamento -->
+  <div *ngIf="reservaIdPreSelecionada === 0 || reservaSelecionadaId === 0">
+    <div class="campo">
+      <label>🔍 Número do Apartamento</label>
+      <input type="text"
+        [(ngModel)]="termoBuscaApartamento"
+        (input)="filtrarPorApartamento()"
+        placeholder="Ex: 105"
+        class="input-busca-apto">
+    </div>
+
+    <!-- HÓSPEDES DO APARTAMENTO -->
+    <div *ngIf="hospedesDoApartamento.length > 0" class="hospedes-apartamento">
+      <label>👥 Hóspedes do Apartamento</label>
+      <div *ngFor="let h of hospedesDoApartamento" class="hospede-linha-pdv">
+        <span>{{ h.titular ? '👑' : '👤' }} {{ h.nome }}</span>
+      </div>
+    </div>
+
+    <div class="campo" *ngIf="reservasFiltradas.length > 0">
+      <label>Selecionar Reserva *</label>
+      <select [(ngModel)]="reservaSelecionadaId" size="5" style="width:100%; height:120px;">
+        <option [value]="0">Selecione...</option>
+        <option *ngFor="let reserva of reservasFiltradas" [value]="reserva.id">
+          Apto {{ reserva.apartamento?.numeroApartamento }} — {{ reserva.cliente?.nome }}
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <div class="alerta-credito" *ngIf="reservaSelecionadaId > 0">
+    🏨 Valor será lançado no extrato do apartamento
+  </div>
+</div>
+
+
+
 
           <!-- VENDA FATURADA -->
           <div *ngIf="tipoVenda === 'FATURADO'" class="form-faturado">
@@ -716,10 +741,12 @@ interface ItemCarrinho {
       }
     `]
   })
-  export class PDVComponent implements OnInit {
+    export class PDVComponent implements OnInit, AfterViewInit {
     private http = inject(HttpClient);
     private router = inject(Router);
     private authService = inject(AuthService);
+
+    @ViewChild('inputCodigoBarras') inputCodigoBarras!: ElementRef;
     
 
     produtos: Produto[] = [];
@@ -742,6 +769,8 @@ interface ItemCarrinho {
     troco = 0;
     observacao = '';
 
+    hospedesDoApartamento: any[] = [];
+
     clientesComCredito: Cliente[] = [];
     clienteSelecionadoId = 0;
     clienteNomeVenda = '';
@@ -756,6 +785,8 @@ interface ItemCarrinho {
     reservaIdPreSelecionada = 0;
     origem: string = '';
 
+    
+
     // ✅ Getter para mostrar info da reserva selecionada
     get reservaSelecionadaInfo(): { apto: string; hospede: string } | null {
       if (!this.reservaSelecionadaId || this.reservaSelecionadaId === 0) return null;
@@ -767,6 +798,10 @@ interface ItemCarrinho {
       };
     }
     codigoBarras = '';
+
+    termoBuscaApartamento = '';
+    reservasFiltradas: any[] = [];
+    hospedesSelecionados: any[] = [];
 
     constructor(private route: ActivatedRoute) {}
 
@@ -800,6 +835,46 @@ interface ItemCarrinho {
         }
       });
     }
+
+    filtrarPorApartamento(): void {
+  const termo = this.termoBuscaApartamento.trim();
+  if (!termo) {
+    this.reservasFiltradas = [...this.reservas];
+    return;
+  }
+  this.reservasFiltradas = this.reservas.filter(r =>
+    r.apartamento?.numeroApartamento?.toString().includes(termo)
+  );
+
+  // ✅ Se encontrou exatamente um apartamento, carrega os hóspedes
+  if (this.reservasFiltradas.length === 1) {
+    const reservaId = this.reservasFiltradas[0].id;
+    this.carregarHospedesApartamento(reservaId);
+  } else {
+    this.hospedesDoApartamento = [];
+  }
+}
+
+ngAfterViewInit(): void {
+  setTimeout(() => {
+    this.inputCodigoBarras?.nativeElement?.focus();
+  }, 300);
+}
+
+carregarHospedesApartamento(reservaId: number): void {
+  this.http.get<any[]>(`/api/reservas/${reservaId}/hospedes`).subscribe({
+    next: (hospedes) => {
+      this.hospedesDoApartamento = hospedes
+        .filter(h => h.status !== 'CHECKOUT_REALIZADO')
+        .map(h => ({
+          reservaId: reservaId,
+          nome: h.cliente?.nome || h.nomeCompleto,
+          titular: h.titular
+        }));
+    },
+    error: () => this.hospedesDoApartamento = []
+  });
+}
 
    carregarClientesComCredito(): void {
     // ✅ Solicita TODOS os clientes via paginação grande para filtrar localmente
@@ -1007,71 +1082,66 @@ interface ItemCarrinho {
     }
 
     carregarReservasAtivas(): void {
-    this.http.get<any[]>('/api/reservas/ativas').subscribe({
-      next: (data) => {
-        this.reservas = data;
-        console.log('🏨 Reservas ativas:', this.reservas.length);
-        
-        // ✅ Pré-seleciona a reserva se veio do Painel Recepção
-        if (this.reservaIdPreSelecionada > 0) {
-          const reservaExiste = this.reservas.find(r => r.id === this.reservaIdPreSelecionada);
-          if (reservaExiste) {
-            this.reservaSelecionadaId = this.reservaIdPreSelecionada;
-            console.log('✅ Reserva pré-selecionada:', this.reservaIdPreSelecionada);
-          } else {
-            console.warn('⚠️ Reserva pré-selecionada não encontrada nas ativas');
-          }
+  this.http.get<any[]>('/api/reservas/ativas').subscribe({
+    next: (data) => {
+      // ✅ ORDENAR POR NÚMERO DO APARTAMENTO (crescente)
+      this.reservas = data.sort((a, b) => {
+        const numA = parseInt(a.apartamento?.numeroApartamento) || 0;
+        const numB = parseInt(b.apartamento?.numeroApartamento) || 0;
+        return numA - numB;
+      });
+      this.reservasFiltradas = [...this.reservas];
+
+      if (this.reservaIdPreSelecionada > 0) {
+        const reservaExiste = this.reservas.find(r => r.id === this.reservaIdPreSelecionada);
+        if (reservaExiste) {
+          this.reservaSelecionadaId = this.reservaIdPreSelecionada;
         }
-      },
-      error: (err) => console.error('❌ Erro ao carregar reservas:', err)
-    });
-  }
+      }
+    },
+    error: (err) => console.error('❌ Erro ao carregar reservas:', err)
+  });
+}
 
     realizarVendaFaturada(): void {
-    // ✅ BUSCAR O ID DO USUÁRIO LOGADO
-    const usuarioId = this.authService.getUsuarioId();
-    
-    const request = {
-      clienteId: Number(this.clienteSelecionadoId),
-      observacao: this.observacao,
-      itens: this.carrinho.map(item => ({
-        produtoId: item.produto.id,
-        quantidade: item.quantidade,
-        valorUnitario: item.valorUnitario
-      }))
-    };
+  const usuarioId = this.authService.getUsuarioId();
+  const isFuncionario = this.tipoVenda === 'FUNCIONARIO';
 
-    // ✅ ADICIONAR usuarioId COMO QUERY PARAMETER
-    this.http.post<any>(
-      `/api/vendas/faturada?usuarioId=${usuarioId}`,
-      request
-    ).subscribe({
-      next: (response) => {
-        this.notaVendaId = response.notaVendaId;
-        this.clienteNomeVenda = response.clienteNome;
-        
-        // ✅ SALVAR DADOS PARA IMPRESSÃO
-        this.ultimosItensVendidos = [...this.carrinho];
-        this.ultimoTotalVenda = this.totalCarrinho;
-        const totalVenda = this.totalCarrinho;
-        
-        this.fecharModalFinalizacao();
-        
-        this.totalCarrinho = totalVenda;
-        
-        this.modalSucesso = true;
-        
-        this.carrinho = [];
-        this.carregarProdutos();
-      },
-      error: (err) => {
-        console.error('❌ Erro completo:', err);
-        console.error('❌ Erro do backend:', err.error);
-        alert('❌ Erro: ' + (err.error?.erro || err.message));
-      }
-    });
-  }
+  const request = {
+    clienteId: Number(this.clienteSelecionadoId),
+    observacao: this.observacao,
+    funcionario: isFuncionario, // ← sinaliza para backend gerar vale
+    itens: this.carrinho.map(item => ({
+      produtoId: item.produto.id,
+      quantidade: item.quantidade,
+      valorUnitario: item.valorUnitario
+    }))
+  };
 
+  const endpoint = isFuncionario
+    ? `/api/vendas/funcionario?usuarioId=${usuarioId}`
+    : `/api/vendas/faturada?usuarioId=${usuarioId}`;
+
+  this.http.post<any>(endpoint, request).subscribe({
+    next: (response) => {
+      this.notaVendaId = response.notaVendaId;
+      this.clienteNomeVenda = response.clienteNome;
+      this.ultimosItensVendidos = [...this.carrinho];
+      this.ultimoTotalVenda = this.totalCarrinho;
+      const totalVenda = this.totalCarrinho;
+      this.fecharModalFinalizacao();
+      this.totalCarrinho = totalVenda;
+      this.modalSucesso = true;
+      this.carrinho = [];
+      this.carregarProdutos();
+    },
+    error: (err) => {
+      console.error('❌ Erro:', err);
+      alert('❌ Erro: ' + (err.error?.erro || err.message));
+    }
+  });
+}
+  
     fecharModalSucesso(): void {
       this.modalSucesso = false;
       this.carrinho = [];
@@ -1347,30 +1417,28 @@ interface ItemCarrinho {
   }
 
    
-    buscarPorCodigo(): void {
-  console.log('🔷 Produtos disponíveis:', this.produtos.length);
-  console.log('🔷 Código:', this.codigoBarras);
+   buscarPorCodigo(): void {
   if (!this.codigoBarras || this.codigoBarras.trim() === '') return;
 
   const codigo = this.codigoBarras.trim();
-  console.log('🔷 Código digitado:', codigo);
-  console.log('🔷 Length:', codigo.length);
-  console.log('🔷 CharCodes:', Array.from(codigo).map(c => c.charCodeAt(0)));
-
-  const produto = this.produtos.find(p => {
-    console.log('Comparando:', JSON.stringify(p.codigoBarras), '===', JSON.stringify(codigo), ':', p.codigoBarras === codigo);
-    return p.codigoBarras === codigo ||
-           p.nomeProduto.toLowerCase() === codigo.toLowerCase();
-  });
+  
+  const produto = this.produtos.find(p => 
+    p.codigoBarras === codigo ||
+    p.nomeProduto.toLowerCase() === codigo.toLowerCase()
+  );
 
   if (produto) {
     this.adicionarAoCarrinho(produto);
-    console.log('✅ Produto encontrado:', produto.nomeProduto);
   } else {
     alert(`❌ Produto não encontrado para o código: ${codigo}`);
   }
 
   this.codigoBarras = '';
+  
+  // ✅ VOLTA O FOCO PARA O CAMPO DE CÓDIGO DE BARRAS
+  setTimeout(() => {
+    this.inputCodigoBarras?.nativeElement?.focus();
+  }, 100);
 }
 
 onKeyDown(event: KeyboardEvent): void {

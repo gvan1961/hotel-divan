@@ -56,7 +56,7 @@ interface Contadores {
   selector: 'app-painel-recepcao',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
+template: `
     <div class="painel-wrapper">
 
       <!-- CONTADORES -->
@@ -169,6 +169,63 @@ interface Contadores {
     <button class="btn-limpar-busca" (click)="limparBusca()"
             *ngIf="mostrarResultados">✕</button>
   </div>
+        
+     <!-- BUSCA POR EMPRESA -->
+<div class="busca-bar">
+  <div class="busca-grupo">
+    <input
+      class="filtro-input"
+      type="text"
+      placeholder="🏢 Buscar hóspedes por empresa..."
+      [(ngModel)]="buscaEmpresa"
+      (keyup.enter)="buscarPorEmpresa()" />
+    <button class="btn-buscar" (click)="buscarPorEmpresa()" [disabled]="buscandoEmpresa">
+      {{ buscandoEmpresa ? '⏳' : '🔍 Buscar Empresa' }}
+    </button>
+    <button class="btn-limpar-busca" (click)="limparBuscaEmpresa()"
+            *ngIf="mostrarResultadosEmpresa">✕</button>
+  </div>
+
+  <!-- RESULTADOS POR EMPRESA -->
+  <div class="resultados-empresa" *ngIf="mostrarResultadosEmpresa && resultadosEmpresa">
+
+    <!-- NÃO ENCONTRADO -->
+    <div *ngIf="!resultadosEmpresa.sucesso" class="sem-resultado-busca">
+      📭 {{ resultadosEmpresa.mensagem }}
+    </div>
+
+    <!-- ENCONTRADO -->
+    <div *ngIf="resultadosEmpresa.sucesso">
+      <div class="empresa-header">
+        <span class="empresa-nome">🏢 {{ resultadosEmpresa.nomeEmpresa }}</span>
+        <span class="empresa-totais">
+          {{ resultadosEmpresa.totalHospedes }} hóspede(s) em 
+          {{ resultadosEmpresa.totalApartamentos }} apartamento(s)
+        </span>
+      </div>
+
+      <!-- POR APARTAMENTO -->
+      <div *ngFor="let apto of getApartamentosDaEmpresa()" class="empresa-apto">
+        <div class="empresa-apto-header">
+          🏠 Apartamento {{ apto.apartamento }}
+          <span class="empresa-apto-total">{{ apto.hospedes.length }} hóspede(s)</span>
+        </div>
+        <div *ngFor="let h of apto.hospedes" class="empresa-hospede">
+          <span>{{ h.titular ? '👑' : '👤' }} {{ h.nomeCliente }}</span>
+          <span *ngIf="h.titular" class="badge-titular">Titular</span>
+        </div>
+      </div>
+
+      <!-- TOTAL GERAL -->
+      <div class="empresa-total-geral">
+        <span>━━━━━━━━━━━━━━━━━━━━</span>
+        <span>TOTAL GERAL: <strong>{{ resultadosEmpresa.totalHospedes }}</strong> hóspede(s) 
+          em <strong>{{ resultadosEmpresa.totalApartamentos }}</strong> apartamento(s)</span>
+      </div>
+    </div>
+
+  </div>
+</div>
 
   <!-- RESULTADOS DA BUSCA -->
   <div class="resultados-busca" *ngIf="mostrarResultados">
@@ -225,8 +282,8 @@ interface Contadores {
   <span class="apt-tipo" *ngIf="apt.tipo">{{ apt.tipo }}</span>
   <span class="reserva-num" *ngIf="apt.reserva?.id">#{{ apt.reserva?.id }}</span>
   <div class="header-badges">
-    <span class="badge-sai"    *ngIf="isSaiHoje(apt)">SAI HOJE</span>
-     <span class="badge-entra"  *ngIf="apt.reserva?.entraHoje && !apt.reserva?.atrasado">ENTRA HOJE</span>
+    <span class="badge-sai" *ngIf="isSaiHoje(apt) && getStatusFinal(apt) !== 'LIMPEZA'">SAI HOJE</span>
+      <span class="badge-entra"  *ngIf="apt.reserva?.entraHoje && !apt.reserva?.atrasado">ENTRA HOJE</span>
      <span class="badge-atraso" *ngIf="apt.reserva?.atrasado && !apt.reserva?.renovacaoAutomatica">ATRASADO</span>
     <span class="badge-renovacao" *ngIf="apt.reserva?.renovacaoAutomatica">🔄 RENOVAÇÃO AUTOMÁTICA</span>
   </div>
@@ -291,10 +348,11 @@ interface Contadores {
 
             <!-- EM LIMPEZA -->
             <ng-container *ngIf="getStatusFinal(apt) === 'LIMPEZA'">
-              <button class="btn-acao btn-liberar" (click)="liberarApartamento(apt)">↩ Liberar UH</button>
-              <button class="btn-icone" (click)="irParaReserva(apt)" title="Ver reserva">➜</button>
-            </ng-container>
-
+  <button class="btn-acao btn-liberar" (click)="liberarApartamento(apt)">↩ Liberar UH</button>
+  <button class="btn-icone" (click)="irParaReserva(apt)" 
+          *ngIf="apt.reserva?.id"
+          title="Ver última reserva">📋</button>
+</ng-container>
             <!-- ATRASADO -->
            <ng-container *ngIf="apt.reserva?.atrasado">
               <div class="aviso-atraso" [title]="'Checkout previsto: ' + formatarData(apt.reserva!.dataCheckout)">
@@ -345,7 +403,7 @@ interface Contadores {
     </div>
   `,
   styles: [`
-    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans:wght@400;500;600&family=Roboto+Mono:wght@400;500;600;700&display=swap');
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -396,18 +454,18 @@ interface Contadores {
     .cnt-sai        { background: #fdebd0; border-color: #e67e22; color: #a04000; }
     .cnt-atrasado   { background: #fadbd8; border-color: #e74c3c; color: #c0392b; }
 
-    .btn-pdv {
-      background: #8e44ad;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 4px 14px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      font-weight: 700;
-      transition: background .15s;
-      margin-left: auto;
-    }
+ .btn-pdv {
+  background: #8e44ad;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 14px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: background .15s;
+  margin-left: auto;  /* ← já empurra para direita */
+}
     .btn-pdv:hover { background: #6c3483; }
 
     .btn-atualizar {
@@ -516,7 +574,7 @@ interface Contadores {
 .card-limpeza    .card-body   { background: #f2f3f4; }
 .card-prereserva .card-body   { background: #d6eaf8; }
 
-    .apt-numero { letter-spacing: .5px; font-size: 1rem; }
+    .apt-numero { letter-spacing: .5px; font-size: 1rem; font-family: 'Roboto Mono', monospace; }
     .apt-tipo {
   font-size: 0.7rem; font-weight: 500;
   background: rgba(255,255,255,.2);
@@ -544,7 +602,7 @@ interface Contadores {
     .info-icon  { flex-shrink: 0; font-size: 0.75rem; margin-top: 1px; }
     .info-texto { flex: 1; }
     .truncate   { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
-    .cliente-nome { font-weight: 600; color: #2c3e50; font-size: 0.82rem; }
+    .cliente-nome { font-weight: 600; color: #2c3e50; font-size: 0.82rem; font-family: 'Roboto Mono', monospace; }
 
     .sem-reserva { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
     .status-label { font-size: 0.8rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: .5px; }
@@ -764,6 +822,110 @@ interface Contadores {
   transform: scale(0.98);
 }
 
+/* ── BUSCA POR EMPRESA ──────────────────────── */
+.resultados-empresa {
+  margin-top: 10px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.empresa-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #1a5276 0%, #2980b9 100%);
+  color: #fff;
+  font-weight: 700;
+}
+
+.empresa-nome {
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+}
+
+.empresa-totais {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  background: rgba(255,255,255,0.15);
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.empresa-apto {
+  border-bottom: 2px solid #f0f4f8;
+  padding: 14px 20px;
+  background: #fff;
+  transition: background 0.15s;
+}
+
+.empresa-apto:hover {
+  background: #f8fbff;
+}
+
+.empresa-apto:last-of-type {
+  border-bottom: none;
+}
+
+.empresa-apto-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  color: #1a5276;
+  font-size: 0.95rem;
+  padding: 0 0 10px 0;
+  border-bottom: 1px dashed #d0e8f5;
+  margin-bottom: 10px;
+}
+
+.empresa-apto-total {
+  font-size: 0.8rem;
+  color: #fff;
+  font-weight: 600;
+  background: #2980b9;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+.empresa-hospede {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  color: #2c3e50;
+  background: #f4f8fb;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  border-left: 3px solid #2980b9;
+}
+
+.empresa-hospede:last-child {
+  margin-bottom: 0;
+}
+
+.empresa-total-geral {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #eaf4fb 0%, #d6eaf8 100%);
+  font-size: 0.95rem;
+  color: #1a5276;
+  gap: 6px;
+  border-top: 2px solid #2980b9;
+  font-weight: 600;
+}
+
+.empresa-total-geral strong {
+  font-size: 1.1rem;
+  color: #1a5276;
+}
+
   `]
 })
 export class PainelRecepcaoApp implements OnInit, OnDestroy {
@@ -782,6 +944,11 @@ export class PainelRecepcaoApp implements OnInit, OnDestroy {
   resultadosBusca: any[] = [];
   buscando = false;
   mostrarResultados = false;
+
+  buscaEmpresa = '';
+resultadosEmpresa: any = null;
+buscandoEmpresa = false;
+mostrarResultadosEmpresa = false;
   
   private intervalo: any;
   private apiUrl = '/api/apartamentos/painel';
@@ -1059,6 +1226,49 @@ return lista.filter(apt => {
         this.buscando = false;
       }
     });
+}
+
+buscarPorEmpresa(): void {
+  if (!this.buscaEmpresa.trim()) return;
+  this.buscandoEmpresa = true;
+  this.mostrarResultadosEmpresa = false;
+  const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+
+  this.http.get<any>('/api/reservas/pesquisar-empresa', {
+    headers,
+    params: { nomeEmpresa: this.buscaEmpresa.trim() }
+  }).subscribe({
+    next: (res) => {
+      this.resultadosEmpresa = res;
+      this.mostrarResultadosEmpresa = true;
+      this.buscandoEmpresa = false;
+    },
+    error: (err) => {
+      alert('Erro: ' + (err.error?.mensagem || err.message));
+      this.buscandoEmpresa = false;
+    }
+  });
+}
+
+limparBuscaEmpresa(): void {
+  this.buscaEmpresa = '';
+  this.resultadosEmpresa = null;
+  this.mostrarResultadosEmpresa = false;
+}
+
+getApartamentosDaEmpresa(): any[] {
+  if (!this.resultadosEmpresa?.hospedes) return [];
+  const aptos: any = {};
+  this.resultadosEmpresa.hospedes.forEach((h: any) => {
+    if (!aptos[h.apartamento]) aptos[h.apartamento] = [];
+    aptos[h.apartamento].push(h);
+  });
+  return Object.keys(aptos).sort((a, b) => {
+    return parseInt(a) - parseInt(b);
+  }).map(apto => ({
+    apartamento: apto,
+    hospedes: aptos[apto]
+  }));
 }
 
 limparBusca(): void {

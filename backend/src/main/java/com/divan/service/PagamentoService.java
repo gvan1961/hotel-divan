@@ -1,8 +1,6 @@
 package com.divan.service;
 
 import com.divan.dto.ResumoPagamentosDTO;
-import com.divan.entity.Apartamento;
-import com.divan.entity.ContaAReceber;
 import com.divan.entity.ExtratoReserva;
 import com.divan.entity.Pagamento;
 import com.divan.entity.Reserva;
@@ -14,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.divan.repository.ContaAReceberRepository;
-import java.time.LocalDate;
 
 import com.divan.repository.ApartamentoRepository;
 
@@ -67,11 +64,8 @@ public class PagamentoService {
                 && reserva.getStatus() != Reserva.StatusReservaEnum.PRE_RESERVA) {
             throw new RuntimeException("Não é possível adicionar pagamento a uma reserva não ativa");
         }
-        
-        if (pagamento.getValor().compareTo(reserva.getTotalApagar()) > 0) {
-            throw new RuntimeException("Valor do pagamento excede o saldo devedor de R$ " + reserva.getTotalApagar());
-        }
-
+       
+      
         // ✅ Marcar como PAGAMENTO normal
         pagamento.setTipo(Pagamento.TipoPagamentoEnum.PAGAMENTO);
         pagamento.setDataHoraPagamento(LocalDateTime.now());

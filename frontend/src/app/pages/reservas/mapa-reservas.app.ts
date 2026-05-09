@@ -1005,10 +1005,45 @@ td.col-reserva.hoje {
 /* RESPONSIVO */
 /* ═══════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════ */
+/* RESPONSIVO MOBILE */
+/* ═══════════════════════════════════════════════════════════ */
+
 @media (max-width: 768px) {
+  .container {
+    padding: 8px;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 1.1rem;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .btn-voltar,
+  .btn-imprimir,
+  .btn-hoje,
+  .btn-atualizar {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+
   .filtros {
     flex-direction: column;
     align-items: stretch;
+    padding: 10px;
+    gap: 8px;
   }
 
   .filtro-periodo,
@@ -1017,21 +1052,122 @@ td.col-reserva.hoje {
     align-items: stretch;
   }
 
+  .filtros select,
+  .filtros input[type="date"] {
+    width: 100%;
+    font-size: 0.9rem;
+  }
+
   .legenda {
-    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .legenda-item {
+    font-size: 0.78rem;
   }
 
   .mapa-scroll {
-    max-height: calc(100vh - 450px);
+    max-height: calc(100vh - 300px);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mapa-table {
+    min-width: 600px;
+  }
+
+  th {
+    padding: 8px 4px;
+    font-size: 0.78rem;
+  }
+
+  .col-apartamento {
+    min-width: 55px;
+    max-width: 55px;
+    font-size: 0.82rem;
+  }
+
+  .col-data {
+    min-width: 55px;
+    max-width: 55px;
+  }
+
+  .celula-reserva {
+    height: 40px;
+    font-size: 0.72rem;
+  }
+
+  td {
+    height: 40px;
+  }
+
+  .reserva-info {
+    font-size: 0.65rem;
+    padding: 0 3px;
+  }
+
+  .modal-content {
+    padding: 16px;
+    max-width: 100%;
+    margin: 8px;
+    border-radius: 8px;
+  }
+
+  .modal-overlay {
+    padding: 8px;
+    align-items: flex-end;
   }
 
   .modal-footer {
     flex-direction: column;
     align-items: stretch;
+    gap: 8px;
   }
-  
+
   .acoes-direita {
     flex-direction: column;
+    gap: 6px;
+  }
+
+  .btn-cancelar,
+  .btn-excluir,
+  .btn-editar,
+  .btn-ver-detalhes,
+  .btn-criar-reserva,
+  .btn-pagar,
+  .btn-confirmar-pagamento,
+  .btn-cancelar-reserva,
+  .btn-confirmar-cancelamento {
+    width: 100%;
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .mapa-table {
+    min-width: 500px;
+  }
+
+  .col-apartamento {
+    min-width: 45px;
+    max-width: 45px;
+    font-size: 0.75rem;
+  }
+
+  .col-data {
+    min-width: 45px;
+    max-width: 45px;
+  }
+
+  .celula-reserva {
+    height: 35px;
+    font-size: 0.65rem;
+  }
+
+  td {
+    height: 35px;
   }
 }
 

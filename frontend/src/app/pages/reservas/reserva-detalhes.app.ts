@@ -527,20 +527,12 @@ import { environment } from '../../../environments/environment';
                 🏨 Comanda de Consumo
               </button>
             </ng-container>
-            <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
-              <button class="btn-acao btn-pagamento" 
-                      *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) > 0"
-                      (click)="abrirModalPagamento()">
-                💳 Registrar Pagamento
-              </button>
-            </ng-container>
-
-            <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
-  <button class="btn-acao btn-adiantamento"
-          *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) <= 0"
-          (click)="abrirModalAdiantamento()">
-    💵 Registrar Adiantamento
-  </button>
+         <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
+  <button class="btn-acao btn-pagamento" 
+        *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
+        (click)="abrirModalPagamento()">
+  💳 Registrar Pagamento
+</button>
 </ng-container>
 
             <ng-container *hasPermission="'RESERVA_EDITAR'">
@@ -3528,66 +3520,39 @@ ngOnDestroy(): void {
         <head>
           <meta charset="UTF-8">
           <title>Fatura - Reserva #${this.reserva.id}</title>
-          <style>
-            @page
-            html, body {
-  margin: 0 !important;
-  padding: 0 !important;
-}
-            { size: 80mm auto; margin: 0; }
-            body { 
-  font-family: 'Courier New', monospace; 
-  font-size: 8pt; 
-  width: 72mm;
-  max-width: 72mm;
-  margin: 0; 
-  padding: 1mm 2mm;
-}
-            .cabecalho { text-align: left; margin-bottom: 8px; }
-            .cabecalho h1 { font-size: 14px; margin: 0; letter-spacing: 2px; }
-            .cnpj, .endereco { font-size: 9px; margin: 2px 0; }
-            .separador { text-align: center; margin: 6px 0; font-size: 10px; }
-            .titulo-documento { text-align: left; margin: 8px 0; }
-            .titulo-documento h2 { font-size: 11px; margin: 0; }
-            .numero-reserva { font-size: 10px; font-weight: bold; margin: 4px 0; }
-            .data-emissao { font-size: 8px; margin: 2px 0; }
-            .secao { margin: 8px 0; }
-            .secao h3 { font-size: 10px; margin: 0 0 6px 0; text-decoration: underline; }
-            .secao p { margin: 3px 0; font-size: 9px; line-height: 1.3; }
-          .linha-valor { 
-    display: flex; 
-    justify-content: space-between; 
-    margin: 4px 0; 
-    font-size: 10pt !important;
-    font-weight: 700 !important;
-    width: 100%;
+         <style>
+  @page { size: 80mm auto; margin: 0; }
+  html, body { margin: 0 !important; padding: 0 !important; }
+  
+  * { font-weight: 700 !important; }
+  
+  body { 
+    font-family: 'Courier New', monospace; 
+    font-size: 10pt; 
+    width: 72mm;
+    max-width: 72mm;
+    margin: 0; 
+    padding: 1mm 2mm;
   }
-  .linha-valor span:first-child {
-    flex: 1;
-  }
-  .linha-valor span:last-child {
-    text-align: right;
-    min-width: 25mm;
-    white-space: nowrap;
-  }
-  .linha-valor.subtotal { 
-    font-weight: 900 !important;
-    margin-top: 6px; 
-  }
-  .linha-valor.total { 
-    font-size: 12pt !important;
-    font-weight: 900 !important;
-    margin: 6px 0; 
-  }
-            .declaracao { text-align: left; margin: 12px 0; font-size: 9px; }
-            .declaracao p { margin: 2px 0; }
-            .assinatura { margin-top: 15px; text-align: center; }
-            .linha-assinatura { border-top: 1px solid #000; margin: 12px 15px 4px 15px; }
-            .label-assinatura { font-size: 8px; margin: 2px 0; }
-            .rodape { text-align: left; margin-top: 12px; font-size: 9px; }
-            .rodape p { margin: 2px 0; }
-            .destaque-apagar { background: #000; color: #fff; padding: 6px; text-align: center; margin: 8px 0; }
-          </style>
+  .cabecalho { text-align: left; margin-bottom: 8px; }
+  .cabecalho h1 { font-size: 16pt; margin: 0; letter-spacing: 2px; font-weight: 900 !important; }
+  .cnpj, .endereco { font-size: 10pt; margin: 2px 0; }
+  .separador { text-align: center; margin: 6px 0; font-size: 10pt; }
+  .titulo-documento { text-align: left; margin: 8px 0; }
+  .titulo-documento h2 { font-size: 13pt; margin: 0; font-weight: 900 !important; }
+  .numero-reserva { font-size: 11pt; font-weight: 900 !important; margin: 4px 0; }
+  .data-emissao { font-size: 10pt; margin: 2px 0; }
+  .secao { margin: 8px 0; }
+  .secao h3 { font-size: 11pt; margin: 0 0 6px 0; text-decoration: underline; font-weight: 900 !important; }
+  .secao p { margin: 3px 0; font-size: 10pt; line-height: 1.4; }
+  .declaracao { text-align: left; margin: 12px 0; font-size: 10pt; }
+  .declaracao p { margin: 2px 0; }
+  .assinatura { margin-top: 15px; text-align: center; }
+  .linha-assinatura { border-top: 1px solid #000; margin: 12px 15px 4px 15px; }
+  .label-assinatura { font-size: 10pt; margin: 2px 0; }
+  .rodape { text-align: left; margin-top: 12px; font-size: 10pt; }
+  .rodape p { margin: 2px 0; }
+</style>
         </head>
         <body>
           <div class="cabecalho">
@@ -3861,13 +3826,7 @@ ngOnDestroy(): void {
         console.error('❌ Valor inválido:', this.pagValor);
         alert('Valor inválido');
         return;
-      }
-
-      if (this.pagValor > (this.reserva.totalApagar || 0)) {
-        console.error('❌ Valor maior que saldo:', this.pagValor, '>', this.reserva.totalApagar);
-        alert(`Valor maior que saldo (R$ ${(this.reserva.totalApagar || 0).toFixed(2)})`);
-        return;
-      }
+      }  
 
       const usuarioId = this.authService.getUsuarioId();
       console.log('👤 Usuario ID:', usuarioId);
@@ -4154,18 +4113,34 @@ salvarAdiantamento(): void {
     }
 
     // ============= FINALIZAR / CANCELAR =============
-  finalizarCheckout(): void {
-    if (!this.reserva) return;
+ finalizarCheckout(): void {
+  if (!this.reserva) return;
 
-    const temSaldo = (this.reserva.totalApagar || 0) > 0;
-    
-    if (temSaldo) {
-      this.finalizarReservaFaturada();  // ✅ Chama FATURADA
-    } else {
-      this.finalizarReservaPaga();      // ✅ Chama PAGA
-    }
-  
+  const saldo = this.reserva.totalApagar || 0;
+  const temSaldoDevedor = saldo > 0.01;
+  const temCredito = saldo < -0.01;
+  const podeCredito = this.reserva.cliente?.creditoAprovado || 
+                    (this.reserva as any).cliente?.empresa?.id;
+
+  // ✅ BLOQUEAR SE TEM SALDO DEVEDOR E NÃO TEM CRÉDITO
+  if (temSaldoDevedor && !podeCredito) {
+    alert(`❌ Não é possível finalizar!\n\nSaldo devedor: R$ ${this.formatarMoeda(saldo)}\n\nRegistre o pagamento antes de finalizar.`);
+    return;
   }
+
+  // ✅ BLOQUEAR SE TEM CRÉDITO A DEVOLVER
+  if (temCredito) {
+    alert(`❌ Não é possível finalizar!\n\nHá um crédito de R$ ${this.formatarMoeda(Math.abs(saldo))} a devolver ao hóspede.\n\nUse o botão "💰 Crédito" antes de finalizar.`);
+    return;
+  }
+
+  // ✅ PROSSEGUIR
+  if (temSaldoDevedor && podeCredito) {
+    this.finalizarReservaFaturada(); // Débito em conta
+  } else {
+    this.finalizarReservaPaga(); // Pago à vista
+  }
+}
 
   finalizarReservaFaturada(): void {
     if (!this.reserva) return;

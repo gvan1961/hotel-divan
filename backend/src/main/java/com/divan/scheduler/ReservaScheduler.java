@@ -39,7 +39,7 @@ public class ReservaScheduler {
 
     private void ativarPreReservasInterno() {
         System.out.println("═══════════════════════════════════════════");
-        System.out.println("🔄 VERIFICANDO PRÉ-RESERVAS PARA ATIVAR");
+        System.out.println("🔄 VERIFICANDO PRÉ-RESERVAS PARA ALERTAR");
         System.out.println("   Data/Hora: " + LocalDateTime.now());
         System.out.println("═══════════════════════════════════════════");
 
@@ -49,37 +49,43 @@ public class ReservaScheduler {
 
         System.out.println("📋 Total de pré-reservas: " + preReservas.size());
 
-        int ativadas = 0;
+        int alertas = 0;
 
         for (Reserva reserva : preReservas) {
             LocalDateTime dataCheckin = reserva.getDataCheckin();
 
             if (!dataCheckin.isAfter(agora)) {
                 System.out.println("───────────────────────────────────────────");
-                System.out.println("✅ Ativando Reserva #" + reserva.getId());
+                System.out.println("🔍 Pré-reserva #" + reserva.getId() + " com check-in no passado");
                 System.out.println("   Apartamento: " + reserva.getApartamento().getNumeroApartamento());
                 System.out.println("   Cliente: " + reserva.getCliente().getNome());
-                System.out.println("   Check-in: " + dataCheckin.toLocalDate());
-
-                reserva.setStatus(Reserva.StatusReservaEnum.ATIVA);
-                reservaRepository.save(reserva);
+                System.out.println("   Check-in previsto: " + dataCheckin);
 
                 Apartamento apartamento = reserva.getApartamento();
-                apartamento.setStatus(Apartamento.StatusEnum.OCUPADO);
-                apartamentoRepository.save(apartamento);
 
-                System.out.println("   ✅ Reserva ativada!");
-                System.out.println("   🏨 Apartamento " + apartamento.getNumeroApartamento() + " → OCUPADO");
+                if (apartamento.getStatus() == Apartamento.StatusEnum.OCUPADO) {
+                    System.out.println("⚠️ ALERTA — Apt " + apartamento.getNumeroApartamento()
+                        + " está OCUPADO — recepção deve tomar decisão!");
+                } else if (apartamento.getStatus() == Apartamento.StatusEnum.LIMPEZA) {
+                    System.out.println("⚠️ ALERTA — Apt " + apartamento.getNumeroApartamento()
+                        + " está em LIMPEZA — aguardando liberação para ativar!");
+                } else {
+                    System.out.println("ℹ️ Apt " + apartamento.getNumeroApartamento()
+                        + " está DISPONÍVEL — aguardando check-in manual pelo recepcionista!");
+                }
 
-                ativadas++;
+                alertas++;
             } else {
-                System.out.println("⏭️ Reserva #" + reserva.getId() + " ainda é futura (check-in: " + dataCheckin.toLocalDate() + ")");
+                System.out.println("⏭️ Reserva #" + reserva.getId()
+                    + " ainda é futura (check-in: " + dataCheckin.toLocalDate() + ")");
             }
         }
 
         System.out.println("═══════════════════════════════════════════");
         System.out.println("✅ VERIFICAÇÃO CONCLUÍDA");
-        System.out.println("   Pré-reservas ativadas: " + ativadas);
+        System.out.println("   Pré-reservas pendentes de check-in: " + alertas);
+        System.out.println("   ⚠️ Ativação automática DESATIVADA");
+        System.out.println("   ✅ Ativação manual pelo recepcionista no Painel");
         System.out.println("═══════════════════════════════════════════");
     }
 

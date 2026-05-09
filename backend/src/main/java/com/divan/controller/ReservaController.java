@@ -1003,6 +1003,7 @@ public class ReservaController {
             BigDecimal valorEstorno = extratoOriginal.getTotalLancamento();
             reserva.setTotalHospedagem(reserva.getTotalHospedagem().subtract(valorEstorno));
             reserva.setTotalApagar(reserva.getTotalApagar().subtract(valorEstorno));
+            reserva.setTotalProduto(reserva.getTotalProduto().subtract(valorEstorno));
 
             reservaRepository.save(reserva);
 
