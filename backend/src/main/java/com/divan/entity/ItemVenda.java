@@ -6,17 +6,13 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 
 @Entity
 @Table(name = "itens_venda")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+
 public class ItemVenda {
     
     @Id
@@ -46,4 +42,70 @@ public class ItemVenda {
     @DecimalMin(value = "0.01", message = "Total do item deve ser maior que zero")
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalItem;
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public NotaVenda getNotaVenda() {
+		return notaVenda;
+	}
+
+	public void setNotaVenda(NotaVenda notaVenda) {
+		this.notaVenda = notaVenda;
+	}
+
+	public Produto getProduto() {
+		return produto;
+	}
+
+	public void setProduto(Produto produto) {
+		this.produto = produto;
+	}
+
+	public Integer getQuantidade() {
+		return quantidade;
+	}
+
+	public void setQuantidade(Integer quantidade) {
+		this.quantidade = quantidade;
+	}
+
+	public BigDecimal getValorUnitario() {
+		return valorUnitario;
+	}
+
+	public void setValorUnitario(BigDecimal valorUnitario) {
+		this.valorUnitario = valorUnitario;
+	}
+
+	public BigDecimal getTotalItem() {
+		return totalItem;
+	}
+
+	public void setTotalItem(BigDecimal totalItem) {
+		this.totalItem = totalItem;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ItemVenda other = (ItemVenda) obj;
+		return Objects.equals(id, other.id);
+	}    
+    
 }

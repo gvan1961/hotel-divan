@@ -1,6 +1,8 @@
 package com.divan.service;
 
 import com.divan.dto.ResumoPagamentosDTO;
+import com.divan.entity.Cliente;
+import com.divan.entity.ContaAReceber;
 import com.divan.entity.ExtratoReserva;
 import com.divan.entity.Pagamento;
 import com.divan.entity.Reserva;
@@ -16,6 +18,7 @@ import com.divan.repository.ContaAReceberRepository;
 import com.divan.repository.ApartamentoRepository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -48,9 +51,7 @@ public class PagamentoService {
         System.out.println("═══════════════════════════════════════════");
 
         Optional<Reserva> reservaOpt = reservaRepository.findById(pagamento.getReserva().getId());
-        if (reservaOpt.isEmpty()) {
-            throw new RuntimeException("Reserva não encontrada");
-        }
+        if (reservaOpt.isEmpty()) throw new RuntimeException("Reserva não encontrada");
 
         Reserva reserva = reservaOpt.get();
 
@@ -60,13 +61,50 @@ public class PagamentoService {
         System.out.println("   Total A Pagar: R$ " + reserva.getTotalApagar());
         System.out.println("   Valor do Pagamento: R$ " + pagamento.getValor());
 
-        if (reserva.getStatus() != Reserva.StatusReservaEnum.ATIVA 
+        if (reserva.getStatus() != Reserva.StatusReservaEnum.ATIVA
                 && reserva.getStatus() != Reserva.StatusReservaEnum.PRE_RESERVA) {
             throw new RuntimeException("Não é possível adicionar pagamento a uma reserva não ativa");
         }
-       
-      
-        // ✅ Marcar como PAGAMENTO normal
+
+        // ✅ DÉBITO EM CONTA — tratamento especial
+        if (pagamento.getFormaPagamento() == Pagamento.FormaPagamentoEnum.DEBITO_EM_CONTA) {
+            Cliente cliente = reserva.getCliente();
+
+            if (cliente.getCreditoAprovado() == null || !cliente.getCreditoAprovado()) {
+                throw new RuntimeException("Cliente não possui crédito aprovado para débito em conta");
+            }
+
+            if (cliente.getEmpresa() == null) {
+                throw new RuntimeException("Cliente não possui empresa vinculada para débito em conta");
+            }
+
+            BigDecimal saldoDevedor = reserva.getTotalApagar();
+            if (saldoDevedor.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new RuntimeException("Reserva não possui saldo devedor para débito em conta");
+            }
+
+            pagamento.setValor(saldoDevedor);
+
+            ContaAReceber conta = new ContaAReceber();
+            conta.setDescricao("Débito em conta — Reserva #" + reserva.getId()
+                + " — " + cliente.getNome()
+                + " — Apt " + reserva.getApartamento().getNumeroApartamento());
+            conta.setValor(saldoDevedor);
+            conta.setSaldo(saldoDevedor);
+            conta.setValorPago(BigDecimal.ZERO);
+            conta.setDataVencimento(LocalDate.now().plusDays(30));
+            conta.setDataCriacao(LocalDateTime.now());
+            conta.setStatus(ContaAReceber.StatusContaEnum.EM_ABERTO);
+            conta.setCliente(cliente);
+            conta.setEmpresa(cliente.getEmpresa());
+            conta.setReserva(reserva);
+            conta.setObservacao("Gerado automaticamente via débito em conta no checkout");
+            contaAReceberRepository.save(conta);
+
+            System.out.println("📋 Conta a Receber criada: R$ " + saldoDevedor
+                + " — Empresa: " + cliente.getEmpresa().getNomeEmpresa());
+        }
+
         pagamento.setTipo(Pagamento.TipoPagamentoEnum.PAGAMENTO);
         pagamento.setDataHoraPagamento(LocalDateTime.now());
         pagamento.setReserva(reserva);
@@ -86,7 +124,6 @@ public class PagamentoService {
 
         return pagamentoSalvo;
     }
-
     /**
      * ✅ NOVO — Processa um adiantamento (crédito do hóspede para consumos futuros).
      * Só permitido quando a reserva está com saldo zerado.

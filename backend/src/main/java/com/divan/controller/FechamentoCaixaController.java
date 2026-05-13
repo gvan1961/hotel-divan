@@ -521,4 +521,22 @@ public class FechamentoCaixaController {
             .map(Pagamento::getValor)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
+    
+    @GetMapping("/api/fechamento-caixa/todos-abertos")
+    public ResponseEntity<?> buscarTodosCaixasAbertos() {
+        List<FechamentoCaixa> caixas = caixaRepository.findByStatus(StatusCaixa.ABERTO);
+        List<Map<String, Object>> resultado = caixas.stream()
+            .map(c -> {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", c.getId());
+                m.put("usuarioId", c.getUsuario().getId());
+                m.put("usuarioNome", c.getUsuario().getNome());
+                m.put("dataHoraAbertura", c.getDataHoraAbertura());
+                m.put("turno", c.getTurno());
+                return m;
+            })
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(resultado);
+    }
+    
 }

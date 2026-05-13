@@ -16,6 +16,8 @@ import java.util.Optional;
 @Repository
 public interface ContaAReceberRepository extends JpaRepository<ContaAReceber, Long> {
     
+	boolean existsByReservaId(Long reservaId);
+	
     List<ContaAReceber> findByCliente(Cliente cliente);
     
     List<ContaAReceber> findByEmpresa(Empresa empresa);

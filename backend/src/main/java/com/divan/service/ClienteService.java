@@ -38,6 +38,7 @@ public class ClienteService {
 
         // ✅ 1. LIMPAR CPF — remove pontos e traço
         if (cliente.getCpf() != null && !cliente.getCpf().isEmpty()) {
+        	System.out.println("🔍 CPF recebido: " + cliente.getCpf());
             cliente.setCpf(cliente.getCpf().replaceAll("[^0-9]", ""));
         }
 

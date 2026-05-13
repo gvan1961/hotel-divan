@@ -1,6 +1,7 @@
 package com.divan.controller;
 
 import com.divan.service.DiariaService;
+import com.divan.service.LogAuditoriaService;
 import com.divan.repository.ApartamentoRepository;
 import com.divan.repository.BilheteSorteioRepository;
 import com.divan.repository.ClienteRepository;
@@ -11,9 +12,11 @@ import com.divan.entity.Cliente;
 import com.divan.entity.ExtratoReserva;
 import com.divan.entity.Diaria;
 import com.divan.entity.TipoApartamento;
+import com.divan.entity.Usuario;
 import com.divan.repository.EmpresaRepository;
 import com.divan.repository.ExtratoReservaRepository;
 import java.math.BigDecimal;
+import java.security.Principal;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -96,6 +99,9 @@ public class ReservaController {
     
     @Autowired
     private EmpresaRepository empresaRepository;
+    
+    @Autowired
+    private LogAuditoriaService logAuditoriaService;
     
     @PostMapping
     public ResponseEntity<?> criarReserva(@Valid @RequestBody ReservaRequestDTO dto) {
@@ -421,16 +427,7 @@ public class ReservaController {
         }
     }
     
-    @PatchMapping("/{id}/cancelar")
-    public ResponseEntity<?> cancelarReserva(@PathVariable Long id, @RequestParam String motivo) {
-        try {
-            Reserva reserva = reservaService.cancelarReserva(id, motivo);
-            return ResponseEntity.ok(reserva);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
-        }
-    }
-    
+      
     @PatchMapping("/{id}/alterar-checkout")
     public ResponseEntity<?> alterarDataCheckout(
             @PathVariable Long id,
@@ -1400,5 +1397,38 @@ public class ReservaController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    @PutMapping("/{id}/cancelar")
+    public ResponseEntity<?> cancelarReserva(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            Principal principal) {
+
+        Reserva reserva = reservaRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+
+        String usernameLogado = principal.getName();
+        Usuario usuario = usuarioRepository.findByUsername(usernameLogado)
+            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+            if (!usuario.temPermissao("CANCELAR_RESERVA_COM_PAGAMENTO")) {
+                logAuditoriaService.registrar(
+                    "TENTATIVA_CANCELAMENTO_NEGADA",
+                    String.format("Usuário %s tentou cancelar reserva #%d — sem permissão",
+                        usernameLogado, id),
+                    reserva
+                );
+                return ResponseEntity.status(403).body(
+                    Map.of("message", "Apenas Gerente ou Admin podem cancelar reservas.")
+                );
+            }
+
+            String motivo = body.getOrDefault("motivo", "Sem motivo informado");
+            reservaService.cancelarReserva(id, motivo, usernameLogado);
+
+            return ResponseEntity.ok(Map.of("message", "Reserva cancelada com sucesso"));
+    }
+    
+    
         
 }

@@ -44,4 +44,10 @@ export class DepositoProvisorioService {
   removerItem(itemId: number): Observable<void> {
     return this.http.delete<void>(`${this.api}/item/${itemId}`);
   }
+
+
+pagarAVista(itemId: number, quantidade: number, formaPagamento: string): Observable<void> {
+  return this.http.post<void>(`${this.api}/pagar-avista`, { itemId, quantidade, formaPagamento });
+}
+
 }

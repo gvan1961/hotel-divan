@@ -129,6 +129,15 @@ public class Reserva {
     @Column(name = "criado_por", length = 100)
     private String criadoPor;
     
+    @Column(name = "cancelado_por", length = 100)
+    private String canceladoPor;
+
+    @Column(name = "data_cancelamento")
+    private LocalDateTime dataCancelamento;
+
+    @Column(name = "motivo_cancelamento", length = 500)
+    private String motivoCancelamento;
+    
     public Long getId() {
 		return id;
 	}
@@ -400,6 +409,32 @@ public class Reserva {
 
 	public void setCriadoPor(String criadoPor) {
 		this.criadoPor = criadoPor;
+	}
+	
+	
+
+	public String getCanceladoPor() {
+		return canceladoPor;
+	}
+
+	public void setCanceladoPor(String canceladoPor) {
+		this.canceladoPor = canceladoPor;
+	}
+
+	public LocalDateTime getDataCancelamento() {
+		return dataCancelamento;
+	}
+
+	public void setDataCancelamento(LocalDateTime dataCancelamento) {
+		this.dataCancelamento = dataCancelamento;
+	}
+
+	public String getMotivoCancelamento() {
+		return motivoCancelamento;
+	}
+
+	public void setMotivoCancelamento(String motivoCancelamento) {
+		this.motivoCancelamento = motivoCancelamento;
 	}
 
 	@Override

@@ -34,14 +34,17 @@ import com.divan.repository.ContaAReceberRepository;
 public class ReservaService {	
 	
 	@Autowired
+	private DescontoRepository descontoRepository;
+	
+	@Autowired
 	private DiariaService diariaService;	
     
     @Autowired
     private ReservaRepository reservaRepository;
     
     @Autowired
-    private DiariaRepository diariaRepository; 
-    
+    private ContaAPagarRepository contaAPagarRepository;
+       
     @Autowired
     private ItemVendaRepository itemVendaRepository;
     
@@ -190,41 +193,33 @@ public class ReservaService {
             reserva.getDataCheckin().toLocalDate(),
             reserva.getDataCheckout().toLocalDate()
         );
-        
         reserva.setQuantidadeDiaria((int) dias);
-        
-        // Buscar diária correta baseada em TIPO + QUANTIDADE DE HÓSPEDES
+
+        // ✅ CALCULAR TOTAL DE DIÁRIAS SOMANDO O EXTRATO (não recalcula pela diária atual)
+        BigDecimal totalDiaria = extratoReservaRepository.findByReservaId(reserva.getId())
+            .stream()
+            .filter(e -> e.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
+                      || e.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.ESTORNO)
+            .map(ExtratoReserva::getTotalLancamento)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        reserva.setTotalDiaria(totalDiaria);
+
+        // ✅ Buscar diária correta para atualizar referência (sem recalcular total)
         Apartamento apartamento = reserva.getApartamento();
         Integer quantidadeHospedes = reserva.getQuantidadeHospede();
 
-        Diaria diariaAtualizada = diariaService.buscarDiariaPara(apartamento, quantidadeHospedes)
-            .orElseThrow(() -> new RuntimeException(
-                String.format("Nenhuma diária cadastrada para o tipo '%s' com %d hóspede(s)%s",
-                    apartamento.getTipoApartamento().getTipo(),
-                    quantidadeHospedes,
-                    quantidadeHospedes == 1 
-                        ? " (modalidade " + (apartamento.getTemCamaDeCasal() ? "CASAL" : "SOLTEIRO") + ")"
-                        : "")
-            ));
+        diariaService.buscarDiariaPara(apartamento, quantidadeHospedes)
+            .ifPresent(reserva::setDiaria);
 
-        reserva.setDiaria(diariaAtualizada);
-
-        // Calcular total (valor já inclui quantidade de hóspedes)
-        BigDecimal valorDiaria = diariaAtualizada.getValor();
-        BigDecimal totalDiaria = valorDiaria.multiply(new BigDecimal(dias));
-
-        reserva.setTotalDiaria(totalDiaria);
-        
-        
-        
-        
-        
-        // Recalcular total da hospedagem (diárias + consumo)
-        BigDecimal totalConsumo = reserva.getTotalProduto();
-        
+        // ✅ Recalcular total da hospedagem
+        BigDecimal totalConsumo = reserva.getTotalProduto() != null 
+            ? reserva.getTotalProduto() : BigDecimal.ZERO;
         BigDecimal totalHospedagem = totalDiaria.add(totalConsumo);
         reserva.setTotalHospedagem(totalHospedagem);
-        reserva.setTotalApagar(totalHospedagem.subtract(reserva.getTotalRecebido()));
+        reserva.setTotalApagar(totalHospedagem.subtract(
+            reserva.getTotalRecebido() != null ? reserva.getTotalRecebido() : BigDecimal.ZERO
+        ));
     }
     
     // ============================================
@@ -709,35 +704,48 @@ public class ReservaService {
      * Recalcula os totais da reserva somando todos os extratos
      */
     private void recalcularTotaisReserva(Reserva reserva) {
-        List<ExtratoReserva> todosExtratos = extratoReservaRepository.findByReservaOrderByDataHoraLancamento(reserva);
-        
-        // ✅ SOMAR TODAS AS DIÁRIAS + ESTORNOS
+        List<ExtratoReserva> todosExtratos = extratoReservaRepository
+            .findByReservaOrderByDataHoraLancamento(reserva);
+
+        // ✅ SOMAR DIÁRIAS + ESTORNOS (acréscimos e ajustes de hóspede)
         BigDecimal totalDiarias = BigDecimal.ZERO;
         for (ExtratoReserva extrato : todosExtratos) {
-            if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA ||
-                extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.ESTORNO) {
+            if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
+             || extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.ESTORNO) {
                 totalDiarias = totalDiarias.add(extrato.getTotalLancamento());
             }
         }
-        
-        // ✅ SOMAR TODOS OS PRODUTOS
+
+        // ✅ SOMAR PRODUTOS
         BigDecimal totalProdutos = BigDecimal.ZERO;
         for (ExtratoReserva extrato : todosExtratos) {
             if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.PRODUTO) {
                 totalProdutos = totalProdutos.add(extrato.getTotalLancamento());
             }
         }
-        
-        // ✅ ATUALIZAR TOTAIS DA RESERVA
+
+        // ✅ RECALCULAR DESCONTO pela tabela de descontos
+        List<Desconto> descontos = descontoRepository.findByReservaId(reserva.getId());
+        BigDecimal totalDesconto = descontos.stream()
+            .map(Desconto::getValor)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // ✅ ATUALIZAR TOTAIS
         reserva.setTotalDiaria(totalDiarias);
         reserva.setTotalProduto(totalProdutos);
+        reserva.setDesconto(totalDesconto);
         reserva.setTotalHospedagem(totalDiarias.add(totalProdutos));
-        reserva.setTotalApagar(reserva.getTotalHospedagem().subtract(reserva.getTotalRecebido()));
-           
-        
-        
-        System.out.println("💰 Total de diárias recalculado: R$ " + totalDiarias);
-        System.out.println("🛒 Total de produtos recalculado: R$ " + totalProdutos);
+        reserva.setTotalApagar(
+            reserva.getTotalHospedagem()
+                .subtract(totalDesconto)
+                .subtract(reserva.getTotalRecebido() != null 
+                    ? reserva.getTotalRecebido() 
+                    : BigDecimal.ZERO)
+        );
+
+        System.out.println("💰 Total diárias: R$ " + totalDiarias);
+        System.out.println("🛒 Total produtos: R$ " + totalProdutos);
+        System.out.println("🏷️ Total desconto: R$ " + totalDesconto);
         System.out.println("💵 Total hospedagem: R$ " + reserva.getTotalHospedagem());
         System.out.println("💳 Total a pagar: R$ " + reserva.getTotalApagar());
     }
@@ -753,7 +761,6 @@ public class ReservaService {
         LocalDateTime checkoutAnterior = reserva.getDataCheckout();
         BigDecimal totalAnterior = reserva.getTotalDiaria();
         
-        // Calcular nova quantidade de diárias
         long diasNovos = ChronoUnit.DAYS.between(
             reserva.getDataCheckin().toLocalDate(),
             novaDataCheckout.toLocalDate()
@@ -764,33 +771,33 @@ public class ReservaService {
             checkoutAnterior.toLocalDate()
         );
         
-        // Atualizar data de checkout
         reserva.setDataCheckout(novaDataCheckout);
 
-        // ✅ Se nova data é futura, regulariza a situação — zera renovação automática
         if (novaDataCheckout.isAfter(LocalDateTime.now())) {
             reserva.setRenovacaoAutomatica(false);
             System.out.println("✅ Renovação automática zerada — checkout regularizado para: " + novaDataCheckout.toLocalDate());
         }
 
-        // Recalcular valores
-        recalcularValores(reserva);
-        
-        BigDecimal diferenca = reserva.getTotalDiaria().subtract(totalAnterior);
-        
-        // Ajustar extratos de diárias
         if (diasNovos > diasAntigos) {
-            // ✅ ADICIONAR DIAS
             System.out.println("➕ Adicionando " + (diasNovos - diasAntigos) + " dia(s)");
             criarExtratosDiarias(reserva, checkoutAnterior, novaDataCheckout);
             
         } else if (diasNovos < diasAntigos) {
-            // ✅ REMOVER DIAS - CRIAR ESTORNOS
             System.out.println("➖ Removendo " + (diasAntigos - diasNovos) + " dia(s) - Criando estornos");
             criarEstornosDiarias(reserva, novaDataCheckout, checkoutAnterior);
         }
         
-        // Criar histórico
+        long diasAtualizados = ChronoUnit.DAYS.between(
+        	    reserva.getDataCheckin().toLocalDate(),
+        	    novaDataCheckout.toLocalDate()
+        	);
+        reserva.setQuantidadeDiaria((int) diasAtualizados);
+
+        // ✅ RECALCULAR TOTAIS APÓS AJUSTE DE EXTRATOS
+        recalcularTotaisReserva(reserva);
+        
+        BigDecimal diferenca = reserva.getTotalDiaria().subtract(totalAnterior);
+        
         HistoricoHospede historico = new HistoricoHospede();
         historico.setReserva(reserva);
         historico.setDataHora(LocalDateTime.now());
@@ -1807,26 +1814,32 @@ public class ReservaService {
 
         // ✅ CRIAR REGISTRO EM CONTAS A RECEBER (PAGA)
         try {
-            ContaAReceber conta = new ContaAReceber();
-            conta.setReserva(reserva);
-            conta.setCliente(reserva.getCliente());
-            conta.setValor(reserva.getTotalHospedagem());
-            conta.setValorPago(reserva.getTotalRecebido());
-            conta.setSaldo(BigDecimal.ZERO);
-            conta.setStatus(ContaAReceber.StatusContaEnum.PAGA);
-            conta.setDataPagamento(LocalDate.now());
-            conta.setDataVencimento(LocalDate.now());
-            conta.setDataCriacao(LocalDateTime.now());
-            conta.setDescricao("Reserva PAGA #" + reserva.getId() +
-                " - Apt " + apartamento.getNumeroApartamento());
-            conta.setObservacao("Pagamento efetuado durante a hospedagem");
+            boolean jaExiste = contaAReceberRepository.existsByReservaId(reservaId);
+            
+            if (!jaExiste) {
+                ContaAReceber conta = new ContaAReceber();
+                conta.setReserva(reserva);
+                conta.setCliente(reserva.getCliente());
+                conta.setValor(reserva.getTotalHospedagem());
+                conta.setValorPago(reserva.getTotalRecebido());
+                conta.setSaldo(BigDecimal.ZERO);
+                conta.setStatus(ContaAReceber.StatusContaEnum.PAGA);
+                conta.setDataPagamento(LocalDate.now());
+                conta.setDataVencimento(LocalDate.now());
+                conta.setDataCriacao(LocalDateTime.now());
+                conta.setDescricao("Reserva PAGA #" + reserva.getId() +
+                    " - Apt " + apartamento.getNumeroApartamento());
+                conta.setObservacao("Pagamento efetuado durante a hospedagem");
 
-            if (reserva.getCliente().getEmpresa() != null) {
-                conta.setEmpresa(reserva.getCliente().getEmpresa());
+                if (reserva.getCliente().getEmpresa() != null) {
+                    conta.setEmpresa(reserva.getCliente().getEmpresa());
+                }
+
+                contaAReceberRepository.save(conta);
+                System.out.println("💚 Conta a receber PAGA criada!");
+            } else {
+                System.out.println("ℹ️ Conta a receber já existe para esta reserva — ignorando criação.");
             }
-
-            contaAReceberRepository.save(conta);
-            System.out.println("💚 Conta a receber PAGA criada!");
 
         } catch (Exception e) {
             System.err.println("⚠️ Erro ao criar conta a receber: " + e.getMessage());
@@ -1971,6 +1984,84 @@ public class ReservaService {
         resultado.put("mensagem", "Hóspede transferido com sucesso");
         resultado.put("apartamentoOrigemFicouVazio", apartamentoOrigemFicouVazio);
         return resultado;
+    }
+    
+    @Transactional
+    public void cancelarReserva(Long reservaId, String motivo, String usernameLogado) {
+
+        Reserva reserva = reservaRepository.findById(reservaId)
+            .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+
+        if (reserva.getStatus() == Reserva.StatusReservaEnum.CANCELADA) {
+            throw new RuntimeException("Reserva já está cancelada");
+        }
+        if (reserva.getStatus() == Reserva.StatusReservaEnum.FINALIZADA) {
+            throw new RuntimeException("Reserva finalizada não pode ser cancelada");
+        }
+
+        // Atualiza a reserva
+        reserva.setStatus(Reserva.StatusReservaEnum.CANCELADA);
+        reserva.setCanceladoPor(usernameLogado);
+        reserva.setDataCancelamento(LocalDateTime.now());
+        reserva.setMotivoCancelamento(motivo);
+        reservaRepository.save(reserva);
+
+        // ✅ Libera o apartamento
+        Apartamento apartamento = reserva.getApartamento();
+        apartamento.setStatus(Apartamento.StatusEnum.DISPONIVEL);
+        apartamentoRepository.save(apartamento);
+
+        // ✅ Devolve produtos ao estoque
+        if (reserva.getNotasVenda() != null) {
+            for (NotaVenda nota : reserva.getNotasVenda()) {
+                if (nota.getItens() != null) {
+                    for (ItemVenda item : nota.getItens()) {
+                        Produto produto = item.getProduto();
+                        produto.setQuantidade(produto.getQuantidade() + item.getQuantidade());
+                        produtoRepository.save(produto);
+                    }
+                }
+            }
+        }
+
+        // ✅ Se houve pagamento, gera ContaAPagar
+        boolean temPagamento = reserva.getTotalRecebido() != null
+            && reserva.getTotalRecebido().compareTo(BigDecimal.ZERO) > 0;
+
+        if (temPagamento) {
+            ContaAPagar devolucao = new ContaAPagar();
+            devolucao.setDescricao("Devolução - Cancelamento reserva #" + reserva.getId());
+            devolucao.setValor(reserva.getTotalRecebido());
+            devolucao.setSaldo(reserva.getTotalRecebido());
+            devolucao.setValorPago(BigDecimal.ZERO);
+            devolucao.setStatus(ContaAPagar.StatusContaEnum.EM_ABERTO);
+            devolucao.setDataVencimento(LocalDate.now());
+            devolucao.setCategoria("DEVOLUCAO");
+            devolucao.setFornecedor(reserva.getCliente().getNome());
+            devolucao.setObservacao(String.format(
+                "Hóspede: %s | Apto: %s | Cancelado por: %s | Motivo: %s",
+                reserva.getCliente().getNome(),
+                apartamento.getNumeroApartamento(),
+                usernameLogado,
+                motivo));
+            devolucao.setCriadoEm(LocalDateTime.now());
+            contaAPagarRepository.save(devolucao);
+
+            logAuditoriaService.registrar(
+                "CANCELAMENTO_COM_DEVOLUCAO",
+                String.format("Reserva #%d cancelada. Valor a devolver: R$ %.2f. Motivo: %s",
+                    reserva.getId(), reserva.getTotalRecebido(), motivo),
+                reserva);
+        } else {
+            logAuditoriaService.registrar(
+                "CANCELAMENTO",
+                String.format("Reserva #%d cancelada. Apt: %s. Motivo: %s",
+                    reserva.getId(), apartamento.getNumeroApartamento(), motivo),
+                reserva);
+        }
+
+        System.out.println("❌ Reserva cancelada: " + reservaId);
+        System.out.println("💬 Motivo: " + motivo);
     }
     
 }

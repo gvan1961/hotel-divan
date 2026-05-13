@@ -171,4 +171,51 @@ public class DepositoProvisorioService {
             depositoRepository.save(deposito);
         }
     }
+    
+    @Transactional
+    public void pagarAVista(DepositoPagarAVistaRequest request) {
+        DepositoProvisorioItem item = itemRepository.findById(request.getItemId())
+                .orElseThrow(() -> new RuntimeException("Item não encontrado"));
+
+        int pendente = item.getQuantidade() - item.getQuantidadeDistribuida();
+        if (request.getQuantidade() > pendente) {
+            throw new RuntimeException("Quantidade maior que o saldo pendente: " + pendente);
+        }
+
+        Produto produto = item.getProduto();
+        BigDecimal valorUnitario = produto.getValorVenda();
+        BigDecimal total = valorUnitario.multiply(BigDecimal.valueOf(request.getQuantidade()));
+
+        // Atualiza estoque
+        produto.setQuantidade(produto.getQuantidade() - request.getQuantidade());
+        produtoRepository.save(produto);
+
+        // Cria NotaVenda do tipo PDV (venda avulsa)
+        NotaVenda nota = new NotaVenda();
+        nota.setDataHoraVenda(LocalDateTime.now());
+        nota.setTipoVenda(TipoVendaEnum.VISTA);
+        nota.setFormaPagamento(NotaVenda.FormaPagamentoEnum.valueOf(request.getFormaPagamento()));
+        nota.setReserva(null);
+        nota.setTotal(total);
+        nota.setStatus(Status.FECHADA);
+        nota.setObservacao("Pagamento à vista — Depósito provisório");
+        notaVendaRepository.save(nota);
+
+        // Cria ItemVenda
+        ItemVenda itemVenda = new ItemVenda();
+        itemVenda.setNotaVenda(nota);
+        itemVenda.setProduto(produto);
+        itemVenda.setQuantidade(request.getQuantidade());
+        itemVenda.setValorUnitario(valorUnitario);
+        itemVenda.setTotalItem(total);
+        itemVendaRepository.save(itemVenda);
+
+        // Atualiza quantidade distribuída
+        item.setQuantidadeDistribuida(item.getQuantidadeDistribuida() + request.getQuantidade());
+        itemRepository.save(item);
+
+        // Fecha depósito se tudo distribuído
+        verificarEFecharDeposito(item.getDeposito());
+    }
+    
 }

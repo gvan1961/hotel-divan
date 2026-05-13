@@ -112,7 +112,15 @@ import { environment } from '../../../environments/environment';
                   [disabled]="item.quantidade === item.quantidadeDistribuida">
                   Distribuir
                 </button>
-                <button
+
+                  <button
+                   class="btn-pagar-avista"
+                   (click)="abrirPagarAVista(item)"
+                   [disabled]="item.quantidade === item.quantidadeDistribuida">
+                   💵 À Vista
+                  </button>
+
+                  <button
                   class="btn-remover"
                   (click)="removerItem(item)"
                   [disabled]="item.quantidadeDistribuida > 0">
@@ -130,6 +138,39 @@ import { environment } from '../../../environments/environment';
 
     </div>
   </div>
+
+  <div class="modal-overlay" *ngIf="modalPagarAVista" (click)="fecharPagarAVista()">
+  <div class="modal modal-pequeno" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>💵 Pagar à Vista</h2>
+      <button class="btn-fechar" (click)="fecharPagarAVista()">✕</button>
+    </div>
+    <div class="secao">
+      <p><strong>{{ itemPagandoAVista?.produto?.nomeProduto }}</strong></p>
+      <p>Pendente: <strong>{{ itemPagandoAVista ? (itemPagandoAVista.quantidade - itemPagandoAVista.quantidadeDistribuida) : 0 }}</strong></p>
+
+     <div class="form-linha">
+  <label>Quantidade:</label>
+  <input type="number" [(ngModel)]="quantidadePagarAVista"
+         class="input-qtd"
+         [readonly]="true"
+         disabled>
+</div>
+
+      <div class="form-linha">
+        <label>Forma de Pagamento:</label>
+        <select [(ngModel)]="formaPagamentoAVista">
+          <option *ngFor="let f of formasPagamento" [value]="f.codigo">{{ f.nome }}</option>
+        </select>
+      </div>
+
+      <button class="btn-add btn-confirmar" (click)="confirmarPagarAVista()"
+              [disabled]="!quantidadePagarAVista">
+        ✅ Confirmar Pagamento
+      </button>
+    </div>
+  </div>
+</div>
 
   <!-- Modal de distribuição -->
   <div class="modal-overlay" *ngIf="itemDistribuindo" (click)="fecharDistribuicao()">
@@ -159,6 +200,7 @@ import { environment } from '../../../environments/environment';
             class="input-qtd"
           />
         </div>
+              
 
         <div class="lista-busca" *ngIf="reservas.length > 0 && !reservaSelecionada">
           <div
@@ -348,6 +390,19 @@ import { environment } from '../../../environments/environment';
   }
   .btn-remover:disabled { background: #aaa; cursor: not-allowed; }
   .vazio { text-align: center; color: #aaa; padding: 32px; font-size: 16px; }
+
+  .btn-pagar-avista {
+  padding: 10px 16px;
+  background: #1565c0;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-right: 6px;
+  font-size: 14px;
+}
+.btn-pagar-avista:disabled { background: #aaa; cursor: not-allowed; }
+
 `]
 })
 export class DepositoProvisorioComponent implements OnInit {
@@ -368,6 +423,18 @@ export class DepositoProvisorioComponent implements OnInit {
   reservas: any[] = [];
   reservaSelecionada: any = null;
   quantidadeDistribuir: number | null = null;
+
+  // Pagar à vista
+modalPagarAVista = false;
+itemPagandoAVista: DepositoProvisorioItem | null = null;
+quantidadePagarAVista: number | null = null;
+formaPagamentoAVista = 'DINHEIRO';
+formasPagamento = [
+  { codigo: 'DINHEIRO', nome: 'Dinheiro' },
+  { codigo: 'PIX', nome: 'PIX' },
+  { codigo: 'CARTAO_DEBITO', nome: 'Cartão Débito' },
+  { codigo: 'CARTAO_CREDITO', nome: 'Cartão Crédito' },
+];
 
   termoCodigo = '';
 
@@ -486,9 +553,13 @@ onKeyDown(event: KeyboardEvent): void {
   }
 
   abrirModal(): void {
-    this.modalAberto = true;
-    this.carregarDeposito();
-  }
+  this.modalAberto = true;
+  this.carregarDeposito();
+  setTimeout(() => {
+    const el = document.querySelector('input[placeholder*="Código"]') as HTMLInputElement;
+    if (el) el.focus();
+  }, 300);
+}
 
   fecharModal(): void {
     this.modalAberto = false;
@@ -605,4 +676,34 @@ onKeyDown(event: KeyboardEvent): void {
       error: (e) => alert('Erro: ' + e.error?.message)
     });
   }
+
+  abrirPagarAVista(item: DepositoProvisorioItem): void {
+  this.itemPagandoAVista = item;
+  this.quantidadePagarAVista = item.quantidade - item.quantidadeDistribuida;
+  this.formaPagamentoAVista = 'DINHEIRO';
+  this.modalPagarAVista = true;
+}
+
+fecharPagarAVista(): void {
+  this.modalPagarAVista = false;
+  this.itemPagandoAVista = null;
+  this.quantidadePagarAVista = null;
+}
+
+confirmarPagarAVista(): void {
+  if (!this.itemPagandoAVista || !this.quantidadePagarAVista) return;
+  this.service.pagarAVista(
+    this.itemPagandoAVista.id,
+    this.quantidadePagarAVista,
+    this.formaPagamentoAVista
+  ).subscribe({
+    next: () => {
+      alert('✅ Pagamento registrado!');
+      this.fecharPagarAVista();
+      this.carregarDeposito();
+    },
+    error: (e) => alert('Erro: ' + e.error?.message)
+  });
+}
+
 }

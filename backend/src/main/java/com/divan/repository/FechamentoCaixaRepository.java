@@ -15,4 +15,6 @@ public interface FechamentoCaixaRepository extends JpaRepository<FechamentoCaixa
     List<FechamentoCaixa> findByDataHoraAberturaBetween(LocalDateTime inicio, LocalDateTime fim);
 
     Optional<FechamentoCaixa> findTopByUsuarioIdOrderByDataHoraAberturaDesc(Long usuarioId);
+    
+    List<FechamentoCaixa> findByStatus(StatusCaixa status);
 }

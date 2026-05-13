@@ -70,6 +70,19 @@ public class Usuario implements UserDetails {
     )
     @JsonIgnoreProperties("usuarios")
     private Set<Permissao> permissoes = new HashSet<>();
+    
+    public boolean temPermissao(String nomePermissao) {
+        // Verifica permissão direta
+        boolean direta = this.getPermissoes().stream()
+            .anyMatch(p -> p.getNome().equals(nomePermissao));
+
+        // Verifica permissão via perfil
+        boolean viaPerfil = this.getPerfis().stream()
+            .flatMap(perfil -> perfil.getPermissoes().stream())
+            .anyMatch(p -> p.getNome().equals(nomePermissao));
+
+        return direta || viaPerfil;
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

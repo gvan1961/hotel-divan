@@ -47,4 +47,12 @@ public class DepositoProvisorioController {
         service.removerItem(id);
         return ResponseEntity.ok().build();
     }
+    
+    @PostMapping("/pagar-avista")
+    public ResponseEntity<Void> pagarAVista(
+            @RequestBody DepositoPagarAVistaRequest request) {
+        service.pagarAVista(request);
+        return ResponseEntity.ok().build();
+    }
+    
 }

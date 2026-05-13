@@ -8,6 +8,7 @@ import { AlertasService } from '../services/alertas.service';
 import { AlertasStateService } from '../services/alertas-state.service'; // ✅ NOVO IMPORT
 import { Subscription } from 'rxjs';
 import { HasPermissionDirective } from '../directives/has-permission.directive';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-sidebar',
@@ -22,7 +23,7 @@ import { HasPermissionDirective } from '../directives/has-permission.directive';
 
       <nav class="sidebar-nav">
 
-        <!-- PAINEL DE RECEPÇÃO -->
+        <!-- PAINEL DE RECEPÇÃO  -->
           <a *hasPermission="'RESERVA_VISUALIZAR'"
             routerLink="/painel-recepcao" routerLinkActive="active" class="nav-item">
             <span class="icon">🏨</span>
@@ -49,6 +50,12 @@ import { HasPermissionDirective } from '../directives/has-permission.directive';
           <span class="icon">📅</span>
           <span class="label">Mapa de Reservas</span>
         </a>
+
+         <!-- AVISO CAIXA DE OUTRO USUÁRIO -->
+        <div class="aviso-caixa-outro" *ngIf="avisoOutrosCaixas">
+          {{ avisoOutrosCaixas }}
+        </div>
+
         
         <div class="nav-divider"></div>
 
@@ -466,6 +473,17 @@ import { HasPermissionDirective } from '../directives/has-permission.directive';
       color: #ffc107;
     }
 
+    .aviso-caixa-outro {
+  background: #fff3cd;
+  color: #856404;
+  padding: 6px 12px;
+  border-left: 4px solid #ffc107;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin: 4px 8px;
+  border-radius: 4px;
+}
+
   `]
 })
 export class SidebarComponent implements OnInit, OnDestroy {
@@ -475,11 +493,11 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private caixaStateService = inject(CaixaStateService);
   private alertasService = inject(AlertasService);
   private alertasStateService = inject(AlertasStateService); // ✅ NOVO INJECT
-  
+  private http = inject(HttpClient);
   caixaAberto: any = null;
   usuarioId: number = 1;
   totalAlertas = 0;
-
+  avisoOutrosCaixas = '';
   adminAberto = false;
    
   private verificandoCaixa = false;
@@ -561,33 +579,45 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   verificarCaixaAberto(): void {
-    console.log('🔵 Verificando caixa...');
-    
-    if (this.verificandoCaixa) {
-      return;
-    }
-
-    this.verificandoCaixa = true;
-
-    this.subscription = this.fechamentoCaixaService.buscarCaixaAberto(this.usuarioId).subscribe({
-      next: (caixa) => {
-        this.verificandoCaixa = false;
-
-        if (caixa && caixa.id) {
-          this.caixaAberto = caixa;
-          console.log('✅ Caixa aberto - ID:', caixa.id);
-        } else {
-          this.caixaAberto = null;
-          console.log('📭 Nenhum caixa aberto');
-        }
-      },
-      error: () => {
-        this.verificandoCaixa = false;
-        this.caixaAberto = null;
-        console.log('📭 Nenhum caixa aberto (erro)');
-      }
-    });
+  console.log('🔵 Verificando caixa...');
+  
+  if (this.verificandoCaixa) {
+    return;
   }
+  this.verificandoCaixa = true;
+  this.subscription = this.fechamentoCaixaService.buscarCaixaAberto(this.usuarioId).subscribe({
+    next: (caixa) => {
+      this.verificandoCaixa = false;
+      if (caixa && caixa.id) {
+        this.caixaAberto = caixa;
+        console.log('✅ Caixa aberto - ID:', caixa.id);
+      } else {
+        this.caixaAberto = null;
+        console.log('📭 Nenhum caixa aberto');
+      }
+
+      // ✅ Verificar outros caixas abertos
+      this.http.get<any[]>('/api/fechamento-caixa/todos-abertos').subscribe({
+        next: (caixas) => {
+          const outrosCaixas = caixas.filter(c => c.usuarioId !== this.usuarioId);
+          if (outrosCaixas.length > 0) {
+            const nomes = outrosCaixas.map((c: any) => c.usuarioNome).join(', ');
+            console.warn(`⚠️ Caixas abertos de outros usuários: ${nomes}`);
+            this.avisoOutrosCaixas = `⚠️ Caixa aberto por: ${nomes}`;
+          } else {
+            this.avisoOutrosCaixas = '';
+          }
+        },
+        error: () => { this.avisoOutrosCaixas = ''; }
+      });
+    },
+    error: () => {
+      this.verificandoCaixa = false;
+      this.caixaAberto = null;
+      console.log('📭 Nenhum caixa aberto (erro)');
+    }
+  });
+}
 
   logout(): void {
     if (confirm('🚪 Deseja realmente sair?')) {

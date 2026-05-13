@@ -353,6 +353,8 @@ public class ApartamentoController {
             		            res.put("id",               r.getId());
             		            res.put("status",           "LIMPEZA"); // ← status visual do card
             		            res.put("clienteNome",      r.getCliente() != null ? r.getCliente().getNome() : "-");
+            		            res.put("empresaNome", r.getCliente() != null && r.getCliente().getEmpresa() != null
+            		            	    ? r.getCliente().getEmpresa().getNomeEmpresa() : null);
             		            res.put("dataCheckin",      r.getDataCheckin().toLocalDate().toString());
             		            res.put("dataCheckout",     r.getDataCheckout().toLocalDate().toString());
             		            res.put("quantidadeHospedes", r.getQuantidadeHospede());
@@ -419,6 +421,8 @@ public class ApartamentoController {
                     res.put("id",               r.getId());
                     res.put("status",           r.getStatus().name());
                     res.put("clienteNome",      r.getCliente() != null ? r.getCliente().getNome() : "-");
+                    res.put("empresaNome", r.getCliente() != null && r.getCliente().getEmpresa() != null
+                    	    ? r.getCliente().getEmpresa().getNomeEmpresa() : null);
                     res.put("dataCheckin",      checkin.toString());
                     res.put("dataCheckout",     checkout.toString());
                     res.put("quantidadeHospedes", r.getQuantidadeHospede());

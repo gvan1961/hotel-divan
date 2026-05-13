@@ -14,11 +14,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/clientes")
@@ -37,6 +36,7 @@ public class ClienteController {
     @PostMapping
     public ResponseEntity<?> criar(@Valid @RequestBody ClienteRequestDTO dto) {
         try {
+        	System.out.println("📨 CPF recebido no controller: " + dto.getCpf());
             Cliente cliente = new Cliente();
             cliente.setNome(dto.getNome());
             cliente.setCpf(dto.getCpf());

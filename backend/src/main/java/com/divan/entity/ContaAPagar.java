@@ -70,6 +70,15 @@ public class ContaAPagar {
     
     @Column(name = "data_compra")
     private LocalDate dataCompra;
+    
+    @Column(name = "cancelado_por", length = 100)
+    private String canceladoPor;
+
+    @Column(name = "data_cancelamento")
+    private LocalDateTime dataCancelamento;
+
+    @Column(name = "motivo_cancelamento", length = 500)
+    private String motivoCancelamento;
 
     public enum StatusContaEnum {
         EM_ABERTO, PAGA, VENCIDA
@@ -109,6 +118,14 @@ public class ContaAPagar {
     public void setCriadoEm(LocalDateTime criadoEm) { this.criadoEm = criadoEm; }
     public LocalDate getDataCompra() { return dataCompra; }
     public void setDataCompra(LocalDate dataCompra) { this.dataCompra = dataCompra; }
+    public String getCanceladoPor() { return canceladoPor; }
+    public void setCanceladoPor(String canceladoPor) { this.canceladoPor = canceladoPor; }
+
+    public LocalDateTime getDataCancelamento() { return dataCancelamento; }
+    public void setDataCancelamento(LocalDateTime dataCancelamento) { this.dataCancelamento = dataCancelamento; }
+
+    public String getMotivoCancelamento() { return motivoCancelamento; }
+    public void setMotivoCancelamento(String motivoCancelamento) { this.motivoCancelamento = motivoCancelamento; }
 
     @Override
     public int hashCode() { return Objects.hash(id); }

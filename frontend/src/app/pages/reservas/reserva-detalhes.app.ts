@@ -527,6 +527,8 @@ import { environment } from '../../../environments/environment';
                 🏨 Comanda de Consumo
               </button>
             </ng-container>
+           
+
          <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
   <button class="btn-acao btn-pagamento" 
         *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
@@ -549,17 +551,15 @@ import { environment } from '../../../environments/environment';
                 💰 Crédito R$ {{ formatarMoeda((reserva.totalApagar || 0) * -1) }}
               </button>
             </ng-container>
-            <ng-container *hasPermission="'RESERVA_FINALIZAR'">
-              <button class="btn-acao" 
-                      *ngIf="reserva.status === 'ATIVA'"
-                      [ngClass]="{
-                        'btn-finalizar-paga': (reserva.totalApagar || 0) <= 0,
-                        'btn-finalizar':      (reserva.totalApagar || 0) > 0
-                      }"
-                      (click)="finalizarCheckout()">
-                {{ (reserva.totalApagar || 0) <= 0 ? '💚 CheckOut de Pagamento à vista' : '✅ Débito em Conta' }}
-              </button>
-            </ng-container>
+           <ng-container *hasPermission="'RESERVA_FINALIZAR'">
+  <!-- Checkout normal - saldo zerado -->
+  <button class="btn-acao btn-finalizar-paga" 
+          *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) <= 0"
+          (click)="finalizarCheckout()">
+    💚 CheckOut
+  </button>
+
+</ng-container>
             <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
               <button class="btn-acao btn-recibo" 
                       *ngIf="reserva.status === 'FINALIZADA'"
@@ -575,13 +575,13 @@ import { environment } from '../../../environments/environment';
    (click)="abrirModalReciboFormal()">
    📄 Recibo Formal
    </button>
- </ng-container>
+   </ng-container> 
 
-            <ng-container *hasPermission="'RESERVA_CANCELAR'">
-  <button class="btn-acao btn-cancelar" 
-          *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
-          (click)="cancelarReserva()">
-    ❌ Cancelar Reserva
+ <ng-container *hasPermission="'CANCELAR_RESERVA_COM_PAGAMENTO'">
+  <button class="btn-acao btn-cancelar"
+          *ngIf="podeCancelar"
+          (click)="confirmarCancelamento()">
+    🚫 Cancelar Reserva
   </button>
 </ng-container>
 
@@ -634,6 +634,38 @@ import { environment } from '../../../environments/environment';
 </div>
         </div>
 
+
+
+        <!-- Modal cancelamento -->
+<div class="modal-overlay" *ngIf="modalCancelamento" (click)="modalCancelamento = false">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <h2>🚫 Cancelar Reserva</h2>
+
+    <div class="info-box info-box-alerta" *ngIf="(reserva?.totalRecebido || 0) > 0">
+      ⚠️ Esta reserva possui <strong>R$ {{ formatarMoeda(reserva?.totalRecebido || 0) }}</strong>
+      recebido. Uma <strong>Conta a Pagar</strong> de devolução será gerada automaticamente.
+    </div>
+
+    <div class="campo">
+      <label>Motivo do cancelamento <span style="color:red">*</span></label>
+      <textarea [(ngModel)]="motivoCancelamento"
+                rows="3"
+                class="form-control"
+                placeholder="Descreva o motivo do cancelamento...">
+      </textarea>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar-modal" (click)="modalCancelamento = false">
+        Voltar
+      </button>
+      <button class="btn-confirmar btn-estornar-confirmar" (click)="executarCancelamento()">
+        🚫 Confirmar Cancelamento
+      </button>
+    </div>
+  </div>
+</div>
+  
         <!-- HISTÓRICO -->
         <div class="card historico-card" *ngIf="reserva.historicos && reserva.historicos.length > 0">
           <h2>📜 Histórico — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong></h2>
@@ -756,14 +788,19 @@ import { environment } from '../../../environments/environment';
   <!-- CPF -->
   <div class="form-group" *ngIf="!novoHospede.menorDeIdade">
     <label>CPF <small>(opcional)</small></label>
-    <input type="text" [(ngModel)]="novoHospede.cpf" placeholder="000.000.000-00" maxlength="14">
+    <input type="text" [(ngModel)]="novoHospede.cpf" 
+       (ngModelChange)="novoHospede.cpf = formatarCPFInput($event)"
+       placeholder="000.000.000-00" maxlength="14">
   </div>
 
-  <!-- CELULAR -->
-  <div class="form-group">
-    <label>Celular</label>
-    <input type="text" [(ngModel)]="novoHospede.celular" placeholder="(00) 00000-0000">
-  </div>
+<div class="form-group">
+  <label>Celular</label>
+  <input type="text"
+         [(ngModel)]="novoHospede.celular"
+         (ngModelChange)="novoHospede.celular = formatarCelularInput($event)"
+         placeholder="(00) 00000-0000"
+         maxlength="15">
+</div>
 
   <!-- DATA DE NASCIMENTO -->
   <div class="form-group">
@@ -905,7 +942,7 @@ import { environment } from '../../../environments/environment';
             </div>
             <div class="campo">
               <label>Forma de Pagamento *</label>
-              <select [(ngModel)]="pagFormaPagamento">
+              <select [(ngModel)]="pagFormaPagamento" (change)="onFormaPagamentoChange()">
                 <option value="">Selecione...</option>
                 <option *ngFor="let forma of formasPagamento" [value]="forma.codigo">{{ forma.nome }}</option>
               </select>
@@ -2664,6 +2701,24 @@ import { environment } from '../../../environments/environment';
     color: #e74c3c;
   }
       }
+
+    .btn-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.95em;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  text-decoration: underline;
+}
+.btn-link:hover {
+  background: #f0f0ff;
+  color: #764ba2;
+}
+
     `]
   })
 
@@ -2728,7 +2783,8 @@ import { environment } from '../../../environments/environment';
     pagValor = 0;
     pagFormaPagamento = '';
     pagObs = '';
-    formasPagamento = [
+
+   formasPagamento = [
   { codigo: 'DINHEIRO',              nome: 'Dinheiro' },
   { codigo: 'PIX',                   nome: 'PIX' },
   { codigo: 'CARTAO_DEBITO',         nome: 'Cartão Débito' },
@@ -2736,6 +2792,7 @@ import { environment } from '../../../environments/environment';
   { codigo: 'TRANSFERENCIA_BANCARIA', nome: 'Transferência' },
   { codigo: 'LINK_PIX',              nome: 'Link Pix' },
   { codigo: 'LINK_CARTAO',           nome: 'Link Cartão' },
+  { codigo: 'DEBITO_EM_CONTA',       nome: 'Débito em Conta' }, // ← ADICIONAR
 ];
 
     modalAdiantamento = false;
@@ -2800,16 +2857,28 @@ import { environment } from '../../../environments/environment';
 
   modalReciboFormal = false;
   valorRecibo = 0;
+
+  modalCancelamento = false;
+motivoCancelamento = '';
+
+  
+get podeCancelar(): boolean {
+  const status = this.reserva?.status;
+  return status !== 'CANCELADA' && status !== 'FINALIZADA';
+}
   
   private intervaloAtualizacao: any;
 
     @ViewChild('signaturePad') signaturePad!: SignaturePadComponent;
 
     ngOnInit(): void {
+
+      console.log('🚀 ngOnInit reserva-detalhes chamado');
   const id = this.route.snapshot.paramMap.get('id');
   if (id) {
     this.reservaId = Number(id);
     this.carregarReserva(this.reservaId);
+    console.log('🏢 Chamando carregarEmpresas...');
     this.carregarEmpresas();
 
     // ✅ Atualizar a cada 30 segundos
@@ -3607,9 +3676,9 @@ ngOnDestroy(): void {
       <td style="font-size:10pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">- R$ ${this.formatarMoeda(this.reserva.desconto)}</td>
     </tr>` : ''}
     <tr>
-      <td style="font-size:10pt; font-weight:900; padding:3px 0; border-top:1px dashed #000;">Subtotal:</td>
-      <td style="font-size:10pt; font-weight:900; text-align:right; white-space:nowrap; padding:3px 0; border-top:1px dashed #000;">R$ ${this.formatarMoeda(this.reserva.totalHospedagem)}</td>
-    </tr>
+  <td style="font-size:10pt; font-weight:900; padding:3px 0; border-top:1px dashed #000;">Subtotal:</td>
+  <td style="font-size:10pt; font-weight:900; text-align:right; white-space:nowrap; padding:3px 0; border-top:1px dashed #000;">R$ ${this.formatarMoeda((this.reserva.totalHospedagem || 0) - (this.reserva.desconto || 0))}</td>
+</tr>
     ${(this.reserva.totalRecebido || 0) > 0 ? `
     <tr>
       <td style="font-size:10pt; font-weight:700; padding:3px 0;">Ja Recebido:</td>
@@ -4598,6 +4667,22 @@ salvarAdiantamento(): void {
 
     abrirModalAdicionarHospede(): void {
 
+      this.http.get<any[]>('/api/empresas').subscribe({
+    next: (data) => {
+      this.empresas = data.sort((a, b) =>
+        a.nomeEmpresa.localeCompare(b.nomeEmpresa, 'pt-BR'));
+      console.log('✅ Empresas carregadas:', this.empresas.length);
+    },
+    error: (err) => console.error('❌ Erro empresas:', err)
+  });
+
+
+      if (this.empresas.length === 0) {
+           this.carregarEmpresas();
+      }   
+
+      console.log('🏢 Empresas disponíveis:', this.empresas.length);
+
       console.log('🚗 ABRINDO MODAL DE ADICIONAR HÓSPEDE');
     console.log('🚗 novoHospede:', this.novoHospede);
     console.log('🚗 tem placaCarro?', 'placaCarro' in this.novoHospede);
@@ -4695,6 +4780,11 @@ salvarAdiantamento(): void {
       alert('⚠️ Nome completo é obrigatório!');
       return;
     }
+
+      if (this.novoHospede.cpf && !this.validarCPF(this.novoHospede.cpf)) {
+    alert('❌ CPF inválido! Verifique o número digitado.');
+    return;
+  }
     
     // ✅ VALIDAR PLACA SE FOI PREENCHIDA
     if (this.novoHospede.placaCarro && !this.validarPlaca(this.novoHospede.placaCarro)) {
@@ -4728,12 +4818,47 @@ salvarAdiantamento(): void {
         this.fecharModalAdicionarHospede();
         this.carregarReserva(this.reserva!.id);
       },
-      error: (err) => {
-        const erro = err.error?.erro || 'Erro ao adicionar hóspede';
-        alert(`❌ ${erro}`);  // ✅ CORRIGIDO: Adicionar ( antes da string
+     error: (err) => {
+  const msg = err.error?.erro || err.error?.message || '';
+  
+  // Se CPF duplicado, busca o cliente existente e adiciona
+  if (msg.includes('CPF já cadastrado')) {
+    this.http.get<any>(`/api/clientes/cpf/${this.novoHospede.cpf.replace(/\D/g, '')}`).subscribe({
+      next: (clienteExistente) => {
+        const request = {
+          clienteId: clienteExistente.id,
+          cadastrarNovo: false
+        };
+        this.http.post(`/api/reservas/${this.reserva!.id}/hospedes`, request).subscribe({
+          next: () => {
+            alert(`✅ Cliente ${clienteExistente.nome} já cadastrado — adicionado automaticamente!`);
+            this.fecharModalAdicionarHospede();
+            this.carregarReserva(this.reserva!.id);
+          },
+          error: (err2) => {
+            const erro2 = err2.error?.erro || 'Erro ao adicionar hóspede existente';
+            alert('❌ ' + erro2);
+          }
+        });
+      },
+      error: () => {
+        alert('❌ Erro ao buscar cliente existente.');
       }
     });
+  } else {
+    const erro = err.error?.erro || err.error?.message || 
+                 (typeof err.error === 'string' ? err.error : 'Erro ao adicionar hóspede');
+    alert('❌ ' + erro);
   }
+}
+    });
+  }
+
+  onFormaPagamentoChange(): void {
+  if (this.pagFormaPagamento === 'DEBITO_EM_CONTA') {
+    this.pagValor = this.reserva?.totalApagar || 0;
+  }
+}
 
     limparFormularioNovoHospede(): void {
   this.novoHospede = {
@@ -5542,6 +5667,32 @@ salvarAdiantamento(): void {
     });
   }
 
+ confirmarCancelamento(): void {
+  
+  this.motivoCancelamento = '';
+  this.modalCancelamento = true;
+}
+
+executarCancelamento(): void {
+  if (!this.motivoCancelamento?.trim()) {
+    alert('⚠️ Informe o motivo do cancelamento.');
+    return;
+  }
+
+  this.http.put(`${this.apiUrl}/reservas/${this.reservaId}/cancelar`,
+    { motivo: this.motivoCancelamento }  // ← body correto
+  ).subscribe({
+    next: () => {
+      this.modalCancelamento = false;
+      alert('✅ Reserva cancelada com sucesso!');
+      this.carregarReserva(this.reservaId);
+    },
+    error: (err: any) => {
+      alert('❌ ' + (err.error?.message || err.error?.erro || 'Erro ao cancelar reserva.'));
+    }
+  });
+}
+
   abrirModalResponsavel(): void {
     this.mostrarModalResponsavel = true;
     this.responsavelBusca = '';
@@ -5599,11 +5750,17 @@ salvarAdiantamento(): void {
       });
   }
 
-  carregarEmpresas(): void {
+ carregarEmpresas(): void {
+  console.log('🏢 Carregando empresas...');
   this.http.get<any[]>('/api/empresas').subscribe({
-    next: (data) => this.empresas = data.sort((a, b) => 
-      a.nomeEmpresa.localeCompare(b.nomeEmpresa, 'pt-BR')),
-    error: () => {}
+    next: (data) => {
+      console.log('✅ Empresas carregadas:', data.length);
+      this.empresas = data.sort((a, b) => 
+        a.nomeEmpresa.localeCompare(b.nomeEmpresa, 'pt-BR'));
+    },
+    error: (err) => {
+      console.error('❌ Erro ao carregar empresas:', err);
+    }
   });
 }
 
@@ -5939,8 +6096,58 @@ valorPorExtenso(valor: number): string {
   return resultado.charAt(0).toUpperCase() + resultado.slice(1);
 }
 
+ formatarCelularInput(valor: string): string {
+  const nums = valor.replace(/\D/g, '').substring(0, 11);
+  if (nums.length <= 2) return `(${nums}`;
+  if (nums.length <= 7) return `(${nums.slice(0,2)}) ${nums.slice(2)}`;
+  return `(${nums.slice(0,2)}) ${nums.slice(2,7)}-${nums.slice(7,11)}`;
+}
+
+abrirDebitoEmConta(): void {
+  this.pagValor = Number(this.reserva?.totalApagar) || 0;
+  this.pagFormaPagamento = 'DEBITO_EM_CONTA';
+  this.pagObs = '';
+  this.modalPagamento = true;
+}
+
 toggleExtrato(): void {
   this.extratoExpandido = !this.extratoExpandido;
+}
+
+validarCPF(cpf: string): boolean {
+  if (!cpf) return true; // CPF é opcional
+  
+  // Remove formatação
+  const nums = cpf.replace(/\D/g, '');
+  
+  // Deve ter 11 dígitos
+  if (nums.length !== 11) return false;
+  
+  // Rejeita CPFs com todos dígitos iguais (ex: 000.000.000-00)
+  if (/^(\d)\1{10}$/.test(nums)) return false;
+  
+  // Valida dígitos verificadores
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(nums[i]) * (10 - i);
+  let rest = (sum * 10) % 11;
+  if (rest === 10 || rest === 11) rest = 0;
+  if (rest !== parseInt(nums[9])) return false;
+
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(nums[i]) * (11 - i);
+  rest = (sum * 10) % 11;
+  if (rest === 10 || rest === 11) rest = 0;
+  if (rest !== parseInt(nums[10])) return false;
+
+  return true;
+}
+
+formatarCPFInput(valor: string): string {
+  const nums = valor.replace(/\D/g, '').substring(0, 11);
+  if (nums.length <= 3) return nums;
+  if (nums.length <= 6) return `${nums.slice(0,3)}.${nums.slice(3)}`;
+  if (nums.length <= 9) return `${nums.slice(0,3)}.${nums.slice(3,6)}.${nums.slice(6)}`;
+  return `${nums.slice(0,3)}.${nums.slice(3,6)}.${nums.slice(6,9)}-${nums.slice(9,11)}`;
 }
 
 onValorReciboInput(): void {

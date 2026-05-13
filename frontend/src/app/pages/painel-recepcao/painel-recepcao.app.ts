@@ -15,6 +15,7 @@ interface Reserva {
   id: number;
   status: string;
   clienteNome: string;
+  empresaNome?: string; 
   dataCheckin: string;
   dataCheckout: string;
   quantidadeHospedes: number;
@@ -280,6 +281,10 @@ template: `
      [title]="getTooltipFaixa(apt)">
   <span class="apt-numero">{{ apt.numero }}</span>
   <span class="apt-tipo" *ngIf="apt.tipo">{{ apt.tipo }}</span>
+   <span class="apt-empresa" 
+        *ngIf="apt.reserva?.empresaNome">
+    {{ apt.reserva!.empresaNome!.substring(0, 4).toUpperCase() }}
+  </span>
   <span class="reserva-num" *ngIf="apt.reserva?.id">#{{ apt.reserva?.id }}</span>
   <div class="header-badges">
     <span class="badge-sai" *ngIf="isSaiHoje(apt) && getStatusFinal(apt) !== 'LIMPEZA'">SAI HOJE</span>
