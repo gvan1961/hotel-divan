@@ -28,6 +28,7 @@ import { DiariaFormApp } from './pages/diarias/diaria-form.app';
 import { ProdutoListaApp } from './pages/produtos/produto-lista.app';
 import { ProdutoFormApp } from './pages/produtos/produto-form.app';
 import { ReservaListaApp } from './pages/reservas/reserva-lista.app';
+import { GraficosOcupacaoApp } from './pages/graficos/graficos-ocupacao.app';
 import { ReservaFormApp } from './pages/reservas/reserva-form.app';
 import { ReservaDetalhesApp } from './pages/reservas/reserva-detalhes.app';
 import { ApartamentosGestaoApp } from './pages/apartamentos/apartamentos-gestao.app';
@@ -64,6 +65,7 @@ import { PontoRelatorioApp } from './pages/ponto/ponto-relatorio.app';
 import { PontoFotoApp } from './pages/ponto/ponto-foto.app';
 import { roleGuard } from './guards/role.guard';
 import { PontoAjusteApp } from './pages/ponto/ponto-ajuste.app';
+
 
 export const routes: Routes = [
   // LOGIN (sem layout)
@@ -179,6 +181,8 @@ export const routes: Routes = [
       { path: 'sorteios', component: SorteioListaApp },
 
       { path: 'administrativo', component: AdministrativoComponent },
+
+      { path: 'graficos', component: GraficosOcupacaoApp },
 
       // ===== PONTO ELETRONICO =====
 

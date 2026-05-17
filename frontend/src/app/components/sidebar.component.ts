@@ -10,6 +10,7 @@ import { Subscription } from 'rxjs';
 import { HasPermissionDirective } from '../directives/has-permission.directive';
 import { HttpClient } from '@angular/common/http';
 
+
 @Component({
   selector: 'app-sidebar',
   standalone: true,
@@ -159,6 +160,13 @@ import { HttpClient } from '@angular/common/http';
           <span class="icon">💰</span>
           <span class="label">Faturamento</span>
         </a>
+
+     <!-- GRÁFICOS -->
+<a *hasPermission="'ROLE_ADMIN'"
+   routerLink="/graficos" routerLinkActive="active" class="nav-item">
+  <span class="icon">📈</span>
+  <span class="label">Gráficos</span>
+</a>
 
         <div class="nav-divider"></div>
 

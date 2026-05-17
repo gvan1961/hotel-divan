@@ -321,7 +321,11 @@ export class ContasPagarFormApp implements OnInit {
     if (!this.conta.descricao) { this.errorMessage = 'Descrição é obrigatória'; return; }
     if (!this.conta.valor || this.conta.valor <= 0) { this.errorMessage = 'Valor é obrigatório'; return; }
     if (!this.conta.dataVencimento) { this.errorMessage = 'Data de vencimento é obrigatória'; return; }
-
+    if (!this.fornecedorSelecionado) { this.errorMessage = 'Fornecedor é obrigatório'; return; }
+    if (!this.fornecedorSelecionado) {
+  this.errorMessage = 'Fornecedor é obrigatório';
+  return;
+}
     // ✅ Validar formato das datas (ano com 4 dígitos)
 const regexData = /^\d{4}-\d{2}-\d{2}$/;
 if (this.conta.dataCompra && !regexData.test(this.conta.dataCompra)) {
