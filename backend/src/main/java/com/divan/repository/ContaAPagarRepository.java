@@ -27,4 +27,7 @@ public interface ContaAPagarRepository extends JpaRepository<ContaAPagar, Long> 
 
     @Query("SELECT c FROM ContaAPagar c WHERE c.dataVencimento BETWEEN :dataInicio AND :dataFim")
     List<ContaAPagar> findContasPorVencimento(@Param("dataInicio") LocalDate dataInicio, @Param("dataFim") LocalDate dataFim);
+    
+    List<ContaAPagar> findByDataVencimentoAndStatusNot(LocalDate dataVencimento, ContaAPagar.StatusContaEnum status);
+    
 }

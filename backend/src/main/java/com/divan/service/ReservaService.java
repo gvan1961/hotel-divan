@@ -28,7 +28,6 @@ import com.divan.entity.ContaAReceber;
 import com.divan.entity.HospedagemHospede;
 import com.divan.repository.ContaAReceberRepository;
 
-
 @Service
 @Transactional
 public class ReservaService {	
@@ -575,6 +574,7 @@ public class ReservaService {
         dto.setHistoricos(reserva.getHistoricos());
         dto.setTotalReciboEmitido(reserva.getTotalReciboEmitido() != null ? reserva.getTotalReciboEmitido() : BigDecimal.ZERO);
         dto.setSaldoAdiantamento(reserva.getSaldoAdiantamento() != null ? reserva.getSaldoAdiantamento() : BigDecimal.ZERO);        
+        dto.setFaturada(reserva.getFaturada() != null ? reserva.getFaturada() : false);
         return dto;
     }
     
@@ -1052,6 +1052,9 @@ public class ReservaService {
         // Finalizar reserva
         reserva.setStatus(Reserva.StatusReservaEnum.FINALIZADA);
         reserva.setRenovacaoAutomatica(false);
+        if (temSaldoDevedor) {
+            reserva.setFaturada(true);
+        }
 
         // Liberar apartamento para limpeza
         Apartamento apartamento = reserva.getApartamento();
@@ -1092,70 +1095,58 @@ public class ReservaService {
     // ✅ MÉTODO PARA CRIAR CONTA A RECEBER
     private void criarContaAReceber(Reserva reserva) {
         try {
+            // ✅ VERIFICAR SE JÁ EXISTE
+            boolean jaExiste = contaAReceberRepository.existsByReservaId(reserva.getId());
+            if (jaExiste) {
+                System.out.println("ℹ️ Conta a receber já existe para reserva #" + reserva.getId() + " — ignorando.");
+                return;
+            }
+
             ContaAReceber conta = new ContaAReceber();
-            
-            // ✅ CAMPOS OBRIGATÓRIOS
             conta.setReserva(reserva);
             conta.setCliente(reserva.getCliente());
-            
-            // ✅ VERIFICAR SE ESTÁ PAGO OU NÃO
+
             boolean estaPago = reserva.getTotalApagar().compareTo(BigDecimal.ZERO) == 0;
-            
+
             if (estaPago) {
-                // ✅ RESERVA PAGA (saldo = 0)
-                conta.setValor(reserva.getTotalHospedagem()); // Valor total original
-                conta.setValorPago(reserva.getTotalRecebido()); // Já recebeu tudo
-                conta.setSaldo(BigDecimal.ZERO); // Sem saldo devedor
+                conta.setValor(reserva.getTotalHospedagem());
+                conta.setValorPago(reserva.getTotalRecebido());
+                conta.setSaldo(BigDecimal.ZERO);
                 conta.setStatus(ContaAReceber.StatusContaEnum.PAGA);
-                conta.setDataPagamento(LocalDate.now()); // Data do pagamento
-                conta.setDataVencimento(LocalDate.now()); // Vencimento = hoje (já pago)
-                conta.setDescricao("Reserva PAGA #" + reserva.getId() + 
+                conta.setDataPagamento(LocalDate.now());
+                conta.setDataVencimento(LocalDate.now());
+                conta.setDescricao("Reserva PAGA #" + reserva.getId() +
                                   " - Apt " + reserva.getApartamento().getNumeroApartamento());
                 conta.setObservacao("Pagamento efetuado no check-out");
-                
-                System.out.println("💚 Registro PAGO criado:");
-                System.out.println("   Valor Total: R$ " + conta.getValor());
-                System.out.println("   Valor Pago: R$ " + conta.getValorPago());
-                System.out.println("   Status: PAGA");
-                
+                System.out.println("💚 Registro PAGO criado — Valor: R$ " + conta.getValor());
             } else {
-                // ⚠️ RESERVA FATURADA (tem saldo devedor)
-                conta.setValor(reserva.getTotalApagar()); // Valor a receber
-                conta.setValorPago(BigDecimal.ZERO); // Ainda não pagou
-                conta.setSaldo(reserva.getTotalApagar()); // Saldo = valor total
+                conta.setValor(reserva.getTotalApagar());
+                conta.setValorPago(BigDecimal.ZERO);
+                conta.setSaldo(reserva.getTotalApagar());
                 conta.setStatus(ContaAReceber.StatusContaEnum.EM_ABERTO);
-                conta.setDataPagamento(null); // Ainda não foi pago
-                conta.setDataVencimento(LocalDate.now().plusDays(30)); // 30 dias para pagar
-                conta.setDescricao("Reserva FATURADA #" + reserva.getId() + 
+                conta.setDataPagamento(null);
+                conta.setDataVencimento(LocalDate.now().plusDays(30));
+                conta.setDescricao("Reserva FATURADA #" + reserva.getId() +
                                   " - Apt " + reserva.getApartamento().getNumeroApartamento());
                 conta.setObservacao("Pagamento faturado - prazo 30 dias");
-                
-                System.out.println("💰 Conta a Receber criada:");
-                System.out.println("   Valor: R$ " + conta.getValor());
-                System.out.println("   Saldo: R$ " + conta.getSaldo());
-                System.out.println("   Vencimento: " + conta.getDataVencimento());
-                System.out.println("   Status: EM_ABERTO");
+                System.out.println("💰 Conta a Receber FATURADA criada — Valor: R$ " + conta.getValor());
             }
-            
-            // ✅ CAMPOS COMUNS
+
             conta.setDataCriacao(LocalDateTime.now());
-            
-            // ✅ EMPRESA (se o cliente tiver)
+
             if (reserva.getCliente().getEmpresa() != null) {
                 conta.setEmpresa(reserva.getCliente().getEmpresa());
             }
-            
+
             contaAReceberRepository.save(conta);
-            
-            System.out.println("✅ Registro salvo com sucesso!");
-            
+            System.out.println("✅ Conta a receber salva com sucesso!");
+
         } catch (Exception e) {
-            System.err.println("❌ Erro ao criar registro: " + e.getMessage());
+            System.err.println("❌ Erro ao criar conta a receber: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Erro ao criar registro: " + e.getMessage());
         }
     }
-    
     public Reserva cancelarReserva(Long reservaId, String motivo) {
         Reserva reserva = reservaRepository.findById(reservaId)
             .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
@@ -1864,16 +1855,7 @@ public class ReservaService {
             .orElseThrow(() -> new RuntimeException("Hóspede não encontrado"));
 
         Reserva reservaOrigem = hospede.getReserva();
-        
-        // ✅ NOVA VALIDAÇÃO — proteção contra transferência individual em reserva de 1 hóspede
-        if (reservaOrigem.getQuantidadeHospede() != null && reservaOrigem.getQuantidadeHospede() <= 1) {
-            throw new RuntimeException(
-                "Esta reserva possui apenas 1 hóspede. " +
-                "Use 'Transferir Apartamento' para mover toda a reserva, " +
-                "em vez de 'Transferir Hóspede Individual'."
-            );
-        }
-        
+                     
         
         Apartamento aptoOrigem = reservaOrigem.getApartamento();
         Apartamento aptoDestino = apartamentoRepository.findById(novoApartamentoId)
@@ -1947,7 +1929,58 @@ public class ReservaService {
             hospede.setTitular(false);
             hospedagemHospedeRepository.save(hospede);
 
-            reservaDestino.setQuantidadeHospede(reservaDestino.getQuantidadeHospede() + 1);
+            // ✅ ATUALIZAR QUANTIDADE
+            int qtdAnteriorDestino = reservaDestino.getQuantidadeHospede();
+            int novaQtd = qtdAnteriorDestino + 1;
+            reservaDestino.setQuantidadeHospede(novaQtd);
+
+            // ✅ RECALCULAR DIÁRIA DO DESTINO
+            Diaria novaDiariaDestino = diariaService.buscarDiariaPara(aptoDestino, novaQtd)
+                .orElse(reservaDestino.getDiaria());
+
+            BigDecimal valorAntigoDestino = reservaDestino.getDiaria().getValor();
+            BigDecimal valorNovoDestino = novaDiariaDestino.getValor();
+
+            reservaDestino.setDiaria(novaDiariaDestino);
+            
+            reservaDestino.setDiaria(novaDiariaDestino);
+
+         // ✅ AJUSTAR DIÁRIA DE HOJE SE JÁ FOI LANÇADA
+         LocalDate hoje = LocalDate.now();
+         List<ExtratoReserva> extratosDestino = extratoReservaRepository
+             .findByReservaOrderByDataHoraLancamento(reservaDestino);
+
+         for (ExtratoReserva extrato : extratosDestino) {
+        	 System.out.println("📋 Extrato: " + extrato.getDataHoraLancamento() + 
+        		        " | Status: " + extrato.getStatusLancamento() + 
+        		        " | Hoje: " + hoje);
+             if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
+                 && extrato.getDataHoraLancamento().toLocalDate().isEqual(hoje)) {
+                 
+            	 BigDecimal diferenca = valorNovoDestino.subtract(valorAntigoDestino);
+            	 if (diferenca.compareTo(BigDecimal.ZERO) != 0) {
+            	     ExtratoReserva ajuste = new ExtratoReserva();
+            	     ajuste.setReserva(reservaDestino);
+            	     ajuste.setDataHoraLancamento(extrato.getDataHoraLancamento());
+            	     ajuste.setStatusLancamento(diferenca.compareTo(BigDecimal.ZERO) > 0
+            	         ? ExtratoReserva.StatusLancamentoEnum.ACRESCIMO
+            	         : ExtratoReserva.StatusLancamentoEnum.ESTORNO);
+            	     ajuste.setDescricao(String.format(
+            	         "Ajuste - Transferência hóspede para Apto %s",
+            	         aptoDestino.getNumeroApartamento()));
+            	     ajuste.setQuantidade(1);
+            	     ajuste.setValorUnitario(diferenca);
+            	     ajuste.setTotalLancamento(diferenca);
+            	     ajuste.setNotaVendaId(null);
+            	     extratoReservaRepository.save(ajuste);
+            	 }
+                 break;
+             }
+         }
+
+
+            // ✅ RECALCULAR TOTAIS DO DESTINO
+            recalcularTotaisReserva(reservaDestino);
             reservaRepository.save(reservaDestino);
         }
 
@@ -1955,6 +1988,9 @@ public class ReservaService {
         long hospedesAtivos = hospedagemHospedeRepository.findByReservaId(reservaOrigem.getId())
             .stream().filter(h -> h.getStatus() == HospedagemHospede.StatusEnum.HOSPEDADO).count();
 
+   
+        
+        
         if (hospedesAtivos == 0) {
             // Último hóspede saiu — liberar para limpeza
             reservaOrigem.setStatus(Reserva.StatusReservaEnum.FINALIZADA);
@@ -1963,15 +1999,33 @@ public class ReservaService {
             apartamentoRepository.save(aptoOrigem);
             apartamentoOrigemFicouVazio = true;
         } else {
-            reservaOrigem.setQuantidadeHospede((int) hospedesAtivos);
-            reservaRepository.save(reservaOrigem);
-        }
+            if (hospedesAtivos > 0) {
+                Diaria novaDiariaOrigem = diariaService.buscarDiariaPara(aptoOrigem, (int) hospedesAtivos)
+                    .orElse(reservaOrigem.getDiaria());
+
+                BigDecimal valorAntigoOrigem = reservaOrigem.getDiaria().getValor();
+                BigDecimal valorNovoOrigem = novaDiariaOrigem.getValor();
+
+                if (valorNovoOrigem.compareTo(valorAntigoOrigem) != 0) {
+                    ajustarDiariasFuturas(reservaOrigem,
+                        LocalDateTime.now().toLocalDate().atStartOfDay(),
+                        reservaOrigem.getQuantidadeHospede() + 1,
+                        (int) hospedesAtivos);
+                }
+
+                reservaOrigem.setQuantidadeHospede((int) hospedesAtivos);
+                reservaOrigem.setDiaria(novaDiariaOrigem);
+                recalcularTotaisReserva(reservaOrigem);
+                reservaRepository.save(reservaOrigem);
+            }
+        }     
+        
 
         HistoricoHospede historico = new HistoricoHospede();
         historico.setReserva(reservaOrigem);
         historico.setDataHora(LocalDateTime.now());
         historico.setQuantidadeAnterior(reservaOrigem.getQuantidadeHospede() + 1);
-        historico.setQuantidadeNova((int) hospedesAtivos);
+        historico.setQuantidadeNova((int) Math.max(1, hospedesAtivos));
         historico.setMotivo(String.format("Hóspede %s transferido para Apt %s — %s",
             hospede.getCliente().getNome(), aptoDestino.getNumeroApartamento(), motivo));
         historicoHospedeRepository.save(historico);

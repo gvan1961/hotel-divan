@@ -2,11 +2,15 @@ package com.divan.controller;
 
 import com.divan.entity.ContaAPagar;
 import com.divan.service.ContaAPagarService;
+import com.divan.service.ContasVencimentoNotificacaoJob;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +20,9 @@ import java.util.Map;
 public class ContaAPagarController {
 
     private final ContaAPagarService service;
+    
+    @Autowired
+    private ContasVencimentoNotificacaoJob contasVencimentoNotificacaoJob;
 
     public ContaAPagarController(ContaAPagarService service) {
         this.service = service;
@@ -100,7 +107,10 @@ public class ContaAPagarController {
         try {
             BigDecimal valorPago = new BigDecimal(body.get("valorPago").toString());
             String formaPagamento = (String) body.get("formaPagamento");
-            return ResponseEntity.ok(service.registrarPagamento(id, valorPago, formaPagamento));
+            LocalDate dataPagamento = body.get("dataPagamento") != null
+                ? LocalDate.parse(body.get("dataPagamento").toString())
+                : LocalDate.now();
+            return ResponseEntity.ok(service.registrarPagamento(id, valorPago, formaPagamento, dataPagamento));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
@@ -114,5 +124,14 @@ public class ContaAPagarController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
+    }
+    
+    //para teste
+       
+    
+    @PostMapping("/testar-notificacao")
+    public ResponseEntity<?> testarNotificacao() {
+        contasVencimentoNotificacaoJob.notificarContasVencendoHoje();
+        return ResponseEntity.ok(Map.of("mensagem", "Notificação disparada!"));
     }
 }

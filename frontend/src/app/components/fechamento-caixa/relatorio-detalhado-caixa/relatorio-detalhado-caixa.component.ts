@@ -149,92 +149,126 @@ export class RelatorioDetalhadoCaixaComponent implements OnInit {
     const tg = this.relatorio.totalGeral || {};
     const sr = this.relatorio.subtotalReservas || {};
 
-    const htmlImpressao = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Fechamento Caixa #${this.relatorio.caixaId}</title>
-        <style>
-          @page { size: 80mm auto; margin: 0; }
-          body {
-            font-family: 'Courier New', monospace;
-            font-size: 7px;
-            width: 80mm;
-            margin: 0;
-            padding: 3mm;
-            line-height: 1.1;
-          }
-          .titulo    { font-size: 9px; font-weight: bold; text-align: center; margin-bottom: 2px; }
-          .info      { font-size: 6px; margin: 1px 0; }
-          .separador { text-align: center; margin: 2px 0; font-size: 6px; }
-          .linha     { display: flex; justify-content: space-between; margin: 1px 0; font-size: 7px; }
-          .linha.total { font-weight: bold; font-size: 8px; margin: 3px 0; }
-          .secao-titulo { font-size: 7px; font-weight: bold; margin: 3px 0 2px 0; border-bottom: 1px dashed #000; }
-          .apto { margin: 2px 0; padding: 2px 0; border-bottom: 1px dotted #ccc; }
-          .apto-header { display: flex; justify-content: space-between; font-size: 7px; font-weight: bold; }
-          .apto-pag { font-size: 6px; color: #333; margin-top: 1px; }
-          .subtotal-box { background: #f0f0f0; padding: 2px; margin: 3px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="titulo">FECHAMENTO DE CAIXA</div>
-        <div class="info">Caixa #${this.relatorio.caixaId} - ${this.relatorio.recepcionistaNome || 'N/A'}</div>
-        <div class="info">Abertura: ${this.formatarDataSimples(this.relatorio.dataHoraAbertura)}</div>
-        <div class="info">Fechamento: ${this.formatarDataSimples(this.relatorio.dataHoraFechamento)}</div>
+   const htmlImpressao = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Fechamento Caixa #${this.relatorio.caixaId}</title>
+    <style>
+      @page { size: 80mm auto; margin: 2mm; }
+      * { font-weight: bold !important; }
+      body {
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        width: 76mm;
+        margin: 0;
+        padding: 2mm;
+        line-height: 1.4;
+      }
+      .titulo { font-size: 13px; text-align: center; margin-bottom: 3px; }
+      .info { font-size: 10px; margin: 2px 0; }
+      .separador { text-align: center; margin: 3px 0; font-size: 10px; }
+      .linha {
+        display: flex;
+        justify-content: space-between;
+        margin: 2px 0;
+        font-size: 11px;
+      }
+      .linha span:first-child {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding-right: 4px;
+      }
+      .linha span:last-child {
+        text-align: right;
+        white-space: nowrap;
+        min-width: 18mm;
+      }
+      .linha.total { font-size: 12px; margin: 4px 0; }
+      .secao-titulo { font-size: 11px; margin: 4px 0 3px 0; border-bottom: 1px dashed #000; }
+      .apto { margin: 3px 0; padding: 2px 0; border-bottom: 1px dotted #000; }
+      .apto-header {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+      }
+      .apto-header span:first-child {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding-right: 4px;
+      }
+      .apto-header span:last-child {
+        text-align: right;
+        white-space: nowrap;
+        min-width: 16mm;
+      }
+      .apto-pag { font-size: 10px; margin-top: 1px; }
+      .subtotal-box { padding: 2px; margin: 3px 0; }
+    </style>
+  </head>
+  <body>
+    <div class="titulo">FECHAMENTO DE CAIXA</div>
+    <div class="info">Caixa #${this.relatorio.caixaId} - ${this.relatorio.recepcionistaNome || 'N/A'}</div>
+    <div class="info">Abertura: ${this.formatarDataSimples(this.relatorio.dataHoraAbertura)}</div>
+    <div class="info">Fechamento: ${this.formatarDataSimples(this.relatorio.dataHoraFechamento)}</div>
 
-        <div class="separador">================================</div>
+    <div class="separador">================================</div>
 
-        <div class="secao-titulo">VENDAS POR APARTAMENTO</div>
-        ${apartamentosHtml}
+    <div class="secao-titulo">VENDAS POR APARTAMENTO</div>
+    ${apartamentosHtml}
 
-        <div class="subtotal-box">
-          <div class="linha"><span>Subtotal Reservas:</span><span>${this.formatarValor(sr.total || 0)}</span></div>
-        </div>
+    <div class="subtotal-box">
+      <div class="linha"><span>Subtotal Reservas:</span><span>${this.formatarValor(sr.total || 0)}</span></div>
+    </div>
 
-        <div class="separador">================================</div>
+    <div class="separador">================================</div>
 
-        <div class="secao-titulo">VENDAS AVULSAS (PDV)</div>
-        ${avulsasHtml}
+    <div class="secao-titulo">VENDAS AVULSAS (PDV)</div>
+    ${avulsasHtml}
 
-        <div class="subtotal-box">
-          <div class="linha"><span>Subtotal Avulsas:</span><span>${this.formatarValor(avTotal)}</span></div>
-        </div>
+    <div class="subtotal-box">
+      <div class="linha"><span>Subtotal Avulsas:</span><span>${this.formatarValor(avTotal)}</span></div>
+    </div>
 
-        <div class="separador">================================</div>
+    <div class="separador">================================</div>
 
-        <div class="secao-titulo">RESUMO GERAL</div>
-        <div class="linha"><span>Dinheiro:</span><span>${this.formatarValor(tg.dinheiro || 0)}</span></div>
-        <div class="linha"><span>PIX:</span><span>${this.formatarValor(tg.pix || 0)}</span></div>
-        <div class="linha"><span>C. Debito:</span><span>${this.formatarValor(tg.cartaoDebito || 0)}</span></div>
-        <div class="linha"><span>C. Credito:</span><span>${this.formatarValor(tg.cartaoCredito || 0)}</span></div>
-        <div class="linha"><span>Transferencia:</span><span>${this.formatarValor(tg.transferencia || 0)}</span></div>
-        <div class="linha"><span>Faturado:</span><span>${this.formatarValor(tg.faturado || 0)}</span></div>
-        ${(tg.linkPix    || 0) > 0 ? `<div class="linha"><span>🔗 Link Pix:</span><span>${this.formatarValor(tg.linkPix)}</span></div>` : ''}
-        ${(tg.linkCartao || 0) > 0 ? `<div class="linha"><span>🔗 Link Cartao:</span><span>${this.formatarValor(tg.linkCartao)}</span></div>` : ''}
-        <div class="separador">================================</div>
+    <div class="secao-titulo">RESUMO GERAL</div>
+    <div class="linha"><span>Dinheiro:</span><span>${this.formatarValor(tg.dinheiro || 0)}</span></div>
+    <div class="linha"><span>PIX:</span><span>${this.formatarValor(tg.pix || 0)}</span></div>
+    <div class="linha"><span>C. Debito:</span><span>${this.formatarValor(tg.cartaoDebito || 0)}</span></div>
+    <div class="linha"><span>C. Credito:</span><span>${this.formatarValor(tg.cartaoCredito || 0)}</span></div>
+    <div class="linha"><span>Transferencia:</span><span>${this.formatarValor(tg.transferencia || 0)}</span></div>
+    <div class="linha"><span>Faturado:</span><span>${this.formatarValor(tg.faturado || 0)}</span></div>
+    ${(tg.linkPix    || 0) > 0 ? `<div class="linha"><span>Link Pix:</span><span>${this.formatarValor(tg.linkPix)}</span></div>` : ''}
+    ${(tg.linkCartao || 0) > 0 ? `<div class="linha"><span>Link Cartao:</span><span>${this.formatarValor(tg.linkCartao)}</span></div>` : ''}
+    <div class="separador">================================</div>
 
-        <div class="linha total"><span>TOTAL GERAL:</span><span>${this.formatarValor(tg.total || 0)}</span></div>
+    <div class="linha total"><span>TOTAL GERAL:</span><span>${this.formatarValor(tg.total || 0)}</span></div>
 
-        <div class="separador">- - - - - - - - - - - - - - - -</div>
+    <div class="separador">- - - - - - - - - - - - - - - -</div>
 
-        <div class="linha total"><span>DINHEIRO A COBRAR:</span><span>${this.formatarValor(tg.dinheiro || 0)}</span></div>
+    <div class="linha total"><span>DINHEIRO A COBRAR:</span><span>${this.formatarValor(tg.dinheiro || 0)}</span></div>
 
-        <div class="separador">================================</div>
+    <div class="separador">================================</div>
 
-        <div style="text-align: center; font-size: 6px; margin-top: 3px;">
-          Conferido: ${new Date().toLocaleString('pt-BR')}
-        </div>
+    <div style="text-align: center; font-size: 10px; margin-top: 3px;">
+      Conferido: ${new Date().toLocaleString('pt-BR')}
+    </div>
 
-        <script>
-          window.onload = function() {
-            window.print();
-            window.onafterprint = function() { window.close(); };
-          };
-        </script>
-      </body>
-      </html>
-    `;
+    <script>
+      window.onload = function() {
+        window.print();
+        window.onafterprint = function() { window.close(); };
+      };
+    </script>
+  </body>
+  </html>
+`;
 
     const janela = window.open('', '_blank', 'width=400,height=600');
     if (janela) {

@@ -112,8 +112,11 @@ public class PagamentoService {
 
         System.out.println("✅ Pagamento registrado: R$ " + pagamento.getValor());
 
-        atualizarTotalRecebidoReserva(reserva.getId(), pagamento.getValor());
-        criarExtratoPagamento(pagamento);
+        // ✅ DEBITO_EM_CONTA não atualiza totalRecebido nem cria extrato
+        if (pagamento.getFormaPagamento() != Pagamento.FormaPagamentoEnum.DEBITO_EM_CONTA) {
+            atualizarTotalRecebidoReserva(reserva.getId(), pagamento.getValor());
+            criarExtratoPagamento(pagamento);
+        }
 
         reserva = reservaRepository.findById(reserva.getId()).get();
 
@@ -123,6 +126,7 @@ public class PagamentoService {
         System.out.println("═══════════════════════════════════════════");
 
         return pagamentoSalvo;
+        
     }
     /**
      * ✅ NOVO — Processa um adiantamento (crédito do hóspede para consumos futuros).

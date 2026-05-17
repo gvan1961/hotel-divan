@@ -65,7 +65,7 @@ public class ContaAPagarService {
     }
 
     @Transactional
-    public ContaAPagar registrarPagamento(Long id, BigDecimal valorPago, String formaPagamento) {
+    public ContaAPagar registrarPagamento(Long id, BigDecimal valorPago, String formaPagamento, LocalDate dataPagamento) {
         ContaAPagar conta = contaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Conta não encontrada"));
 
@@ -73,7 +73,7 @@ public class ContaAPagarService {
         conta.setValorPago(totalPago);
         conta.setSaldo(conta.getValor().subtract(totalPago));
         conta.setFormaPagamento(formaPagamento);
-        conta.setDataPagamento(LocalDate.now());
+        conta.setDataPagamento(dataPagamento != null ? dataPagamento : LocalDate.now());
 
         if (conta.getSaldo().compareTo(BigDecimal.ZERO) <= 0) {
             conta.setStatus(ContaAPagar.StatusContaEnum.PAGA);

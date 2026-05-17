@@ -1417,7 +1417,7 @@ carregarHospedesApartamento(reservaId: number): void {
   }
 
    
-   buscarPorCodigo(): void {
+  buscarPorCodigo(): void {
   if (!this.codigoBarras || this.codigoBarras.trim() === '') return;
 
   const codigo = this.codigoBarras.trim();
@@ -1428,17 +1428,20 @@ carregarHospedesApartamento(reservaId: number): void {
   );
 
   if (produto) {
+    // ✅ VERIFICAR ESTOQUE ANTES DE ADICIONAR
+    if (produto.quantidade <= 0) {
+      alert(`❌ Produto "${produto.nomeProduto}" está sem estoque!`);
+      this.codigoBarras = '';
+      setTimeout(() => this.inputCodigoBarras?.nativeElement?.focus(), 100);
+      return;
+    }
     this.adicionarAoCarrinho(produto);
   } else {
     alert(`❌ Produto não encontrado para o código: ${codigo}`);
   }
 
   this.codigoBarras = '';
-  
-  // ✅ VOLTA O FOCO PARA O CAMPO DE CÓDIGO DE BARRAS
-  setTimeout(() => {
-    this.inputCodigoBarras?.nativeElement?.focus();
-  }, 100);
+  setTimeout(() => this.inputCodigoBarras?.nativeElement?.focus(), 100);
 }
 
 onKeyDown(event: KeyboardEvent): void {

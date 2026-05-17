@@ -52,9 +52,9 @@ export class ContaPagarService {
     return this.http.put<ContaPagar>(`${this.apiUrl}/${id}`, conta);
   }
 
-  registrarPagamento(id: number, valorPago: number, formaPagamento: string): Observable<ContaPagar> {
-    return this.http.post<ContaPagar>(`${this.apiUrl}/${id}/pagar`, { valorPago, formaPagamento });
-  }
+ registrarPagamento(id: number, valorPago: number, formaPagamento: string, dataPagamento: string): Observable<ContaPagar> {
+  return this.http.post<ContaPagar>(`${this.apiUrl}/${id}/pagar`, { valorPago, formaPagamento, dataPagamento });
+}
 
   deletar(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);

@@ -51,6 +51,8 @@ import { ContaPagarService, ContaPagar } from '../../services/conta-pagar.servic
         </select>
         <input type="text" [(ngModel)]="filtroDescricao" (input)="filtrar()"
                placeholder="Buscar por descrição..." />
+        <input type="text" [(ngModel)]="filtroFornecedor" (input)="filtrar()"
+         placeholder="🏢 Buscar por fornecedor..." />       
       </div>
 
       <div *ngIf="loading" class="loading">Carregando...</div>
@@ -70,6 +72,7 @@ import { ContaPagarService, ContaPagar } from '../../services/conta-pagar.servic
               <th>Vencimento</th>
               <th>Valor</th>
               <th>Saldo</th>
+              <th>Dt. Pagamento</th>
               <th>Status</th>
               <th>Ações</th>
             </tr>
@@ -85,6 +88,7 @@ import { ContaPagarService, ContaPagar } from '../../services/conta-pagar.servic
               <td [class.vencido]="isVencida(conta)">{{ formatarData(conta.dataVencimento) }}</td>
               <td>R$ {{ formatarMoeda(conta.valor) }}</td>
               <td>R$ {{ formatarMoeda(conta.saldo || 0) }}</td>
+              <td>{{ conta.dataPagamento ? formatarData(conta.dataPagamento) : '-' }}</td>
               <td>
                 <span [class]="'badge badge-' + (conta.status || '').toLowerCase()">
                   {{ conta.status }}
@@ -106,39 +110,44 @@ import { ContaPagarService, ContaPagar } from '../../services/conta-pagar.servic
       </div>
     </div>
 
-    <!-- MODAL PAGAMENTO -->
-    <div class="modal-overlay" *ngIf="modalPagamento" (click)="fecharModalPagamento()">
-      <div class="modal" (click)="$event.stopPropagation()">
-        <h2>💳 Registrar Pagamento</h2>
-        <div class="info-box">
-          <p><strong>Conta:</strong> {{ contaPagando?.descricao }}</p>
-          <p><strong>Saldo:</strong> R$ {{ formatarMoeda(contaPagando?.saldo || 0) }}</p>
-        </div>
-        <div class="campo">
-          <label>Valor Pago *</label>
-          <input type="number" [(ngModel)]="valorPagamento" min="0.01"
-            [max]="contaPagando?.saldo ?? 0" step="0.01" />
-        </div>
-        <div class="campo">
-          <label>Forma de Pagamento *</label>
-          <select [(ngModel)]="formaPagamento">
-            <option value="">Selecione...</option>
-            <option value="DINHEIRO">Dinheiro</option>
-            <option value="PIX">PIX</option>
-            <option value="CARTAO_DEBITO">Cartão Débito</option>
-            <option value="CARTAO_CREDITO">Cartão Crédito</option>
-            <option value="TRANSFERENCIA">Transferência</option>
-          </select>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-cancelar" (click)="fecharModalPagamento()">Cancelar</button>
-          <button class="btn-confirmar" (click)="confirmarPagamento()"
-                  [disabled]="!valorPagamento || !formaPagamento">
-            ✅ Confirmar
-          </button>
-        </div>
-      </div>
+   <div class="modal-overlay" *ngIf="modalPagamento" (click)="fecharModalPagamento()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h2>💳 Registrar Pagamento</h2>
+    <div class="info-box">
+      <p><strong>Conta:</strong> {{ contaPagando?.descricao }}</p>
+      <p><strong>Saldo:</strong> R$ {{ formatarMoeda(contaPagando?.saldo || 0) }}</p>
     </div>
+    <div class="campo">
+      <label>Valor Pago *</label>
+      <input type="number" [(ngModel)]="valorPagamento" min="0.01"
+        [max]="contaPagando?.saldo ?? 0" step="0.01" />
+    </div>
+    <div class="campo">
+      <label>Data do Pagamento *</label>
+      <input type="date" [(ngModel)]="dataPagamento" />
+    </div>
+    <div class="campo">
+      <label>Forma de Pagamento *</label>
+      <select [(ngModel)]="formaPagamento">
+        <option value="">Selecione...</option>
+        <option value="DINHEIRO">Dinheiro</option>
+        <option value="PIX">PIX</option>
+        <option value="BOLETO">Boleto</option>
+        <option value="CARTAO_DEBITO">Cartão Débito</option>
+        <option value="CARTAO_CREDITO">Cartão Crédito</option>
+        <option value="TRANSFERENCIA">Transferência</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" (click)="fecharModalPagamento()">Cancelar</button>
+      <button class="btn-confirmar" (click)="confirmarPagamento()"
+              [disabled]="!valorPagamento || !formaPagamento || !dataPagamento">
+        ✅ Confirmar
+      </button>
+    </div>
+  </div>
+</div>
+    
   `,
   styles: [`
     .container { padding: 20px; max-width: 1400px; margin: 0 auto; }
@@ -217,6 +226,9 @@ export class ContasPagarListaApp implements OnInit {
 
   buscaReserva = '';
 
+  filtroFornecedor = '';
+ dataPagamento = new Date().toISOString().split('T')[0]; // ← data atual
+
   ngOnInit(): void {
     this.carregar();
   }
@@ -245,14 +257,17 @@ export class ContasPagarListaApp implements OnInit {
   }
 
   filtrar(): void {
-    this.contasFiltradas = this.contas.filter(c => {
-      const matchStatus = !this.filtroStatus || c.status === this.filtroStatus;
-      const matchCategoria = !this.filtroCategoria || c.categoria === this.filtroCategoria;
-      const matchDescricao = !this.filtroDescricao ||
-        c.descricao.toLowerCase().includes(this.filtroDescricao.toLowerCase());
-      return matchStatus && matchCategoria && matchDescricao;
-    });
-  }
+  this.contasFiltradas = this.contas.filter(c => {
+    const matchStatus = !this.filtroStatus || c.status === this.filtroStatus;
+    const matchCategoria = !this.filtroCategoria || c.categoria === this.filtroCategoria;
+    const matchDescricao = !this.filtroDescricao ||
+      c.descricao.toLowerCase().includes(this.filtroDescricao.toLowerCase());
+    const matchFornecedor = !this.filtroFornecedor ||
+      (c.fornecedorObj?.nome || c.fornecedor || '')
+        .toLowerCase().includes(this.filtroFornecedor.toLowerCase());
+    return matchStatus && matchCategoria && matchDescricao && matchFornecedor;
+  });
+}
 
   isVencida(conta: ContaPagar): boolean {
     const hoje = new Date().toISOString().split('T')[0];
@@ -260,32 +275,35 @@ export class ContasPagarListaApp implements OnInit {
   }
 
   abrirModalPagamento(conta: ContaPagar): void {
-    this.contaPagando = conta;
-    this.valorPagamento = conta.saldo || 0;
-    this.modalPagamento = true;
-  }
+  this.contaPagando = conta;
+  this.valorPagamento = conta.saldo || 0;
+  this.dataPagamento = new Date().toISOString().split('T')[0]; // ← inicializa com hoje
+  this.modalPagamento = true;
+}
 
   fecharModalPagamento(): void {
-    this.modalPagamento = false;
-    this.contaPagando = null;
-    this.valorPagamento = null;
-    this.formaPagamento = '';
-  }
+  this.modalPagamento = false;
+  this.contaPagando = null;
+  this.valorPagamento = null;
+  this.formaPagamento = '';
+  this.dataPagamento = new Date().toISOString().split('T')[0];
+}
 
   confirmarPagamento(): void {
-    if (!this.contaPagando || !this.valorPagamento || !this.formaPagamento) return;
-    this.service.registrarPagamento(
-      this.contaPagando.id!,
-      this.valorPagamento,
-      this.formaPagamento
-    ).subscribe({
-      next: () => {
-        this.fecharModalPagamento();
-        this.carregar();
-      },
-      error: (e) => alert('Erro: ' + e.error?.erro)
-    });
-  }
+  if (!this.contaPagando || !this.valorPagamento || !this.formaPagamento || !this.dataPagamento) return;
+  this.service.registrarPagamento(
+    this.contaPagando.id!,
+    this.valorPagamento,
+    this.formaPagamento,
+    this.dataPagamento
+  ).subscribe({
+    next: () => {
+      this.fecharModalPagamento();
+      this.carregar();
+    },
+    error: (e) => alert('Erro: ' + e.error?.erro)
+  });
+}
 
   excluir(id: number): void {
     if (!confirm('Excluir esta conta?')) return;

@@ -124,6 +124,20 @@ template: `
 
       <!-- FILTROS -->
       <div class="filtros-bar">
+
+        <select
+  class="filtro-input"
+  [(ngModel)]="filtroTipo"
+  (change)="aplicarFiltroLocal()">
+  <option value="">🏨 Todos os Tipos</option>
+  <ng-container *ngFor="let tipo of tiposDisponiveis">
+    <option [value]="tipo">Tipo {{ tipo }} — Todos</option>
+    <option [value]="tipo + '_disponivel'">Tipo {{ tipo }} — Disponíveis</option>
+    <option [value]="tipo + '_ocupado'">Tipo {{ tipo }} — Ocupados</option>
+  </ng-container>
+</select>
+
+
         <input
           class="filtro-input"
           type="text"
@@ -954,6 +968,10 @@ export class PainelRecepcaoApp implements OnInit, OnDestroy {
 resultadosEmpresa: any = null;
 buscandoEmpresa = false;
 mostrarResultadosEmpresa = false;
+
+  filtroTipo = '';
+  tiposDisponiveis: string[] = [];
+
   
   private intervalo: any;
   private apiUrl = '/api/apartamentos/painel';
@@ -970,14 +988,20 @@ mostrarResultadosEmpresa = false;
   }
 
   carregarDados(): void {
+    
     this.carregando = true;
     const token = localStorage.getItem('token');
     const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
     this.http.get<any>(this.apiUrl, { headers }).subscribe({
       next: (resp) => {
+        console.log('Tipos encontrados:', resp.apartamentos.map((a: any) => a.tipo));
         this.apartamentos = resp.apartamentos;
         this.apartamentosFiltradosLocal = resp.apartamentos;
         this.contadores   = resp.contadores;
+        // ✅ EXTRAIR TIPOS DISPONÍVEIS DINAMICAMENTE
+        this.tiposDisponiveis = [...new Set<string>(
+          resp.apartamentos.map((a: any) => a.tipo).filter((t: any) => t)
+        )].sort();
         this.carregando   = false;
       },
       error: (err) => {
@@ -992,7 +1016,7 @@ mostrarResultadosEmpresa = false;
   }
 
   aplicarFiltroLocal(): void {
-  this.apartamentosFiltradosLocal = this.apartamentos.filter(apt => {
+  let resultado = this.apartamentos.filter(apt => {
     const okCamas = !this.filtroCamas ||
       (apt.camas?.toLowerCase().includes(this.filtroCamas.toLowerCase()));
     const okTv = !this.filtroTv ||
@@ -1001,6 +1025,23 @@ mostrarResultadosEmpresa = false;
       (apt.reserva?.id?.toString().includes(this.buscaReserva.trim()));
     return okCamas && okTv && okReserva;
   });
+
+  // ✅ FILTRO POR TIPO
+  if (this.filtroTipo) {
+    const partes = this.filtroTipo.split('_');
+    const tipo = partes[0];
+    const status = partes[1];
+
+    resultado = resultado.filter((a: any) => {
+      const matchTipo = a.tipo === tipo;
+      if (!status) return matchTipo;
+      if (status === 'disponivel') return matchTipo && a.statusApt === 'DISPONIVEL';
+      if (status === 'ocupado') return matchTipo && a.statusApt === 'OCUPADO';
+      return matchTipo;
+    });
+  }
+
+  this.apartamentosFiltradosLocal = resultado;
 }
 
   limparFiltros(): void {
@@ -1009,28 +1050,48 @@ mostrarResultadosEmpresa = false;
     this.buscaReserva = '';
     this.apartamentosFiltradosLocal = [...this.apartamentos];
   }
-
-  apartamentosFiltrados(): ApartamentoCard[] {
+apartamentosFiltrados(): ApartamentoCard[] {
     const lista = (this.filtroCamas || this.filtroTv || this.buscaReserva)
       ? this.apartamentosFiltradosLocal
       : this.apartamentos;
 
-    if (this.filtroAtivo === 'todos') return lista;
-return lista.filter(apt => {
-  const s = this.getStatusFinal(apt);
-  switch (this.filtroAtivo) {
-    case 'disponivel': return s === 'DISPONIVEL';
-    case 'ocupado':    return s === 'ATIVA';
-    case 'prereserva': return s === 'PRE_RESERVA' || apt.temPreReservaFutura === true;
-    case 'limpeza':    return s === 'LIMPEZA';
-    case 'manutencao': return s === 'MANUTENCAO';
-    case 'bloqueado':  return s === 'BLOQUEADO' || s === 'INDISPONIVEL';
-    case 'entraHoje':  return apt.reserva?.entraHoje === true;
-    case 'saiHoje':    return this.isSaiHoje(apt);
-    case 'atrasado':   return apt.reserva?.atrasado === true;
-    default: return true;
-  }
-});
+    let resultado = lista;
+
+    // ✅ FILTRO POR STATUS
+    if (this.filtroAtivo !== 'todos') {
+      resultado = resultado.filter(apt => {
+        const s = this.getStatusFinal(apt);
+        switch (this.filtroAtivo) {
+          case 'disponivel': return s === 'DISPONIVEL';
+          case 'ocupado':    return s === 'ATIVA';
+          case 'prereserva': return s === 'PRE_RESERVA' || apt.temPreReservaFutura === true;
+          case 'limpeza':    return s === 'LIMPEZA';
+          case 'manutencao': return s === 'MANUTENCAO';
+          case 'bloqueado':  return s === 'BLOQUEADO' || s === 'INDISPONIVEL';
+          case 'entraHoje':  return apt.reserva?.entraHoje === true;
+          case 'saiHoje':    return this.isSaiHoje(apt);
+          case 'atrasado':   return apt.reserva?.atrasado === true;
+          default: return true;
+        }
+      });
+    }
+
+    // ✅ FILTRO POR TIPO
+    if (this.filtroTipo) {
+      const partes = this.filtroTipo.split('_');
+      const tipo = partes[0];
+      const status = partes[1];
+
+      resultado = resultado.filter((apt: any) => {
+        const matchTipo = apt.tipo === tipo;
+        if (!status) return matchTipo;
+        if (status === 'disponivel') return matchTipo && apt.statusApt === 'DISPONIVEL';
+        if (status === 'ocupado') return matchTipo && apt.statusApt === 'OCUPADO';
+        return matchTipo;
+      });
+    }
+
+    return resultado;
   }
 
   getStatusFinal(apt: ApartamentoCard): string {

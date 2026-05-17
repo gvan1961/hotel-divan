@@ -42,6 +42,8 @@ public class ReservaResponseDTO {
     private BigDecimal totalReciboEmitido = BigDecimal.ZERO;
     private BigDecimal saldoAdiantamento = BigDecimal.ZERO;
     
+    private Boolean faturada;
+    
 	public Long getId() {
 		return id;
 	}
@@ -173,6 +175,14 @@ public class ReservaResponseDTO {
 	}
 	public void setSaldoAdiantamento(BigDecimal saldoAdiantamento) {
 		this.saldoAdiantamento = saldoAdiantamento;
+	}
+	public Boolean getFaturada() {
+		return faturada;
+	}
+	public void setFaturada(Boolean faturada) {
+		this.faturada = faturada;
 	}   
+	
+	
 		        
 }

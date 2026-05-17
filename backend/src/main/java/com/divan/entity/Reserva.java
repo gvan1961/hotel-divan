@@ -138,6 +138,9 @@ public class Reserva {
     @Column(name = "motivo_cancelamento", length = 500)
     private String motivoCancelamento;
     
+    @Column(name = "faturada", nullable = false)
+    private Boolean faturada = false;
+    
     public Long getId() {
 		return id;
 	}
@@ -435,6 +438,14 @@ public class Reserva {
 
 	public void setMotivoCancelamento(String motivoCancelamento) {
 		this.motivoCancelamento = motivoCancelamento;
+	}
+			
+	public Boolean getFaturada() {
+		return faturada;
+	}
+
+	public void setFaturada(Boolean faturada) {
+		this.faturada = faturada;
 	}
 
 	@Override

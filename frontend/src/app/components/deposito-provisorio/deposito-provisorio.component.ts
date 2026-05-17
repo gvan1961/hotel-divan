@@ -64,7 +64,7 @@ import { environment } from '../../../environments/environment';
             min="1"
             class="input-qtd"
           />
-          <button class="btn-add" (click)="adicionarItem()" [disabled]="!produtoSelecionado || !quantidadeAdicionar">
+          <button class="btn-add" (click)="adicionarProduto()" [disabled]="!produtoSelecionado || !quantidadeAdicionar">
             + Adicionar
           </button>
         </div>
@@ -93,6 +93,7 @@ import { environment } from '../../../environments/environment';
           <thead>
             <tr>
               <th>Produto</th>
+              <th>Valor</th>
               <th>Qtd</th>
               <th>Distribuído</th>
               <th>Pendente</th>
@@ -102,6 +103,7 @@ import { environment } from '../../../environments/environment';
           <tbody>
             <tr *ngFor="let item of deposito.itens">
               <td>{{ item.produto.nomeProduto }}</td>
+              <td>R$ {{ item.produto.valorVenda | number:'1.2-2' }}</td>
               <td>{{ item.quantidade }}</td>
               <td>{{ item.quantidadeDistribuida }}</td>
               <td>{{ item.quantidade - item.quantidadeDistribuida }}</td>
@@ -425,24 +427,23 @@ export class DepositoProvisorioComponent implements OnInit {
   quantidadeDistribuir: number | null = null;
 
   // Pagar à vista
-modalPagarAVista = false;
-itemPagandoAVista: DepositoProvisorioItem | null = null;
-quantidadePagarAVista: number | null = null;
-formaPagamentoAVista = 'DINHEIRO';
-formasPagamento = [
-  { codigo: 'DINHEIRO', nome: 'Dinheiro' },
-  { codigo: 'PIX', nome: 'PIX' },
-  { codigo: 'CARTAO_DEBITO', nome: 'Cartão Débito' },
-  { codigo: 'CARTAO_CREDITO', nome: 'Cartão Crédito' },
-];
+  modalPagarAVista = false;
+  itemPagandoAVista: DepositoProvisorioItem | null = null;
+  quantidadePagarAVista: number | null = null;
+  formaPagamentoAVista = 'DINHEIRO';
+  formasPagamento = [
+    { codigo: 'DINHEIRO', nome: 'Dinheiro' },
+    { codigo: 'PIX', nome: 'PIX' },
+    { codigo: 'CARTAO_DEBITO', nome: 'Cartão Débito' },
+    { codigo: 'CARTAO_CREDITO', nome: 'Cartão Crédito' },
+  ];
 
   termoCodigo = '';
 
   posX = 28;
-posY = 28;
-private arrastando = false;
-private moveu = false;
-
+  posY = 28;
+  private arrastando = false;
+  private moveu = false;
 
   constructor(
     private service: DepositoProvisorioService,
@@ -450,99 +451,77 @@ private moveu = false;
   ) {}
 
   ngOnInit(): void {
-  this.carregarDeposito();
-  this.carregarPosicao();
-}
-
-carregarPosicao(): void {
-  const salvo = localStorage.getItem('deposito-btn-pos');
-  if (salvo) {
-    const pos = JSON.parse(salvo);
-    this.posX = pos.x;
-    this.posY = pos.y;
+    this.carregarDeposito();
+    this.carregarPosicao();
   }
-}
 
-iniciarDrag(event: MouseEvent): void {
-  this.arrastando = true;
-  this.moveu = false;
-  event.preventDefault();
-
-  const mover = (e: MouseEvent) => {
-    this.moveu = true;
-    // Calcula posição a partir da direita e de baixo
-    this.posX = window.innerWidth - e.clientX - 32;
-    this.posY = window.innerHeight - e.clientY - 32;
-
-    // Limites para não sair da tela
-    this.posX = Math.max(8, Math.min(this.posX, window.innerWidth - 72));
-    this.posY = Math.max(8, Math.min(this.posY, window.innerHeight - 72));
-  };
-
-  const soltar = () => {
-    this.arrastando = false;
-    localStorage.setItem('deposito-btn-pos', 
-      JSON.stringify({ x: this.posX, y: this.posY }));
-    window.removeEventListener('mousemove', mover);
-    window.removeEventListener('mouseup', soltar);
-  };
-
-  window.addEventListener('mousemove', mover);
-  window.addEventListener('mouseup', soltar);
-}
-
-iniciarDragTouch(event: TouchEvent): void {
-  this.moveu = false;
-  event.preventDefault();
-
-  const mover = (e: TouchEvent) => {
-    const touch = e.touches[0];
-    this.moveu = true;
-    this.posX = window.innerWidth - touch.clientX - 32;
-    this.posY = window.innerHeight - touch.clientY - 32;
-
-    // Limites para não sair da tela
-    this.posX = Math.max(8, Math.min(this.posX, window.innerWidth - 72));
-    this.posY = Math.max(8, Math.min(this.posY, window.innerHeight - 72));
-  };
-
-  const soltar = () => {
-    localStorage.setItem('deposito-btn-pos',
-      JSON.stringify({ x: this.posX, y: this.posY }));
-    window.removeEventListener('touchmove', mover);
-    window.removeEventListener('touchend', soltar);
-  };
-
-  window.addEventListener('touchmove', mover, { passive: false });
-  window.addEventListener('touchend', soltar);
-}
-
-// ✅ Só abre o modal se não arrastou
-onBtnClick(): void {
-  if (!this.moveu) {
-    this.abrirModal();
+  carregarPosicao(): void {
+    const salvo = localStorage.getItem('deposito-btn-pos');
+    if (salvo) {
+      const pos = JSON.parse(salvo);
+      this.posX = pos.x;
+      this.posY = pos.y;
+    }
   }
-}
+
+  iniciarDrag(event: MouseEvent): void {
+    this.arrastando = true;
+    this.moveu = false;
+    event.preventDefault();
+    const mover = (e: MouseEvent) => {
+      this.moveu = true;
+      this.posX = window.innerWidth - e.clientX - 32;
+      this.posY = window.innerHeight - e.clientY - 32;
+      this.posX = Math.max(8, Math.min(this.posX, window.innerWidth - 72));
+      this.posY = Math.max(8, Math.min(this.posY, window.innerHeight - 72));
+    };
+    const soltar = () => {
+      this.arrastando = false;
+      localStorage.setItem('deposito-btn-pos', JSON.stringify({ x: this.posX, y: this.posY }));
+      window.removeEventListener('mousemove', mover);
+      window.removeEventListener('mouseup', soltar);
+    };
+    window.addEventListener('mousemove', mover);
+    window.addEventListener('mouseup', soltar);
+  }
+
+  iniciarDragTouch(event: TouchEvent): void {
+    this.moveu = false;
+    event.preventDefault();
+    const mover = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      this.moveu = true;
+      this.posX = window.innerWidth - touch.clientX - 32;
+      this.posY = window.innerHeight - touch.clientY - 32;
+      this.posX = Math.max(8, Math.min(this.posX, window.innerWidth - 72));
+      this.posY = Math.max(8, Math.min(this.posY, window.innerHeight - 72));
+    };
+    const soltar = () => {
+      localStorage.setItem('deposito-btn-pos', JSON.stringify({ x: this.posX, y: this.posY }));
+      window.removeEventListener('touchmove', mover);
+      window.removeEventListener('touchend', soltar);
+    };
+    window.addEventListener('touchmove', mover, { passive: false });
+    window.addEventListener('touchend', soltar);
+  }
+
+  onBtnClick(): void {
+    if (!this.moveu) this.abrirModal();
+  }
 
   @HostListener('window:keydown', ['$event'])
-onKeyDown(event: KeyboardEvent): void {
-  if (event.ctrlKey && event.key === 'd') {
-    event.preventDefault();
-    event.stopPropagation();
-    this.abrirModal();
+  onKeyDown(event: KeyboardEvent): void {
+    if (event.ctrlKey && event.key === 'd') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.abrirModal();
+    }
   }
-}
 
   carregarDeposito(): void {
     this.service.getAtual().subscribe({
-      next: (dep) => {
-        this.deposito = dep;
-        this.calcularPendente();
-      },
-      error: () => {
-        this.deposito = null;
-        this.totalPendente = 0;
-      }
+      next: (dep) => { this.deposito = dep; this.calcularPendente(); },
+      error: () => { this.deposito = null; this.totalPendente = 0; }
     });
   }
 
@@ -553,13 +532,13 @@ onKeyDown(event: KeyboardEvent): void {
   }
 
   abrirModal(): void {
-  this.modalAberto = true;
-  this.carregarDeposito();
-  setTimeout(() => {
-    const el = document.querySelector('input[placeholder*="Código"]') as HTMLInputElement;
-    if (el) el.focus();
-  }, 300);
-}
+    this.modalAberto = true;
+    this.carregarDeposito();
+    setTimeout(() => {
+      const el = document.querySelector('input[placeholder*="Código"]') as HTMLInputElement;
+      if (el) el.focus();
+    }, 300);
+  }
 
   fecharModal(): void {
     this.modalAberto = false;
@@ -573,11 +552,11 @@ onKeyDown(event: KeyboardEvent): void {
   }
 
   selecionarProduto(p: any): void {
-  this.produtoSelecionado = p;
-  this.quantidadeAdicionar = 1;
-  this.termoBusca = '';
-  this.produtos = [];
-}
+    this.produtoSelecionado = p;
+    this.quantidadeAdicionar = 1;
+    this.termoBusca = '';
+    this.produtos = [];
+  }
 
   limparProduto(): void {
     this.produtoSelecionado = null;
@@ -587,41 +566,52 @@ onKeyDown(event: KeyboardEvent): void {
     this.termoCodigo = '';
   }
 
- buscarPorCodigo(): void {
-  if (this.termoCodigo.length < 3) return;
-  this.http.get<any[]>(`${environment.apiUrl}/produtos/buscar-codigo?codigo=${this.termoCodigo}`)
-    .subscribe({
-      next: (produtos) => {
-        if (produtos.length === 1) {
-          this.produtoSelecionado = produtos[0];
-          this.quantidadeAdicionar = 1;
-          this.termoCodigo = '';
-          this.adicionarItem();
-        } else if (produtos.length > 1) {
-          this.produtos = produtos;
-          this.termoCodigo = '';
-        }
+  buscarPorCodigo(): void {
+    if (this.termoCodigo.length < 3) return;
+    this.http.get<any[]>(`${environment.apiUrl}/produtos/buscar-codigo?codigo=${this.termoCodigo}`)
+      .subscribe({
+        next: (produtos) => {
+          if (produtos.length === 1) {
+            // ✅ VERIFICAR ESTOQUE
+            if (produtos[0].quantidade <= 0) {
+              alert(`❌ Produto "${produtos[0].nomeProduto}" está sem estoque!`);
+              this.termoCodigo = '';
+              setTimeout(() => {
+                const el = document.querySelector('input[placeholder*="Código"]') as HTMLInputElement;
+                if (el) el.focus();
+              }, 100);
+              return;
+            }
+            this.produtoSelecionado = produtos[0];
+            this.quantidadeAdicionar = 1;
+            this.termoCodigo = '';
+            this.adicionarProduto();
+          } else if (produtos.length > 1) {
+            this.produtos = produtos;
+            this.termoCodigo = '';
+          }
+        },
+        error: () => {}
+      });
+  }
+
+  adicionarProduto(): void {
+    if (!this.produtoSelecionado || !this.quantidadeAdicionar) return;
+    this.service.adicionarItem(this.produtoSelecionado.id, this.quantidadeAdicionar).subscribe({
+      next: () => {
+        this.limparProduto();
+        this.carregarDeposito();
+        setTimeout(() => {
+          const el = document.querySelector('input[placeholder*="Código"]') as HTMLInputElement;
+          if (el) el.focus();
+        }, 100);
       },
-      error: () => {}
+      error: (e: any) => {
+        alert('Erro ao adicionar: ' + e.error?.message);
+        this.quantidadeAdicionar = null;
+      }
     });
-}
- adicionarItem(): void {
-  if (!this.produtoSelecionado || !this.quantidadeAdicionar) return;
-  this.service.adicionarItem(this.produtoSelecionado.id, this.quantidadeAdicionar).subscribe({
-    next: () => {
-      this.limparProduto();
-      this.carregarDeposito();
-      setTimeout(() => {
-        const el = document.querySelector('input[placeholder*="Código"]') as HTMLInputElement;
-        if (el) el.focus();
-      }, 100);
-    },
-    error: (e: any) => {
-      alert('Erro ao adicionar: ' + e.error?.message);
-      this.quantidadeAdicionar = null;
-    }
-  });
-}
+  }
 
   removerItem(item: DepositoProvisorioItem): void {
     if (!confirm('Remover este item?')) return;
@@ -669,41 +659,37 @@ onKeyDown(event: KeyboardEvent): void {
       this.reservaSelecionada.id,
       this.quantidadeDistribuir
     ).subscribe({
-      next: () => {
-        this.fecharDistribuicao();
-        this.carregarDeposito();
-      },
+      next: () => { this.fecharDistribuicao(); this.carregarDeposito(); },
       error: (e) => alert('Erro: ' + e.error?.message)
     });
   }
 
   abrirPagarAVista(item: DepositoProvisorioItem): void {
-  this.itemPagandoAVista = item;
-  this.quantidadePagarAVista = item.quantidade - item.quantidadeDistribuida;
-  this.formaPagamentoAVista = 'DINHEIRO';
-  this.modalPagarAVista = true;
-}
+    this.itemPagandoAVista = item;
+    this.quantidadePagarAVista = item.quantidade - item.quantidadeDistribuida;
+    this.formaPagamentoAVista = 'DINHEIRO';
+    this.modalPagarAVista = true;
+  }
 
-fecharPagarAVista(): void {
-  this.modalPagarAVista = false;
-  this.itemPagandoAVista = null;
-  this.quantidadePagarAVista = null;
-}
+  fecharPagarAVista(): void {
+    this.modalPagarAVista = false;
+    this.itemPagandoAVista = null;
+    this.quantidadePagarAVista = null;
+  }
 
-confirmarPagarAVista(): void {
-  if (!this.itemPagandoAVista || !this.quantidadePagarAVista) return;
-  this.service.pagarAVista(
-    this.itemPagandoAVista.id,
-    this.quantidadePagarAVista,
-    this.formaPagamentoAVista
-  ).subscribe({
-    next: () => {
-      alert('✅ Pagamento registrado!');
-      this.fecharPagarAVista();
-      this.carregarDeposito();
-    },
-    error: (e) => alert('Erro: ' + e.error?.message)
-  });
-}
-
+  confirmarPagarAVista(): void {
+    if (!this.itemPagandoAVista || !this.quantidadePagarAVista) return;
+    this.service.pagarAVista(
+      this.itemPagandoAVista.id,
+      this.quantidadePagarAVista,
+      this.formaPagamentoAVista
+    ).subscribe({
+      next: () => {
+        alert('✅ Pagamento registrado!');
+        this.fecharPagarAVista();
+        this.carregarDeposito();
+      },
+      error: (e) => alert('Erro: ' + e.error?.message)
+    });
+  }
 }

@@ -24,14 +24,15 @@ import { environment } from '../../../environments/environment';
   interface ReservaDetalhes {
     id: number;
     saldoAdiantamento?: number;  
-    cliente?: {
+    faturada?: boolean; 
+      cliente?: {
       id: number;
       nome: string;
       cpf: string;
       telefone?: string;
       celular?: string;
       dataNascimento?: string;
-      creditoAprovado?: boolean;                  
+      creditoAprovado?: boolean;                     
     };
 
     responsavelPagamentoNome?: string;
@@ -92,6 +93,7 @@ import { environment } from '../../../environments/environment';
     id: number;
     numeroApartamento: string;
     capacidade: number;
+    status?: string;
     tipoApartamento?: {
       tipo: string;
     };
@@ -118,7 +120,7 @@ import { environment } from '../../../environments/environment';
       <div *ngIf="erro && !loading" class="erro">
         <h2>❌ Erro</h2>
         <p>{{ erro }}</p>
-        <button (click)="voltar()">← Voltar</button>
+        <button (click)="voltar()">← Voltar ao Painel</button>
       </div>
 
       <!-- DETALHES -->
@@ -133,7 +135,7 @@ import { environment } from '../../../environments/environment';
             </span>
           </div>
           <button class="btn-voltar" (click)="voltar()">
-            ← Voltar
+            ← Voltar ao Painel
           </button>
         </div>
 
@@ -445,7 +447,7 @@ import { environment } from '../../../environments/environment';
                 </div>
                 <div class="hospede-detalhes">
                   CPF: {{ hospede.cliente?.cpf || hospede.cpf || 'Não informado' }} | 
-                  Tel: {{ hospede.cliente?.celular || hospede.telefone || 'Não informado' }}
+                  Tel: {{ hospede.cliente?.celular || hospede.celular || 'Não informado' }}
                   <span class="hospede-placa-container">
                     <span *ngIf="hospede.placaCarro" class="hospede-placa">
                       | 🚗 {{ hospede.placaCarro }}
@@ -470,14 +472,14 @@ import { environment } from '../../../environments/environment';
               </div>
               <div class="hospede-acoes" 
                   *ngIf="reserva.status === 'ATIVA' && hospede.status !== 'CHECKOUT_REALIZADO'">
-                <button
+               <button
   type="button"
   class="btn-acao-hospede btn-transferir-hospede"
-  *ngIf="(reserva.quantidadeHospede || 0) > 1"
+  *ngIf="hospede.status !== 'CHECKOUT_REALIZADO'"
   (click)="abrirModalTransferirHospede(hospede)"
   title="Transferir para outro apartamento">
   🔄
-  </button>
+</button> 
                  <button
   type="button"
   class="btn-acao-hospede btn-checkout-hospede"
@@ -496,8 +498,14 @@ import { environment } from '../../../environments/environment';
           </div>
 
         <!-- CARD DE AÇÕES -->
-        <div class="card acoes-card">
-          <h2>⚙️ Ações — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong></h2>
+       <div class="card acoes-card">
+  <div class="acoes-header">
+    <h2>⚙️ Ações — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong></h2>
+   <button class="btn-voltar-painel" (click)="voltarAoPainel()">
+  ← Voltar ao Painel
+</button>
+  </div>
+  <div class="botoes-acoes">
           <div class="botoes-acoes">
             <ng-container *hasPermission="'RESERVA_EDITAR'">
               <button class="btn-acao btn-ativar-reserva" 
@@ -554,18 +562,18 @@ import { environment } from '../../../environments/environment';
            <ng-container *hasPermission="'RESERVA_FINALIZAR'">
   <!-- Checkout normal - saldo zerado -->
   <button class="btn-acao btn-finalizar-paga" 
-          *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) <= 0"
-          (click)="finalizarCheckout()">
-    💚 CheckOut
-  </button>
+        *ngIf="reserva.status === 'ATIVA' && ((reserva.totalApagar || 0) <= 0 || pagouDebitoEmConta)"
+        (click)="finalizarCheckout()">
+  💚 CheckOut
+</button>
 
 </ng-container>
             <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
-              <button class="btn-acao btn-recibo" 
-                      *ngIf="reserva.status === 'FINALIZADA'"
-                      (click)="imprimirRecibo()">
-                📄 {{ (reserva.totalApagar || 0) > 0 ? 'Imprimir Fatura' : 'Imprimir Recibo' }}
-              </button>
+             <button class="btn-acao btn-recibo" 
+        *ngIf="reserva.status === 'FINALIZADA'"
+        (click)="imprimirRecibo()">
+  📄 {{ reserva.faturada ? 'Imprimir Fatura' : 'Imprimir Recibo' }}
+</button>
             </ng-container>
 
              <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
@@ -592,7 +600,7 @@ import { environment } from '../../../environments/environment';
           (click)="carregarEImprimirBilhetes()">
     🎟️ Imprimir Bilhetes
   </button>
-</ng-container>
+</ng-container> 
 
           </div>
 
@@ -633,8 +641,6 @@ import { environment } from '../../../environments/environment';
   </div>
 </div>
         </div>
-
-
 
         <!-- Modal cancelamento -->
 <div class="modal-overlay" *ngIf="modalCancelamento" (click)="modalCancelamento = false">
@@ -1700,10 +1706,10 @@ import { environment } from '../../../environments/environment';
         color: #856404;
       }
 
-      .badge-estorno {
-        background: #f8d7da;
-        color: #721c24;
-      }
+    .badge-acrescimo {
+  background: #d4edda;
+  color: #155724;
+}
 
       .badge-pagamento {
         background: #d1ecf1;
@@ -2719,6 +2725,30 @@ import { environment } from '../../../environments/environment';
   color: #764ba2;
 }
 
+.acoes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.acoes-header h2 {
+  margin: 0;
+}
+.btn-voltar-painel {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.btn-voltar-painel:hover {
+  background: #5a6268;
+}
+
     `]
   })
 
@@ -2741,6 +2771,8 @@ import { environment } from '../../../environments/environment';
     loading = false;
     extratoExpandido = false;
     erro = '';
+
+    pagouDebitoEmConta = false;
 
     // ALTERAR CHECKOUT
     modalAlterarCheckout = false;
@@ -2919,7 +2951,7 @@ ngOnDestroy(): void {
   this.http.get<ReservaDetalhes>(`/api/reservas/${id}`).subscribe({
     next: (data) => {
       this.reserva = data;
-      this.loading = false;
+         this.loading = false;
       
       // ✅ DEBUG AUDITORIA
       console.log('🔍 AUDITORIA:', {
@@ -3294,18 +3326,15 @@ ngOnDestroy(): void {
 
     // ============= RECIBO/FATURA =============
     imprimirRecibo(): void {
-      if (!this.reserva) return;
-
-      const temSaldo = (this.reserva.totalApagar || 0) > 0;
-      
-      if (temSaldo) {
-        console.log('🔸 Gerando FATURA');
-        this.gerarFatura();
-      } else {
-        console.log('🔸 Gerando RECIBO');
-        this.gerarRecibo();
-      }
-    }
+  if (!this.reserva) return;
+  if ((this.reserva as any).faturada) {
+    console.log('🔸 Gerando FATURA');
+    this.gerarFatura();
+  } else {
+    console.log('🔸 Gerando RECIBO');
+    this.gerarRecibo();
+  }
+}
 
     gerarRecibo(): void {
     if (!this.reserva) return;
@@ -3913,14 +3942,16 @@ ngOnDestroy(): void {
       console.log('🌐 URL da requisição:', url);
 
       this.http.post(url, dto).subscribe({
-        next: (response: any) => {
-    console.log('✅ Resposta do pagamento:', response);
-    alert('✅ Pagamento registrado com sucesso!');
-    this.fecharModalPagamento();
-    if (this.reserva) {
-      this.carregarReserva(this.reserva.id);
-    }
-  },
+       next: (response: any) => {
+  if (this.pagFormaPagamento === 'DEBITO_EM_CONTA') {
+    this.pagouDebitoEmConta = true;
+  }
+  alert('✅ Pagamento registrado com sucesso!');
+  this.fecharModalPagamento();
+  if (this.reserva) {
+    this.carregarReserva(this.reserva.id);
+  }
+},
         error: (err: any) => {
           console.log('═══════════════════════════════════════════');
           console.error('❌ ERRO AO REGISTRAR PAGAMENTO');
@@ -4087,34 +4118,40 @@ salvarAdiantamento(): void {
     }
 
     // ============= TRANSFERÊNCIA =============
-    abrirModalTransferencia(): void {
-      if (!this.reserva) return;
+   abrirModalTransferencia(): void {
+  if (!this.reserva) return;
 
-      this.http.get<Apartamento[]>('/api/apartamentos').subscribe({
-        next: (data) => {
-          this.apartamentosDisponiveis = data.filter(
-            (apt: Apartamento) => 
-              apt.id !== this.reserva?.apartamento?.id &&
-              apt.capacidade >= (this.reserva?.quantidadeHospede || 0)
-          );
+  this.http.get<Apartamento[]>('/api/apartamentos').subscribe({
+    next: (data) => {
+      this.apartamentosDisponiveis = data
+        .filter((apt: Apartamento) => 
+          apt.id !== this.reserva?.apartamento?.id &&
+          apt.status === 'DISPONIVEL' &&
+          apt.capacidade >= (this.reserva?.quantidadeHospede || 0)
+        )
+        .sort((a, b) => {
+          const numA = parseInt(a.numeroApartamento) || 0;
+          const numB = parseInt(b.numeroApartamento) || 0;
+          return numA - numB;
+        });
 
-          if (this.apartamentosDisponiveis.length === 0) {
-            alert('⚠️ Nenhum apartamento disponível para transferência');
-            return;
-          }
+      if (this.apartamentosDisponiveis.length === 0) {
+        alert('⚠️ Nenhum apartamento disponível para transferência');
+        return;
+      }
 
-          this.novoApartamentoId = 0;
-          this.dataTransferencia = '';
-          this.transferenciaImediata = true;
-          this.motivoTransferencia = '';
-          this.modalTransferencia = true;
-        },
-        error: (err: any) => {
-          console.error('❌ Erro:', err);
-          alert('Erro ao carregar apartamentos disponíveis');
-        }
-      });
+      this.novoApartamentoId = 0;
+      this.dataTransferencia = '';
+      this.transferenciaImediata = true;
+      this.motivoTransferencia = '';
+      this.modalTransferencia = true;
+    },
+    error: (err: any) => {
+      console.error('❌ Erro:', err);
+      alert('Erro ao carregar apartamentos disponíveis');
     }
+  });
+}
 
     fecharModalTransferencia(): void {
       this.modalTransferencia = false;
@@ -6155,6 +6192,10 @@ onValorReciboInput(): void {
   this.valorReciboTexto = limpo;
   const numero = parseFloat(limpo.replace(',', '.'));
   this.valorRecibo = isNaN(numero) ? 0 : numero;
+}
+
+voltarAoPainel(): void {
+  this.router.navigate(['/painel-recepcao']);
 }
 
 }

@@ -421,9 +421,10 @@ public class ReservaController {
     public ResponseEntity<?> finalizarReserva(@PathVariable Long id) {
         try {
             Reserva reserva = reservaService.finalizarReserva(id);
-            return ResponseEntity.ok(reserva);
+            return ResponseEntity.ok(Map.of("mensagem", "Reserva finalizada com sucesso"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
     
@@ -782,7 +783,34 @@ public class ReservaController {
     public ResponseEntity<?> listarHospedes(@PathVariable Long id) {
         try {
             List<HospedagemHospede> hospedes = hospedagemHospedeRepository.findByReservaId(id);
-            return ResponseEntity.ok(hospedes);
+            List<Map<String, Object>> resultado = hospedes.stream().map(h -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", h.getId());
+                map.put("titular", h.isTitular());
+                map.put("status", h.getStatus().name());
+                map.put("placaCarro", h.getPlacaCarro());
+                map.put("dataHoraEntrada", h.getDataHoraEntrada());
+                map.put("dataHoraSaida", h.getDataHoraSaida());
+                if (h.getCliente() != null) {
+                    map.put("clienteId", h.getCliente().getId());
+                    map.put("nomeCompleto", h.getCliente().getNome());
+                    Map<String, Object> cliente = new HashMap<>();
+                    cliente.put("id", h.getCliente().getId());
+                    cliente.put("nome", h.getCliente().getNome());
+                    cliente.put("cpf", h.getCliente().getCpf());
+                    cliente.put("celular", h.getCliente().getCelular());
+                    // ✅ ADICIONAR EMPRESA
+                    if (h.getCliente().getEmpresa() != null) {
+                        Map<String, Object> empresa = new HashMap<>();
+                        empresa.put("id", h.getCliente().getEmpresa().getId());
+                        empresa.put("nomeEmpresa", h.getCliente().getEmpresa().getNomeEmpresa());
+                        cliente.put("empresa", empresa);
+                    }
+                    map.put("cliente", cliente);
+                }
+                return map;
+            }).collect(Collectors.toList());
+            return ResponseEntity.ok(resultado);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }

@@ -343,7 +343,10 @@ public class ApartamentoController {
             		            .findByApartamentoIdAndStatusIn(apt.getId(),
             		                List.of(Reserva.StatusReservaEnum.FINALIZADA))
             		            .stream()
-            		            .sorted(Comparator.comparing(Reserva::getDataCheckout).reversed())
+            		            .sorted(Comparator.comparing(
+            		            	    r -> r.getDataCheckoutReal() != null ? r.getDataCheckoutReal() : r.getDataCheckout(),
+            		            	    Comparator.reverseOrder()
+            		            	))
             		            .limit(1)
             		            .collect(Collectors.toList());
 
