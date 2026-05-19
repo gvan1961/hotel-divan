@@ -12,7 +12,8 @@ interface ApartamentoRelatorio {
   status: string;
   prioridade: number;
   concluido?: boolean;        // ✅ NOVO
-  apartamentoId?: number;     // ✅ NOVO
+  apartamentoId?: number;  
+  dataCheckin?: string;   
 }
 
 @Component({
@@ -57,6 +58,7 @@ interface ApartamentoRelatorio {
             <tr>
               <th>PRIORIDADE</th>
               <th>APARTAMENTO</th>
+              <th>DATA CHECKIN</th>
               <th>DATA CHECKOUT</th>
               <th>HORA CHECKOUT</th>
               <th>HÓSPEDES</th>
@@ -71,6 +73,7 @@ interface ApartamentoRelatorio {
                 <span *ngIf="apt.prioridade === 2" class="badge normal">2 - NORMAL</span>
               </td>
               <td class="apartamento">{{ apt.numeroApartamento }}</td>
+              <td>{{ apt.dataCheckin || '-' }}</td>
               <td>{{ apt.dataCheckout }}</td>
               <td>{{ apt.horaCheckout }}</td>
               <td class="center">{{ apt.quantidadeHospedes }}</td>
@@ -557,28 +560,36 @@ export class ApartamentosLimpezaApp implements OnInit {
                   new Date(b.dataCheckout).getTime() - new Date(a.dataCheckout).getTime()
                 )[0];
 
+                console.log('ultimaReserva campos:', ultimaReserva);
+
                 const dataCheckout = ultimaReserva.dataCheckoutReal 
                       ? new Date(ultimaReserva.dataCheckoutReal) 
                         : new Date();
+
+                        
                 
                 console.log(`  ✅ LIMPEZA - Checkout: ${dataCheckout.toLocaleString('pt-BR')}`);
                 
-                this.apartamentos.push({
-                  numeroApartamento: apt.numeroApartamento,
-                  dataCheckout: dataCheckout.toLocaleDateString('pt-BR'),
-                  horaCheckout: dataCheckout.toLocaleTimeString('pt-BR', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  }),
+               this.apartamentos.push({
+  numeroApartamento: apt.numeroApartamento,
+  dataCheckin: ultimaReserva.dataCheckin 
+  ? new Date(ultimaReserva.dataCheckin).toLocaleDateString('pt-BR') 
+  : '-',
+  dataCheckout: dataCheckout.toLocaleDateString('pt-BR'),
+  horaCheckout: dataCheckout.toLocaleTimeString('pt-BR', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  }),
                   quantidadeHospedes: ultimaReserva.quantidadeHospede || 0,
                   status: 'LIMPEZA',
                   prioridade: 1,
                   concluido: false,       // ✅ ADICIONE
                   apartamentoId: apt.id   // ✅ ADICIONE
+                  
                 });
               } else {
                 console.log(`  ⚠️ Apartamento em LIMPEZA mas sem reserva finalizada!`);
-                
+                 
                 // Adicionar mesmo sem reserva (com dados vazios)
                 this.apartamentos.push({
                   numeroApartamento: apt.numeroApartamento,
@@ -606,6 +617,9 @@ export class ApartamentosLimpezaApp implements OnInit {
                 
                 this.apartamentos.push({
                   numeroApartamento: apt.numeroApartamento,
+                  dataCheckin: reservaAtiva.dataCheckin 
+  ? new Date(reservaAtiva.dataCheckin).toLocaleDateString('pt-BR') 
+  : '-',
                   dataCheckout: dataCheckout.toLocaleDateString('pt-BR'),
                   horaCheckout: dataCheckout.toLocaleTimeString('pt-BR', { 
                     hour: '2-digit', 

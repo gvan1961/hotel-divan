@@ -935,8 +935,30 @@ novoHospedeForm: any = {
     this.placaHospedeExistente = p;
   }
 
+
+
+
   salvar(): void {
   if (!this.validarFormulario()) return;
+
+  // ✅ VERIFICAR SE CHECKIN É ANTES DAS 12H
+  const checkin = new Date(this.reserva.dataCheckin);
+  const horaCheckin = checkin.getHours();
+  const hoje = new Date().toISOString().split('T')[0];
+  const checkinData = checkin.toISOString().split('T')[0];
+
+  if (checkinData === hoje && horaCheckin < 12) {
+    const confirmar = confirm(
+      '⚠️ ATENÇÃO - DIÁRIA EXTRA!\n\n' +
+      'Este hóspede está fazendo check-in antes das 12h.\n' +
+      'Será cobrada uma diária adicional referente ao dia de ontem.\n\n' +
+      'Deseja continuar?'
+    );
+    if (!confirmar) {
+      return;
+    }
+  }
+
   this.loading = true;
   this.errorMessage = '';
 

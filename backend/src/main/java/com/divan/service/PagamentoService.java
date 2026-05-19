@@ -82,15 +82,15 @@ public class PagamentoService {
             if (saldoDevedor.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new RuntimeException("Reserva não possui saldo devedor para débito em conta");
             }
-
-            pagamento.setValor(saldoDevedor);
+         
 
             ContaAReceber conta = new ContaAReceber();
             conta.setDescricao("Débito em conta — Reserva #" + reserva.getId()
                 + " — " + cliente.getNome()
                 + " — Apt " + reserva.getApartamento().getNumeroApartamento());
-            conta.setValor(saldoDevedor);
-            conta.setSaldo(saldoDevedor);
+            BigDecimal valorDebito = pagamento.getValor();
+            conta.setValor(valorDebito);
+            conta.setSaldo(valorDebito);
             conta.setValorPago(BigDecimal.ZERO);
             conta.setDataVencimento(LocalDate.now().plusDays(30));
             conta.setDataCriacao(LocalDateTime.now());
@@ -112,11 +112,9 @@ public class PagamentoService {
 
         System.out.println("✅ Pagamento registrado: R$ " + pagamento.getValor());
 
-        // ✅ DEBITO_EM_CONTA não atualiza totalRecebido nem cria extrato
-        if (pagamento.getFormaPagamento() != Pagamento.FormaPagamentoEnum.DEBITO_EM_CONTA) {
-            atualizarTotalRecebidoReserva(reserva.getId(), pagamento.getValor());
-            criarExtratoPagamento(pagamento);
-        }
+        // ✅ TODOS os pagamentos atualizam totalRecebido e criam extrato
+        atualizarTotalRecebidoReserva(reserva.getId(), pagamento.getValor());
+        criarExtratoPagamento(pagamento);
 
         reserva = reservaRepository.findById(reserva.getId()).get();
 

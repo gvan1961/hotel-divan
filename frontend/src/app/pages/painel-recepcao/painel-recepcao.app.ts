@@ -60,6 +60,16 @@ interface Contadores {
 template: `
     <div class="painel-wrapper">
 
+    <!-- AVISO DIÁRIA MEIO-DIA -->
+<div class="aviso-diaria" *ngIf="mostrarAvisoDiaria && apartamentosComAvisoDiaria.length > 0">
+  <span class="aviso-icone">⚠️</span>
+  <div class="aviso-texto">
+    <strong>Atenção!</strong> Os seguintes apartamentos terão diária cobrada ao meio-dia:
+    <span class="aviso-aptos">{{ apartamentosComAvisoDiaria.join(', ') }}</span>
+  </div>
+  <button class="aviso-fechar" (click)="mostrarAvisoDiaria = false">✕</button>
+</div>
+
       <!-- CONTADORES -->
       <div class="contadores-bar" *ngIf="contadores">
         <div class="contador-grupo">
@@ -945,6 +955,29 @@ template: `
   color: #1a5276;
 }
 
+.aviso-diaria {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+  border-left: 6px solid #f39c12;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 10px;
+  font-size: 14px;
+}
+.aviso-icone { font-size: 24px; }
+.aviso-texto { flex: 1; }
+.aviso-aptos { font-weight: bold; color: #e67e22; }
+.aviso-fechar {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #856404;
+}
+
   `]
 })
 export class PainelRecepcaoApp implements OnInit, OnDestroy {
@@ -972,6 +1005,9 @@ mostrarResultadosEmpresa = false;
   filtroTipo = '';
   tiposDisponiveis: string[] = [];
 
+  mostrarAvisoDiaria = false;
+  apartamentosComAvisoDiaria: string[] = [];
+
   
   private intervalo: any;
   private apiUrl = '/api/apartamentos/painel';
@@ -980,7 +1016,7 @@ mostrarResultadosEmpresa = false;
 
   ngOnInit(): void {
     this.carregarDados();
-    this.intervalo = setInterval(() => this.carregarDados(), 60000);
+    this.intervalo = setInterval(() => this.carregarDados(), 60000);    
   }
 
   ngOnDestroy(): void {
@@ -1007,6 +1043,7 @@ mostrarResultadosEmpresa = false;
       error: (err) => {
         console.error('Erro ao carregar painel:', err);
         this.carregando = false;
+         this.verificarAvisoDiaria();
       }
     });
   }
@@ -1347,4 +1384,34 @@ limparBusca(): void {
 irParaReservaPorId(reservaId: number): void {
   this.router.navigate(['/reservas', reservaId]);
 }
+
+verificarAvisoDiaria(): void {
+  const agora = new Date();
+  const hora = agora.getHours();
+  console.log('🕐 verificarAvisoDiaria - hora:', hora, 'aptos:', this.apartamentos.length);
+  
+  if (hora < 7 || hora >= 12) {
+    this.mostrarAvisoDiaria = false;
+    console.log('⏰ Fora do horário');
+    return;
+  }
+
+  const hoje = agora.toISOString().split('T')[0];
+  
+  this.apartamentosComAvisoDiaria = this.apartamentos
+    .filter(apt => {
+      console.log('🏨 Apt:', apt.numero, 'status:', apt.statusApt, 'reserva:', apt.reserva?.dataCheckin);
+      if (apt.statusApt !== 'OCUPADO' || !apt.reserva) return false;
+      const checkin = new Date(apt.reserva.dataCheckin);
+      const checkinData = checkin.toISOString().split('T')[0];
+      const checkinHora = checkin.getHours();
+      console.log(`  checkinData=${checkinData} hoje=${hoje} hora=${checkinHora}`);
+      return checkinData === hoje && checkinHora < 12;
+    })
+    .map(apt => apt.numero);
+
+  console.log('⚠️ Aptos com aviso:', this.apartamentosComAvisoDiaria);
+  this.mostrarAvisoDiaria = this.apartamentosComAvisoDiaria.length > 0;
+}
+
 }

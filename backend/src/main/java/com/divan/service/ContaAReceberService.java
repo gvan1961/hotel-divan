@@ -222,9 +222,17 @@ public class ContaAReceberService {
             dto.setTotalDiaria(reserva.getTotalDiaria());
             dto.setTotalConsumo(reserva.getTotalProduto());
             dto.setTotalHospedagem(reserva.getTotalHospedagem());
-            dto.setTotalRecebido(reserva.getTotalRecebido());
             dto.setDesconto(reserva.getDesconto());
-            dto.setTotalApagar(reserva.getTotalApagar());
+
+            // ✅ TOTAL RECEBIDO = pagamentos da reserva + pagamentos da conta a receber
+            BigDecimal totalRecebidoReserva = reserva.getTotalRecebido() != null ? reserva.getTotalRecebido() : BigDecimal.ZERO;
+            BigDecimal valorPagoContaReceber = conta.getValorPago() != null ? conta.getValorPago() : BigDecimal.ZERO;
+            dto.setTotalRecebido(totalRecebidoReserva.add(valorPagoContaReceber));
+
+            // ✅ SALDO REAL = totalHospedagem - desconto - totalRecebido
+            BigDecimal desconto = reserva.getDesconto() != null ? reserva.getDesconto() : BigDecimal.ZERO;
+            BigDecimal totalHospedagem = reserva.getTotalHospedagem() != null ? reserva.getTotalHospedagem() : BigDecimal.ZERO;
+            dto.setTotalApagar(totalHospedagem.subtract(desconto).subtract(totalRecebidoReserva.add(valorPagoContaReceber)));
         }
         
         return dto;

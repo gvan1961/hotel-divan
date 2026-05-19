@@ -1113,8 +1113,8 @@ export class ContasReceberListaApp implements OnInit {
                 (conta as any).totalDiaria = reserva.totalDiaria;
                 (conta as any).totalConsumo = reserva.totalProduto;
                 (conta as any).totalHospedagem = reserva.totalHospedagem;
-                (conta as any).totalRecebido = conta.valorPago;
-                (conta as any).desconto = reserva.desconto || 0;
+               (conta as any).totalRecebido = conta.totalRecebido || conta.valorPago || 0;
+                (conta as any).desconto = conta.desconto || reserva.desconto || 0;
                 (conta as any).totalApagar = conta.saldo;
               } else {
                 (conta as any).reserva = null;
@@ -1379,7 +1379,7 @@ export class ContasReceberListaApp implements OnInit {
     const totalConsumo = (conta as any).totalConsumo || 0;
     const desconto = (conta as any).desconto || 0;
     const totalHospedagem = (conta as any).totalHospedagem || 0;
-    const totalRecebido = conta.valorPago || 0;
+    const totalRecebido = (conta as any).totalRecebido || 0;
     const saldo = conta.saldo || 0;
 
     const linhasExtrato = extratos.length > 0 ? `
@@ -1671,9 +1671,9 @@ export class ContasReceberListaApp implements OnInit {
   }
 
   formatarMoeda(valor?: number): string {
-    if (!valor) return 'R$ 0,00';
-    return 'R$ ' + valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
+  if (valor === null || valor === undefined) return 'R$ 0,00';
+  return 'R$ ' + valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
   calcularTotalGeralDiarias(): number {
     return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).totalDiaria || 0), 0);

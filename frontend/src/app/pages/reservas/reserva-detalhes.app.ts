@@ -562,7 +562,7 @@ import { environment } from '../../../environments/environment';
            <ng-container *hasPermission="'RESERVA_FINALIZAR'">
   <!-- Checkout normal - saldo zerado -->
   <button class="btn-acao btn-finalizar-paga" 
-        *ngIf="reserva.status === 'ATIVA' && ((reserva.totalApagar || 0) <= 0 || pagouDebitoEmConta)"
+        *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) <= 0"
         (click)="finalizarCheckout()">
   💚 CheckOut
 </button>
@@ -943,7 +943,7 @@ import { environment } from '../../../environments/environment';
             <h2>💳 Registrar Pagamento</h2>
             <div class="campo">
               <label>Valor a Pagar *</label>
-              <input type="text" [(ngModel)]="pagValor" appCurrencyInput placeholder="R$ 0,00">
+              <input type="number" [(ngModel)]="pagValor" step="0.01" min="0.01" placeholder="0,00">
               <small>Saldo devedor: R$ {{ formatarMoeda(reserva.totalApagar) }}</small>
             </div>
             <div class="campo">
@@ -2951,6 +2951,7 @@ ngOnDestroy(): void {
   this.http.get<ReservaDetalhes>(`/api/reservas/${id}`).subscribe({
     next: (data) => {
       this.reserva = data;
+      this.verificarAvisoCheckinManha();
          this.loading = false;
       
       // ✅ DEBUG AUDITORIA
@@ -3340,6 +3341,12 @@ ngOnDestroy(): void {
     if (!this.reserva) return;
 
     const totalComDesconto = (this.reserva.totalHospedagem || 0) - (this.reserva.desconto || 0);
+    
+    const debitoEmConta = this.reserva.extratos
+  ?.filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
+  ?.reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0) || 0;
+const totalPagoAVista = (this.reserva.totalRecebido || 0) - debitoEmConta;
+
 
     const htmlImpressao = `
       <!DOCTYPE html>
@@ -3566,8 +3573,12 @@ ngOnDestroy(): void {
       <td colspan="2" style="padding:3px 0; text-align:center; font-weight:700;">================================</td>
     </tr>
     <tr>
-      <td style="font-size:13pt; font-weight:900; padding:5px 0;">TOTAL PAGO:</td>
-      <td style="font-size:13pt; font-weight:900; text-align:right; white-space:nowrap; padding:5px 0;">R$ ${this.formatarMoeda(totalComDesconto)}</td>
+      <td style="font-size:13pt; font-weight:900; padding:5px 0;">TOTAL PAGO A VISTA:</td>
+<td style="font-size:13pt; font-weight:900; text-align:right; white-space:nowrap; padding:5px 0;">R$ ${this.formatarMoeda(totalPagoAVista)}</td>
+</tr>
+${debitoEmConta > 0 ? `<tr>
+<td style="font-size:13pt; font-weight:900; padding:5px 0;">A PAGAR FATURADO:</td>
+<td style="font-size:13pt; font-weight:900; text-align:right; white-space:nowrap; padding:5px 0;">R$ ${this.formatarMoeda(debitoEmConta)}</td>` : ''}
     </tr>
   </table>
 </div>
@@ -3925,7 +3936,7 @@ ngOnDestroy(): void {
         alert('Valor inválido');
         return;
       }  
-
+      console.log('pagValor antes do DTO:', this.pagValor, typeof this.pagValor);
       const usuarioId = this.authService.getUsuarioId();
       console.log('👤 Usuario ID:', usuarioId);
 
@@ -4892,9 +4903,7 @@ salvarAdiantamento(): void {
   }
 
   onFormaPagamentoChange(): void {
-  if (this.pagFormaPagamento === 'DEBITO_EM_CONTA') {
-    this.pagValor = this.reserva?.totalApagar || 0;
-  }
+ 
 }
 
     limparFormularioNovoHospede(): void {
@@ -6192,6 +6201,23 @@ onValorReciboInput(): void {
   this.valorReciboTexto = limpo;
   const numero = parseFloat(limpo.replace(',', '.'));
   this.valorRecibo = isNaN(numero) ? 0 : numero;
+}
+
+verificarAvisoCheckinManha(): void {
+  console.log('🔔 verificarAvisoCheckinManha chamado');
+  if (!this.reserva) return;
+  const agora = new Date();
+  const hora = agora.getHours();
+  if (hora < 7 || hora >= 12) return;
+
+  const checkin = new Date(this.reserva.dataCheckin);
+  const hoje = agora.toISOString().split('T')[0];
+  const checkinData = checkin.toISOString().split('T')[0];
+  const checkinHora = checkin.getHours();
+
+  if (checkinData === hoje && checkinHora < 12) {
+    alert('⚠️ ATENÇÃO!\n\nEste hóspede fez check-in antes das 12h.\nUma diária será cobrada automaticamente ao meio-dia de hoje.');
+  }
 }
 
 voltarAoPainel(): void {
