@@ -131,7 +131,9 @@ public class ContaAPagarController {
     
     @PostMapping("/testar-notificacao")
     public ResponseEntity<?> testarNotificacao() {
+        System.out.println("🚨 [CONTROLLER] testarNotificacao chamado");
         contasVencimentoNotificacaoJob.notificarContasVencendoHoje();
+        System.out.println("🚨 [CONTROLLER] notificarContasVencendoHoje finalizado");
         return ResponseEntity.ok(Map.of("mensagem", "Notificação disparada!"));
     }
 }

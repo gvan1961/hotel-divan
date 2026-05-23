@@ -24,13 +24,14 @@ public interface ApartamentoRepository extends JpaRepository<Apartamento, Long> 
     List<Apartamento> findDisponiveis();
     
     @Query("SELECT a FROM Apartamento a WHERE a.status = 'OCUPADO'")
-    List<Apartamento> findOcupados();
+    List<Apartamento> findOcupados();       
     
     @Query("SELECT a FROM Apartamento a WHERE a.id NOT IN " +
-           "(SELECT r.apartamento.id FROM Reserva r WHERE " +
-           "r.status = 'ATIVA' AND " +
-           "((r.dataCheckin <= :checkout AND r.dataCheckout >= :checkin)))")
-    List<Apartamento> findDisponiveisParaPeriodo(LocalDateTime checkin, LocalDateTime checkout);
+    	       "(SELECT r.apartamento.id FROM Reserva r WHERE " +
+    	       "r.status IN ('ATIVA', 'PRE_RESERVA') AND " +
+    	       "((r.dataCheckin <= :checkout AND r.dataCheckout >= :checkin)))")
+    	List<Apartamento> findDisponiveisParaPeriodo(LocalDateTime checkin, LocalDateTime checkout);
+    
     
     boolean existsByNumeroApartamento(String numeroApartamento);  
     

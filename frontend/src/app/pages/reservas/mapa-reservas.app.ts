@@ -105,7 +105,7 @@ interface ApartamentoMapa {
 
       <!-- MAPA DE RESERVAS -->
       <div *ngIf="!loading" class="mapa-container">
-        <div class="mapa-scroll">
+        <div class="mapa-scroll" tabindex="0">
           <table class="mapa-table">
             <!-- CABEÇALHO COM DATAS -->
             <thead>
@@ -509,7 +509,7 @@ h1 {
 /* TABELA DO MAPA */
 /* ═══════════════════════════════════════════════════════════ */
 
-.mapa-container {
+ .mapa-container {
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -523,7 +523,7 @@ h1 {
 }
 
 .mapa-table {
-  width: 100%;
+  min-width: max-content;
   border-collapse: separate;
   border-spacing: 0;
   min-width: 800px;
@@ -1191,10 +1191,11 @@ td.col-reserva.hoje {
     padding: 10px;
   }
 
-  .mapa-scroll {
-    max-height: none;
-    overflow: visible;
-  }
+.mapa-scroll {
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: auto;
+}
 }
 `]
 })

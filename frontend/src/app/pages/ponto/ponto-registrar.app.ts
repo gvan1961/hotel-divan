@@ -73,20 +73,34 @@ import { ReconhecimentoFacialService } from '../../services/reconhecimento-facia
         </div>
 
         <!-- BOTÕES DE REGISTRO -->
-        <div class="btns-registro" *ngIf="funcionarioReconhecido">
-          <button class="btn-tipo btn-entrada" (click)="registrarPonto('ENTRADA')">
-            🟢 Entrada
-          </button>
-          <button class="btn-tipo btn-saida-intervalo" (click)="registrarPonto('SAIDA_INTERVALO')">
-            🟡 Saída Intervalo
-          </button>
-          <button class="btn-tipo btn-retorno-intervalo" (click)="registrarPonto('RETORNO_INTERVALO')">
-            🔵 Retorno Intervalo
-          </button>
-          <button class="btn-tipo btn-saida" (click)="registrarPonto('SAIDA')">
-            🔴 Saída
-          </button>
-        </div>
+        <!-- AVISO SAÍDA ESQUECIDA -->
+<div class="aviso-pendente" *ngIf="ultimoTipo === 'ENTRADA' || ultimoTipo === 'RETORNO_INTERVALO'">
+  ⚠️ Atenção! Último registro foi <strong>{{ formatarTipo(ultimoTipo) }}</strong>. Não esqueça de registrar a saída!
+</div>
+
+<!-- BOTÕES DE REGISTRO -->
+<div class="btns-registro" *ngIf="funcionarioReconhecido">
+  <button class="btn-tipo btn-entrada"
+    *ngIf="ultimoTipo === 'NENHUM' || ultimoTipo === 'SAIDA' || ultimoTipo === 'SAIDA_INTERVALO'"
+    (click)="registrarPonto('ENTRADA')">
+    🟢 Entrada
+  </button>
+  <button class="btn-tipo btn-saida-intervalo"
+    *ngIf="ultimoTipo === 'ENTRADA' || ultimoTipo === 'RETORNO_INTERVALO'"
+    (click)="registrarPonto('SAIDA_INTERVALO')">
+    🟡 Saída Intervalo
+  </button>
+  <button class="btn-tipo btn-retorno-intervalo"
+    *ngIf="ultimoTipo === 'SAIDA_INTERVALO'"
+    (click)="registrarPonto('RETORNO_INTERVALO')">
+    🔵 Retorno Intervalo
+  </button>
+  <button class="btn-tipo btn-saida"
+    *ngIf="ultimoTipo === 'ENTRADA' || ultimoTipo === 'RETORNO_INTERVALO'"
+    (click)="registrarPonto('SAIDA')">
+    🔴 Saída
+  </button>
+</div>
 
         <!-- BUSCA MANUAL -->
         <div class="busca-manual" *ngIf="cameraAtiva && !funcionarioReconhecido">
@@ -207,6 +221,17 @@ import { ReconhecimentoFacialService } from '../../services/reconhecimento-facia
     .badge-saida_intervalo { background: #fff3cd; color: #856404; }
     .badge-retorno_intervalo { background: #d1ecf1; color: #0c5460; }
     .empty { text-align: center; padding: 30px; color: #666; }
+
+    .aviso-pendente {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 10px 15px;
+  margin: 10px 0;
+  text-align: center;
+  font-size: 14px;
+}
   `]
 })
 export class PontoRegistrarApp implements OnInit, OnDestroy {
@@ -221,6 +246,7 @@ export class PontoRegistrarApp implements OnInit, OnDestroy {
   reconhecendo = false;
   modelosCarregados = false;
   funcionarioReconhecido: any = null;
+  ultimoTipo: string = 'NENHUM';
   fotoFuncionario: string | null = null;
   confianca: number | null = null;
   mensagemSucesso = '';
@@ -323,6 +349,7 @@ export class PontoRegistrarApp implements OnInit, OnDestroy {
 
         if (resultado) {
           this.funcionarioReconhecido = resultado.funcionario;
+          this.buscarUltimoRegistro(resultado.funcionario.id);
           this.fotoFuncionario = resultado.funcionario.fotoBase64;
           this.confianca = resultado.confianca;
           clearInterval(this.intervaloReconhecimento);
@@ -338,6 +365,7 @@ export class PontoRegistrarApp implements OnInit, OnDestroy {
 
   selecionarFuncionarioManual(f: any): void {
     this.funcionarioReconhecido = f;
+    this.buscarUltimoRegistro(f.id);
     this.fotoFuncionario = f.fotoBase64 || null;
     this.confianca = null;
     this.buscaManual = '';
@@ -405,6 +433,13 @@ export class PontoRegistrarApp implements OnInit, OnDestroy {
     };
     return labels[tipo] || tipo;
   }
+
+  buscarUltimoRegistro(clienteId: number): void {
+  this.http.get<any>(`/api/ponto/ultimo-registro/${clienteId}`).subscribe({
+    next: (res) => this.ultimoTipo = res.tipo,
+    error: () => this.ultimoTipo = 'NENHUM'
+  });
+}
 
   formatarHora(dataHora: string): string {
     if (!dataHora) return '-';

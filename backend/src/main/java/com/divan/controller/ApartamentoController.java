@@ -384,7 +384,10 @@ public class ApartamentoController {
             		        .findByApartamentoIdAndStatusIn(apt.getId(),
             		            List.of(Reserva.StatusReservaEnum.PRE_RESERVA));
             		    card.put("temPreReservaFutura", !preReservasLimpeza.isEmpty());
-
+            		    card.put("quantidadePreReservas", preReservasLimpeza.size());
+            		    card.put("datasPreReservas", preReservasLimpeza.stream()
+            		        .map(r -> r.getDataCheckin().toLocalDate().toString())
+            		        .collect(java.util.stream.Collectors.joining(", ")));
             		    cards.add(card);
             		    continue;
             		}
@@ -397,6 +400,10 @@ public class ApartamentoController {
                         List.of(Reserva.StatusReservaEnum.PRE_RESERVA));
                 cntPreReserva += todasPreReservas.size();
                 card.put("temPreReservaFutura", !todasPreReservas.isEmpty());
+                card.put("quantidadePreReservas", todasPreReservas.size());
+                card.put("datasPreReservas", todasPreReservas.stream()
+                	    .map(r -> r.getDataCheckin().toLocalDate().toString())
+                	    .collect(java.util.stream.Collectors.joining(", ")));
 
                 // ✅ Apenas para exibir no grid (ATIVA + PRE_RESERVA de hoje)
                 List<Reserva> reservasAtivas = reservaRepository

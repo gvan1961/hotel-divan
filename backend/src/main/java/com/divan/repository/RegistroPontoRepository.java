@@ -21,9 +21,12 @@ public interface RegistroPontoRepository extends JpaRepository<RegistroPonto, Lo
     @Query("SELECT r FROM RegistroPonto r WHERE r.cliente.id = :clienteId AND r.dataHora BETWEEN :inicio AND :fim ORDER BY r.dataHora ASC")
     List<RegistroPonto> findByClienteIdAndPeriodo(@Param("clienteId") Long clienteId, @Param("inicio") LocalDateTime inicio, @Param("fim") LocalDateTime fim);
 
-    @Query("SELECT r FROM RegistroPonto r WHERE r.cliente.id = :clienteId ORDER BY r.dataHora DESC")
-    Optional<RegistroPonto> findUltimoRegistro(@Param("clienteId") Long clienteId);
-
     @Query("SELECT r FROM RegistroPonto r WHERE DATE(r.dataHora) = DATE(:data) ORDER BY r.dataHora DESC")
     List<RegistroPonto> findByData(@Param("data") LocalDateTime data);
+    
+ //   @Query("SELECT r FROM RegistroPonto r WHERE r.cliente.id = :clienteId ORDER BY r.dataHora DESC LIMIT 1")
+ //   Optional<RegistroPonto> findUltimoRegistro(@Param("clienteId") Long clienteId);
+    
+    @Query(value = "SELECT * FROM registro_ponto WHERE cliente_id = :clienteId ORDER BY data_hora DESC LIMIT 1", nativeQuery = true)
+    Optional<RegistroPonto> findUltimoRegistro(@Param("clienteId") Long clienteId);
 }

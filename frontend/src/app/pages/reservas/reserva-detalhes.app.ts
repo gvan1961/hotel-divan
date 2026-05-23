@@ -54,6 +54,8 @@ import { environment } from '../../../environments/environment';
       telefone?: string;
       titular: boolean;
       status: string;
+      autorizadoJantar?: boolean;  // ← ADICIONA
+      [key: string]: any;
     }>;
     quantidadeHospede: number;
     dataCheckin: string;
@@ -480,7 +482,17 @@ import { environment } from '../../../environments/environment';
   title="Transferir para outro apartamento">
   🔄
 </button> 
-                 <button
+
+   <!-- ✅ BOTÃO AUTORIZAR JANTAR -->
+<button class="btn-jantar"
+  [class.autorizado]="hospede.cliente?.autorizadoJantar"
+  (click)="toggleAutorizacaoJantar(hospede)"
+  title="{{ hospede.cliente?.autorizadoJantar ? 'Desautorizar jantar' : 'Autorizar jantar' }}">
+  {{ hospede.cliente?.autorizadoJantar ? '🍽️' : '🚫' }}
+</button>
+
+
+<button
   type="button"
   class="btn-acao-hospede btn-checkout-hospede"
   *ngIf="(reserva.quantidadeHospede || 0) > 1"
@@ -527,15 +539,14 @@ import { environment } from '../../../environments/environment';
                       (click)="imprimirExtrato()">
                 📊 Imprimir Extrato
               </button>
-            </ng-container>
-            <ng-container *hasPermission="'RESERVA_CRIAR'">
-              <button class="btn-acao btn-comanda" 
-                      *ngIf="reserva.status === 'ATIVA'"
-                      (click)="abrirComanda()">
-                🏨 Comanda de Consumo
-              </button>
-            </ng-container>
-           
+              </ng-container>
+              <ng-container *hasPermission="'RESERVA_CRIAR'">
+                <button class="btn-acao btn-comanda" 
+                        *ngIf="reserva.status === 'ATIVA'"
+                        (click)="abrirComanda()">
+                  🏨 Comanda de Consumo
+                </button>
+              </ng-container>                          
 
          <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
   <button class="btn-acao btn-pagamento" 
@@ -668,7 +679,7 @@ import { environment } from '../../../environments/environment';
       <button class="btn-confirmar btn-estornar-confirmar" (click)="executarCancelamento()">
         🚫 Confirmar Cancelamento
       </button>
-    </div>
+        </div>           
   </div>
 </div>
   
@@ -1264,12 +1275,41 @@ import { environment } from '../../../environments/environment';
         </div>
 
         <!-- COMPONENTE DO MODAL DE TRANSFERÊNCIA -->
-        <app-transferir-hospede-modal 
-          (transferenciaRealizada)="recarregarReserva()">
-        </app-transferir-hospede-modal>    
-      </div> 
-    </div>
-  `,
+        <app-transferir-hospede-modal
+            (transferenciaRealizada)="recarregarReserva()">
+          </app-transferir-hospede-modal>
+        </div>
+      </div>
+
+      <!-- MODAL CHECKOUT ANTECIPADO -->
+      <div class="modal-overlay" *ngIf="modalCheckoutAntecipado" (click)="fecharModalCheckoutAntecipado()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <h2>✂️ Checkout Antecipado</h2>
+          <div class="info-box">
+           <p><strong>Checkout previsto:</strong> {{ formatarData(reserva?.dataCheckout) }}</p>
+           <p><strong>Total pago:</strong> R$ {{ formatarMoeda(reserva?.totalRecebido || 0) }}</p>
+          </div>
+          <div class="campo">
+            <label>Nova data de checkout *</label>
+            <input type="date" [(ngModel)]="novaDataCheckoutAntecipado"
+                   [min]="dataMinCheckoutAntecipado()"
+                   [max]="dataMaxCheckoutAntecipado()" />
+          </div>
+          <div class="info-box" style="background:#fff3cd; border-color:#ffc107;"
+               *ngIf="novaDataCheckoutAntecipado">
+            <p>⚠️ As diárias após <strong>{{ novaDataCheckoutAntecipado }}</strong> serão estornadas.</p>
+            <p>Consumo <strong>não</strong> será estornado.</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-cancelar-modal" (click)="fecharModalCheckoutAntecipado()">Cancelar</button>
+            <button class="btn-confirmar" (click)="confirmarCheckoutAntecipado()"
+                    [disabled]="!novaDataCheckoutAntecipado">
+              ✅ Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+    `,
 
     styles: [`
       /* CONTAINER PRINCIPAL */
@@ -2749,6 +2789,33 @@ import { environment } from '../../../environments/environment';
   background: #5a6268;
 }
 
+.btn-jantar {
+  padding: 3px 8px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 11px;
+  background: #f8d7da;
+  color: #721c24;
+}
+.btn-jantar.autorizado {
+  background: #d4edda;
+  color: #155724;
+}
+
+.btn-checkout-antecipado {
+  background: #e67e22;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.btn-checkout-antecipado:hover {
+  background: #d35400;
+}
+
     `]
   })
 
@@ -2892,6 +2959,9 @@ import { environment } from '../../../environments/environment';
 
   modalCancelamento = false;
 motivoCancelamento = '';
+
+modalCheckoutAntecipado = false;
+novaDataCheckoutAntecipado = '';
 
   
 get podeCancelar(): boolean {
@@ -3781,32 +3851,63 @@ ${debitoEmConta > 0 ? `<tr>
       this.modalAlterarCheckout = false;
     }
 
-    obterDataMinimaCheckout(): string {
-      if (!this.reserva) return '';
-      const dataCheckin = new Date(this.reserva.dataCheckin);
-      dataCheckin.setDate(dataCheckin.getDate() + 1);
-      return dataCheckin.toISOString().split('T')[0];
-    }
-
-    confirmarAlteracaoCheckout(): void {
-    if (!this.reserva) {
-      alert('❌ Reserva não encontrada');
-      return;
-    }
-
-    if (!this.novaDataCheckout) {
-      alert('⚠️ Informe a nova data de check-out');
-      return;
-    }
-
-    // Validar se a nova data é posterior à atual
-    const dataAtual = new Date(this.reserva.dataCheckout);
-    const novaData = new Date(this.novaDataCheckout);
+   obterDataMinimaCheckout(): string {
+  if (!this.reserva) return '';
+  const dataCheckin = new Date(this.reserva.dataCheckin);
+  const ano = dataCheckin.getFullYear();
+  const mes = String(dataCheckin.getMonth() + 1).padStart(2, '0');
+  const dia = String(dataCheckin.getDate() + 1).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
     
-    if (novaData <= dataAtual) {
-      alert('⚠️ A nova data deve ser posterior ao checkout atual');
-      return;
-    }
+   confirmarAlteracaoCheckout(): void {
+  if (!this.reserva) {
+    alert('❌ Reserva não encontrada');
+    return;
+  }
+  if (!this.novaDataCheckout) {
+    alert('⚠️ Informe a nova data de check-out');
+    return;
+  }
+
+  const dataAtual = new Date(this.reserva.dataCheckout);
+  const novaData = new Date(this.novaDataCheckout);
+  const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+
+  // ✅ CHECKOUT ANTECIPADO — nova data é anterior ao checkout atual
+  if (novaData < dataAtual) {
+    const confirmar = confirm(
+      `⚠️ CHECKOUT ANTECIPADO\n\n` +
+      `Nova data: ${this.novaDataCheckout}\n` +
+      `As diárias após esta data serão estornadas.\n` +
+      `Consumo não será estornado.\n\n` +
+      `Confirma?`
+    );
+    if (!confirmar) return;
+
+    this.http.post<any>(`/api/reservas/${this.reserva.id}/checkout-antecipado`,
+      { novaDataCheckout: this.novaDataCheckout },
+      { headers }
+    ).subscribe({
+      next: (res) => {
+        this.fecharModalAlterarCheckout();
+        if (res.valorDevolver > 0) {
+          alert(`✅ Checkout antecipado realizado!\n\n💰 Valor a devolver: R$ ${this.formatarMoeda(res.valorDevolver)}`);
+        } else {
+          alert('✅ Checkout antecipado realizado com sucesso!');
+        }
+        this.carregarReserva(this.reserva!.id);
+      },
+      error: (err) => alert('❌ Erro: ' + (err.error?.erro || err.message))
+    });
+    return;
+  }
+
+  // ✅ PRORROGAÇÃO — nova data é posterior ao checkout atual
+  if (novaData <= dataAtual) {
+    alert('⚠️ A nova data deve ser diferente do checkout atual');
+    return;
+  }
 
     console.log('📤 Enviando prorrogação:', {
       reservaId: this.reserva.id,
@@ -6218,6 +6319,78 @@ verificarAvisoCheckinManha(): void {
   if (checkinData === hoje && checkinHora < 12) {
     alert('⚠️ ATENÇÃO!\n\nEste hóspede fez check-in antes das 12h.\nUma diária será cobrada automaticamente ao meio-dia de hoje.');
   }
+}
+
+ toggleAutorizacaoJantar(hospede: any): void {
+  const clienteId = hospede.cliente?.id || hospede.clienteId;
+
+  console.log('🍽️ clienteId:', clienteId);
+  console.log('🍽️ autorizadoJantar atual:', hospede.cliente?.autorizadoJantar);
+
+  if (!clienteId) return;
+
+  const novoValor = !hospede.cliente?.autorizadoJantar;
+  const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+
+  this.http.patch(`/api/clientes/${clienteId}/autorizar-jantar`, 
+    { autorizadoJantar: novoValor }, 
+    { headers }
+  ).subscribe({
+   next: () => {
+  if (hospede.cliente) {
+    hospede.cliente.autorizadoJantar = novoValor;
+    this.cdr.detectChanges(); // ← força atualização da view
+  }
+},
+    error: () => alert('Erro ao alterar autorização de jantar')
+  });
+}
+
+abrirModalCheckoutAntecipado(): void {
+  console.log('✂️ Abrindo modal checkout antecipado');
+  this.novaDataCheckoutAntecipado = '';
+  this.modalCheckoutAntecipado = true;
+  console.log('✂️ modalCheckoutAntecipado:', this.modalCheckoutAntecipado);
+}
+
+fecharModalCheckoutAntecipado(): void {
+  this.modalCheckoutAntecipado = false;
+  this.novaDataCheckoutAntecipado = '';
+}
+
+dataMinCheckoutAntecipado(): string {
+  const amanha = new Date();
+  amanha.setDate(amanha.getDate() + 1);
+  return amanha.toISOString().split('T')[0];
+}
+
+dataMaxCheckoutAntecipado(): string {
+  if (!this.reserva?.dataCheckout) return '';
+  const checkout = new Date(this.reserva.dataCheckout);
+  checkout.setDate(checkout.getDate() - 1);
+  return checkout.toISOString().split('T')[0];
+}
+
+confirmarCheckoutAntecipado(): void {
+  if (!this.novaDataCheckoutAntecipado || !this.reserva) return;
+
+  const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+
+  this.http.post<any>(`/api/reservas/${this.reserva.id}/checkout-antecipado`,
+    { novaDataCheckout: this.novaDataCheckoutAntecipado },
+    { headers }
+  ).subscribe({
+    next: (res) => {
+      this.fecharModalCheckoutAntecipado();
+      if (res.valorDevolver > 0) {
+        alert(`✅ Checkout antecipado realizado!\n\n💰 Valor a devolver ao hóspede: R$ ${this.formatarMoeda(res.valorDevolver)}`);
+      } else {
+        alert('✅ Checkout antecipado realizado com sucesso!');
+      }
+      this.carregarReserva(this.reserva!.id);
+    },
+    error: (err) => alert('❌ Erro: ' + (err.error?.erro || err.message))
+  });
 }
 
 voltarAoPainel(): void {

@@ -64,7 +64,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     Optional<Reserva> findByApartamentoAndStatus(Apartamento apartamento, Reserva.StatusReservaEnum status);
     
     List<Reserva> findByStatusAndDataCheckoutBefore(Reserva.StatusReservaEnum status, LocalDateTime dataCheckout);
-    List<Reserva> findByStatusAndDataCheckinBefore(Reserva.StatusReservaEnum status, LocalDateTime dataCheckin);
+    List<Reserva> findByStatusAndDataCheckinBefore(Reserva.StatusReservaEnum status, LocalDateTime dataHora);
     @Query("SELECT r.apartamento.id FROM Reserva r WHERE r.status = :status " +
            "GROUP BY r.apartamento.id HAVING COUNT(r) > 1")
     List<Long> findApartamentosComConflito(@Param("status") Reserva.StatusReservaEnum status);
@@ -94,5 +94,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     	    LocalDateTime inicio,
     	    LocalDateTime fim
     	);
+    
+    List<Reserva> findByStatusAndDataCheckinBefore(String status, LocalDateTime dataHora);
         
 }

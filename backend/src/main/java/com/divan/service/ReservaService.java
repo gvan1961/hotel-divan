@@ -134,15 +134,17 @@ public class ReservaService {
         
         BigDecimal valorDiaria = reserva.getDiaria().getValor();
         
-        // Criar um extrato para cada dia
+     // Criar um extrato para cada dia
         for (int i = 0; i < dias; i++) {
-            LocalDateTime dataDiaria = dataInicio.plusDays(i);
-            
+            LocalDateTime dataDiaria = i == 0
+                ? reserva.getDataCheckin()   // ← hora real do check-in
+                : dataInicio.plusDays(i);    // ← 12:00 para as demais diárias
+
             ExtratoReserva extrato = new ExtratoReserva();
             extrato.setReserva(reserva);
             extrato.setDataHoraLancamento(dataDiaria);
             extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.DIARIA);
-            extrato.setDescricao(String.format("Diária - Dia %02d/%02d/%d", 
+            extrato.setDescricao(String.format("Diária - Dia %02d/%02d/%d",
                 dataDiaria.getDayOfMonth(),
                 dataDiaria.getMonthValue(),
                 dataDiaria.getYear()));
@@ -150,9 +152,9 @@ public class ReservaService {
             extrato.setValorUnitario(valorDiaria);
             extrato.setTotalLancamento(valorDiaria);
             extrato.setNotaVendaId(null);
-            
+
             extratoReservaRepository.save(extrato);
-            
+
             System.out.println("📅 Diária criada para: " + dataDiaria.toLocalDate());
         }
     }
@@ -2116,6 +2118,14 @@ public class ReservaService {
 
         System.out.println("❌ Reserva cancelada: " + reservaId);
         System.out.println("💬 Motivo: " + motivo);
+    }
+    
+    public void criarEstornosDiariasPublic(Reserva reserva, LocalDateTime dataInicio, LocalDateTime dataFim) {
+        criarEstornosDiarias(reserva, dataInicio, dataFim);
+    }
+
+    public void recalcularTotaisPublic(Reserva reserva) {
+        recalcularTotaisReserva(reserva);
     }
     
 }

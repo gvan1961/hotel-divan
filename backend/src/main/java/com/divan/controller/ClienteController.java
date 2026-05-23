@@ -227,4 +227,13 @@ public class ClienteController {
         return ResponseEntity.ok(clienteRepository.findByTipoCliente("FUNCIONARIO"));
     }
     
+    @PatchMapping("/{id}/autorizar-jantar")
+    public ResponseEntity<?> autorizarJantar(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        return clienteRepository.findById(id).map(cliente -> {
+            cliente.setAutorizadoJantar((Boolean) body.get("autorizadoJantar"));
+            clienteRepository.save(cliente);
+            return ResponseEntity.ok(Map.of("autorizadoJantar", cliente.getAutorizadoJantar()));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+    
 }

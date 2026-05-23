@@ -336,4 +336,14 @@ public class PontoController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    @GetMapping("/ultimo-registro/{clienteId}")
+    public ResponseEntity<?> ultimoRegistro(@PathVariable Long clienteId) {
+        return registroPontoRepository.findUltimoRegistro(clienteId)
+            .map(r -> ResponseEntity.ok(Map.of(
+                "tipo", r.getTipo().name(),
+                "dataHora", r.getDataHora().toString()
+            )))
+            .orElse(ResponseEntity.ok(Map.of("tipo", "NENHUM")));
+    }
 }

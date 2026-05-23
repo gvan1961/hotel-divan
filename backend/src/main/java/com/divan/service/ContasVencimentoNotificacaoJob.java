@@ -36,29 +36,41 @@ public class ContasVencimentoNotificacaoJob {
     // ✅ Roda todo dia às 10h
     @Scheduled(cron = "0 0 10 * * *")
     public void notificarContasVencendoHoje() {
-        LocalDate hoje = LocalDate.now();
-        log.info("📅 Verificando contas com vencimento em: {}", hoje);
+        try {
+            System.out.println("🔔 [NOTIF] Método chamado - " + LocalDate.now());
+            LocalDate hoje = LocalDate.now();
+            log.info("📅 Verificando contas com vencimento em: {}", hoje);
 
-        List<ContaAPagar> contasHoje = contaRepository
-            .findByDataVencimentoAndStatusNot(hoje, ContaAPagar.StatusContaEnum.PAGA);
+            List<ContaAPagar> contasHoje = contaRepository
+                .findByDataVencimentoAndStatusNot(hoje, ContaAPagar.StatusContaEnum.PAGA);
 
-        if (contasHoje.isEmpty()) {
-            log.info("✅ Nenhuma conta vencendo hoje.");
-            return;
-        }
-
-        String mensagem = montarMensagem(contasHoje, hoje);
-
-        for (String numero : NUMEROS_AVISO) {
-            WhatsAppService.ResultadoEnvio resultado = whatsAppService.enviarTexto(numero, mensagem);
-            if (resultado.isSucesso()) {
-                log.info("✅ Aviso enviado para {}", numero);
-            } else {
-                log.warn("❌ Falha ao enviar para {}: {}", numero, resultado.getErro());
+            if (contasHoje.isEmpty()) {
+                log.info("✅ Nenhuma conta vencendo hoje.");
+                System.out.println("✅ [NOTIF] Nenhuma conta vencendo hoje.");
+                return;
             }
+
+            System.out.println("📋 [NOTIF] Contas encontradas: " + contasHoje.size());
+            String mensagem = montarMensagem(contasHoje, hoje);
+
+            for (String numero : NUMEROS_AVISO) {
+                System.out.println("📤 [NOTIF] Enviando para: " + numero);
+                WhatsAppService.ResultadoEnvio resultado = whatsAppService.enviarTexto(numero, mensagem);
+                if (resultado.isSucesso()) {
+                    log.info("✅ Aviso enviado para {}", numero);
+                    System.out.println("✅ [NOTIF] Enviado com sucesso para: " + numero);
+                } else {
+                    log.warn("❌ Falha ao enviar para {}: {}", numero, resultado.getErro());
+                    System.out.println("❌ [NOTIF] Falha para " + numero + ": " + resultado.getErro());
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("❌ [NOTIF] ERRO: " + e.getMessage());
+            e.printStackTrace();
         }
     }
-
+    	
     private String montarMensagem(List<ContaAPagar> contas, LocalDate hoje) {
         BigDecimal totalHoje = contas.stream()
             .map(c -> c.getSaldo() != null ? c.getSaldo() : c.getValor())

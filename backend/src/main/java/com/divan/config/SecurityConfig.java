@@ -63,15 +63,19 @@ public class SecurityConfig {
                 .and()
             .authorizeHttpRequests(auth -> auth
                 // ========== ENDPOINTS PÚBLICOS ==========
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/public/**").permitAll()
-                .requestMatchers("/api/alertas/**").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/estornos/**").hasAnyAuthority("ESTORNAR_PAGAMENTO", "ROLE_ADMIN", "GERENTE")
-                .requestMatchers("/error").permitAll()
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            		.requestMatchers("/api/auth/**").permitAll()
+            		.requestMatchers("/api/public/**").permitAll()
+            		.requestMatchers("/api/ponto/registrar").permitAll()
+            		.requestMatchers("/api/ponto/hoje").permitAll()
+            		.requestMatchers("/api/ponto/ultimo-registro/**").permitAll()
+            		.requestMatchers("/api/ponto/funcionarios-com-foto").permitAll()
+            		.requestMatchers("/api/alertas/**").authenticated()
+            		.requestMatchers(HttpMethod.POST, "/api/estornos/**").hasAnyAuthority("ESTORNAR_PAGAMENTO", "ROLE_ADMIN", "GERENTE")
+            		.requestMatchers("/error").permitAll()
+            		.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // Swagger / OpenAPI
-                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+            		// Swagger / OpenAPI
+            		.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
                 // ========== APARTAMENTOS ==========
                 .requestMatchers(HttpMethod.GET, "/api/apartamentos/**").hasAnyAuthority("APARTAMENTO_READ", "VISUALIZAR_APARTAMENTO", "ROLE_ADMIN")
@@ -147,7 +151,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/contas-pagar/**").hasAnyRole("ADMIN", "GERENTE")
                 .requestMatchers("/api/fornecedores/**").hasAnyRole("ADMIN", "GERENTE")
                 .requestMatchers("/api/estoque/movimentacoes/**").hasAnyRole("ADMIN", "GERENTE")
-                .requestMatchers("/api/ponto/registrar").authenticated()
+           //     .requestMatchers("/api/ponto/registrar").authenticated()
                 .requestMatchers("/api/ponto/relatorio/**").hasAnyRole("ADMIN", "GERENTE")
                 .requestMatchers("/api/ponto/foto/**").hasRole("ADMIN")
                 .requestMatchers("/api/ponto/ajuste/**").hasAnyRole("ADMIN", "GERENTE")

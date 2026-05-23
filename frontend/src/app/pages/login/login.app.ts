@@ -159,7 +159,14 @@ export class LoginApp {
     this.authService.login({ username: this.username, password: this.password })
       .subscribe({
         next: () => {
-          this.router.navigate(['/painel-recepcao']);
+          const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+          const perfis: string[] = usuario.perfis || [];
+
+          if (perfis.includes('RESTAURANTE') || perfis.includes('COZINHA')) {
+            this.router.navigate(['/jantar']);
+          } else {
+            this.router.navigate(['/painel-recepcao']);
+          }
         },
         error: (err) => {
           this.loading = false;

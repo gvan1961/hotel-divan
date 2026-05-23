@@ -630,13 +630,18 @@ novoHospedeForm: any = {
     this.route.queryParams.subscribe(params => {
       if (params['bloqueado'] === 'true') { this.apartamentoBloqueado = true; this.voltarParaMapa = true; }
       if (params['origem']) { this.origem = params['origem']; }
-      if (params['dataCheckin']) {
-        const dataCheckin = new Date(params['dataCheckin'] + 'T14:00:00');
-        this.reserva.dataCheckin = this.formatDateTimeLocal(dataCheckin);
-        const dataCheckout = new Date(dataCheckin);
-        dataCheckout.setDate(dataCheckout.getDate() + 1);
-        dataCheckout.setHours(12, 0, 0, 0);
-        this.reserva.dataCheckout = this.formatDateTimeLocal(dataCheckout);
+
+    if (params['dataCheckin']) {
+  // ✅ Sincroniza os campos visuais
+  this.checkinData = params['dataCheckin']; // data do mapa (ex: 2026-05-25)
+  this.checkinHora = '14';
+  this.checkinMinuto = '00';
+  this.montarDataCheckin();
+
+  const dataCheckout = new Date(params['dataCheckin'] + 'T14:00:00');
+  dataCheckout.setDate(dataCheckout.getDate() + 1);
+  dataCheckout.setHours(12, 0, 0, 0);
+  this.reserva.dataCheckout = this.formatDateTimeLocal(dataCheckout);
 
         this.http.get<any[]>('/api/empresas').subscribe({
         next: (data) => this.empresas = data.sort((a, b) => 

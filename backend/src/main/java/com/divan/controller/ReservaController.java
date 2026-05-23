@@ -46,6 +46,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.time.temporal.ChronoUnit;
+import java.time.LocalDate;
 
 import java.util.Map;
 
@@ -799,6 +801,8 @@ public class ReservaController {
                     cliente.put("nome", h.getCliente().getNome());
                     cliente.put("cpf", h.getCliente().getCpf());
                     cliente.put("celular", h.getCliente().getCelular());
+                    cliente.put("autorizadoJantar", h.getCliente().getAutorizadoJantar());
+                    
                     // ✅ ADICIONAR EMPRESA
                     if (h.getCliente().getEmpresa() != null) {
                         Map<String, Object> empresa = new HashMap<>();
@@ -1457,6 +1461,63 @@ public class ReservaController {
             return ResponseEntity.ok(Map.of("message", "Reserva cancelada com sucesso"));
     }
     
-    
+    @PostMapping("/{id}/checkout-antecipado")
+    public ResponseEntity<?> checkoutAntecipado(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        try {
+            LocalDate novaDataCheckout = LocalDate.parse(body.get("novaDataCheckout").toString());
+            Reserva reserva = reservaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+
+            // ✅ Validações
+            LocalDate hoje = LocalDate.now(java.time.ZoneId.of("America/Fortaleza"));
+            LocalDate checkin = reserva.getDataCheckin().toLocalDate();
+            LocalDate checkoutAtual = reserva.getDataCheckout().toLocalDate();
+
+            if (novaDataCheckout.isBefore(hoje) || novaDataCheckout.isEqual(checkin)) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("erro", "Nova data deve ser posterior à data atual"));
+            }
+            if (!novaDataCheckout.isBefore(checkoutAtual)) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("erro", "Nova data deve ser anterior ao checkout atual"));
+            }
+
+            // ✅ Criar estornos das diárias futuras
+            LocalDateTime dataInicioEstorno = novaDataCheckout.atTime(12, 0);
+            LocalDateTime dataFimEstorno = reserva.getDataCheckout();
+            reservaService.criarEstornosDiariasPublic(reserva, dataInicioEstorno, dataFimEstorno);
+
+         // ✅ Atualizar quantidade de diárias
+            long novaQuantidadeDiarias = ChronoUnit.DAYS.between(
+                reserva.getDataCheckin().toLocalDate(),
+                novaDataCheckout
+            );
+            if (novaQuantidadeDiarias < 1) novaQuantidadeDiarias = 1;
+            reserva.setQuantidadeDiaria((int) novaQuantidadeDiarias);
+            // ✅ Atualizar checkout
+            reserva.setDataCheckout(novaDataCheckout.atTime(12, 0));
+            reservaRepository.save(reserva);
+
+            // ✅ Recalcular totais
+            reservaService.recalcularTotaisPublic(reserva);
+
+            // ✅ Calcular valor a devolver
+            BigDecimal totalPago = reserva.getTotalRecebido() != null ? reserva.getTotalRecebido() : BigDecimal.ZERO;
+            BigDecimal novoTotal = reserva.getTotalApagar() != null ? reserva.getTotalApagar() : BigDecimal.ZERO;
+            BigDecimal valorDevolver = totalPago.subtract(novoTotal);
+            if (valorDevolver.compareTo(BigDecimal.ZERO) < 0) valorDevolver = BigDecimal.ZERO;
+
+            return ResponseEntity.ok(Map.of(
+                "mensagem", "Checkout antecipado realizado com sucesso",
+                "novaDataCheckout", novaDataCheckout.toString(),
+                "valorDevolver", valorDevolver
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
         
 }

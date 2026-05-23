@@ -70,6 +70,9 @@ import { PontoAjusteApp } from './pages/ponto/ponto-ajuste.app';
 export const routes: Routes = [
   // LOGIN (sem layout)
   { path: 'login', component: LoginApp },
+
+   // PONTO (sem login)
+  { path: 'ponto', component: PontoRegistrarApp },
   
   // TODAS AS OUTRAS ROTAS COM LAYOUT + SIDEBAR
   {
@@ -186,7 +189,6 @@ export const routes: Routes = [
 
       // ===== PONTO ELETRONICO =====
 
-{ path: 'ponto', component: PontoRegistrarApp },
 { path: 'ponto/relatorio', component: PontoRelatorioApp },
 { path: 'ponto/foto', component: PontoFotoApp, canActivate: [roleGuard(['ADMIN', 'GERENTE'])] },
 { path: 'ponto/ajuste', component: PontoAjusteApp, canActivate: [roleGuard(['ADMIN', 'GERENTE'])] },
@@ -204,5 +206,6 @@ export const routes: Routes = [
   },
 
   // REDIRECT PARA DASHBOARD
-  { path: '**', redirectTo: 'painel-recepcao' }
+//  { path: '**', redirectTo: 'painel-recepcao' }
+  { path: '**', redirectTo: 'login' }
 ];

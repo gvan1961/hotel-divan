@@ -2,9 +2,11 @@ package com.divan.scheduler;
 
 import com.divan.entity.Apartamento;
 import com.divan.entity.ExtratoReserva;
+import com.divan.entity.LogAuditoria;
 import com.divan.entity.Reserva;
 import com.divan.repository.ApartamentoRepository;
 import com.divan.repository.ExtratoReservaRepository;
+import com.divan.repository.LogAuditoriaRepository;
 import com.divan.repository.ReservaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -14,6 +16,7 @@ import jakarta.annotation.PostConstruct;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Component
@@ -28,6 +31,9 @@ public class ReservaScheduler {
     @Autowired
     private ApartamentoRepository apartamentoRepository;
 
+    @Autowired
+    private LogAuditoriaRepository logAuditoriaRepository;
+    
     @Autowired
     private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
@@ -296,5 +302,37 @@ public class ReservaScheduler {
             ativarPreReservasInterno();
             return null;
         });
+    }
+    
+ // ✅ Cancela pré-reservas com check-in vencido há mais de X horas
+    @Scheduled(cron = "0 0 * * * *") // Roda toda hora
+    public void cancelarPreReservasExpiradas() {
+        LocalDateTime limite = LocalDateTime.now().minusHours(2); // 2h de tolerância
+        
+        List<Reserva> expiradas = reservaRepository
+            .findByStatusAndDataCheckinBefore(Reserva.StatusReservaEnum.PRE_RESERVA, limite);
+        
+        for (Reserva r : expiradas) {
+            r.setStatus(Reserva.StatusReservaEnum.CANCELADA);
+            r.setMotivoCancelamento("Cancelamento automático — hóspede não compareceu");
+            reservaRepository.save(r);
+
+            // ✅ Registra no log de auditoria
+            LogAuditoria log = new LogAuditoria();
+            log.setUsuario(null); // Sistema automático
+            log.setReserva(r);
+            log.setAcao("NO-SHOW — Cancelamento Automático");
+            log.setDescricao(String.format("Pré-reserva #%d cancelada automaticamente — NO-SHOW. Cliente: %s — Apt: %s — Check-in previsto: %s",
+                r.getId(),
+                r.getCliente().getNome(),
+                r.getApartamento().getNumeroApartamento(),
+                r.getDataCheckin().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+            ));
+            log.setDataHora(LocalDateTime.now());
+            log.setIp("SISTEMA");
+            logAuditoriaRepository.save(log);
+
+            System.out.println("🚫 Pré-reserva #" + r.getId() + " cancelada automaticamente — NO-SHOW");
+        }
     }
 }

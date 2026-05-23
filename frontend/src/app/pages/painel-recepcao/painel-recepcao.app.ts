@@ -37,6 +37,8 @@ interface ApartamentoCard {
   tv: string;
   reserva: Reserva | null;
   temPreReservaFutura: boolean;
+  quantidadePreReservas?: number;
+  datasPreReservas?: string;
 }
 
 interface Contadores {
@@ -420,9 +422,13 @@ template: `
             <!-- DISPONÍVEL -->
             <ng-container *ngIf="getStatusFinal(apt) === 'DISPONIVEL'">
               <button class="btn-acao btn-reservar" (click)="novaReserva(apt)">+ Nova Reserva</button>
-              <div class="pre-reserva-futura" *ngIf="apt.temPreReservaFutura">
-                📌 Pré-reserva agendada
-              </div>
+            
+              <div class="pre-reserva-futura" 
+               *ngIf="apt.temPreReservaFutura"
+               [title]="'Check-ins: ' + apt.datasPreReservas">
+              📌 {{ apt.quantidadePreReservas && apt.quantidadePreReservas > 1 ? apt.quantidadePreReservas + ' Pré-reservas agendadas' : 'Pré-reserva agendada' }}
+             </div>
+
             </ng-container>
 
           </div>
