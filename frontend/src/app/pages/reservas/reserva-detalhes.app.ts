@@ -3020,8 +3020,7 @@ ngOnDestroy(): void {
   this.erro = '';
   this.http.get<ReservaDetalhes>(`/api/reservas/${id}`).subscribe({
     next: (data) => {
-      this.reserva = data;
-      this.verificarAvisoCheckinManha();
+      this.reserva = data;      
          this.loading = false;
       
       // ✅ DEBUG AUDITORIA
@@ -5744,13 +5743,14 @@ salvarAdiantamento(): void {
       {}
     ).subscribe({
       next: (response: any) => {
-        console.log('✅ Pré-reserva ativada:', response);
-        
-        alert('✅ Check-in realizado com sucesso!\n\nReserva agora está ATIVA.');
-        
-        // ✅ RECARREGAR COM O ID
-        this.carregarReserva(this.reservaId);
-      },
+  console.log('✅ Pré-reserva ativada:', response);
+  
+  alert('✅ Check-in realizado com sucesso!\n\nReserva agora está ATIVA.');
+  
+  // ✅ RECARREGAR COM O ID
+  this.carregarReserva(this.reservaId);
+  this.verificarAvisoCheckinManha();
+},
       error: (erro) => {
         console.error('❌ Erro ao ativar pré-reserva:', erro);
         

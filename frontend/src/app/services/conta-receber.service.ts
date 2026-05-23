@@ -6,6 +6,7 @@ export interface ContaAReceber {
   id: number;
   reservaId: number;
   clienteNome: string;
+  todosHospedes?: string;
   empresaNome?: string;
   valor: number;
   valorPago: number;
@@ -15,6 +16,7 @@ export interface ContaAReceber {
   status: 'PENDENTE' | 'PARCIAL' | 'PAGA' | 'ATRASADA' | 'CANCELADA';
   descricao: string;
   diasVencido: number;
+  pagoAVista?: number;
   reserva?: {
     id: number;
     dataCheckin: string;

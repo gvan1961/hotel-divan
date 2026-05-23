@@ -7,13 +7,18 @@ import com.divan.entity.Cliente;
 import com.divan.entity.ContaAReceber;
 import com.divan.entity.ContaAReceber.StatusContaEnum;
 import com.divan.entity.Empresa;
+import com.divan.entity.ExtratoReserva;
 import com.divan.entity.Reserva;
 import com.divan.repository.ContaAReceberRepository;
 import com.divan.repository.EmpresaRepository;
+import com.divan.repository.ExtratoReservaRepository;
+import com.divan.repository.HospedagemHospedeRepository;
 import com.divan.repository.ReservaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -29,7 +34,8 @@ public class ContaAReceberService {
     private final ContaAReceberRepository contaAReceberRepository;
     private final ReservaRepository reservaRepository;
     private final EmpresaRepository empresaRepository;
-
+    private final HospedagemHospedeRepository hospedagemHospedeRepository;
+    private final ExtratoReservaRepository extratoReservaRepository;
     // ========== LISTAR ==========
     
     public List<ContaAReceberDTO> listarTodas() {
@@ -196,7 +202,18 @@ public class ContaAReceberService {
         ContaAReceberDTO dto = new ContaAReceberDTO();
         dto.setId(conta.getId());
         dto.setReservaId(conta.getReserva().getId());
-        dto.setClienteNome(conta.getCliente().getNome());
+        dto.setClienteNome(conta.getCliente().getNome());      
+        
+        if (conta.getReserva() != null) {
+            String todosHospedes = hospedagemHospedeRepository
+                .findByReservaId(conta.getReserva().getId())
+                .stream()
+                .map(h -> h.getCliente() != null ? h.getCliente().getNome() : h.getNomeCompleto())
+                .filter(n -> n != null && !n.isBlank())
+                .collect(Collectors.joining(", "));
+            dto.setTodosHospedes(todosHospedes.isBlank() ? conta.getCliente().getNome() : todosHospedes);
+        }
+        
         dto.setEmpresaNome(conta.getEmpresa() != null ? conta.getEmpresa().getNomeEmpresa() : null);
         dto.setValor(conta.getValor());
         dto.setValorPago(conta.getValorPago());
@@ -227,6 +244,24 @@ public class ContaAReceberService {
             // ✅ TOTAL RECEBIDO = pagamentos da reserva + pagamentos da conta a receber
             BigDecimal totalRecebidoReserva = reserva.getTotalRecebido() != null ? reserva.getTotalRecebido() : BigDecimal.ZERO;
             BigDecimal valorPagoContaReceber = conta.getValorPago() != null ? conta.getValorPago() : BigDecimal.ZERO;
+
+            // ✅ CALCULAR PAGO À VISTA (exclui débito em conta)
+            List<ExtratoReserva> extratos = extratoReservaRepository
+            	    .findByReservaIdOrderByDataHoraLancamento(reserva.getId());
+            System.out.println("📋 Extratos da reserva " + reserva.getId() + ": " + extratos.size());
+            extratos.forEach(e -> System.out.println("  → " + e.getDescricao() + " = " + e.getTotalLancamento()));
+
+            BigDecimal debitoEmConta = extratos.stream()
+                .filter(e -> e.getDescricao() != null && e.getDescricao().contains("DEBITO EM CONTA"))
+                .map(e -> e.getTotalLancamento().abs())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            System.out.println("💳 Débito em conta: " + debitoEmConta);
+            BigDecimal pagoAVista = totalRecebidoReserva.subtract(debitoEmConta);
+            if (pagoAVista.compareTo(BigDecimal.ZERO) < 0) pagoAVista = BigDecimal.ZERO;
+
+            dto.setTotalRecebido(pagoAVista);
+            dto.setPagoAVista(pagoAVista);
             dto.setTotalRecebido(totalRecebidoReserva.add(valorPagoContaReceber));
 
             // ✅ SALDO REAL = totalHospedagem - desconto - totalRecebido

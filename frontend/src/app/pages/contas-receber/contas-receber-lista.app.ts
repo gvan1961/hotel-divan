@@ -123,31 +123,30 @@ interface FiltrosAvancados {
 
         <table class="tabela">
           <thead>
-            <tr>
-              <th>ID</th>
-              <th>Cliente</th>
-              <th>Empresa</th>
-              <th>Descrição</th>
-              <th>Check-in/Check-out</th>
-              <th>Valor</th>
-              <th>Pago</th>
-              <th>Saldo</th>
-              <th>Vencimento</th>
-              <th>Status</th>
-              <th class="no-print">Ações</th>
-            </tr>
+           <tr>
+  <th>Reserva</th>
+  <th>Hóspedes</th>
+  <th>Empresa</th>
+  <th>Check-in/Check-out</th>
+  <th>Valor</th>
+  <th>Pago</th>
+  <th>Saldo</th>
+  <th>Vencimento</th>
+  <th>Status</th>
+  <th class="no-print">Ações</th>
+</tr>
           </thead>
           <tbody>
             <tr *ngFor="let conta of contasFiltradas" [class]="'linha-' + conta.status.toLowerCase()">
-              <td>{{ conta.id }}</td>
-              <td>{{ conta.clienteNome }}</td>
+             <td>#{{ conta.reservaId }}</td>
+             <td>{{ conta.todosHospedes || conta.clienteNome }}</td>
               <td>
                 <span *ngIf="conta.empresaNome" class="badge-empresa">
                   🏢 {{ conta.empresaNome }}
                 </span>
                 <span *ngIf="!conta.empresaNome" class="sem-empresa">-</span>
               </td>
-              <td>{{ conta.descricao }}</td>
+            
               <td class="datas">
                 <div>✅ {{ formatarData(conta.reserva?.dataCheckin) }}</div>
                 <div>📤 {{ formatarData(conta.reserva?.dataCheckout) }}</div>
@@ -419,34 +418,36 @@ interface FiltrosAvancados {
   </div>
 
   <table class="print-table">
-    <thead>
-      <tr>
-        <th>Cliente</th>
-        <th>Apto</th>
-        <th>Hósp.</th>
-        <th>Diár.</th>
-        <th>Vlr Diárias</th>
-        <th>Consumo</th>
-        <th>Total Hosp.</th>
-        <th>Recebido</th>
-        <th>Desconto</th>
-        <th>A Pagar</th>
-      </tr>
-    </thead>
+  <thead>
+  <tr>
+    <th>Reserva</th>
+    <th>Hóspedes</th>
+    <th>Apto</th>
+    <th>Hósp.</th>
+    <th>QT. Diár.</th>
+    <th>Vlr Diárias</th>
+    <th>Consumo</th>
+    <th>Total Hosp.</th>
+    <th>Desconto</th>
+    <th>Pago à Vista</th>
+    <th>Faturado</th>
+  </tr>
+</thead>
     <tbody>
-      <tr *ngFor="let conta of contasFiltradas">
-        <td>{{ conta.clienteNome }}</td>
-        <td>{{ conta.numeroApartamento || '-' }}</td>
-        <td>{{ conta.quantidadeHospede || '-' }}</td>
-        <td>{{ conta.quantidadeDiaria || '-' }}</td>
-        <td class="valor">{{ formatarMoeda(conta.totalDiaria) }}</td>
-        <td class="valor">{{ formatarMoeda(conta.totalConsumo) }}</td>
-        <td class="valor">{{ formatarMoeda(conta.totalHospedagem) }}</td>
-        <td class="valor">{{ formatarMoeda(conta.totalRecebido) }}</td>
-        <td class="valor">{{ formatarMoeda(conta.desconto) }}</td>
-        <td class="valor destaque">{{ formatarMoeda(conta.totalApagar) }}</td>
-      </tr>
-    </tbody>
+  <tr *ngFor="let conta of contasFiltradas">
+    <td>#{{ conta.reservaId }}</td>
+    <td>{{ conta.todosHospedes || conta.clienteNome }}</td>
+    <td>{{ conta.numeroApartamento || '-' }}</td>
+    <td>{{ conta.quantidadeHospede || '-' }}</td>
+    <td>{{ conta.quantidadeDiaria || '-' }}</td>
+    <td class="valor">{{ formatarMoeda(conta.totalDiaria) }}</td>
+    <td class="valor">{{ formatarMoeda(conta.totalConsumo) }}</td>
+    <td class="valor">{{ formatarMoeda(conta.totalHospedagem) }}</td>
+    <td class="valor">{{ (conta.desconto || 0) > 0 ? formatarMoeda(conta.desconto) : '-' }}</td>
+    <td class="valor">{{ formatarMoeda(conta.pagoAVista || 0) }}</td>
+    <td class="valor destaque">{{ formatarMoeda(conta.valor) }}</td>
+  </tr>
+</tbody>
     <tfoot>
       <tr class="total-row">
         <td colspan="4"><strong>TOTAIS:</strong></td>
