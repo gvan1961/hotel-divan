@@ -205,9 +205,7 @@ export class ReservaService {
  * ✅ CANCELAR PRÉ-RESERVA (muda status para CANCELADA)
  */
 cancelarPreReserva(id: number, motivo?: string): Observable<any> {
-  let params = new HttpParams();
-  if (motivo) params = params.set('motivo', motivo);
-  return this.http.patch(`${this.apiUrl}/${id}/cancelar`, null, { params });
+  return this.http.delete(`${this.apiUrl}/${id}/pre-reserva`);
 }
 
 /**

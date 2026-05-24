@@ -113,7 +113,7 @@ interface FiltrosAvancados {
       </div>
 
       <!-- TABELA -->
-      <div *ngIf="!loading" class="tabela-container">
+      <div *ngIf="!loading" class="tabela-container no-print">
         <div class="tabela-header">
           <h3>📋 Resultados ({{ contasFiltradas.length }})</h3>
           <button class="btn-imprimir" (click)="imprimirRelatorio()" *ngIf="contasFiltradas.length > 0">
@@ -923,122 +923,105 @@ interface FiltrosAvancados {
     .btn-confirmar:hover { background: #229954; }
 
     /* ─── IMPRESSÃO ──────────────────────────────── */
-    .print-only {
-      display: none;
-    }
+  .print-only {
+  display: none;
+}
 
-    @media print {
-      .container > *:not(.print-only) {
-        display: none !important;
-      }
-
-      .print-only {
-        display: block !important;
-        padding: 20px;
-      }
-
-      .print-header {
-        text-align: center;
-        margin-bottom: 30px;
-        border-bottom: 2px solid #2c3e50;
-        padding-bottom: 15px;
-      }
-
-      .print-header h1 {
-        margin: 0 0 10px 0;
-        color: #2c3e50;
-        font-size: 24px;
-      }
-
-      .print-subtitle {
-        margin: 5px 0;
-        color: #7f8c8d;
-        font-size: 14px;
-      }
-
-      .print-date {
-        margin: 5px 0;
-        color: #95a5a6;
-        font-size: 12px;
-      }
-
-      .print-filters {
-        margin-top: 15px;
-        padding: 10px;
-        background: #f5f5f5;
-        border-radius: 6px;
-        font-size: 12px;
-      }
-
-      .print-filters span {
-        display: inline-block;
-        margin: 0 10px;
-      }
-
-      .print-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 20px 0;
-        font-size: 11px;
-      }
-
-      .btn-fatura { background: #2980b9; color: white; }
-      .btn-fatura:hover { background: #2471a3; transform: scale(1.1); }
-
-      .print-table th,
-      .print-table td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-      }
-
-      .print-table th {
-        background-color: #2c3e50;
-        color: white;
-        font-weight: bold;
-        font-size: 10px;
-      }
-
-      .print-table td.valor {
-        text-align: right;
-        font-family: 'Courier New', monospace;
-      }
-
-      .print-table td.destaque {
-        font-weight: bold;
-        background: #f0f0f0;
-      }
-
-      .print-table tbody tr:nth-child(even) {
-        background-color: #f9f9f9;
-      }
-
-      .print-table tfoot tr {
-        background-color: #e8e8e8;
-        font-weight: bold;
-      }
-
-      .print-table tfoot td {
-        border-top: 2px solid #2c3e50;
-        padding: 12px 8px;
-      }
-
-      .print-footer {
-        margin-top: 30px;
-        text-align: center;
-        font-size: 10px;
-        color: #7f8c8d;
-        border-top: 1px solid #ddd;
-        padding-top: 10px;
-      }
-
-      body {
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-      }
-
-      @page { margin: 1cm; }
-    }
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .container > *:not(.print-only) {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+    padding: 20px;
+  }
+  .print-header {
+    text-align: center;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 15px;
+  }
+  .print-header h1 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 24px;
+  }
+  .print-subtitle {
+    margin: 5px 0;
+    color: #7f8c8d;
+    font-size: 14px;
+  }
+  .print-date {
+    margin: 5px 0;
+    color: #95a5a6;
+    font-size: 12px;
+  }
+  .print-filters {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f5f5f5;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .print-filters span {
+    display: inline-block;
+    margin: 0 10px;
+  }
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 11px;
+  }
+  .btn-fatura { background: #2980b9; color: white; }
+  .print-table th,
+  .print-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+  .print-table th {
+    background-color: #2c3e50;
+    color: white;
+    font-weight: bold;
+    font-size: 10px;
+  }
+  .print-table td.valor {
+    text-align: right;
+    font-family: 'Courier New', monospace;
+  }
+  .print-table td.destaque {
+    font-weight: bold;
+    background: #f0f0f0;
+  }
+  .print-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  .print-table tfoot tr {
+    background-color: #e8e8e8;
+    font-weight: bold;
+  }
+  .print-table tfoot td {
+    border-top: 2px solid #2c3e50;
+    padding: 12px 8px;
+  }
+  .print-footer {
+    margin-top: 30px;
+    text-align: center;
+    font-size: 10px;
+    color: #7f8c8d;
+    border-top: 1px solid #ddd;
+    padding-top: 10px;
+  }
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  @page { margin: 1cm; }
+}
 
     /* ─── RESPONSIVE ─────────────────────────────── */
     @media (max-width: 768px) {
@@ -1115,6 +1098,8 @@ export class ContasReceberListaApp implements OnInit {
                 (conta as any).totalConsumo = reserva.totalProduto;
                 (conta as any).totalHospedagem = reserva.totalHospedagem;
                (conta as any).totalRecebido = conta.totalRecebido || conta.valorPago || 0;
+               (conta as any).pagoAVista = conta.pagoAVista || 0;
+               console.log('💰 conta #' + conta.id + ' pagoAVista:', conta.pagoAVista, '→', (conta as any).pagoAVista);
                 (conta as any).desconto = conta.desconto || reserva.desconto || 0;
                 (conta as any).totalApagar = conta.saldo;
               } else {
@@ -1126,6 +1111,7 @@ export class ContasReceberListaApp implements OnInit {
                 (conta as any).totalConsumo = conta.valor;
                 (conta as any).totalHospedagem = conta.valor;
                 (conta as any).totalRecebido = conta.valorPago;
+                (conta as any).pagoAVista = conta.pagoAVista || 0;
                 (conta as any).desconto = 0;
                 (conta as any).totalApagar = conta.saldo;
               }
@@ -1339,9 +1325,11 @@ export class ContasReceberListaApp implements OnInit {
     return textos[status] || status;
   }
 
-  imprimirRelatorio(): void {
-    window.print();
-  }
+ imprimirRelatorio(): void {
+  const c = this.contasFiltradas.find((x: any) => x.reservaId === 473);
+  console.log('🖨️ Imprimindo - conta #473 pagoAVista:', (c as any)?.pagoAVista);
+  window.print();
+}
 
   atualizarVencidas(): void {
     this.contaReceberService.atualizarVencidas().subscribe({
@@ -1381,6 +1369,8 @@ export class ContasReceberListaApp implements OnInit {
     const desconto = (conta as any).desconto || 0;
     const totalHospedagem = (conta as any).totalHospedagem || 0;
     const totalRecebido = (conta as any).totalRecebido || 0;
+    const pagoAVista = (conta as any).pagoAVista || conta.pagoAVista || 0;
+    
     const saldo = conta.saldo || 0;
 
     const linhasExtrato = extratos.length > 0 ? `
@@ -1483,11 +1473,15 @@ export class ContasReceberListaApp implements OnInit {
             <span>Total Hospedagem:</span>
             <span>R$ ${this.fmt(totalHospedagem)}</span>
           </div>
-          ${totalRecebido > 0 ? `
+
+
+          ${pagoAVista > 0 ? `
           <div class="linha-valor">
-            <span>Já Recebido:</span>
-            <span>- R$ ${this.fmt(totalRecebido)}</span>
+          <span>Pago à Vista:</span>
+          <span>R$ ${this.fmt(pagoAVista)}</span>
           </div>` : ''}
+
+
           <div class="separador">================================</div>
           <div class="linha-valor total">
             <span>SALDO A PAGAR:</span>

@@ -1519,5 +1519,25 @@ public class ReservaController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    @DeleteMapping("/{id}/pre-reserva")
+    public ResponseEntity<?> cancelarPreReserva(@PathVariable Long id) {
+        try {
+            Reserva reserva = reservaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Pré-reserva não encontrada"));
+
+            if (reserva.getStatus() != Reserva.StatusReservaEnum.PRE_RESERVA) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("erro", "Reserva não é uma pré-reserva"));
+            }
+
+            reservaService.cancelarReserva(id, "Cancelamento de pré-reserva", "sistema");
+
+            return ResponseEntity.ok(Map.of("mensagem", "Pré-reserva cancelada com sucesso"));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
         
 }

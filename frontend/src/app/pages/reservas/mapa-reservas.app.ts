@@ -15,6 +15,7 @@ interface ReservaMapa {
   dataCheckout: string;
   status: string;
   quantidadeHospede: number;
+  totalRecebido?: number;
 }
 
 interface ApartamentoMapa {
@@ -204,19 +205,19 @@ interface ApartamentoMapa {
                 ✏️ Editar
               </button>
               
-              <!-- CANCELAR (mantém histórico) -->
-                <button *ngIf="reservaSelecionada && reservaSelecionada.status === 'PRE_RESERVA'" 
-                  class="btn-cancelar-reserva" 
-                  (click)="abrirModalCancelar()">
-                  ❌ Cancelar
-              </button>
+             <!-- EXCLUIR - só se não houver pagamento -->
+<button *ngIf="reservaSelecionada && reservaSelecionada.status === 'PRE_RESERVA' && (reservaSelecionada.totalRecebido || 0) === 0"
+  class="btn-excluir"
+  (click)="excluirPreReserva()">
+  🗑️ Excluir
+</button>
 
-              <!-- EXCLUIR (remove permanentemente) -->
-                <button *ngIf="reservaSelecionada && reservaSelecionada.status === 'PRE_RESERVA'" 
-                class="btn-excluir" 
-                (click)="excluirPreReserva()">
-                🗑️ Excluir
-              </button>
+<!-- CANCELAR - só se houver pagamento -->
+<button *ngIf="reservaSelecionada && reservaSelecionada.status === 'PRE_RESERVA' && (reservaSelecionada.totalRecebido || 0) > 0"
+  class="btn-cancelar-reserva"
+  (click)="abrirModalCancelar()">
+  ❌ Cancelar
+</button>
               
               <!-- VER DETALHES COMPLETOS -->
               <button *ngIf="reservaSelecionada" 
@@ -1378,15 +1379,16 @@ isPreReservaAmanha(reserva: ReservaMapa): boolean {
               const chave = `${apartamentoId}-${dataStr}`;
 
               this.mapaReservas.set(chave, {
-                id: reserva.id,
-                apartamentoId: apartamentoId,
-                apartamentoNumero: apartamentoNumero,
-                clienteNome: clienteNome || 'Sem nome',
-                dataCheckin: reserva.dataCheckin,
-                dataCheckout: reserva.dataCheckout,
-                status: reserva.status,
-                quantidadeHospede: reserva.quantidadeHospede || 1
-              });
+  id: reserva.id,
+  apartamentoId: apartamentoId,
+  apartamentoNumero: apartamentoNumero,
+  clienteNome: clienteNome || 'Sem nome',
+  dataCheckin: reserva.dataCheckin,
+  dataCheckout: reserva.dataCheckout,
+  status: reserva.status,
+  quantidadeHospede: reserva.quantidadeHospede || 1,
+  totalRecebido: reserva.totalRecebido || 0  
+});
 
               diasMapeados++;
             }
@@ -1584,15 +1586,15 @@ getPosicaoNaReserva(apt: ApartamentoMapa, data: string): string {
 
   // ✅ SE TEM RESERVA → ABRIR MODAL COM OPÇÕES
   if (reserva) {
-    console.log('📋 Abrindo modal para reserva #' + reserva.id);
-    
-    this.reservaSelecionada = reserva;
-    this.apartamentoSelecionado = apt;
-    this.dataSelecionada = data;
-    this.modalTitulo = `Reserva #${reserva.id}`;
-    this.modalDetalhes = true;
-    return;
-  }
+  console.log('📋 Abrindo modal para reserva #' + reserva.id);
+  console.log('💰 totalRecebido:', reserva.totalRecebido);
+  this.reservaSelecionada = reserva;
+  this.apartamentoSelecionado = apt;
+  this.dataSelecionada = data;
+  this.modalTitulo = `Reserva #${reserva.id}`;
+  this.modalDetalhes = true;
+  return;
+}
 
   // ✅ SE NÃO TEM RESERVA → ABRIR MODAL PARA CRIAR
   this.apartamentoSelecionado = apt;
@@ -2021,10 +2023,8 @@ getColspan(apt: ApartamentoMapa, data: string): number {
     } else {
       break; // Parar quando não for mais a mesma reserva
     }
-  }
-  
-  console.log(`Colspan para ${data}: ${diasConsecutivos} dias (Reserva #${reserva.id})`);
-  
+  }  
+    
   return diasConsecutivos > 0 ? diasConsecutivos : 1;
 }
 
