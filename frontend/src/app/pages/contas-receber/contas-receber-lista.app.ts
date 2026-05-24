@@ -151,8 +151,8 @@ interface FiltrosAvancados {
                 <div>✅ {{ formatarData(conta.reserva?.dataCheckin) }}</div>
                 <div>📤 {{ formatarData(conta.reserva?.dataCheckout) }}</div>
               </td>
-              <td>R$ {{ conta.valor | number:'1.2-2' }}</td>
-              <td>R$ {{ conta.valorPago | number:'1.2-2' }}</td>
+              <td>R$ {{ (conta.saldo > 0 ? conta.valor + (conta.pagoAVista || 0) : conta.valorPago) | number:'1.2-2' }}</td>
+              <td>R$ {{ conta.pagoAVista | number:'1.2-2' }}</td>
               <td class="saldo">R$ {{ conta.saldo | number:'1.2-2' }}</td>
               <td>
                 {{ formatarData(conta.dataVencimento) }}

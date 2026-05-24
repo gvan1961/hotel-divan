@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -533,7 +534,13 @@ public class ApartamentoController {
 
                 if (matchHospede || matchPlaca) {
                     Reserva r = h.getReserva();
-                    if (r == null || r.getStatus() != Reserva.StatusReservaEnum.ATIVA) continue;
+                    if (r == null || (r.getStatus() != Reserva.StatusReservaEnum.ATIVA 
+                            && r.getStatus() != Reserva.StatusReservaEnum.PRE_RESERVA)) continue;
+
+             if (r.getStatus() == Reserva.StatusReservaEnum.PRE_RESERVA) {
+                 LocalDate hoje = LocalDate.now(ZoneId.of("America/Fortaleza"));
+                 if (r.getDataCheckin().toLocalDate().isAfter(hoje)) continue;
+             }
 
                     Map<String, Object> item = new LinkedHashMap<>();
                     item.put("hospedeNome",    h.getCliente() != null ? h.getCliente().getNome() : "-");

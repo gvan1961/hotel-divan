@@ -39,7 +39,7 @@ import com.divan.service.ApartamentoService;
 import com.divan.service.ClienteService;
 import com.divan.service.ReservaService;
 import com.divan.service.SorteioService;
-
+import java.time.ZoneId;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -270,7 +270,10 @@ public class ReservaController {
                     && h.getCliente().getEmpresa().getNomeEmpresa()
                         .toLowerCase().contains(nomeEmpresa.toLowerCase())
                     && h.getReserva() != null
-                    && h.getReserva().getStatus() == Reserva.StatusReservaEnum.ATIVA)
+                    		&& (h.getReserva().getStatus() == Reserva.StatusReservaEnum.ATIVA
+                    	    || (h.getReserva().getStatus() == Reserva.StatusReservaEnum.PRE_RESERVA
+                    	        && !h.getReserva().getDataCheckin().toLocalDate()
+                    	            .isAfter(LocalDate.now(ZoneId.of("America/Fortaleza"))))))
                 .map(h -> {
                     Map<String, Object> map = new HashMap<>();
                     map.put("nomeCliente", h.getCliente().getNome());
@@ -724,12 +727,33 @@ public class ReservaController {
 
             BigDecimal diferencaPorDia = valorDiariaNova.subtract(valorDiariaAtual);
 
+            
             // ✅ CALCULAR DIAS RESTANTES
+            LocalDateTime agora = LocalDateTime.now(ZoneId.of("America/Fortaleza"));
+            LocalDate hoje = agora.toLocalDate();
+
             long diasRestantes = java.time.temporal.ChronoUnit.DAYS.between(
-                LocalDateTime.now().toLocalDate(),
+                hoje,
                 reserva.getDataCheckout().toLocalDate()
             );
+
+            // Verifica se há diária retroativa lançada hoje antes do meio-dia
+            boolean temDiariaRetroativaHoje = extratoReservaRepository
+                .findByReservaId(id)
+                .stream()
+                .filter(e -> e.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
+                          && e.getDescricao() != null
+                          && e.getDescricao().startsWith("Diária - Dia"))
+                .anyMatch(e -> e.getDataHoraLancamento().toLocalDate().equals(hoje)
+                            && e.getDataHoraLancamento().getHour() < 12);
+
+            if (temDiariaRetroativaHoje) {
+                diasRestantes += 1;
+            }
             if (diasRestantes < 1) diasRestantes = 1;
+           
+            
+            
 
             BigDecimal valorExtra = diferencaPorDia.multiply(BigDecimal.valueOf(diasRestantes));
 
@@ -1096,8 +1120,11 @@ public class ReservaController {
                 if (apt.getId().equals(apartamentoOrigemId)) continue;
 
                 // Buscar reserva ativa neste apartamento
-                List<Reserva> reservasAtivas = reservaRepository
-                    .findByApartamentoIdAndStatus(apt.getId(), Reserva.StatusReservaEnum.ATIVA);
+                List<Reserva> reservasAtivas = new ArrayList<>();
+                reservasAtivas.addAll(reservaRepository
+                    .findByApartamentoIdAndStatus(apt.getId(), Reserva.StatusReservaEnum.ATIVA));
+                reservasAtivas.addAll(reservaRepository
+                    .findByApartamentoIdAndStatus(apt.getId(), Reserva.StatusReservaEnum.PRE_RESERVA));
 
                 Map<String, Object> item = new HashMap<>();
                 item.put("id", apt.getId());

@@ -261,7 +261,7 @@ import { environment } from '../../../environments/environment';
                 <span class="value-pequeno valor-positivo">-R$ {{ formatarMoeda(reserva.desconto || 0) }}</span>
               </div>
             <button
-    *ngIf="reserva.status === 'ATIVA'"
+    *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
     class="btn-mini btn-desconto"
     (click)="abrirModalDesconto(); $event.stopPropagation()"
     title="Adicionar desconto">
@@ -557,9 +557,9 @@ import { environment } from '../../../environments/environment';
 </ng-container>
 
             <ng-container *hasPermission="'RESERVA_EDITAR'">
-              <button class="btn-acao btn-transferir" 
-                      *ngIf="reserva.status === 'ATIVA'"
-                      (click)="abrirModalTransferencia()">
+             <button class="btn-acao btn-transferir"
+        *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
+        (click)="abrirModalTransferencia()">
                 🔄 Transferir Apartamento
               </button>
             </ng-container>
@@ -4229,39 +4229,40 @@ salvarAdiantamento(): void {
     }
 
     // ============= TRANSFERÊNCIA =============
-   abrirModalTransferencia(): void {
+
+  abrirModalTransferencia(): void {
   if (!this.reserva) return;
 
-  this.http.get<Apartamento[]>('/api/apartamentos').subscribe({
-    next: (data) => {
-      this.apartamentosDisponiveis = data
-        .filter((apt: Apartamento) => 
-          apt.id !== this.reserva?.apartamento?.id &&
-          apt.status === 'DISPONIVEL' &&
-          apt.capacidade >= (this.reserva?.quantidadeHospede || 0)
-        )
-        .sort((a, b) => {
-          const numA = parseInt(a.numeroApartamento) || 0;
-          const numB = parseInt(b.numeroApartamento) || 0;
-          return numA - numB;
-        });
-
-      if (this.apartamentosDisponiveis.length === 0) {
-        alert('⚠️ Nenhum apartamento disponível para transferência');
-        return;
-      }
-
-      this.novoApartamentoId = 0;
-      this.dataTransferencia = '';
-      this.transferenciaImediata = true;
-      this.motivoTransferencia = '';
-      this.modalTransferencia = true;
-    },
-    error: (err: any) => {
-      console.error('❌ Erro:', err);
-      alert('Erro ao carregar apartamentos disponíveis');
-    }
+  this.http.get<any[]>(`/api/reservas/apartamentos-disponiveis-para-transferencia?apartamentoOrigemId=${this.reserva?.apartamento?.id}`)
+    .subscribe({
+      next: (data) => {
+        this.apartamentosDisponiveis = data
+  .filter((apt: any) => 
+    apt.status === 'DISPONIVEL' &&
+    apt.capacidade >= (this.reserva?.quantidadeHospede || 0)
+  )
+  .sort((a: any, b: any) => {
+    const numA = parseInt(a.numeroApartamento) || 0;
+    const numB = parseInt(b.numeroApartamento) || 0;
+    return numA - numB;
   });
+
+        if (this.apartamentosDisponiveis.length === 0) {
+          alert('⚠️ Nenhum apartamento disponível para transferência');
+          return;
+        }
+
+        this.novoApartamentoId = 0;
+        this.dataTransferencia = '';
+        this.transferenciaImediata = true;
+        this.motivoTransferencia = '';
+        this.modalTransferencia = true;
+      },
+      error: (err: any) => {
+        console.error('❌ Erro:', err);
+        alert('Erro ao carregar apartamentos disponíveis');
+      }
+    });
 }
 
     fecharModalTransferencia(): void {
