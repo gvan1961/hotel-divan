@@ -1255,20 +1255,26 @@ apartamentosFiltrados(): ApartamentoCard[] {
       return;
     }
   }
-
-  getTooltipFaixa(apt: ApartamentoCard): string {
-    const status = this.getStatusFinal(apt);
-    switch (status) {
-      case 'ATIVA':       return 'Clique para ver detalhes da reserva';
-      case 'PRE_RESERVA': return 'Clique para abrir o mapa de reservas';
-      case 'LIMPEZA':     return apt.reserva?.id ? 'Clique para ver a última reserva' : 'Apartamento em limpeza';
-      case 'DISPONIVEL':  return 'Clique para criar nova reserva';
-      case 'MANUTENCAO':  return 'Apartamento em manutenção';
-      case 'BLOQUEADO':
-      case 'INDISPONIVEL': return 'Apartamento indisponível';
-      default: return '';
-    }
+  
+  getTooltipFaixa(apt: ApartamentoCard): string { 
+  const status = this.getStatusFinal(apt);
+  switch (status) {
+    case 'ATIVA': return apt.datasPreReservas
+  ? `Clique para ver detalhes da reserva | Próximas: ${apt.datasPreReservas}`
+  : 'Clique para ver detalhes da reserva';
+    case 'PRE_RESERVA': return apt.datasPreReservas 
+      ? `Pré-reserva — Check-ins: ${apt.datasPreReservas}\nClique para ver detalhes`
+      : 'Clique para abrir o mapa de reservas';
+    case 'LIMPEZA':     return apt.reserva?.id ? 'Clique para ver a última reserva' : 'Apartamento em limpeza';
+    case 'DISPONIVEL':  return apt.datasPreReservas
+      ? `Check-ins agendados: ${apt.datasPreReservas}`
+      : 'Clique para criar nova reserva';
+    case 'MANUTENCAO':  return 'Apartamento em manutenção';
+    case 'BLOQUEADO':
+    case 'INDISPONIVEL': return 'Apartamento indisponível';
+    default: return '';
   }
+}
 
   transferirPreReserva(apt: ApartamentoCard): void {
     if (!apt.reserva?.proximaReserva?.id) return;

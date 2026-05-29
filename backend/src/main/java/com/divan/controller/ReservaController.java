@@ -635,14 +635,17 @@ public class ReservaController {
                 novoCliente.setCidade(body.containsKey("cidade") && body.get("cidade") != null
                     ? body.get("cidade").toString() : null);
                 novoCliente.setEstado(body.containsKey("estado") && body.get("estado") != null
-                    ? body.get("estado").toString() : null);
-                novoCliente.setCreditoAprovado(body.containsKey("creditoAprovado")
-                    ? Boolean.parseBoolean(body.get("creditoAprovado").toString()) : false);
-                novoCliente.setAutorizadoJantar(body.containsKey("autorizadoJantar")
-                    ? Boolean.parseBoolean(body.get("autorizadoJantar").toString()) : true);
-                novoCliente.setMenorDeIdade(body.containsKey("menorDeIdade")
-                    ? Boolean.parseBoolean(body.get("menorDeIdade").toString()) : false);
-
+                    ? body.get("estado").toString() : null);                
+                
+                novoCliente.setCreditoAprovado(body.containsKey("creditoAprovado") 
+                	    && Boolean.TRUE.equals(body.get("creditoAprovado")));
+                	novoCliente.setAutorizadoJantar(!body.containsKey("autorizadoJantar") 
+                	    || Boolean.TRUE.equals(body.get("autorizadoJantar")));     
+                                
+                novoCliente.setMenorDeIdade(body.containsKey("menorDeIdade")               		
+                		
+                    ? Boolean.parseBoolean(body.get("menorDeIdade").toString()) : false);            
+                
                 // ✅ VINCULAR EMPRESA
                 if (body.containsKey("empresaId") && body.get("empresaId") != null) {
                     try {

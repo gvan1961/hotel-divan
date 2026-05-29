@@ -448,7 +448,7 @@ import { environment } from '../../../environments/environment';
                   🏢 {{ hospede.cliente.empresa.nomeEmpresa }}
                 </div>
                 <div class="hospede-detalhes">
-                  CPF: {{ hospede.cliente?.cpf || hospede.cpf || 'Não informado' }} | 
+                  CPF: {{ formatarCPF(hospede.cliente?.cpf || hospede.cpf) || 'Não informado' }} | 
                   Tel: {{ hospede.cliente?.celular || hospede.celular || 'Não informado' }}
                   <span class="hospede-placa-container">
                     <span *ngIf="hospede.placaCarro" class="hospede-placa">
@@ -954,7 +954,11 @@ import { environment } from '../../../environments/environment';
             <h2>💳 Registrar Pagamento</h2>
             <div class="campo">
               <label>Valor a Pagar *</label>
-              <input type="number" [(ngModel)]="pagValor" step="0.01" min="0.01" placeholder="0,00">
+             <input type="text" [value]="pagValorTexto" 
+       (input)="onPagValorInput($event)" 
+       (focus)="onPagValorFocus($event)"
+       placeholder="0,00" 
+       inputmode="numeric">
               <small>Saldo devedor: R$ {{ formatarMoeda(reserva.totalApagar) }}</small>
             </div>
             <div class="campo">
@@ -2952,6 +2956,8 @@ import { environment } from '../../../environments/environment';
 
   valorReciboTexto = '';
 
+  pagValorTexto = '0,00';
+
   temBilhetes = false;
 
   modalReciboFormal = false;
@@ -4002,13 +4008,14 @@ ${debitoEmConta > 0 ? `<tr>
     }
 
     // ============= PAGAMENTO =============
-    abrirModalPagamento(): void {
-      if (!this.reserva) return;
-      this.pagValor = Number(this.reserva.totalApagar);
-      this.pagFormaPagamento = '';
-      this.pagObs = '';
-      this.modalPagamento = true;
-    }
+   abrirModalPagamento(): void {
+  if (!this.reserva) return;
+  this.pagValor = Number(this.reserva.totalApagar);
+  this.pagValorTexto = this.pagValor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  this.pagFormaPagamento = '';
+  this.pagObs = '';
+  this.modalPagamento = true;
+}
 
     fecharModalPagamento(): void {
       this.modalPagamento = false;
@@ -6253,10 +6260,12 @@ valorPorExtenso(valor: number): string {
 
 abrirDebitoEmConta(): void {
   this.pagValor = Number(this.reserva?.totalApagar) || 0;
+  this.pagValorTexto = this.pagValor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   this.pagFormaPagamento = 'DEBITO_EM_CONTA';
   this.pagObs = '';
   this.modalPagamento = true;
 }
+
 
 toggleExtrato(): void {
   this.extratoExpandido = !this.extratoExpandido;
@@ -6392,6 +6401,19 @@ confirmarCheckoutAntecipado(): void {
     },
     error: (err) => alert('❌ Erro: ' + (err.error?.erro || err.message))
   });
+}
+
+onPagValorInput(event: any): void {
+  const digits = event.target.value.replace(/\D/g, '');
+  const num = parseInt(digits || '0', 10);
+  const valor = num / 100;
+  this.pagValor = valor;
+  this.pagValorTexto = valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  event.target.value = this.pagValorTexto;
+}
+
+onPagValorFocus(event: any): void {
+  event.target.select();
 }
 
 voltarAoPainel(): void {

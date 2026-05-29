@@ -49,10 +49,20 @@ public class ClienteController {
             cliente.setCidade(dto.getCidade());
             cliente.setEstado(dto.getEstado());
             cliente.setDataNascimento(dto.getDataNascimento());
+            
+            
             cliente.setMenorDeIdade(dto.getMenorDeIdade() != null ? dto.getMenorDeIdade() : false);
+            cliente.setCreditoAprovado(dto.getCreditoAprovado() != null ? dto.getCreditoAprovado() : false);
+            cliente.setAutorizadoJantar(dto.getAutorizadoJantar() != null ? dto.getAutorizadoJantar() : false);
 
+            System.out.println("🍽️ autorizadoJantar antes de salvar: " + cliente.getAutorizadoJantar());
             Cliente clienteSalvo = clienteService.salvar(cliente, dto.getEmpresaId(), dto.getResponsavelId());
+            System.out.println("🍽️ autorizadoJantar após salvar: " + clienteSalvo.getAutorizadoJantar());
+
             return ResponseEntity.status(HttpStatus.CREATED).body(clienteSalvo);
+            
+            
+            
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }

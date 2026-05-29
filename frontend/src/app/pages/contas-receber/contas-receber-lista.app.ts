@@ -196,11 +196,11 @@ interface FiltrosAvancados {
           </tbody>
           <tfoot *ngIf="contasFiltradas.length > 0">
             <tr class="total-row">
-              <td colspan="5"><strong>TOTAL:</strong></td>
-              <td><strong>R$ {{ calcularTotalValor() | number:'1.2-2' }}</strong></td>
-              <td><strong>R$ {{ calcularTotalPago() | number:'1.2-2' }}</strong></td>
-              <td><strong>R$ {{ calcularTotalSaldo() | number:'1.2-2' }}</strong></td>
-              <td colspan="3"></td>
+             <td colspan="4"><strong>TOTAL:</strong></td>
+<td><strong>R$ {{ calcularTotalValor() | number:'1.2-2' }}</strong></td>
+<td><strong>R$ {{ calcularTotalPago() | number:'1.2-2' }}</strong></td>
+<td><strong>R$ {{ calcularTotalSaldo() | number:'1.2-2' }}</strong></td>
+<td colspan="3"></td>
             </tr>
           </tfoot>
         </table>
@@ -1296,13 +1296,12 @@ export class ContasReceberListaApp implements OnInit {
   }
 
   calcularTotalValor(): number {
-    return this.contasFiltradas.reduce((sum, c) => sum + c.valor, 0);
-  }
+  return this.contasFiltradas.reduce((sum, c) => sum + (c.valorPago || 0) + c.saldo, 0);
+}
 
   calcularTotalPago(): number {
-    return this.contasFiltradas.reduce((sum, c) => sum + c.valorPago, 0);
-  }
-
+  return this.contasFiltradas.reduce((sum, c) => sum + (c.valorPago || 0), 0);
+}
   calcularTotalSaldo(): number {
     return this.contasFiltradas.reduce((sum, c) => sum + c.saldo, 0);
   }
@@ -1682,13 +1681,13 @@ export class ContasReceberListaApp implements OnInit {
     return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).totalHospedagem || 0), 0);
   }
 
-  calcularTotalGeralRecebido(): number {
-    return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).totalRecebido || 0), 0);
-  }
+ calcularTotalGeralRecebido(): number {
+  return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).pagoAVista || 0), 0);
+}
 
   calcularTotalGeralDesconto(): number {
-    return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).desconto || 0), 0);
-  }
+  return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).desconto || 0), 0);
+}
 
   calcularTotalGeralAPagar(): number {
     return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).totalApagar || 0), 0);
