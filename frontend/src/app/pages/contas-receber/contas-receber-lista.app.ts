@@ -451,12 +451,12 @@ interface FiltrosAvancados {
     <tfoot>
       <tr class="total-row">
         <td colspan="4"><strong>TOTAIS:</strong></td>
-        <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralDiarias()) }}</strong></td>
-        <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralConsumo()) }}</strong></td>
-        <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralHospedagem()) }}</strong></td>
-        <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralRecebido()) }}</strong></td>
-        <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralDesconto()) }}</strong></td>
-        <td class="valor destaque"><strong>{{ formatarMoeda(calcularTotalGeralAPagar()) }}</strong></td>
+       <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralDiarias()) }}</strong></td>
+       <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralConsumo()) }}</strong></td>
+       <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralHospedagem()) }}</strong></td>
+       <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralDesconto()) }}</strong></td>
+       <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralRecebido()) }}</strong></td>
+       <td class="valor destaque"><strong>{{ formatarMoeda(calcularTotalGeralAPagar()) }}</strong></td>
       </tr>
     </tfoot>
   </table>
@@ -1072,9 +1072,16 @@ export class ContasReceberListaApp implements OnInit {
     observacao: ''
   };
 
-  ngOnInit(): void {
-    this.carregarDados();
-  }
+ ngOnInit(): void {
+  this.carregarDados();
+  this.http.get<any[]>('/api/clientes').subscribe({
+    next: (data) => {
+      console.log('✅ Clientes carregados:', data.length);
+      this.clientes = data.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    },
+    error: (err) => console.error('❌ Erro ao carregar clientes:', err)
+  });
+}
 
   carregarDados(): void {
     this.loading = true;
@@ -1137,9 +1144,14 @@ export class ContasReceberListaApp implements OnInit {
       next: (data) => this.empresas = data
     });
 
-    this.http.get<any[]>('/api/clientes').subscribe({
-      next: (data) => this.clientes = data
-    });
+   this.http.get<any>('/api/clientes').subscribe({
+  next: (data) => {
+    const lista = Array.isArray(data) ? data : (data.content || data.clientes || []);
+    console.log('✅ Clientes carregados:', lista.length);
+    this.clientes = lista.sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  },
+  error: (err) => console.error('❌ Erro ao carregar clientes:', err)
+});
   }
 
   // ========== FILTROS ==========
@@ -1168,9 +1180,12 @@ export class ContasReceberListaApp implements OnInit {
     }
 
     if (this.filtrosAplicados.clienteId) {
-      const clienteSelecionado = this.clientes.find(c => c.id === this.filtrosAplicados.clienteId);
-      resultado = resultado.filter(c => c.clienteNome === clienteSelecionado?.nome);
-    }
+  const clienteSelecionado = this.clientes.find(c => c.id === this.filtrosAplicados.clienteId);
+  resultado = resultado.filter(c => 
+    c.clienteNome?.toLowerCase().includes(clienteSelecionado?.nome?.toLowerCase()) ||
+    c.todosHospedes?.toLowerCase().includes(clienteSelecionado?.nome?.toLowerCase())
+  );
+}
 
     if (this.filtrosAplicados.status) {
       const status = this.filtrosAplicados.status;

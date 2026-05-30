@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -105,9 +106,15 @@ public class ReservaService {
                 " checkin=" + r.getDataCheckin() + 
                 " checkout=" + r.getDataCheckout());
 
-            boolean semConflito = !checkin.isBefore(r.getDataCheckout())
-                    || !checkout.isAfter(r.getDataCheckin());
+         // Se reserva está ATIVA e atrasada, usa data atual como checkout efetivo
+            LocalDateTime checkoutEfetivo = r.getDataCheckout();
+            if (r.getStatus() == Reserva.StatusReservaEnum.ATIVA && 
+                r.getDataCheckout().isBefore(LocalDateTime.now(ZoneId.of("America/Fortaleza")))) {
+                checkoutEfetivo = LocalDateTime.now(ZoneId.of("America/Fortaleza")).plusDays(1);
+            }
 
+            boolean semConflito = !checkin.isBefore(checkoutEfetivo)
+                    || !checkout.isAfter(r.getDataCheckin());
             System.out.println("   semConflito=" + semConflito);
 
             if (!semConflito) {
@@ -116,6 +123,35 @@ public class ReservaService {
             }
         }
         return false;
+    }
+    
+    /**
+     * ✅ VALIDAÇÃO CENTRALIZADA — chamada por TODOS os fluxos
+     */
+    public void validarConflitosReserva(Long apartamentoId, Long clienteId, 
+                                         LocalDateTime checkin, LocalDateTime checkout, 
+                                         Long reservaIdIgnorar) {
+        // 1. VERIFICAR CONFLITO DO APARTAMENTO
+        boolean conflitaApartamento = existeConflitoDeDatas(apartamentoId, checkin, checkout, reservaIdIgnorar);
+        if (conflitaApartamento) {
+            throw new RuntimeException("❌ JÁ EXISTE UMA RESERVA para este apartamento no período selecionado");
+        }
+
+        // 2. VERIFICAR CLIENTE JÁ HOSPEDADO
+        List<Reserva> reservasCliente = reservaRepository.findByClienteIdAndStatusIn(
+            clienteId, List.of(Reserva.StatusReservaEnum.ATIVA, Reserva.StatusReservaEnum.PRE_RESERVA));
+        
+        for (Reserva r : reservasCliente) {
+            if (reservaIdIgnorar != null && r.getId().equals(reservaIdIgnorar)) continue;
+            boolean conflito = checkin.isBefore(r.getDataCheckout()) && checkout.isAfter(r.getDataCheckin());
+            if (conflito) {
+                throw new RuntimeException(String.format(
+                    "❌ Cliente já possui reserva no apartamento %s (Reserva #%d) de %s a %s.",
+                    r.getApartamento().getNumeroApartamento(), r.getId(),
+                    r.getDataCheckin().toLocalDate(), r.getDataCheckout().toLocalDate()
+                ));
+            }
+        }
     }
    
     // ============================================
@@ -1271,6 +1307,15 @@ public class ReservaService {
         	    reserva.getStatus() != Reserva.StatusReservaEnum.PRE_RESERVA) {
         	    throw new RuntimeException("Apenas reservas ATIVAS ou PRÉ-RESERVA podem ser transferidas");
         	}
+        
+     // ✅ VALIDAÇÃO CENTRALIZADA DE CONFLITOS NO NOVO APARTAMENTO
+        validarConflitosReserva(
+            novoApartamento.getId(),
+            reserva.getCliente().getId(),
+            reserva.getDataCheckin(),
+            reserva.getDataCheckout(),
+            reserva.getId()
+        );
         
         if (apartamentoAntigo.getId().equals(novoApartamento.getId())) {
             throw new RuntimeException("O apartamento de destino é o mesmo da reserva atual");

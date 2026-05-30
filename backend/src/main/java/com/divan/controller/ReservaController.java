@@ -1195,6 +1195,15 @@ public class ReservaController {
                     )
                 ));
             }
+            
+         // ✅ VALIDAÇÃO CENTRALIZADA DE CONFLITOS
+            reservaService.validarConflitosReserva(
+                reserva.getApartamento().getId(),
+                reserva.getCliente().getId(),
+                reserva.getDataCheckin(),
+                reserva.getDataCheckout(),
+                reserva.getId()
+            );
 
             // ✅ VERIFICAR SE JÁ EXISTE RESERVA ATIVA NO MESMO APARTAMENTO COM CONFLITO DE DATAS
             List<Reserva> ativas = reservaRepository.findByApartamentoIdAndStatusIn(

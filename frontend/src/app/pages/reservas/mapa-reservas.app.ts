@@ -1374,7 +1374,13 @@ isPreReservaAmanha(reserva: ReservaMapa): boolean {
             // ✅ MAPEAR CADA DIA DA RESERVA
             let diasMapeados = 0;
             
-            for (let d = new Date(checkin); d < checkout; d.setDate(d.getDate() + 1)) {
+            const hoje = new Date();
+hoje.setHours(0, 0, 0, 0);
+const checkoutEfetivo = (reserva.status === 'ATIVA' && checkout < hoje) 
+  ? new Date(hoje.getTime() + 86400000) // amanhã
+  : checkout;
+
+for (let d = new Date(checkin); d < checkoutEfetivo; d.setDate(d.getDate() + 1)) {
               const dataStr = d.toISOString().split('T')[0];
               const chave = `${apartamentoId}-${dataStr}`;
 
@@ -1546,13 +1552,19 @@ getPosicaoNaReserva(apt: ApartamentoMapa, data: string): string {
   if (!reserva) return '';
   
   const dataAtual = new Date(data + 'T00:00:00');
-  const dataCheckin = new Date(reserva.dataCheckin);
-  const dataCheckout = new Date(reserva.dataCheckout);
-  
-  // Normalizar
-  dataAtual.setHours(0, 0, 0, 0);
-  dataCheckin.setHours(0, 0, 0, 0);
-  dataCheckout.setHours(0, 0, 0, 0);
+const dataCheckin = new Date(reserva.dataCheckin);
+let dataCheckout = new Date(reserva.dataCheckout);
+dataAtual.setHours(0, 0, 0, 0);
+dataCheckin.setHours(0, 0, 0, 0);
+dataCheckout.setHours(0, 0, 0, 0);
+
+// ✅ Se reserva ATIVA está atrasada, estende até hoje
+const hoje = new Date();
+hoje.setHours(0, 0, 0, 0);
+if (reserva.status === 'ATIVA' && dataCheckout < hoje) {
+  dataCheckout = new Date(hoje);
+  dataCheckout.setDate(dataCheckout.getDate() + 1);
+}
   
   const isPrimeiroDia = dataAtual.getTime() === dataCheckin.getTime();
   
