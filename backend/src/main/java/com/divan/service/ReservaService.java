@@ -741,27 +741,30 @@ public class ReservaService {
     /**
      * Recalcula os totais da reserva somando todos os extratos
      */
-    private void recalcularTotaisReserva(Reserva reserva) {
+    public void recalcularTotaisReserva(Reserva reserva) {
         List<ExtratoReserva> todosExtratos = extratoReservaRepository
             .findByReservaOrderByDataHoraLancamento(reserva);
-
+     
+        
         // ✅ SOMAR DIÁRIAS + ESTORNOS (acréscimos e ajustes de hóspede)
         BigDecimal totalDiarias = BigDecimal.ZERO;
-        for (ExtratoReserva extrato : todosExtratos) {
-            if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
-             || extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.ESTORNO) {
-                totalDiarias = totalDiarias.add(extrato.getTotalLancamento());
-            }
-        }
-
-        // ✅ SOMAR PRODUTOS
         BigDecimal totalProdutos = BigDecimal.ZERO;
+        BigDecimal totalEstornoProduto = BigDecimal.ZERO;
+
         for (ExtratoReserva extrato : todosExtratos) {
-            if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.PRODUTO) {
+            if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA) {
+                totalDiarias = totalDiarias.add(extrato.getTotalLancamento());
+            } else if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.PRODUTO) {
                 totalProdutos = totalProdutos.add(extrato.getTotalLancamento());
+            } else if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.ESTORNO) {
+                if (extrato.getDescricao() != null && extrato.getDescricao().startsWith("ESTORNO:")) {
+                    totalEstornoProduto = totalEstornoProduto.add(extrato.getTotalLancamento()); // negativo
+                } else {
+                    totalDiarias = totalDiarias.add(extrato.getTotalLancamento()); // ajuste de diária
+                }
             }
         }
-
+        
         // ✅ RECALCULAR DESCONTO pela tabela de descontos
         List<Desconto> descontos = descontoRepository.findByReservaId(reserva.getId());
         BigDecimal totalDesconto = descontos.stream()
@@ -770,14 +773,14 @@ public class ReservaService {
 
         // ✅ ATUALIZAR TOTAIS
         reserva.setTotalDiaria(totalDiarias);
-        reserva.setTotalProduto(totalProdutos);
+        reserva.setTotalProduto(totalProdutos); // GROSS — consumo bruto sem estorno
         reserva.setDesconto(totalDesconto);
-        reserva.setTotalHospedagem(totalDiarias.add(totalProdutos));
+        reserva.setTotalHospedagem(totalDiarias.add(totalProdutos).add(totalEstornoProduto));
         reserva.setTotalApagar(
             reserva.getTotalHospedagem()
                 .subtract(totalDesconto)
-                .subtract(reserva.getTotalRecebido() != null 
-                    ? reserva.getTotalRecebido() 
+                .subtract(reserva.getTotalRecebido() != null
+                    ? reserva.getTotalRecebido()
                     : BigDecimal.ZERO)
         );
 
@@ -1317,14 +1320,15 @@ public class ReservaService {
             reserva.getId()
         );
         
-        if (apartamentoAntigo.getId().equals(novoApartamento.getId())) {
+        boolean mesmoApartamento = apartamentoAntigo.getId().equals(novoApartamento.getId());
+
+        if (mesmoApartamento && dto.getDataTransferencia() == null) {
             throw new RuntimeException("O apartamento de destino é o mesmo da reserva atual");
         }
-        
-        if (!novoApartamento.getStatus().equals(Apartamento.StatusEnum.DISPONIVEL)) {
+
+        if (!mesmoApartamento && !novoApartamento.getStatus().equals(Apartamento.StatusEnum.DISPONIVEL)) {
             throw new RuntimeException("O apartamento de destino não está disponível");
         }
-        
         if (reserva.getQuantidadeHospede() > novoApartamento.getCapacidade()) {
             throw new RuntimeException(
                 String.format("Apartamento %s não suporta %d hóspede(s). Capacidade: %d", 
@@ -1332,6 +1336,27 @@ public class ReservaService {
                     reserva.getQuantidadeHospede(),
                     novoApartamento.getCapacidade())
             );
+        }
+        
+        
+     // ✅ CASO ESPECIAL: mesmo apartamento, apenas altera a data de check-in
+        if (mesmoApartamento) {
+            LocalDateTime novaData = dto.getDataTransferencia();
+            if (novaData == null) {
+                throw new RuntimeException("Informe a nova data para alterar o check-in no mesmo apartamento");
+            }
+            long noites = java.time.temporal.ChronoUnit.DAYS.between(
+            	    reserva.getDataCheckin().toLocalDate(), reserva.getDataCheckout().toLocalDate()
+            	);
+            	LocalDateTime novoCheckout = novaData.plusDays(noites);
+            	reserva.setDataCheckin(novaData);
+            	reserva.setDataCheckout(novoCheckout);
+            	reserva.setQuantidadeDiaria((int) noites);
+            recalcularTotaisReserva(reserva);
+            Reserva salva = reservaRepository.save(reserva);
+            System.out.println("✅ Data de check-in alterada — Apt " + apartamentoAntigo.getNumeroApartamento()
+                + " — Nova data: " + novaData);
+            return salva;
         }
         
         // ========== DEFINIR DATA DA TRANSFERÊNCIA ==========

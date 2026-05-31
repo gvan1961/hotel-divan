@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+﻿import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -183,6 +183,68 @@ interface ApartamentoMapa {
               <p class="texto-disponivel">✅ Este apartamento está LIVRE nesta data!</p>
               <p class="texto-info">Você pode criar uma reserva para este dia.</p>
             </div>
+           </div>
+
+          <!-- SEÇÃO TRANSFERÊNCIA (inline) -->
+          <div *ngIf="mostrarTransferencia" class="secao-transferencia">
+            <hr>
+            <h3>🔄 Transferir Reserva</h3>
+            <div *ngIf="loadingTransf" style="text-align:center;padding:10px">Carregando...</div>
+            <div *ngIf="!loadingTransf">
+              <div class="campo">
+                <label>Tipo</label>
+                <select [(ngModel)]="tipoTransferencia" (change)="aptDestinoTransfId = 0; hospedeTransfId = 0">
+                  <option value="RESERVA">🏨 Reserva inteira</option>
+                  <option value="HOSPEDE">👤 Hóspede individual</option>
+                </select>
+              </div>
+
+              <div class="campo" *ngIf="tipoTransferencia === 'RESERVA'">
+                <label>Nova data de check-in (opcional)</label>
+                <input type="date" [(ngModel)]="novaDataCheckinTransf">
+                <small>Deixe em branco para manter a data atual</small>
+              </div>
+
+              <div class="campo" *ngIf="tipoTransferencia === 'HOSPEDE'">
+                <label>Hóspede</label>
+                <select [(ngModel)]="hospedeTransfId">
+                  <option value="0">Selecione...</option>
+                  <option *ngFor="let h of hospedesReserva" [value]="h.id">
+                    {{ h.cliente?.nome || h.nomeHospede || ('Hóspede #' + h.id) }}
+                  </option>
+                </select>
+              </div>
+              <div class="campo">
+                <label>Apartamento destino</label>
+                <select [(ngModel)]="aptDestinoTransfId">
+                  <option value="0">Selecione...</option>
+                  <ng-container *ngFor="let apt of apartamentosDisponiveisTransf">
+                     <option *ngIf="tipoTransferencia === 'RESERVA' && (apt.status === 'DISPONIVEL' || apt.id === reservaSelecionada?.apartamentoId)" 
+                      [value]="apt.id">
+                      Apt {{ apt.numeroApartamento }}
+                      {{ apt.id === reservaSelecionada?.apartamentoId ? ' ↩ mesmo apt (nova data)' : '' }}
+                        — {{ apt.tipoApartamentoNome || apt.tipoApartamento?.tipo }}
+                        </option>
+                      <option *ngIf="tipoTransferencia === 'HOSPEDE'" [value]="apt.id">
+                      Apt {{ apt.numeroApartamento }} — {{ apt.status === 'DISPONIVEL' ? '🟢 Livre' : '🔴 Ocupado' }}
+                    </option>
+                  </ng-container>
+                </select>
+              </div>
+              <div class="campo">
+                <label>Motivo *</label>
+                <textarea [(ngModel)]="motivoTransferencia" rows="2"
+                          placeholder="Informe o motivo..."></textarea>
+              </div>
+              <div style="display:flex; gap:10px; margin-top:10px">
+                <button class="btn-cancelar" (click)="mostrarTransferencia = false">Cancelar</button>
+                <button class="btn-confirmar-transferencia"
+                        (click)="confirmarTransferencia()"
+                        [disabled]="!aptDestinoTransfId || !motivoTransferencia.trim()">
+                  ✅ Confirmar
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="modal-footer">
@@ -217,6 +279,13 @@ interface ApartamentoMapa {
   class="btn-cancelar-reserva"
   (click)="abrirModalCancelar()">
   ❌ Cancelar
+</button>
+
+               <!-- TRANSFERIR -->
+<button *ngIf="reservaSelecionada && (reservaSelecionada.status === 'ATIVA' || reservaSelecionada.status === 'PRE_RESERVA')"
+        class="btn-transferir-mapa"
+        (click)="abrirModalTransferencia()">
+  🔄 Transferir
 </button>
               
               <!-- VER DETALHES COMPLETOS -->
@@ -280,6 +349,65 @@ interface ApartamentoMapa {
             <textarea [(ngModel)]="pagPreReservaObs" rows="3" 
                       placeholder="Observações sobre o pagamento (opcional)..."></textarea>
           </div>
+
+          <!-- SEÇÃO TRANSFERÊNCIA (inline) -->
+<div *ngIf="mostrarTransferencia" class="secao-transferencia">
+  <hr>
+  <h3>🔄 Transferir Reserva</h3>
+  <div *ngIf="loadingTransf" style="text-align:center;padding:10px">Carregando...</div>
+  <div *ngIf="!loadingTransf">
+    <div class="campo">
+      <label>Tipo</label>
+      <select [(ngModel)]="tipoTransferencia" (change)="aptDestinoTransfId = 0; hospedeTransfId = 0">
+        <option value="RESERVA">🏨 Reserva inteira</option>
+        <option value="HOSPEDE">👤 Hóspede individual</option>
+      </select>
+    </div>
+
+    <!-- NOVA DATA DE CHECK-IN (opcional, só para RESERVA INTEIRA) -->
+              <div class="campo" *ngIf="tipoTransferencia === 'RESERVA'">
+                <label>Nova data de check-in (opcional)</label>
+                <input type="date" [(ngModel)]="novaDataCheckinTransf">
+                <small>Deixe em branco para manter a data atual</small>
+              </div>
+    <div class="campo" *ngIf="tipoTransferencia === 'HOSPEDE'">
+      <label>Hóspede</label>
+      <select [(ngModel)]="hospedeTransfId">
+        <option value="0">Selecione...</option>
+        <option *ngFor="let h of hospedesReserva" [value]="h.id">
+          {{ h.cliente?.nome || h.nomeHospede || ('Hóspede #' + h.id) }}
+        </option>
+      </select>
+    </div>
+    <div class="campo">
+      <label>Apartamento destino</label>
+      <select [(ngModel)]="aptDestinoTransfId">
+        <option value="0">Selecione...</option>
+        <ng-container *ngFor="let apt of apartamentosDisponiveisTransf">
+          <option *ngIf="tipoTransferencia === 'RESERVA' && apt.status === 'DISPONIVEL'" [value]="apt.id">
+            Apt {{ apt.numeroApartamento }} — {{ apt.tipoApartamentoNome || apt.tipoApartamento?.tipo }}
+          </option>
+          <option *ngIf="tipoTransferencia === 'HOSPEDE'" [value]="apt.id">
+            Apt {{ apt.numeroApartamento }} — {{ apt.status === 'DISPONIVEL' ? '🟢 Livre' : '🔴 Ocupado' }}
+          </option>
+        </ng-container>
+      </select>
+    </div>
+    <div class="campo">
+      <label>Motivo *</label>
+      <textarea [(ngModel)]="motivoTransferencia" rows="2"
+                placeholder="Informe o motivo..."></textarea>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:10px">
+      <button class="btn-cancelar" (click)="mostrarTransferencia = false">Cancelar</button>
+      <button class="btn-confirmar-transferencia"
+              (click)="confirmarTransferencia()"
+              [disabled]="!aptDestinoTransfId || !motivoTransferencia.trim()">
+        ✅ Confirmar
+      </button>
+    </div>
+  </div>
+</div>
 
           <div class="modal-footer">
             <button class="btn-cancelar" (click)="fecharModalPagamento()">
@@ -1172,6 +1300,30 @@ td.col-reserva.hoje {
   }
 }
 
+.btn-transferir-mapa {
+  padding: 10px 20px;
+  background: #8e44ad;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+.btn-transferir-mapa:hover { background: #6c3483; transform: translateY(-2px); }
+.btn-confirmar-transferencia {
+  padding: 10px 20px;
+  background: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.btn-confirmar-transferencia:disabled { background: #bdc3c7; cursor: not-allowed; }
+.secao-transferencia { margin-top: 15px; padding-top: 15px; border-top: 2px solid #8e44ad; }
+.secao-transferencia h3 { color: #8e44ad; margin: 0 0 15px 0; }
+
 /* ═══════════════════════════════════════════════════════════ */
 /* IMPRESSÃO */
 /* ═══════════════════════════════════════════════════════════ */
@@ -1228,6 +1380,16 @@ export class MapaReservasApp implements OnInit {
 // Modal Cancelar
 modalCancelar = false;
 motivoCancelamento = '';
+mostrarTransferencia = false;
+modalTransferencia = false;
+tipoTransferencia: 'RESERVA' | 'HOSPEDE' = 'RESERVA';
+apartamentosDisponiveisTransf: any[] = [];
+hospedesReserva: any[] = [];
+hospedeTransfId = 0;
+aptDestinoTransfId = 0;
+motivoTransferencia = '';
+loadingTransf = false; 
+novaDataCheckinTransf = '';
 
   mapaReservas: Map<string, ReservaMapa> = new Map();
 
@@ -2062,6 +2224,84 @@ isCelulaOculta(apt: ApartamentoMapa, data: string): boolean {
     });
   
   return !isPrimeiroDiaVisivel;
+}
+
+abrirModalTransferencia(): void {
+  if (!this.reservaSelecionada) return;
+  this.tipoTransferencia = 'RESERVA';
+  this.aptDestinoTransfId = 0;
+  this.hospedeTransfId = 0;
+  this.motivoTransferencia = '';
+  this.hospedesReserva = [];
+  this.loadingTransf = true;
+  this.mostrarTransferencia = true;
+  this.novaDataCheckinTransf = '';
+
+  this.http.get<any[]>('/api/apartamentos').subscribe({
+    next: (apts) => {
+      this.apartamentosDisponiveisTransf = apts
+        .filter(apt => apt.status !== 'MANUTENCAO' && apt.status !== 'INDISPONIVEL')
+        .sort((a, b) => parseInt(a.numeroApartamento) - parseInt(b.numeroApartamento));
+
+      this.http.get<any>(`/api/reservas/${this.reservaSelecionada!.id}`).subscribe({
+        next: (reserva) => {
+          this.hospedesReserva = reserva.hospedagemHospedes || [];
+          this.loadingTransf = false;
+        },
+        error: () => { this.loadingTransf = false; }
+      });
+    },
+    error: () => { this.loadingTransf = false; }
+  });
+}
+
+fecharModalTransferencia(): void {
+  this.modalTransferencia = false;
+  this.mostrarTransferencia = false;
+}
+
+confirmarTransferencia(): void {
+  if (!this.reservaSelecionada || !this.aptDestinoTransfId || !this.motivoTransferencia.trim()) {
+    alert('⚠️ Preencha todos os campos');
+    return;
+  }
+
+  if (this.tipoTransferencia === 'RESERVA') {
+    const dto = {
+      reservaId: this.reservaSelecionada.id,
+      novoApartamentoId: this.aptDestinoTransfId,
+      dataTransferencia: this.novaDataCheckinTransf ? this.novaDataCheckinTransf + 'T00:00:00' : null,
+      motivo: this.motivoTransferencia
+    };
+    this.http.post('/api/reservas/transferir-apartamento', dto).subscribe({
+      next: () => {
+        alert('✅ Transferência realizada com sucesso!');
+        this.mostrarTransferencia = false;
+        this.fecharModal();
+        this.carregarMapa();
+      },
+      error: (err: any) => alert('❌ Erro: ' + (err.error?.erro || err.message))
+    });
+  } else {
+    if (!this.hospedeTransfId) {
+      alert('⚠️ Selecione o hóspede a transferir');
+      return;
+    }
+    const dto = {
+      hospedagemHospedeId: this.hospedeTransfId,
+      novoApartamentoId: this.aptDestinoTransfId,
+      motivo: this.motivoTransferencia
+    };
+    this.http.post('/api/reservas/transferir-hospede', dto).subscribe({
+      next: () => {
+        alert('✅ Hóspede transferido com sucesso!');
+        this.mostrarTransferencia = false;
+        this.fecharModal();
+        this.carregarMapa();
+      },
+      error: (err: any) => alert('❌ Erro: ' + (err.error?.erro || err.message))
+    });
+  }
 }
 
   imprimir(): void {

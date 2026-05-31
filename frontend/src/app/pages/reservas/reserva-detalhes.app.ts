@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, OnDestroy, ChangeDetectorRef } from '@angular/core';
+﻿import { Component, OnInit, inject, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -244,15 +244,20 @@ import { environment } from '../../../environments/environment';
               <span class="value-pequeno">R$ {{ formatarMoeda(reserva.totalDiaria) }}</span>
             </div>
             
-            <div class="info-item-mini">
-              <span class="label">Consumo:</span>
-              <span class="value-pequeno">R$ {{ formatarMoeda(reserva.totalProduto || 0) }}</span>
-            </div>
-            
-            <div class="info-item-mini separador-mini">
-              <span class="label">Total:</span>
-              <span class="value-pequeno">R$ {{ formatarMoeda((reserva.totalDiaria || 0) + (reserva.totalProduto || 0)) }}</span>
-            </div>
+           <div class="info-item-mini">
+  <span class="label">Consumo:</span>
+  <span class="value-pequeno">R$ {{ formatarMoeda(reserva.totalProduto || 0) }}</span>
+</div>
+
+<div class="info-item-mini" *ngIf="totalEstorno < 0">
+  <span class="label">Estorno:</span>
+  <span class="value-pequeno" style="color:#e74c3c;">R$ {{ formatarMoeda(totalEstorno) }}</span>
+</div>
+
+<div class="info-item-mini separador-mini">
+  <span class="label">Total:</span>
+  <span class="value-pequeno">R$ {{ formatarMoeda(reserva.totalHospedagem || 0) }}</span>
+</div>
             
             <!-- DESCONTO -->
             <div class="info-item-com-botao-mini">
@@ -4205,11 +4210,18 @@ salvarAdiantamento(): void {
       this.produtoSelecionadoId = 0;
       this.quantidadeConsumo = 1;
       this.observacaoConsumo = '';
-      this.modalConsumo = true;
+      this.modalConsumo = true;  
     }
 
     fecharModalConsumo(): void {
       this.modalConsumo = false;
+    }
+
+    get totalEstorno(): number {
+      if (!this.reserva?.extratos) return 0;
+      return this.reserva.extratos
+        .filter((e: any) => e.statusLancamento === 'ESTORNO')
+        .reduce((sum: number, e: any) => sum + (Number(e.totalLancamento) || 0), 0);
     }
 
     carregarProdutosDisponiveis(): void {
