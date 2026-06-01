@@ -7,8 +7,8 @@ import { Subscription } from 'rxjs';
   selector: 'app-header',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <header class="app-header" *ngIf="isLogado">
+  template: `  
+    <header class="app-header no-print" *ngIf="isLogado">
       <div class="header-content">
         <div class="logo">
           <h1>🏨 Hotel Divan</h1>

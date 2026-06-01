@@ -758,9 +758,11 @@ public class ReservaService {
                 totalProdutos = totalProdutos.add(extrato.getTotalLancamento());
             } else if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.ESTORNO) {
                 if (extrato.getDescricao() != null && extrato.getDescricao().startsWith("ESTORNO:")) {
-                    totalEstornoProduto = totalEstornoProduto.add(extrato.getTotalLancamento()); // negativo
+                    totalEstornoProduto = totalEstornoProduto.add(extrato.getTotalLancamento());
+                } else if (extrato.getDescricao() != null && extrato.getDescricao().startsWith("Desconto:")) {
+                    // Desconto já tratado pela tabela descontos_reserva — ignorar aqui
                 } else {
-                    totalDiarias = totalDiarias.add(extrato.getTotalLancamento()); // ajuste de diária
+                    totalDiarias = totalDiarias.add(extrato.getTotalLancamento());
                 }
             }
         }

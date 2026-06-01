@@ -448,9 +448,9 @@ interface FiltrosAvancados {
     <td class="valor destaque">{{ formatarMoeda(conta.valor) }}</td>
   </tr>
 </tbody>
-    <tfoot>
+    <tbody>
       <tr class="total-row">
-        <td colspan="4"><strong>TOTAIS:</strong></td>
+        <td colspan="5"><strong>TOTAIS:</strong></td>
        <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralDiarias()) }}</strong></td>
        <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralConsumo()) }}</strong></td>
        <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralHospedagem()) }}</strong></td>
@@ -458,7 +458,7 @@ interface FiltrosAvancados {
        <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralRecebido()) }}</strong></td>
        <td class="valor destaque"><strong>{{ formatarMoeda(calcularTotalGeralAPagar()) }}</strong></td>
       </tr>
-    </tfoot>
+    </tbody>
   </table>
 
   <div class="print-footer">
@@ -1102,7 +1102,7 @@ export class ContasReceberListaApp implements OnInit {
                 (conta as any).quantidadeHospede = reserva.quantidadeHospede;
                 (conta as any).quantidadeDiaria = reserva.quantidadeDiaria;
                 (conta as any).totalDiaria = reserva.totalDiaria;
-                (conta as any).totalConsumo = reserva.totalProduto;
+                (conta as any).totalConsumo = Math.max(0, (reserva.totalHospedagem || 0) - (reserva.totalDiaria || 0));
                 (conta as any).totalHospedagem = reserva.totalHospedagem;
                (conta as any).totalRecebido = conta.totalRecebido || conta.valorPago || 0;
                (conta as any).pagoAVista = conta.pagoAVista || 0;

@@ -1291,8 +1291,13 @@ apartamentosFiltrados(): ApartamentoCard[] {
       usuarioId: usuario.id,
       motivo: 'Liberação via Painel de Recepção'
     }, { headers }).subscribe({
-      next: () => this.carregarDados(),
-      error: (err) => alert('Erro: ' + (err.error?.erro || err.message))
+      next: (res: any) => {
+  if (res?.checkoutAutomatico) {
+    alert(`⚠️ ATENÇÃO: A reserva #${res.reservaId} de ${res.clienteNome} foi encerrada automaticamente (checkout sem saldo pendente). Verifique o histórico.`);
+  }
+  this.carregarDados();
+},
+error: (err) => alert('Erro: ' + (err.error?.erro || err.message))
     });
   }
 

@@ -14,7 +14,7 @@ import { CommonModule } from '@angular/common';
 
     <!-- Conteúdo das páginas -->
     <router-outlet></router-outlet>
-    <app-deposito-provisorio *ngIf="!isRotaPublica"></app-deposito-provisorio>
+    <app-deposito-provisorio *ngIf="!isRotaPublica" class="no-print"></app-deposito-provisorio>
   `,
   styles: []
 })

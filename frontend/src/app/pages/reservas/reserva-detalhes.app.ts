@@ -4217,12 +4217,15 @@ salvarAdiantamento(): void {
       this.modalConsumo = false;
     }
 
-    get totalEstorno(): number {
-      if (!this.reserva?.extratos) return 0;
-      return this.reserva.extratos
-        .filter((e: any) => e.statusLancamento === 'ESTORNO')
-        .reduce((sum: number, e: any) => sum + (Number(e.totalLancamento) || 0), 0);
-    }
+   get totalEstorno(): number {
+  if (!this.reserva?.extratos) return 0;
+  return this.reserva.extratos
+    .filter((e: any) => 
+      e.statusLancamento === 'ESTORNO' && 
+      e.descricao?.startsWith('ESTORNO:')
+    )
+    .reduce((sum: number, e: any) => sum + (Number(e.totalLancamento) || 0), 0);
+}
 
     carregarProdutosDisponiveis(): void {
       this.http.get<Produto[]>('/api/produtos').subscribe({

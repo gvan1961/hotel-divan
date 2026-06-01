@@ -297,9 +297,9 @@ input[type="number"].input-valor::placeholder {
 
 /* Estilos de impressão globais */
 @media print {
-  /* Esconder sidebar */
   app-sidebar,
-  .sidebar {
+  .sidebar,
+  .no-print {
     display: none !important;
   }
 
