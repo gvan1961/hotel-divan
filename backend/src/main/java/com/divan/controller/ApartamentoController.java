@@ -2,6 +2,7 @@ package com.divan.controller;
 
 import com.divan.dto.ApartamentoRequestDTO;
 import com.divan.entity.HistoricoApartamento;
+import com.divan.entity.HistoricoHospede;
 import com.divan.entity.HospedagemHospede;
 import com.divan.entity.LogAuditoria;
 import com.divan.dto.ApartamentoResponseDTO;
@@ -10,6 +11,7 @@ import com.divan.util.DataUtil;
 import java.util.stream.Collectors;
 import com.divan.entity.Reserva;
 import com.divan.repository.HistoricoApartamentoRepository;
+import com.divan.repository.HistoricoHospedeRepository;
 import com.divan.repository.HospedagemHospedeRepository;
 import com.divan.repository.LogAuditoriaRepository;
 import com.divan.repository.ReservaRepository;
@@ -23,6 +25,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -38,6 +41,9 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/apartamentos")
 @CrossOrigin(origins = "*")
 public class ApartamentoController {
+	
+	@Autowired 
+	private HistoricoHospedeRepository historicoHospedeRepository;
     
     @Autowired
     private ApartamentoService apartamentoService;
@@ -168,6 +174,9 @@ public class ApartamentoController {
                         + apartamento.getStatus()));
             }
             
+            boolean checkoutAutomatico = false;
+            Long reservaId = null;
+            String clienteNome = null;
          // ✅ VERIFICAR SE EXISTE RESERVA ATIVA NO APARTAMENTO
             List<Reserva> reservasAtivas = reservaRepository.findByApartamentoIdAndStatusIn(
                 apartamento.getId(),
@@ -176,14 +185,40 @@ public class ApartamentoController {
 
             if (!reservasAtivas.isEmpty()) {
                 Reserva reservaAtiva = reservasAtivas.get(0);
-                return ResponseEntity.badRequest().body(Map.of(
-                    "erro", String.format(
-                        "Apartamento %s possui reserva ATIVA #%d (%s). Faça o checkout antes de liberar.",
-                        apartamento.getNumeroApartamento(),
-                        reservaAtiva.getId(),
-                        reservaAtiva.getCliente().getNome()
-                    )
-                ));
+                BigDecimal saldo = reservaAtiva.getTotalApagar() != null ? reservaAtiva.getTotalApagar() : BigDecimal.ZERO;
+
+                // ✅ Se tem saldo devedor → bloqueia
+                if (saldo.compareTo(BigDecimal.ZERO) > 0) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "erro", String.format(
+                            "Apartamento %s possui reserva ATIVA #%d (%s) com saldo em aberto de R$ %.2f. Acesse a reserva para regularizar antes de liberar.",
+                            apartamento.getNumeroApartamento(),
+                            reservaAtiva.getId(),
+                            reservaAtiva.getCliente().getNome(),
+                            saldo
+                        )
+                    ));
+                }
+
+                // ✅ Sem saldo devedor → checkout automático com aviso
+                reservaAtiva.setStatus(Reserva.StatusReservaEnum.FINALIZADA);
+                reservaAtiva.setDataCheckout(LocalDateTime.now());
+                reservaRepository.save(reservaAtiva);
+
+                // Registra histórico do checkout automático
+                HistoricoHospede historico = new HistoricoHospede();
+                historico.setReserva(reservaAtiva);
+                historico.setDataHora(LocalDateTime.now());
+                historico.setQuantidadeAnterior(reservaAtiva.getQuantidadeHospede());
+                historico.setQuantidadeNova(reservaAtiva.getQuantidadeHospede());
+                historico.setMotivo("CHECKOUT AUTOMÁTICO — Liberação de UH via Painel de Recepção. Reserva quitada.");
+                historicoHospedeRepository.save(historico);
+
+                System.out.println("⚠️ Checkout automático — Reserva #" + reservaAtiva.getId()
+                    + " — " + reservaAtiva.getCliente().getNome());
+                
+             // ✅ Sinaliza checkout automático para o return final
+              
             }
 
             String statusAnterior = apartamento.getStatus().name();
@@ -231,6 +266,15 @@ public class ApartamentoController {
                 + " liberado da limpeza por usuário "
                 + (historico.getUsuario() != null ? historico.getUsuario().getNome() : "desconhecido"));
 
+            if (checkoutAutomatico) {
+                return ResponseEntity.ok(Map.of(
+                    "mensagem", "Apartamento liberado com checkout automático",
+                    "apartamento", apartamento.getNumeroApartamento(),
+                    "checkoutAutomatico", true,
+                    "reservaId", reservaId,
+                    "clienteNome", clienteNome
+                ));
+            }
             return ResponseEntity.ok(Map.of(
                 "mensagem", "Apartamento liberado com sucesso",
                 "apartamento", apartamento.getNumeroApartamento()
@@ -417,7 +461,8 @@ public class ApartamentoController {
                         return !r.getDataCheckin().toLocalDate().isAfter(hoje);
                     })
                     .collect(Collectors.toList());
-
+                               
+              
                 if (!reservasAtivas.isEmpty()) {
                     Reserva r = reservasAtivas.get(0);
                     LocalDate checkin  = r.getDataCheckin().toLocalDate();

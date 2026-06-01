@@ -83,8 +83,14 @@ public class ContasVencimentoNotificacaoJob {
 
         for (ContaAPagar c : contas) {
             sb.append("• ").append(c.getDescricao());
-            if (c.getFornecedor() != null && !c.getFornecedor().isBlank()) {
-                sb.append(" — ").append(c.getFornecedor());
+            String nomeFornecedor = c.getFornecedor();
+            if (nomeFornecedor == null || nomeFornecedor.isBlank()) {
+                if (c.getFornecedorObj() != null) {
+                    nomeFornecedor = c.getFornecedorObj().getNome();
+                }
+            }
+            if (nomeFornecedor != null && !nomeFornecedor.isBlank()) {
+                sb.append(" — ").append(nomeFornecedor);
             }
             BigDecimal saldo = c.getSaldo() != null ? c.getSaldo() : c.getValor();
             sb.append(" — *").append(REAL_FMT.format(saldo)).append("*\n");
