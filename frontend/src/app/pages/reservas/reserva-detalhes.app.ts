@@ -4065,16 +4065,29 @@ ${debitoEmConta > 0 ? `<tr>
       console.log('🌐 URL da requisição:', url);
 
       this.http.post(url, dto).subscribe({
-       next: (response: any) => {
+
+
+      next: (response: any) => {
   if (this.pagFormaPagamento === 'DEBITO_EM_CONTA') {
     this.pagouDebitoEmConta = true;
-  }
-  alert('✅ Pagamento registrado com sucesso!');
-  this.fecharModalPagamento();
-  if (this.reserva) {
-    this.carregarReserva(this.reserva.id);
+    alert('✅ Pagamento registrado! O hóspede precisa assinar.');
+    this.fecharModalPagamento();
+    if (this.reserva) {
+      this.carregarReserva(this.reserva.id);
+    }
+    setTimeout(() => {
+      this.modalAssinatura = true;
+      this.assinaturaCapturada = null;
+    }, 800);
+  } else {
+    alert('✅ Pagamento registrado com sucesso!');
+    this.fecharModalPagamento();
+    if (this.reserva) {
+      this.carregarReserva(this.reserva.id);
+    }
   }
 },
+
         error: (err: any) => {
           console.log('═══════════════════════════════════════════');
           console.error('❌ ERRO AO REGISTRAR PAGAMENTO');

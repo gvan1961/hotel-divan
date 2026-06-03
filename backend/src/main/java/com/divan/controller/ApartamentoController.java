@@ -184,43 +184,48 @@ public class ApartamentoController {
             );
 
             if (!reservasAtivas.isEmpty()) {
-                Reserva reservaAtiva = reservasAtivas.get(0);
-                BigDecimal saldo = reservaAtiva.getTotalApagar() != null ? reservaAtiva.getTotalApagar() : BigDecimal.ZERO;
+                List<Reserva> reservasComCheckinRealizado = reservasAtivas.stream()
+                    .filter(r -> r.getDataCheckin() != null
+                              && r.getDataCheckin().isBefore(LocalDateTime.now())
+                              && r.getDataCheckoutReal() == null)
+                    .collect(Collectors.toList());
 
-                // ✅ Se tem saldo devedor → bloqueia
-                if (saldo.compareTo(BigDecimal.ZERO) > 0) {
-                    return ResponseEntity.badRequest().body(Map.of(
-                        "erro", String.format(
-                            "Apartamento %s possui reserva ATIVA #%d (%s) com saldo em aberto de R$ %.2f. Acesse a reserva para regularizar antes de liberar.",
-                            apartamento.getNumeroApartamento(),
-                            reservaAtiva.getId(),
-                            reservaAtiva.getCliente().getNome(),
-                            saldo
-                        )
-                    ));
+                if (!reservasComCheckinRealizado.isEmpty()) {
+                    Reserva reservaAtiva = reservasComCheckinRealizado.get(0);
+                    BigDecimal saldo = reservaAtiva.getTotalApagar() != null
+                            ? reservaAtiva.getTotalApagar() : BigDecimal.ZERO;
+
+                    if (saldo.compareTo(BigDecimal.ZERO) > 0) {
+                        return ResponseEntity.badRequest().body(Map.of(
+                            "erro", String.format(
+                                "Apartamento %s possui hóspede ativo #%d (%s) com saldo em aberto de R$ %.2f. Acesse a reserva para regularizar antes de liberar.",
+                                apartamento.getNumeroApartamento(),
+                                reservaAtiva.getId(),
+                                reservaAtiva.getCliente().getNome(),
+                                saldo
+                            )
+                        ));
+                    }
+
+                    reservaAtiva.setStatus(Reserva.StatusReservaEnum.FINALIZADA);
+                    reservaAtiva.setDataCheckoutReal(LocalDateTime.now());
+                    reservaRepository.save(reservaAtiva);
+
+                    HistoricoHospede historicoHospede = new HistoricoHospede();
+                    historicoHospede.setReserva(reservaAtiva);
+                    historicoHospede.setDataHora(LocalDateTime.now());
+                    historicoHospede.setQuantidadeAnterior(reservaAtiva.getQuantidadeHospede());
+                    historicoHospede.setQuantidadeNova(reservaAtiva.getQuantidadeHospede());
+                    historicoHospede.setMotivo("CHECKOUT AUTOMÁTICO — Liberação de UH via Painel de Recepção. Reserva quitada.");
+                    historicoHospedeRepository.save(historicoHospede);
+
+                    checkoutAutomatico = true;
+                    reservaId = reservaAtiva.getId();
+                    clienteNome = reservaAtiva.getCliente().getNome();
                 }
-
-                // ✅ Sem saldo devedor → checkout automático com aviso
-                reservaAtiva.setStatus(Reserva.StatusReservaEnum.FINALIZADA);
-                reservaAtiva.setDataCheckout(LocalDateTime.now());
-                reservaRepository.save(reservaAtiva);
-
-                // Registra histórico do checkout automático
-                HistoricoHospede historico = new HistoricoHospede();
-                historico.setReserva(reservaAtiva);
-                historico.setDataHora(LocalDateTime.now());
-                historico.setQuantidadeAnterior(reservaAtiva.getQuantidadeHospede());
-                historico.setQuantidadeNova(reservaAtiva.getQuantidadeHospede());
-                historico.setMotivo("CHECKOUT AUTOMÁTICO — Liberação de UH via Painel de Recepção. Reserva quitada.");
-                historicoHospedeRepository.save(historico);
-
-                System.out.println("⚠️ Checkout automático — Reserva #" + reservaAtiva.getId()
-                    + " — " + reservaAtiva.getCliente().getNome());
-                
-             // ✅ Sinaliza checkout automático para o return final
-              
             }
 
+            
             String statusAnterior = apartamento.getStatus().name();
 
             // ✅ LIBERAR
@@ -633,4 +638,33 @@ public class ApartamentoController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    @GetMapping("/historico-limpeza")
+    public ResponseEntity<?> historicoLimpeza(
+            @RequestParam String dataInicio,
+            @RequestParam String dataFim) {
+        try {
+            LocalDateTime inicio = LocalDate.parse(dataInicio).atStartOfDay();
+            LocalDateTime fim = LocalDate.parse(dataFim).atTime(23, 59, 59);
+
+            List<HistoricoApartamento> historicos = historicoApartamentoRepository
+                .findByAcaoAndDataHoraBetweenOrderByDataHoraDesc("LIBERADO_LIMPEZA", inicio, fim);
+
+            List<Map<String, Object>> resultado = historicos.stream().map(h -> {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("apartamento", h.getApartamento().getNumeroApartamento());
+                item.put("tipoApartamento", h.getApartamento().getTipoApartamento() != null
+                    ? h.getApartamento().getTipoApartamento().getTipo() : "-");
+                item.put("dataHora", h.getDataHora());
+                item.put("usuario", h.getUsuario() != null ? h.getUsuario().getNome() : "Sistema");
+                item.put("motivo", h.getMotivo());
+                return item;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+    
 }

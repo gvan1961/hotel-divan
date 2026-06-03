@@ -26,6 +26,12 @@ interface ApartamentoRelatorio {
       <div class="header no-print">
         <h1>🧹 Relatório de Limpeza</h1>
         <div class="acoes">
+          <div class="abas no-print" style="display:flex; gap:8px; margin-right:16px;">
+          <button class="btn" [style.background]="!mostrarHistorico?'#2c3e50':'#95a5a6'"
+          (click)="mostrarHistorico=false">🧹 Limpeza Atual</button>
+          <button class="btn" [style.background]="mostrarHistorico?'#2c3e50':'#95a5a6'"
+          (click)="mostrarHistorico=true">📋 Histórico</button>
+        </div>
           <button class="btn" (click)="carregarDados()">🔄 Atualizar</button>
           <button class="btn btn-imprimir" (click)="imprimir()">🖨️ Imprimir</button>
           <button class="btn" (click)="voltar()">← Voltar</button>
@@ -39,7 +45,7 @@ interface ApartamentoRelatorio {
       </div>
 
       <!-- RELATÓRIO PARA IMPRESSÃO -->
-      <div *ngIf="!loading" class="relatorio">
+      <div *ngIf="!loading && !mostrarHistorico" class="relatorio">
         <!-- CABEÇALHO DO RELATÓRIO -->
         <div class="relatorio-header">
           <h1>🏨 HOTEL DI VAN</h1>
@@ -103,6 +109,59 @@ interface ApartamentoRelatorio {
     <p>Assinatura da Camareira</p>
   </div>
 </div>
+      </div>
+
+    <!-- HISTÓRICO DE LIBERAÇÕES -->
+    <div *ngIf="mostrarHistorico" class="no-print historico-container">
+  <div class="historico-filtros">
+    <h2>📋 Histórico de Liberações de Limpeza</h2>
+    <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-top:16px;">
+      <div>
+        <label>Data início</label>
+        <input type="date" [(ngModel)]="dataInicioHistorico" class="input-data">
+      </div>
+      <div>
+        <label>Data fim</label>
+        <input type="date" [(ngModel)]="dataFimHistorico" class="input-data">
+      </div>
+      <button class="btn" (click)="carregarHistorico()">🔍 Buscar</button>
+    </div>
+  </div>
+
+  <div *ngIf="loadingHistorico" style="text-align:center;padding:30px">Carregando...</div>
+
+  <div *ngIf="!loadingHistorico && historicoLimpeza.length === 0 && dataInicioHistorico"
+       style="text-align:center;padding:30px;color:#7f8c8d">
+    Nenhuma liberação encontrada no período.
+  </div>
+
+  <table *ngIf="historicoLimpeza.length > 0" class="tabela-historico">
+    <thead>
+      <tr>
+        <th>Apartamento</th>
+        <th>Tipo</th>
+        <th>Data/Hora Liberação</th>
+        <th>Liberado por</th>
+        <th>Observação</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let h of historicoLimpeza">
+        <td><strong>{{ h.apartamento }}</strong></td>
+        <td>{{ h.tipoApartamento }}</td>
+        <td>{{ formatarDataHora(h.dataHora) }}</td>
+        <td>{{ h.usuario }}</td>
+        <td>{{ h.motivo }}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="5"><strong>Total: {{ historicoLimpeza.length }} liberação(ões)</strong></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
     </div>
   `,
   styles: [`
@@ -501,6 +560,40 @@ interface ApartamentoRelatorio {
         padding: 4px 2px;
       }
     }
+
+    .historico-container { padding: 20px; }
+.historico-filtros { margin-bottom: 20px; }
+.historico-filtros h2 { color: #2c3e50; margin-bottom: 10px; }
+.input-data {
+  display: block;
+  margin-top: 4px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.tabela-historico {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+.tabela-historico th {
+  background: #2c3e50;
+  color: white;
+  padding: 10px;
+  text-align: left;
+}
+.tabela-historico td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+.tabela-historico tbody tr:hover { background: #f5f5f5; }
+.tabela-historico tfoot td {
+  padding: 10px;
+  border-top: 2px solid #2c3e50;
+  font-weight: bold;
+}
+
   `]
 })
 export class ApartamentosLimpezaApp implements OnInit {
@@ -508,6 +601,12 @@ export class ApartamentosLimpezaApp implements OnInit {
   private router = inject(Router);
 
   loading = false;
+
+mostrarHistorico = false;
+dataInicioHistorico = '';
+dataFimHistorico = '';
+historicoLimpeza: any[] = [];
+loadingHistorico = false;
   apartamentos: ApartamentoRelatorio[] = [];
   dataHoraAtual = '';
 
@@ -734,4 +833,30 @@ calcularTotalHospedes(): number {
     console.log(`📋 Apartamento ${apt.numeroApartamento} marcado como conferido`);
   }
 }
+
+carregarHistorico(): void {
+  if (!this.dataInicioHistorico || !this.dataFimHistorico) {
+    alert('⚠️ Informe o período');
+    return;
+  }
+  this.loadingHistorico = true;
+  this.http.get<any[]>(`/api/apartamentos/historico-limpeza?dataInicio=${this.dataInicioHistorico}&dataFim=${this.dataFimHistorico}`)
+    .subscribe({
+      next: (data) => {
+        this.historicoLimpeza = data;
+        this.loadingHistorico = false;
+      },
+      error: (err) => {
+        alert('❌ Erro: ' + (err.error?.erro || err.message));
+        this.loadingHistorico = false;
+      }
+    });
+}
+
+formatarDataHora(dataHora: string): string {
+  if (!dataHora) return '-';
+  const d = new Date(dataHora);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+}
+
 }

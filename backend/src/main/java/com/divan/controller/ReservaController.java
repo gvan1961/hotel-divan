@@ -991,6 +991,7 @@ public class ReservaController {
 
             // ✅ ATUALIZAR QUANTIDADE E SALVAR
             reserva.setQuantidadeHospede(novaQuantidade);
+            reservaService.recalcularTotaisReserva(reserva);
             reservaRepository.save(reserva);
 
             System.out.println("✅ Checkout parcial concluído | Reserva #" + id +

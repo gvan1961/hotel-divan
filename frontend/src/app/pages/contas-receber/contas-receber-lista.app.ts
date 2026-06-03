@@ -422,6 +422,8 @@ interface FiltrosAvancados {
   <tr>
     <th>Reserva</th>
     <th>Hóspedes</th>
+    <th>Check-in</th>
+    <th>Check-out</th>
     <th>Apto</th>
     <th>Hósp.</th>
     <th>QT. Diár.</th>
@@ -437,6 +439,8 @@ interface FiltrosAvancados {
   <tr *ngFor="let conta of contasFiltradas">
     <td>#{{ conta.reservaId }}</td>
     <td>{{ conta.todosHospedes || conta.clienteNome }}</td>
+    <td>{{ formatarData($any(conta).dataCheckin) }}</td>
+    <td>{{ formatarData($any(conta).dataCheckout) }}</td>
     <td>{{ conta.numeroApartamento || '-' }}</td>
     <td>{{ conta.quantidadeHospede || '-' }}</td>
     <td>{{ conta.quantidadeDiaria || '-' }}</td>
@@ -450,7 +454,7 @@ interface FiltrosAvancados {
 </tbody>
     <tbody>
       <tr class="total-row">
-        <td colspan="5"><strong>TOTAIS:</strong></td>
+        <td colspan="7"><strong>TOTAIS:</strong></td>
        <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralDiarias()) }}</strong></td>
        <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralConsumo()) }}</strong></td>
        <td class="valor"><strong>{{ formatarMoeda(calcularTotalGeralHospedagem()) }}</strong></td>
@@ -1102,6 +1106,8 @@ export class ContasReceberListaApp implements OnInit {
                 (conta as any).quantidadeHospede = reserva.quantidadeHospede;
                 (conta as any).quantidadeDiaria = reserva.quantidadeDiaria;
                 (conta as any).totalDiaria = reserva.totalDiaria;
+                (conta as any).dataCheckin = reserva.dataCheckin;
+                (conta as any).dataCheckout = reserva.dataCheckout;
                 (conta as any).totalConsumo = Math.max(0, (reserva.totalHospedagem || 0) - (reserva.totalDiaria || 0));
                 (conta as any).totalHospedagem = reserva.totalHospedagem;
                (conta as any).totalRecebido = conta.totalRecebido || conta.valorPago || 0;

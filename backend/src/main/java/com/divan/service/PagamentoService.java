@@ -78,31 +78,41 @@ public class PagamentoService {
                 throw new RuntimeException("Cliente não possui empresa vinculada para débito em conta");
             }
 
+            
+                   
+            
+
+            
+            
             BigDecimal saldoDevedor = reserva.getTotalApagar();
             if (saldoDevedor.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new RuntimeException("Reserva não possui saldo devedor para débito em conta");
             }
-         
 
-            ContaAReceber conta = new ContaAReceber();
-            conta.setDescricao("Débito em conta — Reserva #" + reserva.getId()
-                + " — " + cliente.getNome()
-                + " — Apt " + reserva.getApartamento().getNumeroApartamento());
-            BigDecimal valorDebito = pagamento.getValor();
-            conta.setValor(valorDebito);
-            conta.setSaldo(valorDebito);
-            conta.setValorPago(BigDecimal.ZERO);
-            conta.setDataVencimento(LocalDate.now().plusDays(30));
-            conta.setDataCriacao(LocalDateTime.now());
-            conta.setStatus(ContaAReceber.StatusContaEnum.EM_ABERTO);
-            conta.setCliente(cliente);
-            conta.setEmpresa(cliente.getEmpresa());
-            conta.setReserva(reserva);
-            conta.setObservacao("Gerado automaticamente via débito em conta no checkout");
-            contaAReceberRepository.save(conta);
-
-            System.out.println("📋 Conta a Receber criada: R$ " + saldoDevedor
-                + " — Empresa: " + cliente.getEmpresa().getNomeEmpresa());
+            boolean jaExiste = contaAReceberRepository.existsByReservaId(reserva.getId());
+            if (!jaExiste) {
+                ContaAReceber conta = new ContaAReceber();
+                conta.setDescricao("Débito em conta — Reserva #" + reserva.getId()
+                    + " — " + cliente.getNome()
+                    + " — Apt " + reserva.getApartamento().getNumeroApartamento());
+                BigDecimal valorDebito = pagamento.getValor();
+                conta.setValor(valorDebito);
+                conta.setSaldo(valorDebito);
+                conta.setValorPago(BigDecimal.ZERO);
+                conta.setDataVencimento(LocalDate.now().plusDays(30));
+                conta.setDataCriacao(LocalDateTime.now());
+                conta.setStatus(ContaAReceber.StatusContaEnum.EM_ABERTO);
+                conta.setCliente(cliente);
+                conta.setEmpresa(cliente.getEmpresa());
+                conta.setReserva(reserva);
+                conta.setObservacao("Gerado automaticamente via débito em conta no checkout");
+                contaAReceberRepository.save(conta);
+                System.out.println("📋 Conta a Receber criada: R$ " + valorDebito
+                    + " — Empresa: " + cliente.getEmpresa().getNomeEmpresa());
+            } else {
+                System.out.println("ℹ️ Conta a receber já existe para reserva #" + reserva.getId() + " — ignorando criação.");
+            }        
+                        
         }
 
         pagamento.setTipo(Pagamento.TipoPagamentoEnum.PAGAMENTO);
