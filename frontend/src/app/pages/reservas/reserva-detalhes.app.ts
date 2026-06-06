@@ -1230,7 +1230,7 @@ import { environment } from '../../../environments/environment';
               <p class="modal-info">
                 <strong>Cliente:</strong> {{ reserva?.cliente?.nome }}<br>
                 <strong>Apartamento:</strong> {{ reserva?.apartamento?.numeroApartamento }}<br>
-                <strong>Valor a Pagar:</strong> R$ {{ formatarMoeda(reserva?.totalApagar) }}
+                <strong>Valor a Pagar:</strong> R$ {{ formatarMoeda(valorDebitoEmConta || reserva?.totalApagar) }}
               </p>
               <p class="modal-info" style="color: #e67e22; font-weight: bold;">
                 Ao assinar, você confirma o valor faturado para pagamento posterior.
@@ -3805,15 +3805,10 @@ ${debitoEmConta > 0 ? `<tr>
     <tr>
   <td style="font-size:10pt; font-weight:900; padding:3px 0; border-top:1px dashed #000;">Subtotal:</td>
   <td style="font-size:10pt; font-weight:900; text-align:right; white-space:nowrap; padding:3px 0; border-top:1px dashed #000;">R$ ${this.formatarMoeda((this.reserva.totalHospedagem || 0) - (this.reserva.desconto || 0))}</td>
-</tr>
-    ${(this.reserva.totalRecebido || 0) > 0 ? `
-    <tr>
-      <td style="font-size:10pt; font-weight:700; padding:3px 0;">Ja Recebido:</td>
-      <td style="font-size:10pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">- R$ ${this.formatarMoeda(this.reserva.totalRecebido)}</td>
-    </tr>` : ''}
+</tr>   
     <tr>
       <td style="font-size:12pt; font-weight:900; padding:5px 0; border-top:2px solid #000;">VALOR A PAGAR:</td>
-      <td style="font-size:12pt; font-weight:900; text-align:right; white-space:nowrap; padding:5px 0; border-top:2px solid #000;">R$ ${this.formatarMoeda(this.reserva.totalApagar)}</td>
+      <td style="font-size:12pt; font-weight:900; text-align:right; white-space:nowrap; padding:5px 0; border-top:2px solid #000;">R$ ${this.formatarMoeda(valorFaturado)}</td>
     </tr>
   </table>
 </div>
@@ -4077,6 +4072,7 @@ ${debitoEmConta > 0 ? `<tr>
       next: (response: any) => {
   if (this.pagFormaPagamento === 'DEBITO_EM_CONTA') {
     this.pagouDebitoEmConta = true;
+    this.valorDebitoEmConta = this.pagValor;
     alert('✅ Pagamento registrado! O hóspede precisa assinar.');
     this.fecharModalPagamento();
     if (this.reserva) {

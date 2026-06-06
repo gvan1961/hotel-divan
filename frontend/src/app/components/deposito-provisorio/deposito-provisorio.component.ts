@@ -94,6 +94,7 @@ import { environment } from '../../../environments/environment';
             <tr>
               <th>Produto</th>
               <th>Valor</th>
+              <th>Subtotal</th>
               <th>Qtd</th>
               <th>Distribuído</th>
               <th>Pendente</th>
@@ -104,6 +105,7 @@ import { environment } from '../../../environments/environment';
             <tr *ngFor="let item of deposito.itens">
               <td>{{ item.produto.nomeProduto }}</td>
               <td>R$ {{ item.produto.valorVenda | number:'1.2-2' }}</td>
+              <td>R$ {{ (item.produto.valorVenda * item.quantidade) | number:'1.2-2' }}</td>
               <td>{{ item.quantidade }}</td>
               <td>{{ item.quantidadeDistribuida }}</td>
               <td>{{ item.quantidade - item.quantidadeDistribuida }}</td>
