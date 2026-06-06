@@ -16,6 +16,7 @@ import { FornecedorService, Fornecedor } from '../../services/fornecedor.service
           <button class="btn-voltar" (click)="router.navigate(['/contas-pagar'])">← Contas a Pagar</button>
           <button class="btn-novo" (click)="router.navigate(['/fornecedores/novo'])">+ Novo Fornecedor</button>
         </div>
+        
       </div>
 
       <div class="search-box">

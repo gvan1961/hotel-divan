@@ -510,6 +510,9 @@ public class ReservaController {
     @PostMapping("/transferir-apartamento")
     public ResponseEntity<?> transferirApartamento(@RequestBody TransferenciaApartamentoDTO dto) {
         try {
+            if (dto.getNovoApartamentoId() == null || dto.getNovoApartamentoId() == 0) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Selecione um apartamento de destino"));
+            }
             Reserva reserva = reservaService.transferirApartamento(dto);
             return ResponseEntity.ok(reserva);
         } catch (Exception e) {
@@ -698,111 +701,42 @@ public class ReservaController {
                         )
                     ));
                 }
-            }
-            
-            
+            }                      
             
 
             hospedagemHospedeRepository.save(hospede);
 
-            // ✅ NOVA QUANTIDADE DE HÓSPEDES
+         // ✅ NOVA QUANTIDADE DE HÓSPEDES
             int novaQuantidade = reserva.getQuantidadeHospede() + 1;
 
-            // ✅ BUSCAR DIÁRIA PARA A NOVA QUANTIDADE
-            Apartamento apartamento = reserva.getApartamento();
-            TipoApartamento tipoApartamento = apartamento.getTipoApartamento();
-
-            Optional<Diaria> novaDiariaOpt = diariaService.buscarDiariaPara(apartamento, novaQuantidade);
-            // ✅ CALCULAR DIFERENÇA DE VALOR
-            BigDecimal valorDiariaAtual = reserva.getDiaria().getValor();
-            BigDecimal valorDiariaNova;
-
-            if (novaDiariaOpt.isPresent()) {
-                valorDiariaNova = novaDiariaOpt.get().getValor();
-                reserva.setDiaria(novaDiariaOpt.get());
-                System.out.println("✅ Diária atualizada para " + novaQuantidade + 
-                    " hóspedes: R$ " + valorDiariaNova);
-            } else {
-                valorDiariaNova = valorDiariaAtual;
-                System.out.println("⚠️ Sem diária específica para " + novaQuantidade + 
-                    " hóspedes — mantendo R$ " + valorDiariaAtual);
-            }
-
-            BigDecimal diferencaPorDia = valorDiariaNova.subtract(valorDiariaAtual);
-
-            
-            // ✅ CALCULAR DIAS RESTANTES
+            // ✅ CALCULAR INÍCIO DA DIFERENÇA
             LocalDateTime agora = LocalDateTime.now(ZoneId.of("America/Fortaleza"));
             LocalDate hoje = agora.toLocalDate();
 
-            long diasRestantes = java.time.temporal.ChronoUnit.DAYS.between(
-                hoje,
-                reserva.getDataCheckout().toLocalDate()
-            );
-
             // Verifica se há diária retroativa lançada hoje antes do meio-dia
-            boolean temDiariaRetroativaHoje = extratoReservaRepository
+            boolean ehDiaCheckin = reserva.getDataCheckin().toLocalDate().isEqual(hoje);
+            boolean temDiariaHoje = extratoReservaRepository
                 .findByReservaId(id)
                 .stream()
-                .filter(e -> e.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
-                          && e.getDescricao() != null
-                          && e.getDescricao().startsWith("Diária - Dia"))
-                .anyMatch(e -> e.getDataHoraLancamento().toLocalDate().equals(hoje)
-                            && e.getDataHoraLancamento().getHour() < 12);
+                .anyMatch(e -> e.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
+                            && e.getDataHoraLancamento().toLocalDate().equals(hoje));
 
-            if (temDiariaRetroativaHoje) {
-                diasRestantes += 1;
-            }
-            if (diasRestantes < 1) diasRestantes = 1;
-           
-            
-            
+            LocalDate inicioDiferenca = (ehDiaCheckin || temDiariaHoje) ? hoje : hoje.plusDays(1);
 
-            BigDecimal valorExtra = diferencaPorDia.multiply(BigDecimal.valueOf(diasRestantes));
-
-            System.out.println("💰 Diferença por dia: R$ " + diferencaPorDia);
-            System.out.println("📅 Dias restantes: " + diasRestantes);
-            System.out.println("💵 Valor extra total: R$ " + valorExtra);
-
-            // ✅ SÓ LANÇA SE TIVER DIFERENÇA
-            if (valorExtra.compareTo(BigDecimal.ZERO) > 0) {
-                ExtratoReserva lancamento = new ExtratoReserva();
-                lancamento.setReserva(reserva);
-                lancamento.setDescricao("Acréscimo de hóspede: " + novaQuantidade +
-                    " hóspedes × " + diasRestantes + " diária(s)" +
-                    " (diferença R$ " + diferencaPorDia.setScale(2) + "/dia)");
-                lancamento.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.DIARIA);
-                lancamento.setQuantidade((int) diasRestantes);
-                lancamento.setValorUnitario(diferencaPorDia);
-                lancamento.setTotalLancamento(valorExtra);
-                lancamento.setDataHoraLancamento(LocalDateTime.now());
-                extratoReservaRepository.save(lancamento);
-
-                // ✅ ATUALIZAR TOTAIS DA RESERVA
-                reserva.setTotalDiaria(reserva.getTotalDiaria().add(valorExtra));
-                reserva.setTotalHospedagem(reserva.getTotalHospedagem().add(valorExtra));
-                reserva.setTotalApagar(reserva.getTotalApagar().add(valorExtra));
-
-                System.out.println("✅ Extrato lançado e totais atualizados");
-            } else {
-                System.out.println("ℹ️ Sem diferença de valor — nenhum lançamento gerado");
-            }
-
-            // ✅ ATUALIZAR QUANTIDADE E SALVAR
-            reserva.setQuantidadeHospede(novaQuantidade);
-            reservaRepository.save(reserva);
-
-            System.out.println("✅ Hóspede adicionado na reserva #" + id +
-                " | Qtd: " + novaQuantidade + " | +R$ " + valorExtra);
+            // ✅ AJUSTAR DIÁRIAS CENTRALIZADAMENTE
+            reservaService.ajustarDiariasPorQuantidadeHospedes(
+                reserva,
+                novaQuantidade,
+                inicioDiferenca,
+                "Acréscimo de hóspede: "
+            );
 
             return ResponseEntity.ok(Map.of(
                 "mensagem", "Hóspede adicionado com sucesso",
-                "novaQuantidadeHospedes", novaQuantidade,
-                "diasCobrados", diasRestantes,
-                "valorCobrado", valorExtra
+                "novaQuantidadeHospedes", novaQuantidade
             ));
 
-        } catch (Exception e) {
+            } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
@@ -910,107 +844,34 @@ public class ReservaController {
                 }
             }
 
-            // ✅ BUSCAR DIÁRIA PARA A NOVA QUANTIDADE
-            Apartamento apartamento = reserva.getApartamento();
-            TipoApartamento tipoApartamento = apartamento.getTipoApartamento();
-            BigDecimal valorDiariaAtual = reserva.getDiaria().getValor();
-            BigDecimal valorDiariaNova;
-
-            Optional<Diaria> novaDiariaOpt = diariaService.buscarDiariaPara(apartamento, novaQuantidade);
-
-            if (novaDiariaOpt.isPresent()) {
-                valorDiariaNova = novaDiariaOpt.get().getValor();
-                reserva.setDiaria(novaDiariaOpt.get());
-                System.out.println("✅ Nova diária para " + novaQuantidade + 
-                    " hóspede(s): R$ " + valorDiariaNova);
-            } else {
-                valorDiariaNova = valorDiariaAtual;
-                System.out.println("⚠️ Sem diária específica para " + novaQuantidade + 
-                    " hóspede(s) — mantendo R$ " + valorDiariaAtual);
-            }
-
-            BigDecimal diferencaPorDia = valorDiariaNova.subtract(valorDiariaAtual);
-            // diferencaPorDia será NEGATIVA quando nova diária é menor (desconto)
-
-            // ✅ CALCULAR DIAS RESTANTES
-            // Antes das 12h: o scheduler ainda não lançou hoje → inclui hoje no recálculo
-            // Após as 12h: hoje já foi cobrado com a diária antiga → recalcula a partir de amanhã
-            java.time.LocalDate inicioDiferenca;
+            // ✅ CALCULAR INÍCIO DA DIFERENÇA (antes/após 12h)
+            LocalDate inicioDiferenca;
             if (horaAtual < 12) {
-                inicioDiferenca = agora.toLocalDate(); // inclui hoje
+                inicioDiferenca = agora.toLocalDate();
                 System.out.println("⏰ Saída antes das 12h — recalcula a partir de HOJE");
             } else {
-                inicioDiferenca = agora.toLocalDate().plusDays(1); // só a partir de amanhã
+                inicioDiferenca = agora.toLocalDate().plusDays(1);
                 System.out.println("⏰ Saída após as 12h — recalcula a partir de AMANHÃ");
             }
 
-            long diasRestantes = java.time.temporal.ChronoUnit.DAYS.between(
-                inicioDiferenca, reserva.getDataCheckout().toLocalDate()
+            // ✅ AJUSTAR DIÁRIAS CENTRALIZADAMENTE
+            reservaService.ajustarDiariasPorQuantidadeHospedes(
+                reserva,
+                novaQuantidade,
+                inicioDiferenca,
+                "Ajuste checkout parcial: "
             );
 
-            System.out.println("📅 Dias a recalcular: " + diasRestantes);
-            System.out.println("💰 Diferença por dia: R$ " + diferencaPorDia);
-
-            // ✅ SÓ LANÇA SE HOUVER DIFERENÇA E DIAS RESTANTES
-            if (diasRestantes > 0 && diferencaPorDia.compareTo(BigDecimal.ZERO) != 0) {
-                BigDecimal valorAjuste = diferencaPorDia.multiply(BigDecimal.valueOf(diasRestantes));
-
-                ExtratoReserva lancamento = new ExtratoReserva();
-                lancamento.setReserva(reserva);
-                lancamento.setDataHoraLancamento(agora);
-                lancamento.setQuantidade((int) diasRestantes);
-                lancamento.setValorUnitario(diferencaPorDia);
-                lancamento.setTotalLancamento(valorAjuste);
-
-                if (valorAjuste.compareTo(BigDecimal.ZERO) < 0) {
-                    // ✅ DESCONTO — nova diária é mais barata
-                    lancamento.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
-                    lancamento.setDescricao("Ajuste checkout parcial: " + novaQuantidade +
-                        " hóspede(s) × " + diasRestantes + " dia(s)" +
-                        " (R$ " + diferencaPorDia.setScale(2) + "/dia)");
-                } else {
-                    // ✅ ACRÉSCIMO — nova diária é mais cara (raro, mas possível)
-                    lancamento.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.DIARIA);
-                    lancamento.setDescricao("Ajuste checkout parcial: " + novaQuantidade +
-                        " hóspede(s) × " + diasRestantes + " dia(s)" +
-                        " (R$ " + diferencaPorDia.setScale(2) + "/dia)");
-                }
-
-                extratoReservaRepository.save(lancamento);
-
-                // ✅ ATUALIZAR TOTAIS DA RESERVA
-                reserva.setTotalDiaria(reserva.getTotalDiaria().add(valorAjuste));
-                reserva.setTotalHospedagem(reserva.getTotalHospedagem().add(valorAjuste));
-                reserva.setTotalApagar(reserva.getTotalApagar().add(valorAjuste));
-
-                System.out.println("✅ Ajuste lançado: R$ " + valorAjuste);
-            } else {
-                System.out.println("ℹ️ Sem ajuste necessário" + 
-                    (diasRestantes == 0 ? " (último dia)" : " (mesma diária)"));
-            }
-
-            // ✅ ATUALIZAR QUANTIDADE E SALVAR
-            reserva.setQuantidadeHospede(novaQuantidade);
-            reservaService.recalcularTotaisReserva(reserva);
-            reservaRepository.save(reserva);
-
-            System.out.println("✅ Checkout parcial concluído | Reserva #" + id +
-                " | Saiu: " + hospede.getCliente().getNome() +
-                " | Nova qtd: " + novaQuantidade +
-                " | Hora: " + horaAtual + "h");
-
             return ResponseEntity.ok(Map.of(
-            	    "mensagem", "Checkout parcial realizado com sucesso",
-            	    "novaQuantidadeHospedes", novaQuantidade,
-            	    "diasRecalculados", diasRestantes,
-            	    "diferencaPorDia", diferencaPorDia,
-            	    "bilhetesGerados", bilhetes.stream()
-            	        .map(b -> Map.of(
-            	            "numeroBilhete", b.getNumeroBilhete(),
-            	            "nomeHospede", b.getHospedagemHospede().getCliente().getNome()
-            	        ))
-            	        .collect(java.util.stream.Collectors.toList())
-            	));
+                "mensagem", "Checkout parcial realizado com sucesso",
+                "novaQuantidadeHospedes", novaQuantidade,
+                "bilhetesGerados", bilhetes.stream()
+                    .map(b -> Map.of(
+                        "numeroBilhete", b.getNumeroBilhete(),
+                        "clienteNome", b.getHospedagemHospede().getCliente().getNome()
+                    ))
+                    .collect(java.util.stream.Collectors.toList())
+            ));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -1126,10 +987,7 @@ public class ReservaController {
                 // Buscar reserva ativa neste apartamento
                 List<Reserva> reservasAtivas = new ArrayList<>();
                 reservasAtivas.addAll(reservaRepository
-                    .findByApartamentoIdAndStatus(apt.getId(), Reserva.StatusReservaEnum.ATIVA));
-                reservasAtivas.addAll(reservaRepository
-                    .findByApartamentoIdAndStatus(apt.getId(), Reserva.StatusReservaEnum.PRE_RESERVA));
-
+                	    .findByApartamentoIdAndStatus(apt.getId(), Reserva.StatusReservaEnum.ATIVA));
                 Map<String, Object> item = new HashMap<>();
                 item.put("id", apt.getId());
                 item.put("numeroApartamento", apt.getNumeroApartamento());
@@ -1198,14 +1056,7 @@ public class ReservaController {
             }
             
          // ✅ VALIDAÇÃO CENTRALIZADA DE CONFLITOS
-            reservaService.validarConflitosReserva(
-                reserva.getApartamento().getId(),
-                reserva.getCliente().getId(),
-                reserva.getDataCheckin(),
-                reserva.getDataCheckout(),
-                reserva.getId()
-            );
-
+           
             // ✅ VERIFICAR SE JÁ EXISTE RESERVA ATIVA NO MESMO APARTAMENTO COM CONFLITO DE DATAS
             List<Reserva> ativas = reservaRepository.findByApartamentoIdAndStatusIn(
                 reserva.getApartamento().getId(),

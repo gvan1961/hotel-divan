@@ -195,33 +195,67 @@ public class ReservaService {
         }
     }
     
-    /**
-     * Remove lançamentos de diárias quando reduz período
-     */
-    private void removerExtratosDiarias(Reserva reserva, LocalDateTime dataInicio, LocalDateTime dataFim) {
-        List<ExtratoReserva> todosExtratos = extratoReservaRepository.findByReservaId(reserva.getId());
-        
-        List<ExtratoReserva> extratosParaRemover = new ArrayList<>();
-        
-        for (ExtratoReserva extrato : todosExtratos) {
-            if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA) {
-                LocalDateTime dataLancamento = extrato.getDataHoraLancamento();
-                
-                boolean dentroDoRange = (dataLancamento.isEqual(dataInicio) || dataLancamento.isAfter(dataInicio)) 
-                                      && dataLancamento.isBefore(dataFim);
-                
-                if (dentroDoRange) {
-                    extratosParaRemover.add(extrato);
-                }
-            }
-        }
-        
-        for (ExtratoReserva extrato : extratosParaRemover) {
-            System.out.println("🗑️ Removendo diária: " + extrato.getDataHoraLancamento().toLocalDate());
-            extratoReservaRepository.delete(extrato);
-        }
-    }
     
+    public void ajustarDiariasPorQuantidadeHospedes(
+            Reserva reserva,
+            int novaQuantidade,
+            java.time.LocalDate inicioDiferenca,
+            String descricao) {
+
+        Apartamento apartamento = reserva.getApartamento();
+        java.math.BigDecimal valorDiariaAtual = reserva.getDiaria().getValor();
+        java.math.BigDecimal valorDiariaNova;
+
+        java.util.Optional<Diaria> novaDiariaOpt = diariaService.buscarDiariaPara(apartamento, novaQuantidade);
+
+        if (novaDiariaOpt.isPresent()) {
+            valorDiariaNova = novaDiariaOpt.get().getValor();
+            reserva.setDiaria(novaDiariaOpt.get());
+            System.out.println("✅ Nova diária para " + novaQuantidade + " hóspede(s): R$ " + valorDiariaNova);
+        } else {
+            valorDiariaNova = valorDiariaAtual;
+            System.out.println("⚠️ Sem diária específica para " + novaQuantidade + " hóspede(s) — mantendo R$ " + valorDiariaAtual);
+        }
+
+        java.math.BigDecimal diferencaPorDia = valorDiariaNova.subtract(valorDiariaAtual);
+
+        long diasRestantes = java.time.temporal.ChronoUnit.DAYS.between(
+            inicioDiferenca, reserva.getDataCheckout().toLocalDate()
+        );
+
+        System.out.println("📅 Dias a recalcular: " + diasRestantes);
+        System.out.println("💰 Diferença por dia: R$ " + diferencaPorDia);
+
+        if (diasRestantes > 0 && diferencaPorDia.compareTo(java.math.BigDecimal.ZERO) != 0) {
+            java.math.BigDecimal valorAjuste = diferencaPorDia.multiply(java.math.BigDecimal.valueOf(diasRestantes));
+
+            ExtratoReserva lancamento = new ExtratoReserva();
+            lancamento.setReserva(reserva);
+            lancamento.setDataHoraLancamento(LocalDateTime.now());
+            lancamento.setQuantidade((int) diasRestantes);
+            lancamento.setValorUnitario(diferencaPorDia);
+            lancamento.setTotalLancamento(valorAjuste);
+            lancamento.setDescricao(descricao + novaQuantidade +
+                " hóspede(s) × " + diasRestantes + " dia(s)" +
+                " (R$ " + diferencaPorDia.setScale(2) + "/dia)");
+
+            if (valorAjuste.compareTo(java.math.BigDecimal.ZERO) < 0) {
+                lancamento.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
+            } else {
+                lancamento.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.DIARIA);
+            }
+
+            extratoReservaRepository.save(lancamento);
+        }
+
+        reserva.setQuantidadeHospede(novaQuantidade);
+        recalcularTotaisReserva(reserva);
+        reservaRepository.save(reserva);
+
+        System.out.println("✅ Ajuste concluído | Nova qtd: " + novaQuantidade + " | Dias recalculados: " + diasRestantes);
+    }  
+    
+ 
     /**
      * Recalcula valores da reserva após alterações
      */
@@ -574,6 +608,11 @@ public class ReservaService {
             clienteDTO.setCidade(reserva.getCliente().getCidade());
             clienteDTO.setEstado(reserva.getCliente().getEstado());
             clienteDTO.setCep(reserva.getCliente().getCep());
+            if (reserva.getCliente().getEmpresa() != null) {
+                clienteDTO.setEmpresaId(reserva.getCliente().getEmpresa().getId());
+                clienteDTO.setEmpresaNome(reserva.getCliente().getEmpresa().getNomeEmpresa());
+            }
+            
             dto.setCliente(clienteDTO);
         }
         
@@ -655,7 +694,13 @@ public class ReservaService {
         reserva.setDiaria(diariaAtualizada);
         
         // ✅ AJUSTAR APENAS AS DIÁRIAS FUTURAS
-        ajustarDiariasFuturas(reserva, proximoDia, quantidadeAnterior, novaQuantidade);
+        Diaria diariaAntigaAjuste = diariaService.buscarDiariaPara(reserva.getApartamento(), quantidadeAnterior)
+        	    .orElseThrow(() -> new RuntimeException("Diária antiga não encontrada"));
+        	Diaria diariaNovAjuste = diariaService.buscarDiariaPara(reserva.getApartamento(), novaQuantidade)
+        	    .orElseThrow(() -> new RuntimeException("Diária nova não encontrada"));
+        	BigDecimal diferencaAjuste = diariaNovAjuste.getValor().subtract(diariaAntigaAjuste.getValor());
+        	ajustarExtratosExistentes(reserva, proximoDia, diferencaAjuste,
+        	    String.format("Ajuste - Alteração de %d para %d hóspede(s)", quantidadeAnterior, novaQuantidade));
         
         // Recalcular totais
         recalcularTotaisReserva(reserva);
@@ -687,56 +732,7 @@ public class ReservaService {
         return reservaSalva;
     }
     
-    private void ajustarDiariasFuturas(Reserva reserva, LocalDateTime dataInicio, Integer qtdAnterior, Integer qtdNova) {
-        // Buscar diária antiga e nova (considera cama de casal quando 1 hóspede)
-        Apartamento apartamento = reserva.getApartamento();
-        
-        Diaria diariaAntiga = diariaService.buscarDiariaPara(apartamento, qtdAnterior)
-            .orElseThrow(() -> new RuntimeException("Diária antiga não encontrada"));
-        
-        Diaria diariaNova = diariaService.buscarDiariaPara(apartamento, qtdNova)
-            .orElseThrow(() -> new RuntimeException("Diária nova não encontrada"));     
-        
-        
-        
-        BigDecimal valorAntigo = diariaAntiga.getValor();
-        BigDecimal valorNovo = diariaNova.getValor();
-        BigDecimal diferenca = valorNovo.subtract(valorAntigo);
-        
-        // Buscar todas as diárias futuras
-        List<ExtratoReserva> todosExtratos = extratoReservaRepository.findByReservaOrderByDataHoraLancamento(reserva);
-        
-        int diasAjustados = 0;
-        
-        for (ExtratoReserva extrato : todosExtratos) {
-            if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA) {
-                LocalDateTime dataLancamento = extrato.getDataHoraLancamento();
-                
-                // ✅ AJUSTAR APENAS SE FOR DIA FUTURO (>= dataInicio)
-                if (!dataLancamento.isBefore(dataInicio)) {
-                    // Criar AJUSTE (positivo ou negativo)
-                    ExtratoReserva ajuste = new ExtratoReserva();
-                    ajuste.setReserva(reserva);
-                    ajuste.setDataHoraLancamento(dataLancamento);
-                    ajuste.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
-                    ajuste.setDescricao(String.format("Ajuste - Alteração de %d para %d hóspede(s)", qtdAnterior, qtdNova));
-                    ajuste.setQuantidade(1);
-                    ajuste.setValorUnitario(diferenca);
-                    ajuste.setTotalLancamento(diferenca); // Positivo se aumentou, negativo se diminuiu
-                    ajuste.setNotaVendaId(null);
-                    
-                    extratoReservaRepository.save(ajuste);
-                    diasAjustados++;
-                    
-                    System.out.println("📝 Ajuste criado para " + dataLancamento.toLocalDate() + ": R$ " + diferenca);
-                } else {
-                    System.out.println("⏭️ Mantendo diária de " + dataLancamento.toLocalDate() + " com valor original");
-                }
-            }
-        }
-        
-        System.out.println("✅ Total de dias ajustados: " + diasAjustados);
-    }
+    
 
     /**
      * Recalcula os totais da reserva somando todos os extratos
@@ -1314,13 +1310,15 @@ public class ReservaService {
         	}
         
      // ✅ VALIDAÇÃO CENTRALIZADA DE CONFLITOS NO NOVO APARTAMENTO
-        validarConflitosReserva(
-            novoApartamento.getId(),
-            reserva.getCliente().getId(),
-            reserva.getDataCheckin(),
-            reserva.getDataCheckout(),
-            reserva.getId()
-        );
+        boolean conflita = existeConflitoDeDatasIgnorandoPreReserva(
+        	    novoApartamento.getId(),
+        	    reserva.getDataCheckin(),
+        	    reserva.getDataCheckout(),
+        	    reserva.getId()
+        	);
+        	if (conflita) {
+        	    throw new RuntimeException("❌ JÁ EXISTE UMA RESERVA ATIVA para este apartamento no período selecionado");
+        	}
         
         boolean mesmoApartamento = apartamentoAntigo.getId().equals(novoApartamento.getId());
 
@@ -1447,15 +1445,10 @@ public class ReservaService {
         
         
         
-        ajustarDiariasTransferencia(
-            reserva, 
-            dataInicioAjuste, 
-            apartamentoAntigo, 
-            novoApartamento,
-            valorAntigo,
-            valorNovo,
-            diferenca
-        );
+        ajustarExtratosExistentes(reserva, dataInicioAjuste, diferenca,
+        	    String.format("Ajuste - Transferência para Apto %s (%s)",
+        	        novoApartamento.getNumeroApartamento(),
+        	        novoApartamento.getTipoApartamento().getTipo()));
         
         // ========== RECALCULAR TOTAIS ==========
         
@@ -1492,65 +1485,18 @@ public class ReservaService {
         return reservaSalva;
     }
     
-    private void ajustarDiariasTransferencia(
-            Reserva reserva,
-            LocalDateTime dataInicio,
-            Apartamento aptoAntigo,
-            Apartamento aptoNovo,
-            BigDecimal valorAntigo,
-            BigDecimal valorNovo,
-            BigDecimal diferenca
-        ) {
-        
-        List<ExtratoReserva> todosExtratos = extratoReservaRepository
-            .findByReservaOrderByDataHoraLancamento(reserva);
-        
-        int diasAjustados = 0;
-        
-        // ✅ NORMALIZAR DATA PARA COMPARAÇÃO (SEM HORA)
-        LocalDateTime dataInicioNormalizada = dataInicio.toLocalDate().atStartOfDay();
-        
-        for (ExtratoReserva extrato : todosExtratos) {
-            if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA) {
-                LocalDateTime dataLancamento = extrato.getDataHoraLancamento();
-                LocalDateTime dataLancamentoNormalizada = dataLancamento.toLocalDate().atStartOfDay();
-                
-                // ✅ AJUSTAR DIÁRIAS A PARTIR DA DATA DE TRANSFERÊNCIA (INCLUSIVE)
-                // Comparar apenas a data, ignorando hora
-                if (!dataLancamentoNormalizada.isBefore(dataInicioNormalizada)) {
-                    
-                    // Se mudou o valor, criar ajuste
-                    if (diferenca.compareTo(BigDecimal.ZERO) != 0) {
-                        ExtratoReserva ajuste = new ExtratoReserva();
-                        ajuste.setReserva(reserva);
-                        ajuste.setDataHoraLancamento(dataLancamento); // Manter a mesma data da diária
-                        ajuste.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
-                        ajuste.setDescricao(String.format(
-                            "Ajuste - Transferência para Apto %s (%s)", 
-                            aptoNovo.getNumeroApartamento(),
-                            aptoNovo.getTipoApartamento().getTipo()
-                        ));
-                        ajuste.setQuantidade(1);
-                        ajuste.setValorUnitario(diferenca);
-                        ajuste.setTotalLancamento(diferenca);
-                        ajuste.setNotaVendaId(null);
-                        
-                        extratoReservaRepository.save(ajuste);
-                        diasAjustados++;
-                        
-                        System.out.println("📝 Ajuste criado para " + dataLancamento.toLocalDate() + 
-                                         ": R$ " + diferenca);
-                    } else {
-                        System.out.println("💰 Mesmo valor - Sem ajuste para " + dataLancamento.toLocalDate());
-                    }
-                } else {
-                    System.out.println("⏭️ Mantendo diária de " + dataLancamento.toLocalDate() + 
-                                     " no apartamento antigo");
-                }
-            }
+      
+    private boolean existeConflitoDeDatasIgnorandoPreReserva(Long apartamentoId, LocalDateTime checkin, LocalDateTime checkout, Long reservaIdExcluir) {
+        List<Reserva> reservas = reservaRepository.findByApartamentoId(apartamentoId);
+        for (Reserva r : reservas) {
+            if (reservaIdExcluir != null && r.getId().equals(reservaIdExcluir)) continue;
+            if (r.getStatus() == Reserva.StatusReservaEnum.PRE_RESERVA) continue;
+            if (r.getStatus() == Reserva.StatusReservaEnum.FINALIZADA) continue;
+            if (r.getStatus() == Reserva.StatusReservaEnum.CANCELADA) continue;
+            boolean semConflito = !checkin.isBefore(r.getDataCheckout()) || !checkout.isAfter(r.getDataCheckin());
+            if (!semConflito) return true;
         }
-        
-        System.out.println("✅ Total de dias ajustados: " + diasAjustados);
+        return false;
     }
     
 
@@ -1598,13 +1544,17 @@ public class ReservaService {
 
         // CLIENTE
         if (reserva.getCliente() != null) {
-            ReservaDetalhesDTO.ClienteSimples clienteDTO = new ReservaDetalhesDTO.ClienteSimples();
-            clienteDTO.setId(reserva.getCliente().getId());
-            clienteDTO.setNome(reserva.getCliente().getNome());
-            clienteDTO.setCpf(reserva.getCliente().getCpf());
-            clienteDTO.setTelefone(reserva.getCliente().getCelular()); // != null ? 
-            clienteDTO.setCreditoAprovado(reserva.getCliente().getCreditoAprovado());                               
-            dto.setCliente(clienteDTO);
+        	ReservaDetalhesDTO.ClienteSimples clienteDTO = new ReservaDetalhesDTO.ClienteSimples();
+        	clienteDTO.setId(reserva.getCliente().getId());
+        	clienteDTO.setNome(reserva.getCliente().getNome());
+        	clienteDTO.setCpf(reserva.getCliente().getCpf());
+        	clienteDTO.setTelefone(reserva.getCliente().getCelular());
+        	clienteDTO.setCreditoAprovado(reserva.getCliente().getCreditoAprovado());
+        	if (reserva.getCliente().getEmpresa() != null) {
+        	    clienteDTO.setEmpresaId(reserva.getCliente().getEmpresa().getId());
+        	    clienteDTO.setEmpresaNome(reserva.getCliente().getEmpresa().getNomeEmpresa());
+        	}
+        	dto.setCliente(clienteDTO);
         }
 
         // APARTAMENTO
@@ -2014,48 +1964,20 @@ public class ReservaService {
 
             BigDecimal valorAntigoDestino = reservaDestino.getDiaria().getValor();
             BigDecimal valorNovoDestino = novaDiariaDestino.getValor();
-
-            reservaDestino.setDiaria(novaDiariaDestino);
-            
-            reservaDestino.setDiaria(novaDiariaDestino);
-
-         // ✅ AJUSTAR DIÁRIA DE HOJE SE JÁ FOI LANÇADA
-         LocalDate hoje = LocalDate.now();
-         List<ExtratoReserva> extratosDestino = extratoReservaRepository
-             .findByReservaOrderByDataHoraLancamento(reservaDestino);
-
-         for (ExtratoReserva extrato : extratosDestino) {
-        	 System.out.println("📋 Extrato: " + extrato.getDataHoraLancamento() + 
-        		        " | Status: " + extrato.getStatusLancamento() + 
-        		        " | Hoje: " + hoje);
-             if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
-                 && extrato.getDataHoraLancamento().toLocalDate().isEqual(hoje)) {
                  
-            	 BigDecimal diferenca = valorNovoDestino.subtract(valorAntigoDestino);
-            	 if (diferenca.compareTo(BigDecimal.ZERO) != 0) {
-            	     ExtratoReserva ajuste = new ExtratoReserva();
-            	     ajuste.setReserva(reservaDestino);
-            	     ajuste.setDataHoraLancamento(extrato.getDataHoraLancamento());
-            	     ajuste.setStatusLancamento(diferenca.compareTo(BigDecimal.ZERO) > 0
-            	         ? ExtratoReserva.StatusLancamentoEnum.ACRESCIMO
-            	         : ExtratoReserva.StatusLancamentoEnum.ESTORNO);
-            	     ajuste.setDescricao(String.format(
-            	         "Ajuste - Transferência hóspede para Apto %s",
-            	         aptoDestino.getNumeroApartamento()));
-            	     ajuste.setQuantidade(1);
-            	     ajuste.setValorUnitario(diferenca);
-            	     ajuste.setTotalLancamento(diferenca);
-            	     ajuste.setNotaVendaId(null);
-            	     extratoReservaRepository.save(ajuste);
-            	 }
-                 break;
-             }
+            reservaDestino.setDiaria(novaDiariaDestino);
+         // ✅ AJUSTAR DIÁRIAS EXISTENTES DO DESTINO
+         BigDecimal diferencaDestino = valorNovoDestino.subtract(valorAntigoDestino);
+         if (diferencaDestino.compareTo(BigDecimal.ZERO) != 0) {
+             ajustarExtratosExistentes(reservaDestino,
+                 LocalDateTime.now().toLocalDate().atStartOfDay(),
+                 diferencaDestino,
+                 String.format("Ajuste - Transferência hóspede para Apto %s",
+                     aptoDestino.getNumeroApartamento()));
          }
-
-
-            // ✅ RECALCULAR TOTAIS DO DESTINO
-            recalcularTotaisReserva(reservaDestino);
-            reservaRepository.save(reservaDestino);
+         // ✅ RECALCULAR TOTAIS DO DESTINO
+         recalcularTotaisReserva(reservaDestino);
+         reservaRepository.save(reservaDestino);
         }
 
         // Remover hóspede da reserva origem
@@ -2081,10 +2003,12 @@ public class ReservaService {
                 BigDecimal valorNovoOrigem = novaDiariaOrigem.getValor();
 
                 if (valorNovoOrigem.compareTo(valorAntigoOrigem) != 0) {
-                    ajustarDiariasFuturas(reservaOrigem,
-                        LocalDateTime.now().toLocalDate().atStartOfDay(),
-                        reservaOrigem.getQuantidadeHospede() + 1,
-                        (int) hospedesAtivos);
+                	BigDecimal diferencaOrigem = valorNovoOrigem.subtract(valorAntigoOrigem);
+                	ajustarExtratosExistentes(reservaOrigem,
+                	    LocalDateTime.now().toLocalDate().atStartOfDay(),
+                	    diferencaOrigem,
+                	    String.format("Ajuste - Alteração de %d para %d hóspede(s)",
+                	    	    reservaOrigem.getQuantidadeHospede(), (int) hospedesAtivos));
                 }
 
                 reservaOrigem.setQuantidadeHospede((int) hospedesAtivos);
@@ -2198,6 +2122,44 @@ public class ReservaService {
 
     public void recalcularTotaisPublic(Reserva reserva) {
         recalcularTotaisReserva(reserva);
-    }
+    }    
     
+    private void ajustarExtratosExistentes(
+            Reserva reserva,
+            LocalDateTime dataInicio,
+            BigDecimal diferenca,
+            String descricao) {
+
+        List<ExtratoReserva> todosExtratos = extratoReservaRepository
+            .findByReservaOrderByDataHoraLancamento(reserva);
+
+        LocalDateTime dataInicioNormalizada = dataInicio.toLocalDate().atStartOfDay();
+        int diasAjustados = 0;
+
+        for (ExtratoReserva extrato : todosExtratos) {
+        	if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
+        		    && extrato.getDescricao() != null
+        		    && extrato.getDescricao().startsWith("Diária - Dia")) {                LocalDateTime dataLancamento = extrato.getDataHoraLancamento();
+                LocalDateTime dataLancamentoNormalizada = dataLancamento.toLocalDate().atStartOfDay();
+
+                if (!dataLancamentoNormalizada.isBefore(dataInicioNormalizada)) {
+                    if (diferenca.compareTo(BigDecimal.ZERO) != 0) {
+                        ExtratoReserva ajuste = new ExtratoReserva();
+                        ajuste.setReserva(reserva);
+                        ajuste.setDataHoraLancamento(dataLancamento);
+                        ajuste.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
+                        ajuste.setDescricao(descricao);
+                        ajuste.setQuantidade(1);
+                        ajuste.setValorUnitario(diferenca);
+                        ajuste.setTotalLancamento(diferenca);
+                        ajuste.setNotaVendaId(null);
+                        extratoReservaRepository.save(ajuste);
+                        diasAjustados++;
+                        System.out.println("📝 Ajuste criado para " + dataLancamento.toLocalDate() + ": R$ " + diferenca);
+                    }
+                }
+            }
+        }
+        System.out.println("✅ Total de dias ajustados: " + diasAjustados);
+    }
 }

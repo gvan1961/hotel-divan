@@ -9,7 +9,7 @@ import { CommonModule } from '@angular/common';
     <div class="signature-wrapper">
       <div class="signature-instrucao">✍️ Desenhe sua assinatura abaixo</div>
       <canvas #canvas
-              width="560"
+              width="380"
               height="180"
               class="signature-canvas"
               (mousedown)="iniciarDesenho($event)"
@@ -36,14 +36,14 @@ import { CommonModule } from '@angular/common';
     }
 
     .signature-canvas {
-      width: 100%;
-      height: 180px;
-      border: 2px dashed #999;
-      border-radius: 8px;
-      background: #fff;
-      cursor: crosshair;
-      touch-action: none;
-    }
+  width: 380px;
+  height: 150px;
+  border: 2px dashed #999;
+  border-radius: 8px;
+  background: #fff;
+  cursor: crosshair;
+  touch-action: none;
+}
 
     .signature-canvas:active {
       border-color: #2980b9;

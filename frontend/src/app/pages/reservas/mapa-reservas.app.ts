@@ -197,14 +197,7 @@ interface ApartamentoMapa {
                   <option value="RESERVA">🏨 Reserva inteira</option>
                   <option value="HOSPEDE">👤 Hóspede individual</option>
                 </select>
-              </div>
-
-              <div class="campo" *ngIf="tipoTransferencia === 'RESERVA'">
-                <label>Nova data de check-in (opcional)</label>
-                <input type="date" [(ngModel)]="novaDataCheckinTransf">
-                <small>Deixe em branco para manter a data atual</small>
-              </div>
-
+              </div> 
               <div class="campo" *ngIf="tipoTransferencia === 'HOSPEDE'">
                 <label>Hóspede</label>
                 <select [(ngModel)]="hospedeTransfId">
@@ -370,15 +363,16 @@ interface ApartamentoMapa {
                 <input type="date" [(ngModel)]="novaDataCheckinTransf">
                 <small>Deixe em branco para manter a data atual</small>
               </div>
-    <div class="campo" *ngIf="tipoTransferencia === 'HOSPEDE'">
-      <label>Hóspede</label>
-      <select [(ngModel)]="hospedeTransfId">
-        <option value="0">Selecione...</option>
-        <option *ngFor="let h of hospedesReserva" [value]="h.id">
-          {{ h.cliente?.nome || h.nomeHospede || ('Hóspede #' + h.id) }}
-        </option>
-      </select>
-    </div>
+
+              <div class="campo" *ngIf="tipoTransferencia === 'HOSPEDE'">
+                <label>Hóspede</label>
+                <select [(ngModel)]="hospedeTransfId">
+                  <option value="0">Selecione...</option>
+                  <option *ngFor="let h of hospedesReserva" [value]="h.id">
+                    {{ h.cliente?.nome || h.nomeHospede || ('Hóspede #' + h.id) }}
+                  </option>
+                </select>
+              </div>
     <div class="campo">
       <label>Apartamento destino</label>
       <select [(ngModel)]="aptDestinoTransfId">
@@ -2303,7 +2297,7 @@ confirmarTransferencia(): void {
     });
   }
 }
-
+    
   imprimir(): void {
   window.print();
 }

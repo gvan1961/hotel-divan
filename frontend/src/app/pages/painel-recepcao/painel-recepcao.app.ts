@@ -162,7 +162,7 @@ template: `
           placeholder="📺 Filtrar por TV (ex: Smart, 55...)"
           [(ngModel)]="filtroTv"
           (input)="aplicarFiltroLocal()" />
-        <button class="btn-limpar" (click)="limparFiltros()" *ngIf="filtroCamas || filtroTv || buscaReserva">
+        <button class="btn-limpar" (click)="limparFiltros()" *ngIf="filtroCamas || filtroTv || buscaReserva || filtroDataCheckin">
           ✕ Limpar
         </button>
       </div>
@@ -188,6 +188,13 @@ template: `
   placeholder="🔢 Buscar por nº da reserva..."
   [(ngModel)]="buscaReserva"
   (input)="aplicarFiltroLocal()" />
+
+  <input
+  class="filtro-input"
+  type="date"
+  [(ngModel)]="filtroDataCheckin"
+  (change)="aplicarFiltroLocal()"
+  title="Filtrar por data de check-in" />
    
   <button class="btn-buscar" (click)="buscarNoPainel()" [disabled]="buscando">
       {{ buscando ? '⏳' : '🔍 Buscar' }}
@@ -395,10 +402,11 @@ template: `
 
             <!-- ATIVA (não atrasado) -->
             <ng-container *ngIf="getStatusFinal(apt) === 'ATIVA' && !apt.reserva?.atrasado">
-              <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒</button>
-              <button class="btn-icone" title="Hóspedes"          (click)="irParaReserva(apt)">👥</button>
-              <button class="btn-icone" title="Transferir"        (click)="irParaReserva(apt)">➜</button>
-            </ng-container>
+  <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒</button>
+  <button class="btn-icone" title="Hóspedes"          (click)="irParaReserva(apt)">👥</button>
+  <button class="btn-icone" title="Transferir"        (click)="irParaReserva(apt)">➜</button>
+  <button class="btn-icone btn-limpeza-diaria" title="Registrar limpeza diária" (click)="registrarLimpezaDiaria(apt)">🧹</button>
+</ng-container>
 
             <!-- PRÓXIMA RESERVA -->
             <div class="proxima-reserva" *ngIf="apt.reserva?.proximaReserva">
@@ -984,6 +992,9 @@ template: `
   color: #856404;
 }
 
+.btn-limpeza-diaria { background: #8e44ad; color: #fff; }
+.btn-limpeza-diaria:hover { background: #6c3483; }
+
   `]
 })
 export class PainelRecepcaoApp implements OnInit, OnDestroy {
@@ -1014,6 +1025,8 @@ mostrarResultadosEmpresa = false;
   mostrarAvisoDiaria = false;
   apartamentosComAvisoDiaria: string[] = [];
 
+  filtroDataCheckin: string = '';
+  
   
   private intervalo: any;
   private apiUrl = '/api/apartamentos/painel';
@@ -1084,7 +1097,15 @@ mostrarResultadosEmpresa = false;
     });
   }
 
-  this.apartamentosFiltradosLocal = resultado;
+  // ✅ FILTRO POR DATA CHECKIN
+if (this.filtroDataCheckin) {
+  resultado = resultado.filter((apt: any) => {
+    const checkin = apt.reserva?.dataCheckin;
+    if (!checkin) return false;
+    return new Date(checkin).toISOString().split('T')[0] === this.filtroDataCheckin;
+  });
+}
+this.apartamentosFiltradosLocal = resultado;
 }
 
   limparFiltros(): void {
@@ -1092,6 +1113,8 @@ mostrarResultadosEmpresa = false;
     this.filtroTv    = '';
     this.buscaReserva = '';
     this.apartamentosFiltradosLocal = [...this.apartamentos];
+    this.filtroDataCheckin = '';
+    
   }
 apartamentosFiltrados(): ApartamentoCard[] {
     const lista = (this.filtroCamas || this.filtroTv || this.buscaReserva)
@@ -1133,6 +1156,24 @@ apartamentosFiltrados(): ApartamentoCard[] {
         return matchTipo;
       });
     }
+
+    // ✅ FILTRO POR DATA CHECKIN
+if (this.filtroDataCheckin) {
+  resultado = resultado.filter((apt: any) => {
+    const checkin = apt.reserva?.dataCheckin;
+    if (!checkin) return false;
+    return new Date(checkin).toISOString().split('T')[0] === this.filtroDataCheckin;
+  });
+}
+
+    // ✅ FILTRO POR DATA CHECKIN
+if (this.filtroDataCheckin) {
+  resultado = resultado.filter((apt: any) => {
+    const checkin = apt.reserva?.dataCheckin;
+    if (!checkin) return false;
+    return new Date(checkin).toISOString().split('T')[0] === this.filtroDataCheckin;
+  });
+}
 
     return resultado;
   }
@@ -1402,6 +1443,8 @@ irParaReservaPorId(reservaId: number): void {
   this.router.navigate(['/reservas', reservaId]);
 }
 
+
+
 verificarAvisoDiaria(): void {
   const agora = new Date();
   const hora = agora.getHours();
@@ -1429,6 +1472,23 @@ verificarAvisoDiaria(): void {
 
   console.log('⚠️ Aptos com aviso:', this.apartamentosComAvisoDiaria);
   this.mostrarAvisoDiaria = this.apartamentosComAvisoDiaria.length > 0;
+}
+
+registrarLimpezaDiaria(apt: ApartamentoCard): void {
+  if (!confirm(`🧹 Registrar limpeza diária do apartamento ${apt.numero}?`)) return;
+  this.http.post(`/api/apartamentos/${apt.id}/limpeza-diaria`, {}).subscribe({
+    next: () => {
+      alert(`✅ Limpeza diária do apartamento ${apt.numero} registrada!`);
+    },
+    error: (err) => {
+      const msg = err.error?.erro || err.message;
+      if (msg.includes('já registrada')) {
+        alert(`⚠️ Limpeza do apartamento ${apt.numero} já foi registrada hoje!`);
+      } else {
+        alert('❌ Erro: ' + msg);
+      }
+    }
+  });
 }
 
 }

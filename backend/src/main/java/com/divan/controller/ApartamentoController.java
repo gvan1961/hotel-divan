@@ -10,6 +10,7 @@ import com.divan.entity.Apartamento;
 import com.divan.util.DataUtil;
 import java.util.stream.Collectors;
 import com.divan.entity.Reserva;
+import com.divan.entity.Usuario;
 import com.divan.repository.HistoricoApartamentoRepository;
 import com.divan.repository.HistoricoHospedeRepository;
 import com.divan.repository.HospedagemHospedeRepository;
@@ -41,6 +42,12 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/apartamentos")
 @CrossOrigin(origins = "*")
 public class ApartamentoController {
+	
+	@Autowired
+	private com.divan.repository.ApartamentoRepository apartamentoRepository;
+	
+	@Autowired
+	private com.divan.security.JwtUtil jwtUtil;
 	
 	@Autowired 
 	private HistoricoHospedeRepository historicoHospedeRepository;
@@ -648,8 +655,9 @@ public class ApartamentoController {
             LocalDateTime fim = LocalDate.parse(dataFim).atTime(23, 59, 59);
 
             List<HistoricoApartamento> historicos = historicoApartamentoRepository
-                .findByAcaoAndDataHoraBetweenOrderByDataHoraDesc("LIBERADO_LIMPEZA", inicio, fim);
-
+            	    .findByAcaoInAndDataHoraBetweenOrderByDataHoraDesc(
+            	        List.of("LIBERADO_LIMPEZA", "LIMPEZA_DIARIA"), inicio, fim);
+            
             List<Map<String, Object>> resultado = historicos.stream().map(h -> {
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("apartamento", h.getApartamento().getNumeroApartamento());
@@ -662,6 +670,50 @@ public class ApartamentoController {
             }).collect(Collectors.toList());
 
             return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+    
+    @PostMapping("/{id}/limpeza-diaria")
+    public ResponseEntity<?> registrarLimpezaDiaria(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            Apartamento apartamento = apartamentoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Apartamento não encontrado"));
+
+            String token = authHeader.replace("Bearer ", "");
+            String username = jwtUtil.getUsernameFromToken(token);
+            Usuario usuario = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+            // ✅ VERIFICAR SE JÁ FOI REGISTRADA HOJE
+            LocalDateTime inicioDia = LocalDate.now().atStartOfDay();
+            LocalDateTime fimDia = LocalDate.now().atTime(23, 59, 59);
+            List<HistoricoApartamento> jaRegistrado = historicoApartamentoRepository
+                .findByAcaoAndDataHoraBetweenOrderByDataHoraDesc("LIMPEZA_DIARIA", inicioDia, fimDia)
+                .stream()
+                .filter(h -> h.getApartamento().getId().equals(id))
+                .collect(java.util.stream.Collectors.toList());
+
+            if (!jaRegistrado.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "erro", "Limpeza diária já registrada hoje para este apartamento"
+                ));
+            }
+
+            HistoricoApartamento historico = new HistoricoApartamento();
+            historico.setApartamento(apartamento);
+            historico.setUsuario(usuario);
+            historico.setAcao("LIMPEZA_DIARIA");
+            historico.setStatusAnterior(apartamento.getStatus().name());
+            historico.setStatusNovo(apartamento.getStatus().name());
+            historico.setMotivo("Limpeza diária registrada");
+            historico.setDataHora(LocalDateTime.now());
+            historicoApartamentoRepository.save(historico);
+
+            return ResponseEntity.ok(Map.of("mensagem", "Limpeza diária registrada com sucesso"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }

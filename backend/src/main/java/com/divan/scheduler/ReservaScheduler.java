@@ -166,10 +166,9 @@ public class ReservaScheduler {
                 LocalDateTime novoCheckout = reservaAtualizada.getDataCheckout().plusDays(1);
                 reservaAtualizada.setDataCheckout(novoCheckout);
                 reservaAtualizada.setQuantidadeDiaria(reservaAtualizada.getQuantidadeDiaria() + 1);
-                reservaAtualizada.setTotalDiaria(reservaAtualizada.getTotalDiaria().add(valorDiaria));
-                reservaAtualizada.setTotalHospedagem(reservaAtualizada.getTotalHospedagem().add(valorDiaria));
-                reservaAtualizada.setTotalApagar(reservaAtualizada.getTotalApagar().add(valorDiaria));
                 reservaAtualizada.setRenovacaoAutomatica(true);
+                reservaRepository.saveAndFlush(reservaAtualizada);
+                reservaService.recalcularTotaisPublic(reservaAtualizada);
                 reservaRepository.saveAndFlush(reservaAtualizada);
 
                 System.out.println("✅ Diária extra lançada: R$ " + valorDiaria);

@@ -277,6 +277,8 @@ public class ReservaDetalhesDTO {
         private String cpf;
         private String telefone;
         private Boolean creditoAprovado;
+        private Long empresaId;
+        private String empresaNome;
 		
         public Long getId() {
 			return id;
@@ -308,7 +310,20 @@ public class ReservaDetalhesDTO {
 		public void setCreditoAprovado(Boolean creditoAprovado) {
 			this.creditoAprovado = creditoAprovado;
 		}
+		public Long getEmpresaId() {
+			return empresaId;
+		}
+		public void setEmpresaId(Long empresaId) {
+			this.empresaId = empresaId;
+		}
+		public String getEmpresaNome() {
+			return empresaNome;
+		}
+		public void setEmpresaNome(String empresaNome) {
+			this.empresaNome = empresaNome;
+		}
 		
+				
     }   
     
     public static class ApartamentoSimples {

@@ -2849,6 +2849,7 @@ import { environment } from '../../../environments/environment';
     erro = '';
 
     pagouDebitoEmConta = false;
+    valorDebitoEmConta = 0;
 
     // ALTERAR CHECKOUT
     modalAlterarCheckout = false;
@@ -3163,7 +3164,7 @@ ngOnDestroy(): void {
     // ============= IMPRIMIR CHECK-IN =============
     imprimirCheckin(): void {
     if (!this.reserva) return;
-    
+    const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
     const htmlImpressao = `
       <!DOCTYPE html>
       <html>
@@ -3340,12 +3341,14 @@ ngOnDestroy(): void {
         <div class="separador">================================</div>
 
         <div class="secao">
-          <h3>DADOS DO HOSPEDE</h3>
-          <p><strong>Nome:</strong> ${this.reserva.cliente?.nome}</p>
-          <p><strong>Telefone:</strong> ${this.reserva.cliente?.celular || this.reserva.cliente?.telefone || 'Nao informado'}</p>
-        </div>
+  <h3>DADOS DO HOSPEDE</h3>
+  <p><strong>Nome:</strong> ${this.reserva.cliente?.nome}</p>
+  ${empresaNomeCliente ? '<p><strong>Empresa:</strong> ' + empresaNomeCliente + '</p>' : ''}
+  <p><strong>CPF:</strong> ${this.formatarCPF(this.reserva.cliente?.cpf)}</p>
+  <p><strong>Telefone:</strong> ${this.reserva.cliente?.celular || this.reserva.cliente?.telefone || 'Nao informado'}</p>
+</div>
 
-        <div class="separador">- - - - - - - - - - - - - - - -</div>
+<div class="separador">- - - - - - - - - - - - - - - -</div>
 
         <div class="secao">
           <h3>INFORMACOES DA RESERVA</h3>
@@ -3426,7 +3429,7 @@ ngOnDestroy(): void {
   ?.filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
   ?.reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0) || 0;
 const totalPagoAVista = (this.reserva.totalRecebido || 0) - debitoEmConta;
-
+ const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
 
     const htmlImpressao = `
       <!DOCTYPE html>
@@ -3614,11 +3617,12 @@ const totalPagoAVista = (this.reserva.totalRecebido || 0) - debitoEmConta;
         <div class="separador">================================</div>
 
         <div class="secao">
-          <h3>DADOS DO HOSPEDE</h3>
-          <p><strong>Nome:</strong> ${this.reserva.cliente?.nome}</p>
-          <p><strong>CPF:</strong> ${this.formatarCPF(this.reserva.cliente?.cpf)}</p>
-          <p><strong>Telefone:</strong> ${this.reserva.cliente?.celular || this.reserva.cliente?.telefone || 'Nao informado'}</p>
-        </div>
+  <h3>DADOS DO HOSPEDE</h3>
+  <p><strong>Nome:</strong> ${this.reserva.cliente?.nome}</p>
+  ${empresaNomeCliente ? '<p><strong>Empresa:</strong> ' + empresaNomeCliente + '</p>' : ''}
+  <p><strong>CPF:</strong> ${this.formatarCPF(this.reserva.cliente?.cpf)}</p>
+  <p><strong>Telefone:</strong> ${this.reserva.cliente?.celular || this.reserva.cliente?.telefone || 'Nao informado'}</p>
+</div>
 
         <div class="separador">- - - - - - - - - - - - - - - -</div>
 
@@ -3702,7 +3706,9 @@ ${debitoEmConta > 0 ? `<tr>
   }
     gerarFatura(): void {
       if (!this.reserva) return;
-
+      const valorFaturado = this.valorDebitoEmConta ||
+    ((this.reserva.totalHospedagem || 0) - (this.reserva.desconto || 0));
+  const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
       const htmlImpressao = `
         <!DOCTYPE html>
         <html>
@@ -3762,6 +3768,7 @@ ${debitoEmConta > 0 ? `<tr>
           <div class="secao">
             <h3>DADOS DO HOSPEDE</h3>
             <p><strong>Nome:</strong> ${this.reserva.cliente?.nome}</p>
+            ${empresaNomeCliente ? '<p><strong>Empresa:</strong> ' + empresaNomeCliente + '</p>' : ''}
             <p><strong>CPF:</strong> ${this.formatarCPF(this.reserva.cliente?.cpf)}</p>
             <p><strong>Telefone:</strong> ${this.reserva.cliente?.celular || this.reserva.cliente?.telefone || 'Nao informado'}</p>
           </div>
@@ -5304,6 +5311,7 @@ salvarAdiantamento(): void {
 
     const totalComDesconto = (this.reserva.totalHospedagem || 0) - (this.reserva.desconto || 0);
     const saldo = totalComDesconto - (this.reserva.totalRecebido || 0);
+    const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
 
     // Agrupar extratos por tipo
     const diarias = (this.reserva.extratos || []).filter(e => 
@@ -5528,6 +5536,7 @@ salvarAdiantamento(): void {
 
         <div class="secao">
           <p><strong>Hospede:</strong> ${this.reserva.cliente?.nome}</p>
+          ${empresaNomeCliente ? '<p><strong>Empresa:</strong> ' + empresaNomeCliente + '</p>' : ''}
           <p><strong>Apartamento:</strong> ${this.reserva.apartamento?.numeroApartamento}</p>
           <p><strong>Check-in:</strong> ${this.formatarDataCompleta(this.reserva.dataCheckin)}</p>
           <p><strong>Check-out:</strong> ${this.formatarDataCompleta(this.reserva.dataCheckout)}</p>
