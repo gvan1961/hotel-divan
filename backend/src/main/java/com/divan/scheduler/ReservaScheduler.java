@@ -307,35 +307,56 @@ public class ReservaScheduler {
         });
     }
     
- // ✅ Cancela pré-reservas com check-in vencido há mais de X horas
+ // ✅ Verifica pré-reservas com check-in vencido e gera alertas (NÃO cancela mais)
     @Scheduled(cron = "0 0 * * * *") // Roda toda hora
     public void cancelarPreReservasExpiradas() {
-        LocalDateTime limite = LocalDateTime.now().minusHours(2); // 2h de tolerância
-        
+        LocalDateTime limite = LocalDateTime.now().minusHours(2);
+
         List<Reserva> expiradas = reservaRepository
             .findByStatusAndDataCheckinBefore(Reserva.StatusReservaEnum.PRE_RESERVA, limite);
-        
-        for (Reserva r : expiradas) {
-            r.setStatus(Reserva.StatusReservaEnum.CANCELADA);
-            r.setMotivoCancelamento("Cancelamento automático — hóspede não compareceu");
-            reservaRepository.save(r);
 
-            // ✅ Registra no log de auditoria
+        for (Reserva r : expiradas) {
+            // Verifica se já existe alerta hoje para esta reserva
+            boolean jaAlertado = logAuditoriaRepository
+                .existsByReservaIdAndAcaoAndDataHoraAfter(
+                    r.getId(),
+                    "NO-SHOW — Alerta",
+                    LocalDateTime.now().toLocalDate().atStartOfDay()
+                );
+
+            if (jaAlertado) continue;
+
+            boolean temPagamento = r.getTotalRecebido() != null
+                && r.getTotalRecebido().compareTo(java.math.BigDecimal.ZERO) > 0;
+
             LogAuditoria log = new LogAuditoria();
-            log.setUsuario(null); // Sistema automático
+            log.setUsuario(null);
             log.setReserva(r);
-            log.setAcao("NO-SHOW — Cancelamento Automático");
-            log.setDescricao(String.format("Pré-reserva #%d cancelada automaticamente — NO-SHOW. Cliente: %s — Apt: %s — Check-in previsto: %s",
-                r.getId(),
-                r.getCliente().getNome(),
-                r.getApartamento().getNumeroApartamento(),
-                r.getDataCheckin().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-            ));
+            log.setAcao("NO-SHOW — Alerta");
             log.setDataHora(LocalDateTime.now());
             log.setIp("SISTEMA");
-            logAuditoriaRepository.save(log);
 
-            System.out.println("🚫 Pré-reserva #" + r.getId() + " cancelada automaticamente — NO-SHOW");
+            if (temPagamento) {
+                log.setDescricao(String.format(
+                    "Pré-reserva #%d — hóspede não chegou mas reserva está PAGA. Cliente: %s — Apt: %s — Check-in previsto: %s",
+                    r.getId(),
+                    r.getCliente().getNome(),
+                    r.getApartamento().getNumeroApartamento(),
+                    r.getDataCheckin().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                ));
+                System.out.println("💰 Pré-reserva #" + r.getId() + " — paga mas hóspede não chegou");
+            } else {
+                log.setDescricao(String.format(
+                    "Pré-reserva #%d — hóspede não compareceu. Cliente: %s — Apt: %s — Check-in previsto: %s",
+                    r.getId(),
+                    r.getCliente().getNome(),
+                    r.getApartamento().getNumeroApartamento(),
+                    r.getDataCheckin().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                ));
+                System.out.println("⚠️ Pré-reserva #" + r.getId() + " — NO-SHOW sem pagamento");
+            }
+
+            logAuditoriaRepository.save(log);
         }
     }
 }
