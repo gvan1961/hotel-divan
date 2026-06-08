@@ -1,10 +1,11 @@
-import { Component, OnInit, inject } from '@angular/core';
+//import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ContaReceberService, ContaAReceber, PagamentoConta } from '../../services/conta-receber.service';
 import { HttpClient } from '@angular/common/http';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 
 interface FiltrosAvancados {
   empresaId?: number;
@@ -32,6 +33,7 @@ interface FiltrosAvancados {
           <button class="btn btn-atualizar" (click)="atualizarVencidas()">
             🔄 Atualizar
           </button>
+          <button class="btn btn-baixa-lote" *ngIf="filtrosAplicados.empresaId && contasFiltradas.length > 0" (click)="abrirModalBaixaLote()">✅ Dar baixa em todas ({{ contasFiltradas.length }})</button>
          
           <button *hasPermission="'CONTA_RECEBER_CRIAR'" 
         class="btn btn-criar" 
@@ -391,22 +393,52 @@ interface FiltrosAvancados {
           </div>
 
           <div class="modal-footer">
-            <button class="btn-cancelar" (click)="fecharModalPagamento()">Cancelar</button>
+           <button class="btn-cancelar" (click)="fecharModalPagamento()">Cancelar</button>
             <button class="btn-confirmar" (click)="registrarPagamento()">Confirmar Pagamento</button>
           </div>
         </div>
       </div>
+    </div>
 
-          
-
+    <!-- MODAL BAIXA EM LOTE -->
+    <div class="modal-overlay" *ngIf="modalBaixaLote">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <h2>✅ Dar baixa em lote</h2>
+        <div class="campo">
+          <label>Data do Pagamento *</label>
+          <input type="date" [(ngModel)]="pagamentoLote.dataPagamento">
+        </div>
+        <div class="campo">
+          <label>Forma de Pagamento *</label>
+          <select [(ngModel)]="pagamentoLote.formaPagamento">
+            <option value="">Selecione...</option>
+            <option value="DINHEIRO">Dinheiro</option>
+            <option value="PIX">PIX</option>
+            <option value="TRANSFERENCIA_BANCARIA">Transferência</option>
+            <option value="CARTAO_CREDITO">Cartão Crédito</option>
+            <option value="CARTAO_DEBITO">Cartão Débito</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label>Observação</label>
+          <textarea [(ngModel)]="pagamentoLote.observacao" rows="2"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancelar" (click)="modalBaixaLote = false">Cancelar</button>
+          <button class="btn-confirmar" (click)="darBaixaEmLote()">✅ Confirmar</button>
+        </div>
+      </div>
     </div>
 
     <!-- ÁREA DE IMPRESSÃO (OCULTA NA TELA) -->
-   <div class="print-only">
+    <div class="print-only">
    <div class="print-header">
-    <h1>{{ obterTituloCabecalho() }}</h1>
-    <p class="print-subtitle">Relatório de Contas a Receber</p>
-    <p class="print-date">{{ obterDataHoraRelatorio() }}</p>
+  <p style="font-size:11pt; font-weight:700; margin:0;">SANTOS E CORREIA LTDA</p>
+  <h1>HOTEL DI VAN</h1>
+  <p class="print-subtitle">CNPJ: 07.757.726/0001-12 | Arapiraca - AL</p>
+  <div class="separador" style="margin:8px 0;">================================</div>
+  <p class="print-subtitle">{{ obterTituloCabecalho() }} — Relatório de Contas a Receber</p>
+  <p class="print-date">{{ dataHoraRelatorio }}</p>
     
     <div class="print-filters" *ngIf="temFiltrosAtivos()">
       <strong>Filtros Aplicados:</strong>
@@ -463,11 +495,12 @@ interface FiltrosAvancados {
        <td class="valor destaque"><strong>{{ formatarMoeda(calcularTotalGeralAPagar()) }}</strong></td>
       </tr>
     </tbody>
-  </table>
+  </table>  
 
   <div class="print-footer">
     <p>Total de registros: {{ contasFiltradas.length }}</p>
-  </div>
+  </div> 
+
 </div>
 
   `,
@@ -1036,12 +1069,18 @@ interface FiltrosAvancados {
       .modal-grande         { min-width: 90%; }
       .tabela-container     { overflow-x: auto; }
     }
+
+    .btn-baixa-lote { background: #27ae60; }
+    .btn-baixa-lote:hover { background: #229954; }
+
   `]
 })
 export class ContasReceberListaApp implements OnInit {
   private contaReceberService = inject(ContaReceberService);
   private http = inject(HttpClient);
   private router = inject(Router);
+
+  private cdr = inject(ChangeDetectorRef);
 
   contas: ContaAReceber[] = [];
   contasFiltradas: ContaAReceber[] = [];
@@ -1065,6 +1104,13 @@ export class ContasReceberListaApp implements OnInit {
     descricao: ''
   };
   reservasDisponiveis: any[] = [];
+
+  modalBaixaLote = false;
+pagamentoLote = {
+  dataPagamento: new Date().toISOString().split('T')[0],
+  formaPagamento: '',
+  observacao: ''
+};
 
   // MODAL PAGAMENTO
   modalPagamento = false;
@@ -1194,24 +1240,21 @@ export class ContasReceberListaApp implements OnInit {
 }
 
     if (this.filtrosAplicados.status) {
-      const status = this.filtrosAplicados.status;
-      if (status === 'EM_ABERTO') {
-        resultado = resultado.filter(c =>
-          c.status === 'PENDENTE' || c.status === 'PARCIAL' || c.status === 'ATRASADA'
-        );
-      } else if (status === 'VENCIDAS') {
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        resultado = resultado.filter(c => {
-          const vencimento = new Date(c.dataVencimento);
-          vencimento.setHours(0, 0, 0, 0);
-          return vencimento < hoje &&
-            (c.status === 'PENDENTE' || c.status === 'PARCIAL' || c.status === 'ATRASADA');
-        });
-      } else {
-        resultado = resultado.filter(c => c.status === status);
-      }
-    }
+  const status = this.filtrosAplicados.status;
+  if (status === 'EM_ABERTO') {
+    resultado = resultado.filter(c => c.status !== 'PAGA' && c.status !== 'CANCELADA');
+  } else if (status === 'VENCIDAS') {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    resultado = resultado.filter(c => {
+      const vencimento = new Date(c.dataVencimento);
+      vencimento.setHours(0, 0, 0, 0);
+      return vencimento < hoje && c.status !== 'PAGA' && c.status !== 'CANCELADA';
+    });
+  } else {
+    resultado = resultado.filter(c => c.status === status);
+  }
+}
 
     if (this.filtrosAplicados.dataCheckInInicio && this.filtrosAplicados.dataCheckInFim) {
       resultado = resultado.filter(c => {
@@ -1681,9 +1724,7 @@ export class ContasReceberListaApp implements OnInit {
     return 'Relatório de Contas a Receber';
   }
 
-  obterDataHoraRelatorio(): string {
-    return new Date().toLocaleString('pt-BR');
-  }
+ dataHoraRelatorio: string = new Date().toLocaleString('pt-BR');
 
   formatarMoeda(valor?: number): string {
   if (valor === null || valor === undefined) return 'R$ 0,00';
@@ -1717,4 +1758,51 @@ export class ContasReceberListaApp implements OnInit {
   temReserva(conta: ContaAReceber): boolean {
   return !!(conta as any).reserva;
 }
+
+darBaixaEmLote(): void {
+  if (!this.pagamentoLote.dataPagamento) { alert('Informe a data'); return; }
+  if (!this.pagamentoLote.formaPagamento) { alert('Selecione a forma de pagamento'); return; }
+
+  const contasEmAberto = this.contasFiltradas.filter(c => c.status !== 'PAGA');
+  if (contasEmAberto.length === 0) { alert('Nenhuma conta em aberto'); return; }
+
+  const confirmacao = confirm(`✅ Dar baixa em ${contasEmAberto.length} conta(s)?\n\nEssa ação não pode ser desfeita.`);
+  if (!confirmacao) return;
+
+  let processadas = 0;
+  let erros = 0;
+
+  contasEmAberto.forEach(conta => {
+    const pag = {
+      valorPago: conta.saldo,
+      dataPagamento: this.pagamentoLote.dataPagamento,
+      formaPagamento: this.pagamentoLote.formaPagamento,
+      observacao: this.pagamentoLote.observacao
+    };
+    this.contaReceberService.registrarPagamento(conta.id, pag).subscribe({
+      next: () => {
+        processadas++;
+        if (processadas + erros === contasEmAberto.length) {
+          alert(`✅ ${processadas} conta(s) pagas com sucesso!${erros > 0 ? '\n❌ ' + erros + ' erro(s)' : ''}`);
+          this.modalBaixaLote = false;
+          this.carregarDados();
+        }
+      },
+      error: () => {
+        erros++;
+        if (processadas + erros === contasEmAberto.length) {
+          alert(`✅ ${processadas} conta(s) pagas!\n❌ ${erros} erro(s)`);
+          this.modalBaixaLote = false;
+          this.carregarDados();
+        }
+      }
+    });
+  });
+}
+
+abrirModalBaixaLote(): void {
+  this.modalBaixaLote = true;
+  this.cdr.detectChanges();
+}
+
 } 

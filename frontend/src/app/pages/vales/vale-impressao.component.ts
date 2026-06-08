@@ -76,10 +76,15 @@ import { Vale, TIPO_VALE_LABELS, STATUS_VALE_LABELS } from '../../models/vale.mo
           </p>
           
           <div class="area-assinatura">
-            <div class="linha-assinatura"></div>
-            <p class="label-assinatura">Assinatura do Funcionário</p>
-            <p class="data-assinatura">{{ obterDataAtual() }}</p>
-          </div>
+  <ng-container *ngIf="vale?.assinaturaBase64; else semAssinatura">
+    <img [src]="vale.assinaturaBase64" style="max-width:250px; max-height:80px; display:block; margin:0 auto 10px; border:1px solid #ddd;">
+  </ng-container>
+  <ng-template #semAssinatura>
+    <div class="linha-assinatura"></div>
+  </ng-template>
+  <p class="label-assinatura">Assinatura do Funcionário</p>
+  <p class="data-assinatura">{{ obterDataAtual() }}</p>
+</div>
         </div>
 
         <!-- RODAPÉ -->
@@ -291,36 +296,62 @@ import { Vale, TIPO_VALE_LABELS, STATUS_VALE_LABELS } from '../../models/vale.mo
       margin: 5px 0;
     }
 
+    .rodape {
+  page-break-inside: avoid;
+}
+
+.secao-assinatura {
+  page-break-inside: avoid;
+  margin-top: 20px !important;
+  padding: 15px !important;
+}
+
+
     /* IMPRESSÃO */
-    @media print {
-      body {
-        background: white;
-      }
+@media print {
+  body {
+    background: white;
+    font-size: 11px !important;
+  }
 
-      .container {
-        padding: 0;
-        max-width: 100%;
-      }
+  img {
+    max-width: 200px !important;
+    max-height: 60px !important;
+  }
 
-      .no-print {
-        display: none !important;
-      }
+  .container {
+    padding: 0;
+    max-width: 100%;
+  }
 
-      .vale-documento {
-        border: 2px solid #2c3e50;
-        min-height: auto;
-      }
+  .no-print {
+    display: none !important;
+  }
 
-      * {
-        print-color-adjust: exact !important;
-        -webkit-print-color-adjust: exact !important;
-      }
+  .vale-documento {
+    border: 2px solid #2c3e50;
+    min-height: auto;
+  }
 
-      @page {
-        margin: 20mm;
-        size: A4 portrait;
-      }
-    }
+  .secao-assinatura {
+    margin-top: 20px !important;
+    padding: 15px !important;
+  }
+
+  .area-assinatura {
+    margin-top: 15px !important;
+  }
+
+  * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  @page {
+  margin: 5mm;
+  size: A4 portrait;
+}
+}
   `]
 })
 export class ValeImpressaoComponent implements OnInit {

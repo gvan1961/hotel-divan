@@ -27,6 +27,7 @@ export interface ValeRequest {
   tipoVale: TipoVale;
   valor: number;
   observacao?: string;
+  assinaturaBase64?: string;
 }
 
 export enum TipoVale {

@@ -5,6 +5,8 @@ import com.divan.entity.Vale;
 import com.divan.entity.Vale.StatusVale;
 import com.divan.repository.ClienteRepository;
 import com.divan.repository.ValeRepository;
+import com.divan.service.WhatsAppService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +28,9 @@ public class ValeController {
     @Autowired
     private ClienteRepository clienteRepository;
 
+    @Autowired
+    private WhatsAppService whatsAppService;
+    
     @GetMapping
     public ResponseEntity<List<Vale>> listarTodos() {
         return ResponseEntity.ok(valeRepository.findAll());
@@ -66,7 +71,9 @@ public class ValeController {
             preencherVale(vale, body);
             vale.setDataEmissao(LocalDateTime.now());
             vale.setStatus(StatusVale.PENDENTE);
-            return ResponseEntity.ok(valeRepository.save(vale));
+            Vale valeSalvo = valeRepository.save(vale);
+            notificarValeCreado(valeSalvo);
+            return ResponseEntity.ok(valeSalvo);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
@@ -89,7 +96,9 @@ public class ValeController {
         return valeRepository.findById(id).map(vale -> {
             vale.setStatus(StatusVale.PAGO);
             vale.setDataPagamento(LocalDateTime.now());
-            return ResponseEntity.ok(valeRepository.save(vale));
+            Vale valeSalvo = valeRepository.save(vale);
+            notificarValePago(valeSalvo);
+            return ResponseEntity.ok(valeSalvo);
         }).orElse(ResponseEntity.notFound().build());
     }
 
@@ -128,6 +137,38 @@ public class ValeController {
             vencidos.size() + " vale(s) marcado(s) como vencido(s)"));
     }
 
+    private void notificarValeCreado(Vale vale) {
+        try {
+            Cliente cliente = vale.getCliente();
+            if (cliente == null || cliente.getCelular() == null || cliente.getCelular().isBlank()) return;
+
+            String numero = whatsAppService.montarNumeroCompleto("55", cliente.getCelular());
+            if (numero == null) return;
+
+            String msg = String.format(
+                "🏨 *Hotel Di Van*\n\n" +
+                "Olá, *%s*!\n\n" +
+                "Um vale foi registrado em seu nome:\n\n" +
+                "💰 *Valor:* R$ %s\n" +
+                "📋 *Tipo:* %s\n" +
+                "📅 *Data:* %s\n" +
+                "📆 *Vencimento:* %s\n\n" +
+                "%s" +
+                "Em caso de dúvidas, entre em contato com a recepção.",
+                cliente.getNome(),
+                vale.getValor().setScale(2),
+                vale.getTipoVale() != null ? vale.getTipoVale() : "-",
+                vale.getDataConcessao() != null ? vale.getDataConcessao().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "-",
+                vale.getDataVencimento() != null ? vale.getDataVencimento().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "-",
+                vale.getObservacao() != null && !vale.getObservacao().isBlank() ? "📝 *Obs:* " + vale.getObservacao() + "\n\n" : ""
+            );
+
+            whatsAppService.enviarTexto(numero, msg);
+        } catch (Exception e) {
+            System.err.println("⚠️ Erro ao notificar vale: " + e.getMessage());
+        }
+    }
+    
     private void preencherVale(Vale vale, Map<String, Object> body) {
         Long clienteId = Long.parseLong(body.get("clienteId").toString());
         Cliente cliente = clienteRepository.findById(clienteId)
@@ -147,8 +188,38 @@ public class ValeController {
                 body.get("dataVencimento").toString().substring(0, 10)));
         if (body.get("dataConcessao") != null)
             vale.setDataConcessao(LocalDate.parse(
-                body.get("dataConcessao").toString().substring(0, 10)));
+                body.get("dataConcessao").toString().substring(0, 10)));        
         else
             vale.setDataConcessao(LocalDate.now());
+        if (body.get("assinaturaBase64") != null)
+            vale.setAssinaturaBase64(body.get("assinaturaBase64").toString());
+    }
+    
+    private void notificarValePago(Vale vale) {
+        try {
+            Cliente cliente = vale.getCliente();
+            if (cliente == null || cliente.getCelular() == null || cliente.getCelular().isBlank()) return;
+
+            String numero = whatsAppService.montarNumeroCompleto("55", cliente.getCelular());
+            if (numero == null) return;
+
+            String msg = String.format(
+                "🏨 *Hotel Di Van*\n\n" +
+                "Olá, *%s*!\n\n" +
+                "✅ O seu vale foi *quitado*:\n\n" +
+                "💰 *Valor:* R$ %s\n" +
+                "📋 *Tipo:* %s\n" +
+                "📅 *Data Pagamento:* %s\n\n" +
+                "Obrigado! 🙏",
+                cliente.getNome(),
+                vale.getValor().setScale(2),
+                vale.getTipoVale() != null ? vale.getTipoVale() : "-",
+                LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+            );
+
+            whatsAppService.enviarTexto(numero, msg);
+        } catch (Exception e) {
+            System.err.println("⚠️ Erro ao notificar pagamento de vale: " + e.getMessage());
+        }
     }
 }

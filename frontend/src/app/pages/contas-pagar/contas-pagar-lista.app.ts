@@ -223,7 +223,7 @@ export class ContasPagarListaApp implements OnInit {
   contaPagando: ContaPagar | null = null;
   valorPagamento: number | null = null;
   formaPagamento = '';
-
+ 
   buscaReserva = '';
 
   filtroFornecedor = '';

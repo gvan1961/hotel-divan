@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -7,11 +7,13 @@ import { ClienteService } from '../../services/cliente.service';
 import { Vale, ValeRequest, TipoVale, TIPO_VALE_LABELS } from '../../models/vale.model';
 import { Cliente } from '../../models/cliente.model';
 import { CurrencyInputDirective } from '../../directives/currency-input.directive';
+import { Component, OnInit, inject, ChangeDetectorRef, ViewChild } from '@angular/core';
+import { SignaturePadComponent } from '../../components/signature-pad/signature-pad.component';
 
 @Component({
   selector: 'app-vale-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, CurrencyInputDirective],
+  imports: [CommonModule, FormsModule, CurrencyInputDirective, SignaturePadComponent],
   template: `
     <div class="container-form">
       <div class="header">
@@ -134,19 +136,37 @@ import { CurrencyInputDirective } from '../../directives/currency-input.directiv
 
 <!-- BOTÕES -->
 <div class="form-footer">
-  <button type="button" class="btn-cancelar" (click)="voltar()">
-    Cancelar
+  <button type="button" class="btn-cancelar" (click)="voltar()">Cancelar</button>
+  <button type="button" class="btn-remoto" (click)="solicitarRemoto()" [disabled]="!formValido()">
+    📱 Solicitar Remotamente
   </button>
-  <button 
-    type="submit" 
-    class="btn-salvar"
-    [disabled]="!formValido()">
-    {{ modoEdicao ? '💾 Salvar Alterações' : '✅ Criar Vale' }}
+  <button type="button" class="btn-salvar" (click)="abrirAssinatura()" [disabled]="!formValido()">
+    ✅ Criar Vale
   </button>
 </div>
 </form>
 </div>
-     
+
+<!-- MODAL ASSINATURA -->
+<div class="modal-overlay" *ngIf="modalAssinatura">
+  <div class="modal-content modal-assinatura" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>✍️ Assinatura do Funcionário</h3>
+      <button class="btn-fechar-modal" (click)="modalAssinatura = false">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p><strong>Funcionário:</strong> {{ funcionarioSelecionado?.nome }}</p>
+      <p><strong>Valor:</strong> R$ {{ form.valor | number:'1.2-2' }}</p>
+      <app-signature-pad #signaturePad></app-signature-pad>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" (click)="modalAssinatura = false">❌ Cancelar</button>
+      <button class="btn-confirmar" (click)="confirmarAssinatura()">✅ Confirmar e Salvar</button>
+    </div>
+  </div>
+</div>    
+
+
       <!-- LOADING -->
       <div class="loading-overlay" *ngIf="loading">
         <div class="spinner"></div>
@@ -528,6 +548,10 @@ export class ValeFormComponent implements OnInit {
   funcionarioSelecionado: Cliente | null = null;
   totalPendente = 0;
 
+  modalAssinatura = false;
+  assinaturaBase64: string | null = null;
+  @ViewChild('signaturePad') signaturePad!: SignaturePadComponent;
+
   // Tipos de vale
   tiposVale = [
   { valor: TipoVale.ADIANTAMENTO, label: TIPO_VALE_LABELS.ADIANTAMENTO },
@@ -727,4 +751,28 @@ onValorInput(event: any): void {
     data.setDate(data.getDate() + 30);
     return data.toISOString().split('T')[0];
   }
+
+  abrirAssinatura(): void {
+  if (!this.formValido()) return;
+  this.modalAssinatura = true;
+}
+
+confirmarAssinatura(): void {
+  const assinatura = this.signaturePad?.obterAssinatura();
+  if (!assinatura) {
+    alert('⚠️ Por favor, assine antes de confirmar.');
+    return;
+  }
+  this.form.assinaturaBase64 = assinatura;
+  this.modalAssinatura = false;
+  this.salvar();
+}
+
+solicitarRemoto(): void {
+  if (!this.formValido()) return;
+  const agora = new Date().toLocaleString('pt-BR');
+  this.form.observacao = (this.form.observacao ? this.form.observacao + '\n' : '') +
+    `Solicitado remotamente em ${agora}`;
+  this.salvar();
+}
 }
