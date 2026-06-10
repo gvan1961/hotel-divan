@@ -10,6 +10,7 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 interface FiltrosAvancados {
   empresaId?: number;
   clienteId?: number;
+  clienteNome?: string;
   dataCheckInInicio?: string;
   dataCheckInFim?: string;
   dataCheckOutInicio?: string;
@@ -52,10 +53,10 @@ interface FiltrosAvancados {
           🏢 Empresa: {{ obterNomeEmpresa(filtrosAplicados.empresaId) }}
           <button (click)="removerFiltro('empresaId')">✕</button>
         </div>
-        <div class="filtro-tag" *ngIf="filtrosAplicados.clienteId">
-          👤 Cliente: {{ obterNomeCliente(filtrosAplicados.clienteId) }}
-          <button (click)="removerFiltro('clienteId')">✕</button>
-        </div>
+        <div class="filtro-tag" *ngIf="filtrosAplicados.clienteNome">
+  👤 Cliente: {{ filtrosAplicados.clienteNome }}
+  <button (click)="removerFiltro('clienteId')">✕</button>
+</div>
         <div class="filtro-tag" *ngIf="filtrosAplicados.dataCheckInInicio && filtrosAplicados.dataCheckInFim">
           📅 Check-in: {{ formatarData(filtrosAplicados.dataCheckInInicio) }} a {{ formatarData(filtrosAplicados.dataCheckInFim) }}
           <button (click)="removerFiltro('checkin')">✕</button>
@@ -234,12 +235,22 @@ interface FiltrosAvancados {
             <!-- CLIENTE -->
             <div class="campo">
               <label>👤 Cliente</label>
-              <select [(ngModel)]="filtrosTemp.clienteId">
-                <option [ngValue]="undefined">Todos os clientes</option>
-                <option *ngFor="let cliente of clientes" [ngValue]="cliente.id">
-                  {{ cliente.nome }}
-                </option>
-              </select>
+              <input type="text" 
+  [(ngModel)]="filtroClienteTexto"
+  (input)="filtrarClientesOpcoes()"
+  placeholder="Digite o nome do cliente..."
+  class="filtro-input">
+<div class="lista-resultados" *ngIf="clientesFiltrados.length > 0">
+  <div class="item-resultado" 
+    *ngFor="let c of clientesFiltrados"
+    (click)="selecionarClienteFiltro(c)">
+    {{ c.nome }}
+  </div>
+</div>
+<div *ngIf="filtrosTemp.clienteId" style="margin-top:5px; color:#27ae60;">
+  ✅ {{ obterNomeCliente(filtrosTemp.clienteId) }}
+  <span style="cursor:pointer; color:#e74c3c;" (click)="limparClienteFiltro()"> ✕</span>
+</div>
             </div>
 
             <!-- STATUS -->
@@ -1073,6 +1084,29 @@ interface FiltrosAvancados {
     .btn-baixa-lote { background: #27ae60; }
     .btn-baixa-lote:hover { background: #229954; }
 
+    .lista-resultados {
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  z-index: 100;
+}
+
+.item-resultado {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.item-resultado:hover {
+  background: #f0f0f0;
+}
+
+.item-resultado:last-child {
+  border-bottom: none;
+}
+
   `]
 })
 export class ContasReceberListaApp implements OnInit {
@@ -1105,6 +1139,9 @@ export class ContasReceberListaApp implements OnInit {
   };
   reservasDisponiveis: any[] = [];
 
+  filtroClienteTexto = '';
+  clientesFiltrados: any[] = [];
+
   modalBaixaLote = false;
 pagamentoLote = {
   dataPagamento: new Date().toISOString().split('T')[0],
@@ -1121,97 +1158,92 @@ pagamentoLote = {
     formaPagamento: '',
     observacao: ''
   };
-
- ngOnInit(): void {
+ngOnInit(): void {
   this.carregarDados();
-  this.http.get<any[]>('/api/clientes').subscribe({
-    next: (data) => {
-      console.log('✅ Clientes carregados:', data.length);
-      this.clientes = data.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-    },
-    error: (err) => console.error('❌ Erro ao carregar clientes:', err)
-  });
 }
 
   carregarDados(): void {
     this.loading = true;
 
     this.contaReceberService.listarTodas().subscribe({
-      next: (contas) => {
-        this.contas = contas;
+  next: (contas) => {
+    this.contas = contas;
 
-        this.http.get<any[]>('/api/reservas').subscribe({
-          next: (reservas) => {
-            this.reservas = reservas;
+    this.http.get<any[]>('/api/reservas').subscribe({
+      next: (reservas) => {
+        this.reservas = reservas;
 
-            this.contas.forEach(conta => {
-              const reserva = reservas.find(r => r.id === conta.reservaId);
-              if (reserva) {
-                (conta as any).reserva = reserva;
-                (conta as any).numeroApartamento = reserva.apartamento?.numeroApartamento;
-                (conta as any).quantidadeHospede = reserva.quantidadeHospede;
-                (conta as any).quantidadeDiaria = reserva.quantidadeDiaria;
-                (conta as any).totalDiaria = reserva.totalDiaria;
-                (conta as any).dataCheckin = reserva.dataCheckin;
-                (conta as any).dataCheckout = reserva.dataCheckout;
-                (conta as any).totalConsumo = Math.max(0, (reserva.totalHospedagem || 0) - (reserva.totalDiaria || 0));
-                (conta as any).totalHospedagem = reserva.totalHospedagem;
-               (conta as any).totalRecebido = conta.totalRecebido || conta.valorPago || 0;
-               (conta as any).pagoAVista = conta.pagoAVista || 0;
-               console.log('💰 conta #' + conta.id + ' pagoAVista:', conta.pagoAVista, '→', (conta as any).pagoAVista);
-                (conta as any).desconto = conta.desconto || reserva.desconto || 0;
-                (conta as any).totalApagar = conta.saldo;
-              } else {
-                (conta as any).reserva = null;
-                (conta as any).numeroApartamento = '-';
-                (conta as any).quantidadeHospede = '-';
-                (conta as any).quantidadeDiaria = '-';
-                (conta as any).totalDiaria = 0;
-                (conta as any).totalConsumo = conta.valor;
-                (conta as any).totalHospedagem = conta.valor;
-                (conta as any).totalRecebido = conta.valorPago;
-                (conta as any).pagoAVista = conta.pagoAVista || 0;
-                (conta as any).desconto = 0;
-                (conta as any).totalApagar = conta.saldo;
-              }
-            });
-
-            this.aplicarFiltros();
-            this.loading = false;
-          },
-          error: (err) => {
-            console.error('❌ Erro ao carregar reservas:', err);
-            this.loading = false;
+        this.contas.forEach(conta => {
+          const reserva = reservas.find(r => r.id === conta.reservaId);
+          if (reserva) {
+            (conta as any).reserva = reserva;
+            (conta as any).numeroApartamento = reserva.apartamento?.numeroApartamento;
+            (conta as any).quantidadeHospede = reserva.quantidadeHospede;
+            (conta as any).quantidadeDiaria = reserva.quantidadeDiaria;
+            (conta as any).totalDiaria = reserva.totalDiaria;
+            (conta as any).dataCheckin = reserva.dataCheckin;
+            (conta as any).dataCheckout = reserva.dataCheckout;
+            (conta as any).totalConsumo = Math.max(0, (reserva.totalHospedagem || 0) - (reserva.totalDiaria || 0));
+            (conta as any).totalHospedagem = reserva.totalHospedagem;
+            (conta as any).totalRecebido = conta.totalRecebido || conta.valorPago || 0;
+            (conta as any).pagoAVista = conta.pagoAVista || 0;
+            (conta as any).desconto = conta.desconto || reserva.desconto || 0;
+            (conta as any).totalApagar = conta.saldo;
+          } else {
+            (conta as any).reserva = null;
+            (conta as any).numeroApartamento = '-';
+            (conta as any).quantidadeHospede = '-';
+            (conta as any).quantidadeDiaria = '-';
+            (conta as any).totalDiaria = 0;
+            (conta as any).totalConsumo = conta.valor;
+            (conta as any).totalHospedagem = conta.valor;
+            (conta as any).totalRecebido = conta.valorPago;
+            (conta as any).pagoAVista = conta.pagoAVista || 0;
+            (conta as any).desconto = 0;
+            (conta as any).totalApagar = conta.saldo;
           }
         });
+
+        // ✅ Extrai clientes únicos das contas
+       const clientesMap = new Map<string, any>();
+this.contas.forEach((conta: any) => {
+  if (conta.clienteNome && !clientesMap.has(conta.clienteNome)) {
+    clientesMap.set(conta.clienteNome, { id: conta.reservaId, nome: conta.clienteNome });
+  }
+});
+this.clientes = Array.from(clientesMap.values())
+  .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+        this.aplicarFiltros();
+        this.loading = false;
       },
       error: (err) => {
-        console.error('❌ Erro ao carregar contas:', err);
+        console.error('❌ Erro ao carregar reservas:', err);
         this.loading = false;
-        alert('Erro ao carregar contas');
       }
     });
+  },
+  error: (err) => {
+    console.error('❌ Erro ao carregar contas:', err);
+    this.loading = false;
+    alert('Erro ao carregar contas');
+  }
+});
 
     this.http.get<any[]>('/api/empresas').subscribe({
       next: (data) => this.empresas = data
     });
 
-   this.http.get<any>('/api/clientes').subscribe({
-  next: (data) => {
-    const lista = Array.isArray(data) ? data : (data.content || data.clientes || []);
-    console.log('✅ Clientes carregados:', lista.length);
-    this.clientes = lista.sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR'));
-  },
-  error: (err) => console.error('❌ Erro ao carregar clientes:', err)
-});
   }
 
   // ========== FILTROS ==========
 
   abrirModalFiltros(): void {
-    this.filtrosTemp = { ...this.filtrosAplicados };
-    this.modalFiltros = true;
-  }
+  this.filtrosTemp = { ...this.filtrosAplicados };
+  this.filtroClienteTexto = this.filtrosAplicados.clienteNome || '';
+  this.clientesFiltrados = [];
+  this.modalFiltros = true;
+}
 
   fecharModalFiltros(): void {
     this.modalFiltros = false;
@@ -1231,13 +1263,14 @@ pagamentoLote = {
       resultado = resultado.filter(c => c.empresaNome === empresaSelecionada?.nomeEmpresa);
     }
 
-    if (this.filtrosAplicados.clienteId) {
-  const clienteSelecionado = this.clientes.find(c => c.id === this.filtrosAplicados.clienteId);
-  resultado = resultado.filter(c => 
-    c.clienteNome?.toLowerCase().includes(clienteSelecionado?.nome?.toLowerCase()) ||
-    c.todosHospedes?.toLowerCase().includes(clienteSelecionado?.nome?.toLowerCase())
+   if (this.filtrosAplicados.clienteNome) {
+  const termo = this.filtrosAplicados.clienteNome.toLowerCase();
+  resultado = resultado.filter(c =>
+    c.clienteNome?.toLowerCase().includes(termo) ||
+    c.todosHospedes?.toLowerCase().includes(termo)
   );
 }
+
 
     if (this.filtrosAplicados.status) {
   const status = this.filtrosAplicados.status;
@@ -1286,7 +1319,10 @@ pagamentoLote = {
 
   removerFiltro(tipo: string): void {
     if (tipo === 'empresaId') delete this.filtrosAplicados.empresaId;
-    if (tipo === 'clienteId') delete this.filtrosAplicados.clienteId;
+    if (tipo === 'clienteId') {
+  delete this.filtrosAplicados.clienteId;
+  delete this.filtrosAplicados.clienteNome;
+}
     if (tipo === 'status') delete this.filtrosAplicados.status;
     if (tipo === 'checkin') {
       delete this.filtrosAplicados.dataCheckInInicio;
@@ -1307,6 +1343,33 @@ pagamentoLote = {
   limparFiltrosTemp(): void {
     this.filtrosTemp = {};
   }
+  
+   filtrarClientesOpcoes(): void {
+  if (!this.filtroClienteTexto.trim()) {
+    this.clientesFiltrados = [];
+    return;
+  }
+  const termo = this.filtroClienteTexto.toLowerCase();
+  this.clientesFiltrados = this.clientes
+    .filter(c => c.nome.toLowerCase().includes(termo))
+    .slice(0, 10);
+}
+
+
+selecionarClienteFiltro(cliente: any): void {
+  this.filtrosTemp.clienteNome = cliente.nome;
+  this.filtroClienteTexto = cliente.nome;
+  this.clientesFiltrados = [];
+}
+
+
+limparClienteFiltro(): void {
+  this.filtrosTemp.clienteId = undefined;
+  this.filtrosTemp.clienteNome = undefined;
+  this.filtroClienteTexto = '';
+  this.clientesFiltrados = [];
+}
+
 
   // ATALHOS
   atalhoMesAtual(): void {

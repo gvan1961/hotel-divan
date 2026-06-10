@@ -77,6 +77,12 @@ import { Vale, TipoVale, StatusVale, TIPO_VALE_LABELS, STATUS_VALE_LABELS } from
         </button>
       </div>
 
+      <button class="btn-baixa-lote" 
+  *ngIf="valesSelecionados.size > 0"
+  (click)="modalBaixaLote = true">
+  💰 Dar baixa em {{ valesSelecionados.size }} vale(s)
+</button>
+
       <!-- LOADING -->
       <div *ngIf="loading" class="loading">
         <div class="spinner"></div>
@@ -88,6 +94,7 @@ import { Vale, TipoVale, StatusVale, TIPO_VALE_LABELS, STATUS_VALE_LABELS } from
         <table>
           <thead>
             <tr>
+              <th><input type="checkbox" (change)="selecionarTodos($event)"></th>
               <th>ID</th>
               <th>Funcionário</th>
               <th>Tipo</th>
@@ -101,6 +108,12 @@ import { Vale, TipoVale, StatusVale, TIPO_VALE_LABELS, STATUS_VALE_LABELS } from
           <tbody>
             <tr *ngFor="let vale of valesFiltrados" 
                 [class.vencido]="vale.status === 'VENCIDO'">
+                <td>
+  <input type="checkbox"
+    *ngIf="vale.status === 'PENDENTE' || vale.status === 'VENCIDO'"
+    [checked]="valesSelecionados.has(vale.id!)"
+    (click)="toggleSelecionado(vale.id!)">
+</td>
               <td>{{ vale.id }}</td>
               <td>
                 <div class="funcionario-info">
@@ -222,6 +235,18 @@ import { Vale, TipoVale, StatusVale, TIPO_VALE_LABELS, STATUS_VALE_LABELS } from
           </div>
         </div>
       </div>
+
+         <div class="modal-overlay" *ngIf="modalBaixaLote">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <h2>💰 Dar baixa em lote</h2>
+    <p>{{ valesSelecionados.size }} vale(s) selecionado(s)</p>
+    <div class="modal-footer">
+      <button class="btn-cancelar" (click)="modalBaixaLote = false">Cancelar</button>
+      <button class="btn-confirmar" (click)="darBaixaEmLote()">✅ Confirmar</button>
+    </div>
+  </div>
+</div>
+
     </div>
   `,
   styles: [`
@@ -720,6 +745,9 @@ export class ValeListaComponent implements OnInit {
   quantidadePendente = 0;
   quantidadeVencido = 0;
   quantidadePagoMes = 0;
+
+  valesSelecionados: Set<number> = new Set();
+  modalBaixaLote = false;
   
   // Filtros
   filtroStatus = '';
@@ -919,4 +947,55 @@ export class ValeListaComponent implements OnInit {
     if (!data) return '-';
     return new Date(data).toLocaleDateString('pt-BR');
   }
+    
+  toggleSelecionado(id: number): void {
+  if (this.valesSelecionados.has(id)) {
+    this.valesSelecionados.delete(id);
+  } else {
+    this.valesSelecionados.add(id);
+  }
+}
+
+selecionarTodos(event: any): void {
+  if (event.target.checked) {
+    this.valesFiltrados
+      .filter(v => v.status === 'PENDENTE' || v.status === 'VENCIDO')
+      .forEach(v => this.valesSelecionados.add(v.id!));
+  } else {
+    this.valesSelecionados.clear();
+  }
+}
+
+darBaixaEmLote(): void {
+  const ids = Array.from(this.valesSelecionados);
+  const confirmacao = confirm(`💰 Confirmar pagamento de ${ids.length} vale(s)?`);
+  if (!confirmacao) return;
+
+  let processados = 0;
+  let erros = 0;
+
+  ids.forEach(id => {
+    this.valeService.marcarComoPago(id).subscribe({
+      next: () => {
+        processados++;
+        if (processados + erros === ids.length) {
+          alert(`✅ ${processados} vale(s) pagos com sucesso!${erros > 0 ? '\n❌ ' + erros + ' erro(s)' : ''}`);
+          this.modalBaixaLote = false;
+          this.valesSelecionados.clear();
+          this.carregarVales();
+        }
+      },
+      error: () => {
+        erros++;
+        if (processados + erros === ids.length) {
+          alert(`✅ ${processados} pago(s)!\n❌ ${erros} erro(s)`);
+          this.modalBaixaLote = false;
+          this.valesSelecionados.clear();
+          this.carregarVales();
+        }
+      }
+    });
+  });
+}
+  
 }
