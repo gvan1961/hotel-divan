@@ -3425,10 +3425,11 @@ ngOnDestroy(): void {
 
     const totalComDesconto = (this.reserva.totalHospedagem || 0) - (this.reserva.desconto || 0);
     
-    const debitoEmConta = this.reserva.extratos
-  ?.filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
-  ?.reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0) || 0;
-const totalPagoAVista = (this.reserva.totalRecebido || 0) - debitoEmConta;
+    const extratos = this.reserva.extratos || [];
+const debitoEmConta = extratos
+  .filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
+  .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
+const totalPagoAVista = Math.max(0, (this.reserva.totalRecebido || 0) - debitoEmConta);
  const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
 
     const htmlImpressao = `
