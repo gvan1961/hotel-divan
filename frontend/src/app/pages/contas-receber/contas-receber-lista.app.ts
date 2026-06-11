@@ -6,6 +6,7 @@ import { ContaReceberService, ContaAReceber, PagamentoConta } from '../../servic
 import { HttpClient } from '@angular/common/http';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { ExportService } from '../../services/export.service';
 
 interface FiltrosAvancados {
   empresaId?: number;
@@ -34,6 +35,16 @@ interface FiltrosAvancados {
           <button class="btn btn-atualizar" (click)="atualizarVencidas()">
             🔄 Atualizar
           </button>
+          <button class="btn btn-exportar" (click)="exportar()" *ngIf="contasFiltradas.length > 0">
+            📊 Exportar Excel
+          </button>
+
+          <button class="btn btn-relatorio-detalhado" 
+  *ngIf="filtrosAplicados.empresaId && contasFiltradas.length > 0"
+  (click)="imprimirRelatorioDetalhado()">
+  📋 Relatório Detalhado
+</button>
+
           <button class="btn btn-baixa-lote" *ngIf="filtrosAplicados.empresaId && contasFiltradas.length > 0" (click)="abrirModalBaixaLote()">✅ Dar baixa em todas ({{ contasFiltradas.length }})</button>
          
           <button *hasPermission="'CONTA_RECEBER_CRIAR'" 
@@ -1107,12 +1118,19 @@ interface FiltrosAvancados {
   border-bottom: none;
 }
 
+.btn-exportar { background: #27ae60; }
+.btn-exportar:hover { background: #229954; }
+
+.btn-relatorio-detalhado { background: #8e44ad; }
+.btn-relatorio-detalhado:hover { background: #7d3c98; }
+
   `]
 })
 export class ContasReceberListaApp implements OnInit {
   private contaReceberService = inject(ContaReceberService);
   private http = inject(HttpClient);
   private router = inject(Router);
+  private exportService = inject(ExportService);
 
   private cdr = inject(ChangeDetectorRef);
 
@@ -1866,6 +1884,175 @@ darBaixaEmLote(): void {
 abrirModalBaixaLote(): void {
   this.modalBaixaLote = true;
   this.cdr.detectChanges();
+}
+
+exportar(): void {
+  const dados = this.contasFiltradas.map(c => ({
+    'Reserva': c.reservaId ? '#' + c.reservaId : '-',
+    'Hóspede': c.clienteNome,
+    'Empresa': (c as any).empresaNome || '-',
+    'Apartamento': (c as any).numeroApartamento || '-',
+    'Check-in': this.formatarData((c as any).dataCheckin),
+    'Check-out': this.formatarData((c as any).dataCheckout),
+    'Diárias': (c as any).quantidadeDiaria || '-',
+    'Vlr Diárias': (c as any).totalDiaria || 0,
+    'Consumo': (c as any).totalConsumo || 0,
+    'Total Hosp.': (c as any).totalHospedagem || 0,
+    'Desconto': (c as any).desconto || 0,
+    'Pago à Vista': (c as any).pagoAVista || 0,
+    'Faturado': c.valor || 0,
+    'Status': c.status,
+    'Vencimento': this.formatarData(c.dataVencimento)
+  }));
+
+  const titulo = this.filtrosAplicados.empresaId
+    ? this.obterNomeEmpresa(this.filtrosAplicados.empresaId)
+    : 'Contas-Receber';
+
+  this.exportService.exportarExcel(dados, titulo, 'Contas a Receber');
+}
+
+imprimirRelatorioDetalhado(): void {
+  const empresaId = this.filtrosAplicados.empresaId;
+  if (!empresaId) return;
+  const nomeEmpresa = this.obterNomeEmpresa(empresaId);
+
+  // Pega apenas os reservaIds das contas já filtradas na tela
+  const reservaIds = this.contasFiltradas
+    .map(c => c.reservaId)
+    .filter(id => id != null);
+
+  if (reservaIds.length === 0) {
+    alert('⚠️ Nenhuma conta filtrada para gerar relatório.');
+    return;
+  }
+
+  this.http.get<any[]>(`/api/contas-receber/empresa/${empresaId}/relatorio-detalhado`).subscribe({
+    next: (dados) => {
+      // Filtra apenas as reservas que estão nas contasFiltradas
+      const dadosFiltrados = dados.filter(d => reservaIds.includes(d.reservaId));
+      const html = this.montarHtmlRelatorioDetalhado(dadosFiltrados, nomeEmpresa);
+      const janela = window.open('', '_blank');
+      if (janela) {
+        janela.document.write(html);
+        janela.document.close();
+        janela.print();
+      }
+    },
+    error: (err) => alert('❌ Erro ao gerar relatório: ' + err.message)
+  });
+}
+
+montarHtmlRelatorioDetalhado(dados: any[], nomeEmpresa: string): string {
+  const totalGeral = dados.reduce((sum, c) => sum + (c.valor || 0), 0);
+  const totalPago = dados.reduce((sum, c) => sum + (c.valorPago || 0), 0);
+  const totalSaldo = dados.reduce((sum, c) => sum + (c.saldo || 0), 0);
+
+  const reservasHtml = dados.map(conta => {
+    const extratosHtml = (conta.extratos || []).map((e: any) => `
+      <tr>
+        <td>${this.formatarDataHora(e.dataHora)}</td>
+        <td><span class="badge-${e.status?.toLowerCase()}">${e.status}</span></td>
+        <td>${e.descricao || '-'}</td>
+        <td style="text-align:right">${e.quantidade || 1}</td>
+        <td style="text-align:right">R$ ${(e.valorUnitario || 0).toFixed(2).replace('.', ',')}</td>
+        <td style="text-align:right; font-weight:bold; color:${(e.total || 0) < 0 ? '#e74c3c' : '#27ae60'}">
+          R$ ${(e.total || 0).toFixed(2).replace('.', ',')}
+        </td>
+      </tr>
+    `).join('');
+
+    return `
+      <div class="reserva-bloco">
+        <div class="reserva-header">
+          <strong>Reserva #${conta.reservaId}</strong> — 
+          Apto ${conta.numeroApartamento} | 
+          ${this.formatarData(conta.dataCheckin)} → ${this.formatarData(conta.dataCheckout)} |
+          ${conta.quantidadeDiaria} diária(s) | ${conta.quantidadeHospede} hóspede(s)
+        </div>
+        <div class="hospedes">👥 ${conta.todosHospedes || conta.clienteNome}</div>
+        <table class="extrato-table">
+          <thead>
+            <tr>
+              <th>Data</th><th>Tipo</th><th>Descrição</th>
+              <th>Qtd</th><th>Valor Unit.</th><th>Total</th>
+            </tr>
+          </thead>
+          <tbody>${extratosHtml}</tbody>
+        </table>
+        <div class="reserva-totais">
+  <span>Diárias: <strong>R$ ${(conta.totalDiaria || 0).toFixed(2).replace('.', ',')}</strong></span>
+  <span>Consumo: <strong>R$ ${(conta.totalConsumo || 0).toFixed(2).replace('.', ',')}</strong></span>
+  <span>Total Hosp.: <strong>R$ ${(conta.totalHospedagem || 0).toFixed(2).replace('.', ',')}</strong></span>
+  <span>Desconto: <strong style="color:#e74c3c">R$ ${(conta.desconto || 0).toFixed(2).replace('.', ',')}</strong></span>
+  <span>Pago à Vista: <strong style="color:#27ae60">R$ ${(conta.pagoAVista || 0).toFixed(2).replace('.', ',')}</strong></span>
+  
+  <span>Faturado: <strong style="color:#8e44ad">R$ ${(conta.valor || 0).toFixed(2).replace('.', ',')}</strong></span>
+  <span class="badge-status-${conta.status?.toLowerCase()}">${
+  conta.status === 'EM_ABERTO' ? 'Em Aberto' :
+  conta.status === 'PAGA' ? 'Paga' :
+  conta.status === 'VENCIDA' ? 'Vencida' :
+  conta.status === 'CANCELADA' ? 'Cancelada' : conta.status
+}</span>
+</div>
+      </div>
+    `;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório Detalhado — ${nomeEmpresa}</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 11px; margin: 20px; color: #333; }
+    h1 { font-size: 16px; margin: 0; }
+    h2 { font-size: 13px; color: #555; margin: 2px 0; }
+    .cabecalho { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+    .reserva-bloco { border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px; padding: 10px; page-break-inside: avoid; }
+    .reserva-header { background: #f5f5f5; padding: 6px; font-size: 12px; border-radius: 3px; margin-bottom: 5px; }
+    .hospedes { color: #555; margin-bottom: 8px; font-size: 11px; }
+    .extrato-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    .extrato-table th { background: #2c3e50; color: white; padding: 4px 6px; text-align: left; font-size: 10px; }
+    .extrato-table td { padding: 3px 6px; border-bottom: 1px solid #eee; font-size: 10px; }
+    .extrato-table tr:nth-child(even) { background: #f9f9f9; }
+    .reserva-totais { 
+  display: flex; 
+  gap: 15px; 
+  flex-wrap: wrap; 
+  padding: 8px; 
+  background: #f0f0f0; 
+  border-radius: 3px; 
+  font-size: 11px;
+  align-items: center;
+}
+    .totais-gerais { margin-top: 15px; border-top: 2px solid #333; padding-top: 10px; font-size: 13px; display: flex; gap: 20px; justify-content: flex-end; }
+    @media print {
+      body { margin: 10mm; font-size: 10px; }
+      @page { margin: 10mm; size: A4 portrait; }
+    }
+  </style>
+</head>
+<body>
+  <div class="cabecalho">
+    <h1>SANTOS E CORREIA LTDA — HOTEL DI VAN</h1>
+    <h2>CNPJ: 07.757.726/0001-12 | Arapiraca - AL</h2>
+    <h2>Relatório Detalhado — ${nomeEmpresa}</h2>
+    <p>Emitido em: ${new Date().toLocaleString('pt-BR')}</p>
+  </div>
+  ${reservasHtml}
+  <div class="totais-gerais">
+    <span>Total Hospedagem: <strong>R$ ${totalGeral.toFixed(2).replace('.', ',')}</strong></span>
+    <span>Total Pago: <strong style="color:#27ae60">R$ ${totalPago.toFixed(2).replace('.', ',')}</strong></span>
+    <span>Saldo a Receber: <strong style="color:#e74c3c">R$ ${totalSaldo.toFixed(2).replace('.', ',')}</strong></span>
+  </div>
+</body>
+</html>`;
+}
+
+formatarDataHora(dataHora: string): string {
+  if (!dataHora) return '-';
+  return new Date(dataHora).toLocaleString('pt-BR');
 }
 
 } 

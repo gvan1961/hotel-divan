@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/contas-receber")
@@ -90,4 +91,11 @@ public class ContaAReceberController {
         contaAReceberService.excluir(id);
         return ResponseEntity.ok().build();
     }
+    
+    @GetMapping("/empresa/{empresaId}/relatorio-detalhado")
+    public ResponseEntity<List<Map<String, Object>>> relatorioDetalhado(@PathVariable Long empresaId) {
+        return ResponseEntity.ok(contaAReceberService.relatorioDetalhadoEmpresa(empresaId));
+    }
+    
+    
 }

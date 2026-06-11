@@ -9,27 +9,37 @@ import com.divan.entity.ContaAReceber.StatusContaEnum;
 import com.divan.entity.Empresa;
 import com.divan.entity.ExtratoReserva;
 import com.divan.entity.Reserva;
+import com.divan.entity.VwExtratoCompleto;
 import com.divan.repository.ContaAReceberRepository;
 import com.divan.repository.EmpresaRepository;
 import com.divan.repository.ExtratoReservaRepository;
 import com.divan.repository.HospedagemHospedeRepository;
 import com.divan.repository.ReservaRepository;
+import com.divan.repository.VwExtratoCompletoRepository;
+
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
+
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ContaAReceberService {
+
+	@Autowired
+	private VwExtratoCompletoRepository vwExtratoCompletoRepository;
 
     private final ContaAReceberRepository contaAReceberRepository;
     private final ReservaRepository reservaRepository;
@@ -195,6 +205,84 @@ public class ContaAReceberService {
         contaAReceberRepository.delete(conta);
         System.out.println("✅ Conta excluída com sucesso");
     }
+    
+    
+ // ========== RELATÓRIO DETALHADO POR EMPRESA ==========
+    public List<Map<String, Object>> relatorioDetalhadoEmpresa(Long empresaId) {
+        List<VwExtratoCompleto> extratos = vwExtratoCompletoRepository
+            .findByEmpresaIdOrderByReservaIdAscDataHoraLancamentoAsc(empresaId);
+
+        // Agrupa extratos por reservaId
+        Map<Long, List<VwExtratoCompleto>> porReserva = extratos.stream()
+            .collect(Collectors.groupingBy(VwExtratoCompleto::getReservaId));
+
+        List<Map<String, Object>> resultado = new ArrayList<>();
+
+        for (Map.Entry<Long, List<VwExtratoCompleto>> entry : porReserva.entrySet()) {
+            List<VwExtratoCompleto> extratosReserva = entry.getValue();
+            VwExtratoCompleto primeiro = extratosReserva.get(0);
+
+            Map<String, Object> item = new HashMap<>();
+            item.put("reservaId", primeiro.getReservaId());
+            item.put("clienteNome", primeiro.getClienteNome());
+            item.put("numeroApartamento", primeiro.getNumeroApartamento());
+            item.put("dataCheckin", primeiro.getDataCheckin());
+            item.put("dataCheckout", primeiro.getDataCheckout());
+            item.put("totalHospedagem", primeiro.getTotalHospedagem());
+            item.put("totalDiaria", primeiro.getTotalDiaria());
+            item.put("totalConsumo", primeiro.getTotalProduto());
+            item.put("desconto", primeiro.getDesconto());
+            item.put("totalRecebido", primeiro.getTotalRecebido());
+
+            // Busca conta a receber para esta reserva
+            ContaAReceber conta = contaAReceberRepository.findByReserva(
+                reservaRepository.findById(primeiro.getReservaId()).orElse(null))
+                .orElse(null);
+            item.put("valor", conta != null ? conta.getValor() : BigDecimal.ZERO);
+            item.put("valorPago", conta != null ? conta.getValorPago() : BigDecimal.ZERO);
+            item.put("saldo", conta != null ? conta.getSaldo() : BigDecimal.ZERO);
+            item.put("status", conta != null ? conta.getStatus() : "EM_ABERTO");
+            item.put("quantidadeHospede", primeiro.getQuantidadeHospede());
+            item.put("quantidadeDiaria", primeiro.getQuantidadeDiaria());
+
+            // Calcula pago à vista (total recebido - débitos em conta)
+            BigDecimal debitoEmConta = extratosReserva.stream()
+                .filter(e -> e.getDescricao() != null && e.getDescricao().contains("DEBITO EM CONTA"))
+                .map(VwExtratoCompleto::getTotalLancamento)
+                .map(BigDecimal::abs)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalRecebido = primeiro.getTotalRecebido() != null ? primeiro.getTotalRecebido() : BigDecimal.ZERO;
+            BigDecimal pagoAVista = totalRecebido.subtract(debitoEmConta);
+            if (pagoAVista.compareTo(BigDecimal.ZERO) < 0) pagoAVista = BigDecimal.ZERO;
+            item.put("pagoAVista", pagoAVista);
+
+            // Hóspedes
+            String hospedes = hospedagemHospedeRepository
+                .findByReservaId(primeiro.getReservaId())
+                .stream()
+                .map(h -> h.getCliente() != null ? h.getCliente().getNome() : h.getNomeCompleto())
+                .filter(n -> n != null && !n.isBlank())
+                .collect(Collectors.joining(", "));
+            item.put("todosHospedes", hospedes.isBlank() ? primeiro.getClienteNome() : hospedes);
+
+            // Extratos
+            List<Map<String, Object>> extratosList = extratosReserva.stream().map(e -> {
+                Map<String, Object> ext = new HashMap<>();
+                ext.put("descricao", e.getDescricao());
+                ext.put("status", e.getStatusLancamento());
+                ext.put("quantidade", e.getQuantidade());
+                ext.put("valorUnitario", e.getValorUnitario());
+                ext.put("total", e.getTotalLancamento());
+                ext.put("dataHora", e.getDataHoraLancamento());
+                return ext;
+            }).collect(Collectors.toList());
+
+            item.put("extratos", extratosList);
+            resultado.add(item);
+        }
+        return resultado;
+    }
+    
 
     // ========== CONVERTER PARA DTO ==========
     
@@ -272,4 +360,57 @@ public class ContaAReceberService {
         
         return dto;
     }
+    
+    public List<Map<String, Object>> relatórioDetalhadoEmpresa(Long empresaId) {
+        Empresa empresa = new Empresa();
+        empresa.setId(empresaId);
+        List<ContaAReceber> contas = contaAReceberRepository.findByEmpresa(empresa);
+
+        List<Map<String, Object>> resultado = new ArrayList<>();
+
+        for (ContaAReceber conta : contas) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("contaId", conta.getId());
+            item.put("reservaId", conta.getReserva().getId());
+            item.put("clienteNome", conta.getCliente().getNome());
+            item.put("numeroApartamento", conta.getReserva().getApartamento() != null
+                ? conta.getReserva().getApartamento().getNumeroApartamento() : "-");
+            item.put("dataCheckin", conta.getReserva().getDataCheckin());
+            item.put("dataCheckout", conta.getReserva().getDataCheckout());
+            item.put("quantidadeHospede", conta.getReserva().getQuantidadeHospede());
+            item.put("quantidadeDiaria", conta.getReserva().getQuantidadeDiaria());
+            item.put("totalHospedagem", conta.getReserva().getTotalHospedagem());
+            item.put("desconto", conta.getReserva().getDesconto());
+            item.put("totalRecebido", conta.getReserva().getTotalRecebido());
+            item.put("valor", conta.getValor());
+                       
+            item.put("valorPago", conta.getReserva().getTotalRecebido() != null
+            	    ? conta.getReserva().getTotalRecebido() : BigDecimal.ZERO);         
+            
+            
+            item.put("saldo", conta.getSaldo());
+            item.put("status", conta.getStatus());
+            item.put("dataVencimento", conta.getDataVencimento());
+           
+            // Extratos da reserva
+            List<ExtratoReserva> extratos = extratoReservaRepository
+                .findByReservaIdOrderByDataHoraLancamento(conta.getReserva().getId());
+
+            List<Map<String, Object>> extratosList = extratos.stream().map(e -> {
+                Map<String, Object> ext = new HashMap<>();
+                ext.put("descricao", e.getDescricao());
+                ext.put("status", e.getStatusLancamento());
+                ext.put("quantidade", e.getQuantidade());
+                ext.put("valorUnitario", e.getValorUnitario());
+                ext.put("total", e.getTotalLancamento());
+                ext.put("dataHora", e.getDataHoraLancamento());
+                return ext;
+            }).collect(Collectors.toList());
+
+            item.put("extratos", extratosList);
+            resultado.add(item);
+        }
+        return resultado;
+    }
+    
 }

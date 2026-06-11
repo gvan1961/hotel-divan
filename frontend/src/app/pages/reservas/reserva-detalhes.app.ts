@@ -4440,53 +4440,40 @@ salvarAdiantamento(): void {
 
   // ✅ CHAMADO PELO MODAL APÓS ASSINAR
   confirmarAssinaturaFaturada(): void {
-    if (!this.signaturePad || !this.signaturePad.temAssinatura) {
-      alert('⚠️ Por favor, assine antes de confirmar!');
-      return;
-    }
-
-    this.assinaturaCapturada = this.signaturePad.obterAssinatura();
-
-    if (!this.assinaturaCapturada) {
-      alert('⚠️ Erro ao capturar assinatura. Tente novamente.');
-      return;
-    }
-
-    this.modalAssinatura = false;
-
-    // ✅ FINALIZAR RESERVA NO BACKEND
-    this.http.patch(`/api/reservas/${this.reserva!.id}/finalizar`, {}).subscribe({
-      next: () => {
-        this.salvarAssinatura();
-        this.alertasStateService.notificarAlertasAtualizados();
-        alert('✅ Reserva finalizada! Valor enviado para Contas a Receber.');
-        this.carregarReserva(this.reserva!.id);
-        setTimeout(() => {
-  this.gerarFatura();
-  // ✅ BUSCAR E IMPRIMIR BILHETES
-  this.http.get<any[]>(`/api/reservas/${this.reserva!.id}/bilhetes-sorteio`).subscribe({
-    
-    next: (bilhetes) => {
-      if (bilhetes.length > 0) {
-        const imprimir = confirm(`🎟️ ${bilhetes.length} bilhete(s) de sorteio gerado(s)! Deseja imprimir?`);
-        if (imprimir) this.imprimirBilhetes(bilhetes);
-      }
-    },
-    error: () => {}
-  });
-}, 800);
-      },
-      error: (err: any) => {
-        let mensagemErro = 'Erro ao finalizar reserva';
-        if (err.error && err.error.erro) {
-          mensagemErro = err.error.erro;
-        } else if (err.error && err.error.message) {
-          mensagemErro = err.error.message;
-        }
-        alert(mensagemErro);
-      }
-    });
+  if (!this.signaturePad || !this.signaturePad.temAssinatura) {
+    alert('⚠️ Por favor, assine antes de confirmar!');
+    return;
   }
+
+  this.assinaturaCapturada = this.signaturePad.obterAssinatura();
+
+  if (!this.assinaturaCapturada) {
+    alert('⚠️ Erro ao capturar assinatura. Tente novamente.');
+    return;
+  }
+
+  this.modalAssinatura = false;
+
+  // ✅ APENAS SALVA ASSINATURA E GERA FATURA — SEM FINALIZAR
+  this.salvarAssinatura();
+  this.alertasStateService.notificarAlertasAtualizados();
+  alert('✅ Assinatura registrada! Valor enviado para Contas a Receber.');
+  this.carregarReserva(this.reserva!.id);
+  setTimeout(() => {
+    this.gerarFatura();
+    // ✅ BUSCAR E IMPRIMIR BILHETES
+    this.http.get<any[]>(`/api/reservas/${this.reserva!.id}/bilhetes-sorteio`).subscribe({
+      next: (bilhetes) => {
+        if (bilhetes.length > 0) {
+          const imprimir = confirm(`🎟️ ${bilhetes.length} bilhete(s) de sorteio gerado(s)! Deseja imprimir?`);
+          if (imprimir) this.imprimirBilhetes(bilhetes);
+        }
+      },
+      error: () => {}
+    });
+  }, 800);
+}    
+  
 
   // ✅ SALVAR ASSINATURA NO BACKEND
   private salvarAssinatura(): void {
@@ -6088,20 +6075,24 @@ carregarEImprimirBilhetes(): void {
 
 abrirModalReciboFormal(): void {
   if (!this.reserva) return;
-
-  const totalRecebido = this.reserva.totalRecebido || 0;
-  const totalRecibado = this.reserva.totalReciboEmitido || 0;
-  const saldoDisponivel = totalRecebido - totalRecibado;
-
-  if (saldoDisponivel <= 0) {
-    alert('❌ Não há saldo disponível para emitir recibo.\n\nTodo o valor pago já foi recibado.');
-    return;
-  }
-
-  // Pré-preenche com o saldo disponível
-  this.valorRecibo = saldoDisponivel;
-  this.valorReciboTexto = saldoDisponivel.toFixed(2).replace('.', ',');
-  this.modalReciboFormal = true;
+  // Recarrega reserva para garantir dados atualizados
+  this.http.get<any>(`/api/reservas/${this.reserva.id}`).subscribe({
+    next: (data) => {
+      this.reserva = { ...this.reserva!, ...data };
+      const reserva = this.reserva;
+      if (!reserva) return;
+      const totalRecebido = reserva.totalRecebido || 0;
+      const totalRecebido2 = reserva.totalReciboEmitido || 0;
+      const saldoDisponivel = totalRecebido - totalRecebido2;
+      if (saldoDisponivel <= 0) {
+        alert('❌ Não há saldo disponível para emitir recibo.\n\nTodo o valor pago já foi recebido.');
+        return;
+      }
+      this.valorRecibo = saldoDisponivel;
+      this.valorReciboTexto = saldoDisponivel.toFixed(2).replace('.', ',');
+      this.modalReciboFormal = true;
+    }
+  });
 }
 
 fecharModalReciboFormal(): void {

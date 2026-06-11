@@ -110,8 +110,17 @@ public class PagamentoService {
                 System.out.println("📋 Conta a Receber criada: R$ " + valorDebito
                     + " — Empresa: " + cliente.getEmpresa().getNomeEmpresa());
             } else {
-                System.out.println("ℹ️ Conta a receber já existe para reserva #" + reserva.getId() + " — ignorando criação.");
-            }        
+                // ✅ ATUALIZA O VALOR DA CONTA EXISTENTE
+                ContaAReceber contaExistente = contaAReceberRepository.findByReserva(reserva)
+                    .orElseThrow(() -> new RuntimeException("Conta a receber não encontrada"));
+                BigDecimal novoValor = contaExistente.getValor().add(pagamento.getValor());
+                BigDecimal novoSaldo = contaExistente.getSaldo().add(pagamento.getValor());
+                contaExistente.setValor(novoValor);
+                contaExistente.setSaldo(novoSaldo);
+                contaAReceberRepository.save(contaExistente);
+                System.out.println("📋 Conta a Receber atualizada: R$ " + novoValor
+                    + " — Empresa: " + cliente.getEmpresa().getNomeEmpresa());
+            }
                         
         }
 
