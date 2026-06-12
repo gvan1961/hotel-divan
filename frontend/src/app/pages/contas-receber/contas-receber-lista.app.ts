@@ -142,8 +142,6 @@ interface FiltrosAvancados {
   <th>Hóspedes</th>
   <th>Empresa</th>
   <th>Check-in/Check-out</th>
-  <th>Valor</th>
-  <th>Pago</th>
   <th>Saldo</th>
   <th>Vencimento</th>
   <th>Status</th>
@@ -165,8 +163,6 @@ interface FiltrosAvancados {
                 <div>✅ {{ formatarData(conta.reserva?.dataCheckin) }}</div>
                 <div>📤 {{ formatarData(conta.reserva?.dataCheckout) }}</div>
               </td>
-              <td>R$ {{ (conta.saldo > 0 ? conta.valor + (conta.pagoAVista || 0) : conta.valorPago) | number:'1.2-2' }}</td>
-              <td>R$ {{ conta.pagoAVista | number:'1.2-2' }}</td>
               <td class="saldo">R$ {{ conta.saldo | number:'1.2-2' }}</td>
               <td>
                 {{ formatarData(conta.dataVencimento) }}
@@ -211,10 +207,8 @@ interface FiltrosAvancados {
           <tfoot *ngIf="contasFiltradas.length > 0">
             <tr class="total-row">
              <td colspan="4"><strong>TOTAL:</strong></td>
-<td><strong>R$ {{ calcularTotalValor() | number:'1.2-2' }}</strong></td>
-<td><strong>R$ {{ calcularTotalPago() | number:'1.2-2' }}</strong></td>
-<td><strong>R$ {{ calcularTotalSaldo() | number:'1.2-2' }}</strong></td>
-<td colspan="3"></td>
+               <td><strong>R$ {{ calcularTotalSaldo() | number:'1.2-2' }}</strong></td>
+               <td colspan="3"></td>
             </tr>
           </tfoot>
         </table>
@@ -1894,6 +1888,7 @@ exportar(): void {
     'Apartamento': (c as any).numeroApartamento || '-',
     'Check-in': this.formatarData((c as any).dataCheckin),
     'Check-out': this.formatarData((c as any).dataCheckout),
+    'Hóspedes': (c as any).quantidadeHospede || '-',
     'Diárias': (c as any).quantidadeDiaria || '-',
     'Vlr Diárias': (c as any).totalDiaria || 0,
     'Consumo': (c as any).totalConsumo || 0,

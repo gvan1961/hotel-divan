@@ -4473,7 +4473,7 @@ salvarAdiantamento(): void {
     });
   }, 800);
 }    
-  
+
 
   // ✅ SALVAR ASSINATURA NO BACKEND
   private salvarAssinatura(): void {
@@ -6075,17 +6075,23 @@ carregarEImprimirBilhetes(): void {
 
 abrirModalReciboFormal(): void {
   if (!this.reserva) return;
-  // Recarrega reserva para garantir dados atualizados
   this.http.get<any>(`/api/reservas/${this.reserva.id}`).subscribe({
     next: (data) => {
       this.reserva = { ...this.reserva!, ...data };
       const reserva = this.reserva;
       if (!reserva) return;
-      const totalRecebido = reserva.totalRecebido || 0;
+
+      // ✅ Apenas pagamentos à vista (exclui débito em conta)
+      const extratos = reserva.extratos || [];
+      const debitoEmConta = extratos
+        .filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
+        .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
+      const pagoAVista = Math.max(0, (reserva.totalRecebido || 0) - debitoEmConta);
       const totalRecebido2 = reserva.totalReciboEmitido || 0;
-      const saldoDisponivel = totalRecebido - totalRecebido2;
+      const saldoDisponivel = pagoAVista - totalRecebido2;
+
       if (saldoDisponivel <= 0) {
-        alert('❌ Não há saldo disponível para emitir recibo.\n\nTodo o valor pago já foi recebido.');
+        alert('❌ Não há saldo disponível para emitir recibo.\n\nTodo o valor pago à vista já foi recibado.');
         return;
       }
       this.valorRecibo = saldoDisponivel;
