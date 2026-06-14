@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
 import java.util.Optional;
@@ -100,11 +101,9 @@ public class ContaAReceberService {
     public ContaAReceberDTO criar(ContaAReceberRequestDTO dto) {
         System.out.println("🆕 Criando conta a receber para reserva: " + dto.getReservaId());
 
-        // Buscar reserva
         Reserva reserva = reservaRepository.findById(dto.getReservaId())
                 .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
 
-        // ✅ VERIFICAR SE JÁ EXISTE CONTA PARA ESTA RESERVA (CORRETO)
         Optional<ContaAReceber> contaExistente = contaAReceberRepository.findByReserva(reserva);
         if (contaExistente.isPresent()) {
             throw new RuntimeException("Já existe uma conta a receber para esta reserva");
@@ -114,7 +113,6 @@ public class ContaAReceberService {
         conta.setReserva(reserva);
         conta.setCliente(reserva.getCliente());
         
-        // Se tiver empresa, buscar e setar
         if (dto.getEmpresaId() != null) {
             Empresa empresa = empresaRepository.findById(dto.getEmpresaId())
                     .orElseThrow(() -> new RuntimeException("Empresa não encontrada"));
@@ -146,12 +144,10 @@ public class ContaAReceberService {
             throw new RuntimeException("Esta conta já está paga");
         }
 
-        // Validar valor do pagamento
         if (dto.getValorPago().compareTo(conta.getSaldo()) > 0) {
             throw new RuntimeException("Valor do pagamento não pode ser maior que o saldo");
         }
 
-        // Atualizar valores
         BigDecimal novoValorPago = conta.getValorPago().add(dto.getValorPago());
         BigDecimal novoSaldo = conta.getValor().subtract(novoValorPago);
 
@@ -159,7 +155,6 @@ public class ContaAReceberService {
         conta.setSaldo(novoSaldo);
         conta.setDataPagamento(dto.getDataPagamento());
 
-        // Se pagou tudo, marcar como PAGA
         if (novoSaldo.compareTo(BigDecimal.ZERO) == 0) {
             conta.setStatus(StatusContaEnum.PAGA);
             System.out.println("✅ Conta totalmente paga!");
@@ -168,6 +163,28 @@ public class ContaAReceberService {
         }
 
         conta = contaAReceberRepository.save(conta);
+
+        // ✅ LANÇAR PAGAMENTO NO EXTRATO DA RESERVA
+        if (conta.getReserva() != null) {
+            ExtratoReserva extrato = new ExtratoReserva();
+            extrato.setReserva(conta.getReserva());
+            extrato.setDataHoraLancamento(LocalDateTime.now());
+            extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.PAGAMENTO);
+            extrato.setDescricao("Pagamento empresa — " +
+                (dto.getFormaPagamento() != null ? dto.getFormaPagamento().toString() : "Faturado"));
+            extrato.setQuantidade(1);
+            extrato.setValorUnitario(dto.getValorPago().negate());
+            extrato.setTotalLancamento(dto.getValorPago().negate());
+            extrato.setNotaVendaId(null);
+            extratoReservaRepository.save(extrato);
+
+            Reserva reservaDaConta = conta.getReserva();
+            BigDecimal totalRecebidoAtual = reservaDaConta.getTotalRecebido() != null
+                ? reservaDaConta.getTotalRecebido() : BigDecimal.ZERO;
+            reservaDaConta.setTotalRecebido(totalRecebidoAtual.add(dto.getValorPago()));
+            reservaRepository.save(reservaDaConta);
+        }
+
         return converterParaDTO(conta);
     }
 
@@ -411,6 +428,48 @@ public class ContaAReceberService {
             resultado.add(item);
         }
         return resultado;
+    }
+    
+    @Transactional
+    public ContaAReceberDTO aplicarDesconto(Long id, BigDecimal valorDesconto, String motivo) {
+        ContaAReceber conta = contaAReceberRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Conta não encontrada"));
+
+        if (valorDesconto.compareTo(conta.getSaldo()) > 0) {
+            throw new RuntimeException("Desconto não pode ser maior que o saldo");
+        }
+
+        // Atualiza a conta
+        BigDecimal novoSaldo = conta.getSaldo().subtract(valorDesconto);
+        BigDecimal novoValor = conta.getValor().subtract(valorDesconto);
+        conta.setSaldo(novoSaldo);
+        conta.setValor(novoValor);
+        if (novoSaldo.compareTo(BigDecimal.ZERO) == 0) {
+            conta.setStatus(StatusContaEnum.PAGA);
+        }
+        contaAReceberRepository.save(conta);
+
+        // Lança desconto no extrato da reserva
+        if (conta.getReserva() != null) {
+            ExtratoReserva extrato = new ExtratoReserva();
+            extrato.setReserva(conta.getReserva());
+            extrato.setDataHoraLancamento(LocalDateTime.now());
+            extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
+            extrato.setDescricao("Desconto empresa — " + (motivo != null ? motivo : "Desconto negociado"));
+            extrato.setQuantidade(1);
+            extrato.setValorUnitario(valorDesconto.negate());
+            extrato.setTotalLancamento(valorDesconto.negate());
+            extrato.setNotaVendaId(null);
+            extratoReservaRepository.save(extrato);
+
+            // Atualiza desconto na reserva
+            Reserva reserva = conta.getReserva();
+            BigDecimal descontoAtual = reserva.getDesconto() != null ? reserva.getDesconto() : BigDecimal.ZERO;
+            reserva.setDesconto(descontoAtual.add(valorDesconto));
+            reservaRepository.save(reserva);
+        }
+
+        return converterParaDTO(conta);
     }
     
 }

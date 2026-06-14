@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -97,5 +98,18 @@ public class ContaAReceberController {
         return ResponseEntity.ok(contaAReceberService.relatorioDetalhadoEmpresa(empresaId));
     }
     
+    @PatchMapping("/{id}/desconto")
+    public ResponseEntity<?> aplicarDesconto(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        try {
+            BigDecimal valorDesconto = new BigDecimal(body.get("valorDesconto").toString());
+            String motivo = body.get("motivo") != null ? body.get("motivo").toString() : null;
+            ContaAReceberDTO conta = contaAReceberService.aplicarDesconto(id, valorDesconto, motivo);
+            return ResponseEntity.ok(conta);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
     
 }

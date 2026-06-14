@@ -3705,150 +3705,148 @@ ${debitoEmConta > 0 ? `<tr>
       janelaImpressao.document.close();
     }
   }
-    gerarFatura(): void {
-      if (!this.reserva) return;
-      const valorFaturado = this.valorDebitoEmConta ||
-    ((this.reserva.totalHospedagem || 0) - (this.reserva.desconto || 0));
-  const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
-      const htmlImpressao = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>Fatura - Reserva #${this.reserva.id}</title>
-         <style>
-  @page { size: 80mm auto; margin: 0; }
-  html, body { margin: 0 !important; padding: 0 !important; }
+   gerarFatura(): void {
+  if (!this.reserva) return;
   
-  * { font-weight: 700 !important; }
-  
-  body { 
-    font-family: 'Courier New', monospace; 
-    font-size: 10pt; 
-    width: 72mm;
-    max-width: 72mm;
-    margin: 0; 
-    padding: 1mm 2mm;
-  }
-  .cabecalho { text-align: left; margin-bottom: 8px; }
-  .cabecalho h1 { font-size: 16pt; margin: 0; letter-spacing: 2px; font-weight: 900 !important; }
-  .cnpj, .endereco { font-size: 10pt; margin: 2px 0; }
-  .separador { text-align: center; margin: 6px 0; font-size: 10pt; }
-  .titulo-documento { text-align: left; margin: 8px 0; }
-  .titulo-documento h2 { font-size: 13pt; margin: 0; font-weight: 900 !important; }
-  .numero-reserva { font-size: 11pt; font-weight: 900 !important; margin: 4px 0; }
-  .data-emissao { font-size: 10pt; margin: 2px 0; }
-  .secao { margin: 8px 0; }
-  .secao h3 { font-size: 11pt; margin: 0 0 6px 0; text-decoration: underline; font-weight: 900 !important; }
-  .secao p { margin: 3px 0; font-size: 10pt; line-height: 1.4; }
-  .declaracao { text-align: left; margin: 12px 0; font-size: 10pt; }
-  .declaracao p { margin: 2px 0; }
-  .assinatura { margin-top: 15px; text-align: center; }
-  .linha-assinatura { border-top: 1px solid #000; margin: 12px 15px 4px 15px; }
-  .label-assinatura { font-size: 10pt; margin: 2px 0; }
-  .rodape { text-align: left; margin-top: 12px; font-size: 10pt; }
-  .rodape p { margin: 2px 0; }
-</style>
-        </head>
-        <body>
-          <div class="cabecalho">
-            <h1>HOTEL DI VAN</h1>
-            <p class="cnpj">CNPJ: 07.757.726/0001-12</p>
-            <p class="endereco">Arapiraca - AL</p>
-            <div class="separador">================================</div>
-          </div>
-
-          <div class="titulo-documento">
-            <h2>FATURA - PAGAMENTO FATURADO</h2>
-            <p class="numero-reserva">Reserva Nº ${this.reserva.id}</p>
-            <p class="data-emissao">${this.dataAtualCompleta()}</p>
-          </div>
-
-          <div class="separador">================================</div>
-
-          <div class="secao">
-            <h3>DADOS DO HOSPEDE</h3>
-            <p><strong>Nome:</strong> ${this.reserva.cliente?.nome}</p>
-            ${empresaNomeCliente ? '<p><strong>Empresa:</strong> ' + empresaNomeCliente + '</p>' : ''}
-            <p><strong>CPF:</strong> ${this.formatarCPF(this.reserva.cliente?.cpf)}</p>
-            <p><strong>Telefone:</strong> ${this.reserva.cliente?.celular || this.reserva.cliente?.telefone || 'Nao informado'}</p>
-          </div>
-
-          <div class="separador">- - - - - - - - - - - - - - - -</div>
-
-          <div class="secao">
-            <h3>PERIODO DA HOSPEDAGEM</h3>
-            <p><strong>Apartamento:</strong> ${this.reserva.apartamento?.numeroApartamento}</p>
-            <p><strong>Check-in:</strong> ${this.formatarDataCompleta(this.reserva.dataCheckin)}</p>
-            <p><strong>Check-out:</strong> ${this.formatarDataCompleta(this.reserva.dataCheckout)}</p>
-            <p><strong>Total de Diarias:</strong> ${this.reserva.quantidadeDiaria} dia(s)</p>
-            <p><strong>Hospedes:</strong> ${this.reserva.quantidadeHospede} pessoa(s)</p>
-          </div>
-
-          <div class="separador">================================</div>
-
-          <div class="secao">
-  <h3>DISCRIMINACAO DE VALORES</h3>
-  <table style="width:100%; border-collapse:collapse;">
-    <tr>
-      <td style="font-size:10pt; font-weight:700; padding:3px 0;">Diarias (${this.reserva.quantidadeDiaria}x):</td>
-      <td style="font-size:10pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">R$ ${this.formatarMoeda(this.reserva.totalDiaria)}</td>
-    </tr>
-    <tr>
-      <td style="font-size:10pt; font-weight:700; padding:3px 0;">Consumo:</td>
-      <td style="font-size:10pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">R$ ${this.formatarMoeda(this.reserva.totalProduto || 0)}</td>
-    </tr>
-    ${(this.reserva.desconto || 0) > 0 ? `
-    <tr>
-      <td style="font-size:10pt; font-weight:700; padding:3px 0;">Desconto:</td>
-      <td style="font-size:10pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">- R$ ${this.formatarMoeda(this.reserva.desconto)}</td>
-    </tr>` : ''}
-    <tr>
-  <td style="font-size:10pt; font-weight:900; padding:3px 0; border-top:1px dashed #000;">Subtotal:</td>
-  <td style="font-size:10pt; font-weight:900; text-align:right; white-space:nowrap; padding:3px 0; border-top:1px dashed #000;">R$ ${this.formatarMoeda((this.reserva.totalHospedagem || 0) - (this.reserva.desconto || 0))}</td>
-</tr>   
-    <tr>
-      <td style="font-size:12pt; font-weight:900; padding:5px 0; border-top:2px solid #000;">VALOR A PAGAR:</td>
-      <td style="font-size:12pt; font-weight:900; text-align:right; white-space:nowrap; padding:5px 0; border-top:2px solid #000;">R$ ${this.formatarMoeda(valorFaturado)}</td>
-    </tr>
-  </table>
-</div>
-
-          <div class="assinatura">
-            ${this.assinaturaCapturada ? `
-              <img src="${this.assinaturaCapturada}" class="imagem-assinatura" alt="Assinatura">
-            ` : `
-              <div class="linha-assinatura"></div>
-            `}
-            <p class="label-assinatura">Assinatura do Hospede</p>
-            <div class="linha-assinatura"></div>
-            <p class="label-assinatura">Hotel Di Van</p>
-            <p class="label-assinatura">Data: ${this.dataAtualSimples()}</p>
-          </div>
-
-          <div class="rodape">
-            <p>Esta fatura devera ser paga</p>
-            <p>conforme acordado.</p>
-          </div>
-
-          <script>
-            window.onload = function() {
-              window.print();
-              window.onafterprint = function() {
-                window.close();
-              };
-            };
-          </script>
-        </body>
-        </html>
-      `;
-
-      const janelaImpressao = window.open('', '_blank', 'width=800,height=600');
-      if (janelaImpressao) {
-        janelaImpressao.document.write(htmlImpressao);
-        janelaImpressao.document.close();
-      }
+  this.http.get<any[]>('/api/contas-receber').subscribe({
+    next: (contas) => {
+      const conta = contas.find((c: any) => c.reservaId === this.reserva!.id);
+      const valorTotal = conta ? (conta.valor || 0) : 
+        ((this.reserva!.totalHospedagem || 0) - (this.reserva!.desconto || 0));
+      const valorPago = conta ? (conta.valorPago || 0) : 0;
+      const saldo = conta ? (conta.saldo || 0) : valorTotal;
+      this.gerarHtmlFatura(valorTotal, valorPago, saldo);
+    },
+    error: () => {
+      const valorTotal = (this.reserva!.totalHospedagem || 0) - (this.reserva!.desconto || 0);
+      this.gerarHtmlFatura(valorTotal, 0, valorTotal);
     }
+  });
+}
+
+gerarHtmlFatura(valorTotal: number, valorPago: number, saldo: number): void {
+  if (!this.reserva) return;
+  const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
+  const htmlImpressao = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Fatura - Reserva #${this.reserva.id}</title>
+      <style>
+        @page { size: 80mm auto; margin: 0; }
+        html, body { margin: 0 !important; padding: 0 !important; }
+        * { font-weight: 700 !important; }
+        body { font-family: 'Courier New', monospace; font-size: 10pt; width: 72mm; max-width: 72mm; margin: 0; padding: 1mm 2mm; }
+        .cabecalho { text-align: left; margin-bottom: 8px; }
+        .cabecalho h1 { font-size: 16pt; margin: 0; letter-spacing: 2px; font-weight: 900 !important; }
+        .cnpj, .endereco { font-size: 10pt; margin: 2px 0; }
+        .separador { text-align: center; margin: 6px 0; font-size: 10pt; }
+        .titulo-documento { text-align: left; margin: 8px 0; }
+        .titulo-documento h2 { font-size: 13pt; margin: 0; font-weight: 900 !important; }
+        .numero-reserva { font-size: 11pt; font-weight: 900 !important; margin: 4px 0; }
+        .data-emissao { font-size: 10pt; margin: 2px 0; }
+        .secao { margin: 8px 0; }
+        .secao h3 { font-size: 11pt; margin: 0 0 6px 0; text-decoration: underline; font-weight: 900 !important; }
+        .secao p { margin: 3px 0; font-size: 10pt; line-height: 1.4; }
+        .assinatura { margin-top: 15px; text-align: center; }
+        .linha-assinatura { border-top: 1px solid #000; margin: 12px 15px 4px 15px; }
+        .label-assinatura { font-size: 10pt; margin: 2px 0; }
+        .rodape { text-align: left; margin-top: 12px; font-size: 10pt; }
+        .rodape p { margin: 2px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="cabecalho">
+        <h1>HOTEL DI VAN</h1>
+        <p class="cnpj">CNPJ: 07.757.726/0001-12</p>
+        <p class="endereco">Arapiraca - AL</p>
+        <div class="separador">================================</div>
+      </div>
+      <div class="titulo-documento">
+        <h2>FATURA - PAGAMENTO FATURADO</h2>
+        <p class="numero-reserva">Reserva Nº ${this.reserva.id}</p>
+        <p class="data-emissao">${this.dataAtualCompleta()}</p>
+      </div>
+      <div class="separador">================================</div>
+      <div class="secao">
+        <h3>DADOS DO HOSPEDE</h3>
+        <p><strong>Nome:</strong> ${this.reserva.cliente?.nome}</p>
+        ${empresaNomeCliente ? '<p><strong>Empresa:</strong> ' + empresaNomeCliente + '</p>' : ''}
+        <p><strong>CPF:</strong> ${this.formatarCPF(this.reserva.cliente?.cpf)}</p>
+        <p><strong>Telefone:</strong> ${this.reserva.cliente?.celular || this.reserva.cliente?.telefone || 'Nao informado'}</p>
+      </div>
+      <div class="separador">- - - - - - - - - - - - - - - -</div>
+      <div class="secao">
+        <h3>PERIODO DA HOSPEDAGEM</h3>
+        <p><strong>Apartamento:</strong> ${this.reserva.apartamento?.numeroApartamento}</p>
+        <p><strong>Check-in:</strong> ${this.formatarDataCompleta(this.reserva.dataCheckin)}</p>
+        <p><strong>Check-out:</strong> ${this.formatarDataCompleta(this.reserva.dataCheckout)}</p>
+        <p><strong>Total de Diarias:</strong> ${this.reserva.quantidadeDiaria} dia(s)</p>
+        <p><strong>Hospedes:</strong> ${this.reserva.quantidadeHospede} pessoa(s)</p>
+      </div>
+      <div class="separador">================================</div>
+      <div class="secao">
+        <h3>DISCRIMINACAO DE VALORES</h3>
+        <table style="width:100%; border-collapse:collapse;">
+          <tr>
+            <td style="font-size:10pt; font-weight:700; padding:3px 0;">Diarias (${this.reserva.quantidadeDiaria}x):</td>
+            <td style="font-size:10pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">R$ ${this.formatarMoeda(this.reserva.totalDiaria)}</td>
+          </tr>
+          <tr>
+            <td style="font-size:10pt; font-weight:700; padding:3px 0;">Consumo:</td>
+            <td style="font-size:10pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">R$ ${this.formatarMoeda(this.reserva.totalProduto || 0)}</td>
+          </tr>
+          ${(this.reserva.desconto || 0) > 0 ? `
+          <tr>
+            <td style="font-size:10pt; font-weight:700; padding:3px 0;">Desconto:</td>
+            <td style="font-size:10pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">- R$ ${this.formatarMoeda(this.reserva.desconto)}</td>
+          </tr>` : ''}
+          <tr>
+            <td style="font-size:10pt; font-weight:900; padding:3px 0; border-top:1px dashed #000;">Total Hospedagem:</td>
+            <td style="font-size:10pt; font-weight:900; text-align:right; white-space:nowrap; padding:3px 0; border-top:1px dashed #000;">R$ ${this.formatarMoeda(valorTotal)}</td>
+          </tr>
+          ${valorPago > 0 ? `
+          <tr>
+            <td style="font-size:10pt; font-weight:700; padding:3px 0;">Ja Pago:</td>
+            <td style="font-size:10pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">- R$ ${this.formatarMoeda(valorPago)}</td>
+          </tr>` : ''}
+          <tr>
+            <td style="font-size:12pt; font-weight:900; padding:5px 0; border-top:2px solid #000;">SALDO A PAGAR:</td>
+            <td style="font-size:12pt; font-weight:900; text-align:right; white-space:nowrap; padding:5px 0; border-top:2px solid #000;">R$ ${this.formatarMoeda(saldo)}</td>
+          </tr>
+        </table>
+      </div>
+      <div class="assinatura">
+        ${this.assinaturaCapturada ? `
+          <img src="${this.assinaturaCapturada}" class="imagem-assinatura" alt="Assinatura">
+        ` : `
+          <div class="linha-assinatura"></div>
+        `}
+        <p class="label-assinatura">Assinatura do Hospede</p>
+        <div class="linha-assinatura"></div>
+        <p class="label-assinatura">Hotel Di Van</p>
+        <p class="label-assinatura">Data: ${this.dataAtualSimples()}</p>
+      </div>
+      <div class="rodape">
+        <p>Esta fatura devera ser paga</p>
+        <p>conforme acordado.</p>
+      </div>
+      <script>
+        window.onload = function() {
+          window.print();
+          window.onafterprint = function() { window.close(); };
+        };
+      </script>
+    </body>
+    </html>
+  `;
+  const janelaImpressao = window.open('', '_blank', 'width=800,height=600');
+  if (janelaImpressao) {
+    janelaImpressao.document.write(htmlImpressao);
+    janelaImpressao.document.close();
+  }
+}
 
     // ============= ALTERAR CHECKOUT =============
     abrirModalAlterarCheckout(): void {

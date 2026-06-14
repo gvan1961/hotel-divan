@@ -185,6 +185,14 @@ interface FiltrosAvancados {
                   title="Registrar pagamento">
                   💳
                 </button>
+
+                <button
+                  *ngIf="conta.status !== 'PAGA' && conta.status !== 'CANCELADA'"
+                   class="btn-acao btn-desconto"
+                   (click)="abrirModalDesconto(conta)"
+                   title="Aplicar desconto">
+                   💸
+                </button>
                 <button 
                   *hasPermission="'CONTA_RECEBER_PAGAMENTO'"
                   [hidden]="conta.status !== 'PAGA'"
@@ -442,6 +450,30 @@ interface FiltrosAvancados {
         <div class="modal-footer">
           <button class="btn-cancelar" (click)="modalBaixaLote = false">Cancelar</button>
           <button class="btn-confirmar" (click)="darBaixaEmLote()">✅ Confirmar</button>
+        </div>
+      </div>
+    </div>
+    
+     <!-- MODAL DESCONTO -->
+    <div class="modal-overlay" *ngIf="modalDesconto">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <h2>💸 Aplicar Desconto</h2>
+        <div class="info-conta">
+          <p><strong>Cliente:</strong> {{ contaDescontoSelecionada?.clienteNome }}</p>
+          <p><strong>Saldo:</strong> R$ {{ contaDescontoSelecionada?.saldo | number:'1.2-2' }}</p>
+        </div>
+        <div class="campo">
+          <label>Valor do Desconto *</label>
+          <input type="number" [(ngModel)]="valorDesconto" step="0.01" min="0.01"
+                 [max]="contaDescontoSelecionada?.saldo || 0">
+        </div>
+        <div class="campo">
+          <label>Motivo *</label>
+          <input type="text" [(ngModel)]="motivoDesconto" placeholder="Informe o motivo...">
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancelar" (click)="modalDesconto = false">Cancelar</button>
+          <button class="btn-confirmar" (click)="confirmarDesconto()">✅ Confirmar</button>
         </div>
       </div>
     </div>
@@ -1118,6 +1150,9 @@ interface FiltrosAvancados {
 .btn-relatorio-detalhado { background: #8e44ad; }
 .btn-relatorio-detalhado:hover { background: #7d3c98; }
 
+.btn-desconto { background: #e67e22; color: white; }
+.btn-desconto:hover { background: #ca6f1e; }
+
   `]
 })
 export class ContasReceberListaApp implements OnInit {
@@ -1139,6 +1174,11 @@ export class ContasReceberListaApp implements OnInit {
   filtrosAplicados: FiltrosAvancados = {};
   empresas: any[] = [];
   clientes: any[] = [];
+
+  modalDesconto = false;
+  contaDescontoSelecionada: ContaAReceber | null = null;
+  valorDesconto = 0;
+  motivoDesconto = '';
 
   // MODAL CRIAR
   modalCriar = false;
@@ -2048,6 +2088,34 @@ montarHtmlRelatorioDetalhado(dados: any[], nomeEmpresa: string): string {
 formatarDataHora(dataHora: string): string {
   if (!dataHora) return '-';
   return new Date(dataHora).toLocaleString('pt-BR');
+}
+
+abrirModalDesconto(conta: ContaAReceber): void {
+  this.contaDescontoSelecionada = conta;
+  this.valorDesconto = 0;
+  this.motivoDesconto = '';
+  this.modalDesconto = true;
+}
+
+confirmarDesconto(): void {
+  if (this.valorDesconto <= 0) { alert('Informe um valor válido'); return; }
+  if (!this.motivoDesconto.trim()) { alert('Informe o motivo'); return; }
+  if (this.valorDesconto > (this.contaDescontoSelecionada?.saldo || 0)) {
+    alert('Desconto não pode ser maior que o saldo');
+    return;
+  }
+
+  this.http.patch(`/api/contas-receber/${this.contaDescontoSelecionada!.id}/desconto`, {
+    valorDesconto: this.valorDesconto,
+    motivo: this.motivoDesconto
+  }).subscribe({
+    next: () => {
+      alert('✅ Desconto aplicado com sucesso!');
+      this.modalDesconto = false;
+      this.carregarDados();
+    },
+    error: (err) => alert('❌ Erro: ' + (err.error?.erro || err.message))
+  });
 }
 
 } 
