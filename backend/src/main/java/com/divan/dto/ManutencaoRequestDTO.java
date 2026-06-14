@@ -8,8 +8,9 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-import com.divan.controller.ManutencaoApartamento.StatusManutencao;
-import com.divan.controller.ManutencaoApartamento.TipoServico;
+import com.divan.entity.StatusManutencao;
+import com.divan.entity.TipoServico;
+
 
 public class ManutencaoRequestDTO {
 

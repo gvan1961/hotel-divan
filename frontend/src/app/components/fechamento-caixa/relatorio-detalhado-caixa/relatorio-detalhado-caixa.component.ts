@@ -81,9 +81,9 @@ export class RelatorioDetalhadoCaixaComponent implements OnInit {
     alert('Exportação PDF será implementada em breve!');
   }
 
-  voltar(): void {
-    this.router.navigate(['/components/fechamento-caixa']);
-  }
+ voltar(): void {
+  window.history.back();
+}
 
   imprimir(): void {
     if (!this.relatorio) return;
