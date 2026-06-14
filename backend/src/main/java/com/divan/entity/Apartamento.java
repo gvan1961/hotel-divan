@@ -51,6 +51,10 @@ public class Apartamento {
     @JsonIgnoreProperties("apartamento")
     private List<Reserva> reservas;
     
+    @OneToMany(mappedBy = "apartamento")
+    @JsonIgnoreProperties("apartamento")
+    private List<ManutencaoApartamento> manutencoes;
+    
     @Column(name = "tem_cama_de_casal", nullable = false)
     private Boolean temCamaDeCasal = false;
     
@@ -135,6 +139,15 @@ public class Apartamento {
 
 	public void setTemCamaDeCasal(Boolean temCamaDeCasal) {
 		this.temCamaDeCasal = temCamaDeCasal;
+	}
+	
+
+	public List<ManutencaoApartamento> getManutencoes() {
+		return manutencoes;
+	}
+
+	public void setManutencoes(List<ManutencaoApartamento> manutencoes) {
+		this.manutencoes = manutencoes;
 	}
 
 	@Override

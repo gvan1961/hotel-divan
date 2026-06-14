@@ -15,6 +15,7 @@ import { LayoutComponent } from './components/layout.component';
 import { DashboardApp } from './pages/dashboard/dashboard.app';
 import { ClienteListaApp } from './pages/clientes/cliente-lista.app';
 import { ClienteFormApp } from './pages/clientes/cliente-form.app';
+//import { ClienteHistoricoApp } from './pages/clientes/cliente-historico.app';
 import { ApartamentoListaApp } from './pages/apartamentos/apartamento-lista.app';
 import { ApartamentoFormApp } from './pages/apartamentos/apartamento-form.app';
 import { TipoApartamentoListaApp } from './pages/tipos-apartamento/tipo-apartamento-lista.app';
@@ -187,11 +188,26 @@ export const routes: Routes = [
 
       { path: 'graficos', component: GraficosOcupacaoApp },
 
+      //====== Hanking =======
+
+      { path: 'clientes/ranking', loadComponent: () => import('./pages/relatorios/ranking-hospedes.app').then(m => m.RankingHospedesApp) },
+
       // ===== PONTO ELETRONICO =====
 
 { path: 'ponto/relatorio', component: PontoRelatorioApp },
 { path: 'ponto/foto', component: PontoFotoApp, canActivate: [roleGuard(['ADMIN', 'GERENTE'])] },
 { path: 'ponto/ajuste', component: PontoAjusteApp, canActivate: [roleGuard(['ADMIN', 'GERENTE'])] },
+
+{ path: 'manutencoes', loadComponent: () => import('./manutencao/manutencao-lista.app').then(m => m.ManutencaoListaApp) },
+{ path: 'manutencoes/novo', loadComponent: () => import('./manutencao/manutencao-form.app').then(m => m.ManutencaoFormApp) },
+{ path: 'manutencoes/editar/:id', loadComponent: () => import('./manutencao/manutencao-form.app').then(m => m.ManutencaoFormApp) },
+
+{ 
+  path: 'clientes/:id/historico', 
+  loadComponent: () => import('./pages/clientes/cliente-historico.app')
+    .then(m => m.ClienteHistoricoApp) 
+},
+
 
       // ===== CONTAS A PAGAR =====
 { path: 'contas-pagar', component: ContasPagarListaApp },

@@ -95,6 +95,13 @@ import { HttpClient } from '@angular/common/http';
           <span class="label">Apartamentos</span>
         </a>
 
+        <!-- MANUTENÇÕES -->
+           <a *hasPermission="'RESERVA_VISUALIZAR'"
+            routerLink="/manutencoes" routerLinkActive="active" class="nav-item">
+            <span class="icon">🔧</span>
+            <span class="label">Manutenções</span>
+           </a>
+
         <!-- CADASTROS -->
         <a *hasPermission="'USUARIO_VISUALIZAR'"
            routerLink="/cadastros" routerLinkActive="active" class="nav-item nav-item-cadastros">

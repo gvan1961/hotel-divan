@@ -13,9 +13,12 @@ import { Cliente } from '../../models/cliente.model';
   template: `
     <div class="container">
       <div class="header">
-        <h1>Clientes</h1>
-        <button class="btn-primary" (click)="novo()">+ Novo Cliente</button>
-      </div>
+  <h1>Clientes</h1>
+  <div style="display:flex; gap:10px;">
+    <button class="btn-ranking" (click)="verRanking()">🏆 Ranking</button>
+    <button class="btn-primary" (click)="novo()">+ Novo Cliente</button>
+  </div>
+</div>
 
      <div class="search-box">
   <input 
@@ -61,7 +64,8 @@ import { Cliente } from '../../models/cliente.model';
     <td *ngIf="!cliente.celular2">-</td>
     <td>{{ cliente.empresaNome || cliente.empresa?.nomeEmpresa || '-' }}</td>
     <td>
-      <button class="btn-edit" (click)="editar(cliente.id!)">Editar</button>
+      <button class="btn-historico" (click)="verHistorico(cliente.id!)">📋 Histórico</button>
+      <button class="btn-edit" (click)="editar(cliente.id!)">Editar</button>      
       <button class="btn-delete" (click)="excluir(cliente.id!)">Excluir</button>
     </td>
   </tr>
@@ -162,6 +166,11 @@ import { Cliente } from '../../models/cliente.model';
     .btn-pag:disabled { background: #ccc; cursor: not-allowed; }
     .btn-pag:hover:not(:disabled) { background: #5568d3; }
     .pag-info { color: #555; font-weight: 600; }
+    .btn-historico { background: #3498db; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; }
+    .btn-historico:hover { background: #2980b9; }
+
+    .btn-ranking { background: #f39c12; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-right: 10px; }
+    .btn-ranking:hover { background: #e67e22; }
   `]
 })
 export class ClienteListaApp implements OnInit {
@@ -261,7 +270,9 @@ export class ClienteListaApp implements OnInit {
          numeros.substring(9);
 }
 
-
+ verHistorico(id: number): void {
+  this.router.navigate(['/clientes', id, 'historico']);
+}
 
  filtrarPorEmpresa(): void {
   if (!this.filtroEmpresa) {
@@ -289,4 +300,9 @@ export class ClienteListaApp implements OnInit {
     error: () => this.loading = false
   });
 }
+
+verRanking(): void {
+  this.router.navigate(['/clientes/ranking']);
+}
+
 }

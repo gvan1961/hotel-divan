@@ -432,10 +432,10 @@ template: `
               <button class="btn-acao btn-reservar" (click)="novaReserva(apt)">+ Nova Reserva</button>
             
               <div class="pre-reserva-futura" 
-               *ngIf="apt.temPreReservaFutura"
-               [title]="'Check-ins: ' + apt.datasPreReservas">
-              📌 {{ apt.quantidadePreReservas && apt.quantidadePreReservas > 1 ? apt.quantidadePreReservas + ' Pré-reservas agendadas' : 'Pré-reserva agendada' }}
-             </div>
+     *ngIf="apt.temPreReservaFutura"
+     [title]="'Check-ins: ' + formatarDatasPreReservas(apt.datasPreReservas || '')">
+  📌 {{ labelPreReserva(apt) }}
+</div>
 
             </ng-container>
 
@@ -1299,16 +1299,17 @@ if (this.filtroDataCheckin) {
   
   getTooltipFaixa(apt: ApartamentoCard): string { 
   const status = this.getStatusFinal(apt);
+  const datas = this.formatarDatasPreReservas(apt.datasPreReservas || '');
   switch (status) {
     case 'ATIVA': return apt.datasPreReservas
-  ? `Clique para ver detalhes da reserva | Próximas: ${apt.datasPreReservas}`
-  : 'Clique para ver detalhes da reserva';
+      ? `Clique para ver detalhes da reserva | Próximas: ${datas}`
+      : 'Clique para ver detalhes da reserva';
     case 'PRE_RESERVA': return apt.datasPreReservas 
-      ? `Pré-reserva — Check-ins: ${apt.datasPreReservas}\nClique para ver detalhes`
+      ? `Pré-reserva — Check-ins: ${datas}\nClique para ver detalhes`
       : 'Clique para abrir o mapa de reservas';
-    case 'LIMPEZA':     return apt.reserva?.id ? 'Clique para ver a última reserva' : 'Apartamento em limpeza';
-    case 'DISPONIVEL':  return apt.datasPreReservas
-      ? `Check-ins agendados: ${apt.datasPreReservas}`
+    case 'LIMPEZA': return apt.reserva?.id ? 'Clique para ver a última reserva' : 'Apartamento em limpeza';
+    case 'DISPONIVEL': return apt.datasPreReservas
+      ? `Check-ins agendados: ${datas}`
       : 'Clique para criar nova reserva';
     case 'MANUTENCAO':  return 'Apartamento em manutenção';
     case 'BLOQUEADO':
@@ -1321,6 +1322,12 @@ if (this.filtroDataCheckin) {
     if (!apt.reserva?.proximaReserva?.id) return;
     this.router.navigate(['/reservas', apt.reserva.proximaReserva.id]);
   }
+
+  labelPreReserva(apt: ApartamentoCard): string {
+  return apt.quantidadePreReservas && apt.quantidadePreReservas > 1
+    ? `${apt.quantidadePreReservas} Pré-reservas agendadas`
+    : 'Pré-reserva agendada';
+}
 
   // ── AÇÕES ────────────────────────────────────
 
@@ -1443,7 +1450,18 @@ irParaReservaPorId(reservaId: number): void {
   this.router.navigate(['/reservas', reservaId]);
 }
 
-
+formatarDatasPreReservas(datas: string): string {
+  if (!datas) return '';
+  // Divide por vírgula, formata cada data e junta novamente
+  return datas.split(',')
+    .map(d => {
+      const trimmed = d.trim();
+      if (!trimmed) return '';
+      const [ano, mes, dia] = trimmed.split('-');
+      return `${dia}/${mes}/${ano}`;
+    })
+    .join(', ');
+}
 
 verificarAvisoDiaria(): void {
   const agora = new Date();

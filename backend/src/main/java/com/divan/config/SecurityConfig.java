@@ -156,6 +156,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/ponto/foto/**").hasRole("ADMIN")
                 .requestMatchers("/api/ponto/ajuste/**").hasAnyRole("ADMIN", "GERENTE")
                 .requestMatchers("/api/ponto/**").authenticated()
+                .requestMatchers("/api/publico/**").permitAll()
                 // ========== QUALQUER OUTRA REQUISIÇÃO ==========
                 .anyRequest().authenticated()
             );
