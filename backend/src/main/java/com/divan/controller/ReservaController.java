@@ -667,6 +667,37 @@ public class ReservaController {
                 Cliente cliente = clienteRepository.findById(clienteId)
                     .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
                 hospede.setCliente(cliente);
+                
+             // ✅ VERIFICAR SE CLIENTE JÁ ESTÁ HOSPEDADO OU TEM PRÉ-RESERVA NO MESMO PERÍODO
+                List<HospedagemHospede> conflitos = hospedagemHospedeRepository
+                    .findByClienteId(cliente.getId())
+                    .stream()
+                    .filter(h -> {
+                        Reserva r = h.getReserva();
+                        if (r == null) return false;
+                        if (r.getId().equals(reserva.getId())) return false;
+                        if (r.getStatus() == Reserva.StatusReservaEnum.CANCELADA ||
+                            r.getStatus() == Reserva.StatusReservaEnum.FINALIZADA) return false;
+                        return reserva.getDataCheckin().toLocalDate().isBefore(r.getDataCheckout().toLocalDate()) &&
+                        	       reserva.getDataCheckout().toLocalDate().isAfter(r.getDataCheckin().toLocalDate());
+                    })
+                    .collect(java.util.stream.Collectors.toList());
+
+                if (!conflitos.isEmpty()) {
+                    HospedagemHospede conflito = conflitos.get(0);
+                    Reserva rConflito = conflito.getReserva();
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "erro", String.format(
+                            "⚠️ %s já possui reserva/pré-reserva no Apt %s (Reserva #%d) de %s a %s. " +
+                            "Acesse a reserva e transfira o apartamento antes de adicionar este hóspede.",
+                            cliente.getNome(),
+                            rConflito.getApartamento().getNumeroApartamento(),
+                            rConflito.getId(),
+                            rConflito.getDataCheckin().toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                            rConflito.getDataCheckout().toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                        )
+                    ));
+                }
             }
 
             if (body.containsKey("placaCarro") && body.get("placaCarro") != null

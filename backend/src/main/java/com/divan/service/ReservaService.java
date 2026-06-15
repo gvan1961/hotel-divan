@@ -356,12 +356,13 @@ public class ReservaService {
 
             if (conflito) {
                 throw new RuntimeException(String.format(
-                    "❌ %s já possui pré-reserva no apartamento %s (Reserva #%d) de %s a %s.",
+                    "⚠️ %s já possui pré-reserva no Apt %s (Reserva #%d) de %s a %s. " +
+                    "Acesse a pré-reserva e transfira o apartamento antes de criar nova reserva.",
                     reserva.getCliente().getNome(),
                     r.getApartamento().getNumeroApartamento(),
                     r.getId(),
-                    r.getDataCheckin().toLocalDate(),
-                    r.getDataCheckout().toLocalDate()
+                    r.getDataCheckin().toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                    r.getDataCheckout().toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                 ));
             }
         }
