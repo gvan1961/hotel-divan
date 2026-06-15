@@ -1529,7 +1529,9 @@ public class ReservaService {
         dto.setTotalRecebido(reserva.getTotalRecebido());
         dto.setTotalApagar(reserva.getTotalApagar());
         dto.setDesconto(reserva.getDesconto() != null ? reserva.getDesconto() : BigDecimal.ZERO);
-
+        dto.setTotalReciboEmitido(reserva.getTotalReciboEmitido() != null 
+        	    ? reserva.getTotalReciboEmitido() : BigDecimal.ZERO);
+        
         System.out.println("💰 Totais da reserva:");
         System.out.println("  Total Diária: R$ " + dto.getTotalDiaria());
         System.out.println("  Total Produto: R$ " + dto.getTotalProduto());

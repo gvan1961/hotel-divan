@@ -594,8 +594,8 @@ import { environment } from '../../../environments/environment';
 
              <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
    <button class="btn-acao btn-recibo-formal"
-   *ngIf="reserva.status === 'ATIVA' && 
-          ((reserva.totalRecebido || 0) - (reserva.totalReciboEmitido || 0)) > 0"
+   *ngIf="reserva.status === 'ATIVA' &&
+       (pagoAVistaParaRecibo - (reserva.totalReciboEmitido || 0)) > 0"
    (click)="abrirModalReciboFormal()">
    📄 Recibo Formal
    </button>
@@ -626,7 +626,7 @@ import { environment } from '../../../environments/environment';
     <h2>📄 Recibo Formal</h2>
     <div class="info-box">
       <p><strong>Hóspede:</strong> {{ reserva.cliente?.nome }}</p>
-      <p><strong>Total Pago:</strong> R$ {{ formatarMoeda(reserva.totalRecebido || 0) }}</p>
+      <p><strong>Pago à Vista:</strong> R$ {{ formatarMoeda(pagoAVistaParaRecibo) }}</p>
       <p><strong>Já Recibado:</strong> R$ {{ formatarMoeda(reserva.totalReciboEmitido || 0) }}</p>
       <p><strong>Disponível para Recibo:</strong> 
         <span style="color: #28a745; font-weight: bold;">
@@ -640,8 +640,8 @@ import { environment } from '../../../environments/environment';
         [(ngModel)]="valorReciboTexto"
         (input)="onValorReciboInput()"
         placeholder="0,00" />
-      <small>Máximo permitido: R$ {{ formatarMoeda((reserva.totalRecebido || 0) - (reserva.totalReciboEmitido || 0)) }} (saldo disponível)</small>
-      <small *ngIf="valorRecibo > ((reserva.totalRecebido || 0) - (reserva.totalReciboEmitido || 0))" style="color: red; display: block;">
+       <small>Máximo permitido: R$ {{ formatarMoeda(pagoAVistaParaRecibo - (reserva.totalReciboEmitido || 0)) }} (saldo disponível)</small>
+       <small *ngIf="valorRecibo > (pagoAVistaParaRecibo - (reserva.totalReciboEmitido || 0))" style="color: red; display: block;">
         ⚠️ Valor não pode ser superior ao saldo disponível para recibo
       </small>
     </div>
@@ -650,7 +650,7 @@ import { environment } from '../../../environments/environment';
       <button class="btn-cancelar-modal" (click)="fecharModalReciboFormal()">Cancelar</button>
       <button class="btn-confirmar"
         (click)="imprimirReciboFormal()"
-        [disabled]="!valorRecibo || valorRecibo <= 0 || valorRecibo > ((reserva.totalRecebido || 0) - (reserva.totalReciboEmitido || 0))">
+        [disabled]="!valorRecibo || valorRecibo <= 0 || valorRecibo > (pagoAVistaParaRecibo - (reserva.totalReciboEmitido || 0))">
         🖨️ Imprimir Recibo
       </button>
     </div>
@@ -1160,7 +1160,7 @@ import { environment } from '../../../environments/environment';
             <div class="campo" *ngIf="valorDesconto > 0">
               <div class="info-box" style="background: #d4edda; border-color: #28a745;">
                 <p style="color: #155724;"><strong>Novo Total:</strong> R$ {{ formatarMoeda((reserva.totalHospedagem || 0) - valorDesconto) }}</p>
-                <p style="color: #155724;"><strong>Novo Saldo:</strong> R$ {{ formatarMoeda((reserva.totalHospedagem || 0) - valorDesconto - (reserva.totalRecebido || 0)) }}</p>
+                <p style="color: #155724;"><strong>Novo Saldo:</strong> R$ {{ formatarMoeda((reserva.totalHospedagem || 0) - valorDesconto - pagoAVistaParaRecibo) }}</p>
               </div>
             </div>
             <div class="campo">
@@ -2856,6 +2856,8 @@ import { environment } from '../../../environments/environment';
     novaDataCheckout = '';
     motivoAlteracaoCheckout = '';
 
+    pagoAVistaParaRecibo = 0;
+
     // ALTERAR HÓSPEDES
     modalAlterarHospedes = false;
     novaQuantidadeHospedes = 1;
@@ -2985,9 +2987,8 @@ get podeCancelar(): boolean {
 
     @ViewChild('signaturePad') signaturePad!: SignaturePadComponent;
 
-    ngOnInit(): void {
-
-      console.log('🚀 ngOnInit reserva-detalhes chamado');
+   ngOnInit(): void {
+  console.log('🚀 ngOnInit reserva-detalhes chamado');
   const id = this.route.snapshot.paramMap.get('id');
   if (id) {
     this.reservaId = Number(id);
@@ -2997,13 +2998,12 @@ get podeCancelar(): boolean {
 
     // ✅ Atualizar a cada 30 segundos
     this.intervaloAtualizacao = setInterval(() => {
-  this.atualizarSilencioso(this.reservaId);
-}, 30000);
+      this.atualizarSilencioso(this.reservaId);
+    }, 30000);
   } else {
     this.erro = 'ID da reserva não fornecido';
   }
 }
-
 atualizarSilencioso(id: number): void {
   this.http.get<ReservaDetalhes>(`/api/reservas/${id}`).subscribe({
     next: (data) => {
@@ -3034,6 +3034,13 @@ ngOnDestroy(): void {
     next: (data) => {
       this.reserva = data;      
          this.loading = false;
+
+         // ✅ Calcula pago à vista para recibo formal
+  const extratos = data.extratos || [];
+  const debitoEmConta = extratos
+    .filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
+    .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
+  this.pagoAVistaParaRecibo = Math.max(0, (data.totalRecebido || 0) - debitoEmConta);
       
       // ✅ DEBUG AUDITORIA
       console.log('🔍 AUDITORIA:', {
@@ -6084,7 +6091,8 @@ abrirModalReciboFormal(): void {
       const debitoEmConta = extratos
         .filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
         .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
-      const pagoAVista = Math.max(0, (reserva.totalRecebido || 0) - debitoEmConta);
+     const pagoAVista = Math.max(0, (reserva.totalRecebido || 0) - debitoEmConta);
+     this.pagoAVistaParaRecibo = pagoAVista;
       const totalRecebido2 = reserva.totalReciboEmitido || 0;
       const saldoDisponivel = pagoAVista - totalRecebido2;
 
@@ -6092,9 +6100,18 @@ abrirModalReciboFormal(): void {
         alert('❌ Não há saldo disponível para emitir recibo.\n\nTodo o valor pago à vista já foi recibado.');
         return;
       }
-      this.valorRecibo = saldoDisponivel;
-      this.valorReciboTexto = saldoDisponivel.toFixed(2).replace('.', ',');
-      this.modalReciboFormal = true;
+      const totalReciboEmitido = reserva.totalReciboEmitido || 0;
+
+if (totalReciboEmitido > 0) {
+  // Já emitiu recibo antes — deixa em branco
+  this.valorRecibo = 0;
+  this.valorReciboTexto = '';
+} else {
+  // Primeiro recibo — pré-preenche com total disponível
+  this.valorRecibo = saldoDisponivel;
+  this.valorReciboTexto = saldoDisponivel.toFixed(2).replace('.', ',');
+}
+this.modalReciboFormal = true;
     }
   });
 }

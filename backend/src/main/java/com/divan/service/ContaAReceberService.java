@@ -446,6 +446,7 @@ public class ContaAReceberService {
         conta.setValor(novoValor);
         if (novoSaldo.compareTo(BigDecimal.ZERO) == 0) {
             conta.setStatus(StatusContaEnum.PAGA);
+            conta.setValorPago(conta.getValor());
         }
         contaAReceberRepository.save(conta);
 
