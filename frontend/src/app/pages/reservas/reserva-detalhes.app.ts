@@ -3323,11 +3323,13 @@ ngOnDestroy(): void {
             font-weight: 700 !important;
           }
 
-          .imagem-assinatura {
-              max-width: 100%;
-              max-height: 22mm;
-              margin-bottom: 2px;
-            }
+         .imagem-assinatura {
+  max-width: 80%;
+  max-height: 22mm;
+  margin-bottom: 2px;
+  display: block;
+  margin-left: 0;
+}
 
         </style>
       </head>
@@ -6204,8 +6206,15 @@ gerarHtmlRecibo(): void {
         .titulo-recibo { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 25px; letter-spacing: 3px; text-decoration: underline; }
         .corpo { margin-bottom: 30px; line-height: 1.8; font-size: 12pt; text-align: justify; }
         .valor-destaque { font-weight: bold; font-size: 13pt; }
-        .assinatura { margin-top: 60px; }
-        .linha-assinatura { border-top: 1px solid #000; width: 350px; margin: 0 auto; padding-top: 8px; text-align: center; font-size: 11pt; }
+        .assinatura {
+  margin-top: 12px;
+  text-align: left;
+}
+       .linha-assinatura {
+  border-top: 2px solid #000;
+  margin: 10px 0 4px 0;
+  width: auto;
+}
         .data-local { margin-top: 40px; font-size: 11pt; }
         .numero-recibo { text-align: right; font-size: 10pt; color: #555; margin-bottom: 10px; }
         @media print { body { padding: 20px; } }

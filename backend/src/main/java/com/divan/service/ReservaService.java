@@ -636,6 +636,7 @@ public class ReservaService {
             dto.setApartamento(apartamentoDTO);
         }
         
+        
         dto.setQuantidadeHospede(reserva.getQuantidadeHospede());
         dto.setDataCheckin(reserva.getDataCheckin());
         dto.setDataCheckout(reserva.getDataCheckout());

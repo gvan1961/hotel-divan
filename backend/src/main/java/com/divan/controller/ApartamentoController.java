@@ -400,13 +400,16 @@ public class ApartamentoController {
             		            .findByApartamentoIdAndStatusIn(apt.getId(),
             		                List.of(Reserva.StatusReservaEnum.FINALIZADA))
             		            .stream()
-            		            .sorted(Comparator.comparing(
-            		            	    r -> r.getDataCheckoutReal() != null ? r.getDataCheckoutReal() : r.getDataCheckout(),
-            		            	    Comparator.reverseOrder()
-            		            	))
+            		            .sorted((r1, r2) -> {
+            		                LocalDateTime d1 = r1.getDataCheckoutReal() != null ? r1.getDataCheckoutReal() : r1.getDataCheckout();
+            		                LocalDateTime d2 = r2.getDataCheckoutReal() != null ? r2.getDataCheckoutReal() : r2.getDataCheckout();
+            		                int cmp = d2.compareTo(d1);
+            		                if (cmp != 0) return cmp;
+            		                return r2.getId().compareTo(r1.getId());
+            		            })
             		            .limit(1)
             		            .collect(Collectors.toList());
-
+            		        
             		        if (!ultimasReservas.isEmpty()) {
             		            Reserva r = ultimasReservas.get(0);
             		            Map<String, Object> res = new LinkedHashMap<>();

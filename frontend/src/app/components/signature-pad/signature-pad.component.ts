@@ -7,10 +7,10 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule],
   template: `
     <div class="signature-wrapper">
-      <div class="signature-instrucao">✍️ Desenhe sua assinatura abaixo</div>
+      <div class="signature-instrucao">✏️ Assine acima da linha</div>
       <canvas #canvas
-              width="380"
-              height="180"
+              width="760"
+              height="360"
               class="signature-canvas"
               (mousedown)="iniciarDesenho($event)"
               (mousemove)="desenhar($event)"
@@ -36,14 +36,16 @@ import { CommonModule } from '@angular/common';
     }
 
     .signature-canvas {
-  width: 380px;
-  height: 150px;
-  border: 2px dashed #999;
-  border-radius: 8px;
-  background: #fff;
-  cursor: crosshair;
-  touch-action: none;
-}
+      width: 100%;
+      max-width: 760px;
+      height: 300px;
+      border: 2px dashed #999;
+      border-radius: 8px;
+      background: #fff;
+      cursor: crosshair;
+      touch-action: none;
+      display: block;
+    }
 
     .signature-canvas:active {
       border-color: #2980b9;
@@ -73,12 +75,56 @@ export class SignaturePadComponent implements AfterViewInit {
   private desenhando = false;
   temAssinatura = false;
 
+  private get linhaBaseY(): number {
+    return Math.floor(this.canvasRef.nativeElement.height * 0.80);
+  }
+
   ngAfterViewInit() {
     this.ctx = this.canvasRef.nativeElement.getContext('2d')!;
     this.ctx.strokeStyle = '#000';
-    this.ctx.lineWidth = 2.5;
+    this.ctx.lineWidth = 3;
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
+    this.desenharGuia();
+  }
+
+  private desenharGuia() {
+    const canvas = this.canvasRef.nativeElement;
+    const ctx = this.ctx;
+    const y = this.linhaBaseY;
+    const margemEsq = 40;
+    const margemDir = canvas.width - 40;
+
+    ctx.save();
+
+    // Linha base tracejada
+    ctx.strokeStyle = '#aaa';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([8, 4]);
+    ctx.beginPath();
+    ctx.moveTo(margemEsq, y);
+    ctx.lineTo(margemDir, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // X de início
+    const xPos = margemEsq;
+    const tamanho = 14;
+    ctx.strokeStyle = '#bbb';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(xPos - tamanho / 2, y - tamanho / 2);
+    ctx.lineTo(xPos + tamanho / 2, y + tamanho / 2);
+    ctx.moveTo(xPos + tamanho / 2, y - tamanho / 2);
+    ctx.lineTo(xPos - tamanho / 2, y + tamanho / 2);
+    ctx.stroke();
+
+    // Texto guia
+    ctx.fillStyle = '#ccc';
+    ctx.font = '22px sans-serif';
+    ctx.fillText('Assine aqui', margemEsq + 20, y - 10);
+
+    ctx.restore();
   }
 
   // ── MOUSE ──
@@ -86,6 +132,8 @@ export class SignaturePadComponent implements AfterViewInit {
     this.desenhando = true;
     this.temAssinatura = true;
     const { x, y } = this.getCoordenadas(e.clientX, e.clientY);
+    this.ctx.strokeStyle = '#000';
+    this.ctx.lineWidth = 3;
     this.ctx.beginPath();
     this.ctx.moveTo(x, y);
   }
@@ -99,12 +147,14 @@ export class SignaturePadComponent implements AfterViewInit {
 
   pararDesenho() { this.desenhando = false; }
 
-  // ── TOUCH (tablet) ──
+  // ── TOUCH (tablet / mesa digitalizadora) ──
   iniciarDesenhoTouch(e: TouchEvent) {
     const touch = e.touches[0];
     this.desenhando = true;
     this.temAssinatura = true;
     const { x, y } = this.getCoordenadas(touch.clientX, touch.clientY);
+    this.ctx.strokeStyle = '#000';
+    this.ctx.lineWidth = 3;
     this.ctx.beginPath();
     this.ctx.moveTo(x, y);
   }
@@ -129,8 +179,10 @@ export class SignaturePadComponent implements AfterViewInit {
   }
 
   limpar() {
-    this.ctx.clearRect(0, 0, this.canvasRef.nativeElement.width, this.canvasRef.nativeElement.height);
+    const canvas = this.canvasRef.nativeElement;
+    this.ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.temAssinatura = false;
+    this.desenharGuia();
   }
 
   obterAssinatura(): string | null {
