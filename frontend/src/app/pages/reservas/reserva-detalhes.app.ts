@@ -6097,7 +6097,7 @@ abrirModalReciboFormal(): void {
       const saldoDisponivel = pagoAVista - totalRecebido2;
 
       if (saldoDisponivel <= 0) {
-        alert('❌ Não há saldo disponível para emitir recibo.\n\nTodo o valor pago à vista já foi recibado.');
+        alert('❌ Não há saldo disponível para emitir recibo.\n\nTodo o valor pago à vista já foi recebido.');
         return;
       }
       const totalReciboEmitido = reserva.totalReciboEmitido || 0;

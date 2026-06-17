@@ -820,8 +820,7 @@ public class ReservaService {
 
         if (diasNovos > diasAntigos) {
             System.out.println("➕ Adicionando " + (diasNovos - diasAntigos) + " dia(s)");
-            criarExtratosDiarias(reserva, checkoutAnterior, novaDataCheckout);
-            
+            criarExtratosDiariasTransferencia(reserva, checkoutAnterior, novaDataCheckout);            
         } else if (diasNovos < diasAntigos) {
             System.out.println("➖ Removendo " + (diasAntigos - diasNovos) + " dia(s) - Criando estornos");
             criarEstornosDiarias(reserva, novaDataCheckout, checkoutAnterior);
@@ -1934,8 +1933,8 @@ public class ReservaService {
             novaReserva.setNotasVenda(List.of(nota));
 
             Reserva reservaSalva = reservaRepository.save(novaReserva);
-            criarExtratosDiarias(reservaSalva, LocalDateTime.now(), reservaOrigem.getDataCheckout());
-
+            criarExtratosDiariasTransferencia(reservaSalva, LocalDateTime.now(), reservaOrigem.getDataCheckout());
+            
             // Mover hóspede para nova reserva
             hospede.setReserva(reservaSalva);
             hospede.setTitular(true);
@@ -2149,7 +2148,7 @@ public class ReservaService {
                     if (diferenca.compareTo(BigDecimal.ZERO) != 0) {
                         ExtratoReserva ajuste = new ExtratoReserva();
                         ajuste.setReserva(reserva);
-                        ajuste.setDataHoraLancamento(dataLancamento);
+                        ajuste.setDataHoraLancamento(LocalDateTime.now());
                         ajuste.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
                         ajuste.setDescricao(descricao);
                         ajuste.setQuantidade(1);
@@ -2164,5 +2163,27 @@ public class ReservaService {
             }
         }
         System.out.println("✅ Total de dias ajustados: " + diasAjustados);
+    }
+    
+    private void criarExtratosDiariasTransferencia(Reserva reserva, LocalDateTime dataInicio, LocalDateTime dataFim) {
+        long dias = ChronoUnit.DAYS.between(dataInicio.toLocalDate(), dataFim.toLocalDate());
+        if (dias <= 0) return;
+        BigDecimal valorDiaria = reserva.getDiaria().getValor();
+        for (int i = 0; i < dias; i++) {
+            LocalDateTime dataDiaria = dataInicio.toLocalDate().plusDays(i).atTime(12, 0);
+            ExtratoReserva extrato = new ExtratoReserva();
+            extrato.setReserva(reserva);
+            extrato.setDataHoraLancamento(dataDiaria);
+            extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.DIARIA);
+            extrato.setDescricao(String.format("Diária - Dia %02d/%02d/%d",
+                dataDiaria.getDayOfMonth(),
+                dataDiaria.getMonthValue(),
+                dataDiaria.getYear()));
+            extrato.setQuantidade(1);
+            extrato.setValorUnitario(valorDiaria);
+            extrato.setTotalLancamento(valorDiaria);
+            extrato.setNotaVendaId(null);
+            extratoReservaRepository.save(extrato);
+        }
     }
 }
