@@ -1220,29 +1220,21 @@ import { environment } from '../../../environments/environment';
         </div>
 
         <!-- MODAL DE ASSINATURA -->
-        <div class="modal-overlay" *ngIf="modalAssinatura" (click)="cancelarAssinatura()">
-          <div class="modal-content modal-assinatura" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h3>✍️ Assinatura do Hóspede</h3>
-              <button class="btn-fechar-modal" (click)="cancelarAssinatura()">&times;</button>
-            </div>
-            <div class="modal-body">
-              <p class="modal-info">
-                <strong>Cliente:</strong> {{ reserva?.cliente?.nome }}<br>
-                <strong>Apartamento:</strong> {{ reserva?.apartamento?.numeroApartamento }}<br>
-                <strong>Valor a Pagar:</strong> R$ {{ formatarMoeda(valorDebitoEmConta || reserva?.totalApagar) }}
-              </p>
-              <p class="modal-info" style="color: #e67e22; font-weight: bold;">
-                Ao assinar, você confirma o valor faturado para pagamento posterior.
-              </p>
-              <app-signature-pad #signaturePad></app-signature-pad>
-            </div>
-            <div class="modal-footer">
-              <button class="btn-cancelar" (click)="cancelarAssinatura()">❌ Cancelar</button>
-              <button class="btn-confirmar" (click)="confirmarAssinaturaFaturada()">✅ Confirmar e Finalizar</button>
-            </div>
-          </div>
-        </div>
+       <div class="modal-overlay-assinatura" *ngIf="modalAssinatura">
+  <div class="assinatura-fullscreen">
+    <div class="assinatura-topo">
+      <span><strong>{{ reserva?.cliente?.nome }}</strong> — Apt {{ reserva?.apartamento?.numeroApartamento }} — R$ {{ formatarMoeda(valorDebitoEmConta || reserva?.totalApagar) }}</span>
+      <button class="btn-fechar-modal" (click)="cancelarAssinatura()">&times;</button>
+    </div>
+    <div class="assinatura-canvas-area">
+      <app-signature-pad #signaturePad></app-signature-pad>
+    </div>
+    <div class="assinatura-rodape">
+      <button class="btn-cancelar" (click)="cancelarAssinatura()">❌ Cancelar</button>
+      <button class="btn-confirmar" (click)="confirmarAssinaturaFaturada()">✅ Confirmar e Finalizar</button>
+    </div>
+  </div>
+</div>
 
         <!-- MODAL EDITAR PLACA DO HÓSPEDE -->
         <div class="modal-overlay" *ngIf="modalEditarPlaca" (click)="fecharModalEditarPlaca()">
@@ -2090,6 +2082,34 @@ import { environment } from '../../../environments/environment';
         max-width: 700px;
       }
 
+      .modal-content.modal-assinatura {
+  max-width: 98vw;
+  width: 98vw;
+  height: 95vh;
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+}
+.modal-content.modal-assinatura .modal-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.modal-content.modal-assinatura app-signature-pad {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.modal-content.modal-assinatura .signature-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  border: none;
+  background: #fff;
+  cursor: crosshair;
+  touch-action: none;
+  display: block;
+}
       .modal-content h2 {
         margin: 0 0 20px 0;
         color: #2c3e50;
@@ -2824,6 +2844,48 @@ import { environment } from '../../../environments/environment';
 .btn-checkout-antecipado:hover {
   background: #d35400;
 }
+  .modal-overlay-assinatura {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 99999;
+  background: white;
+  display: flex;
+  flex-direction: column;
+}
+.assinatura-fullscreen {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+.assinatura-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background: #2c3e50;
+  color: white;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.assinatura-canvas-area {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+.assinatura-canvas-area app-signature-pad {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.assinatura-rodape {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 15px;
+  background: #f8f9fa;
+  border-top: 1px solid #ddd;
+  flex-shrink: 0;
+} 
 
     `]
   })
@@ -3271,66 +3333,41 @@ ngOnDestroy(): void {
             line-height: 1.4; 
           }
           
-          .secao strong {
-            font-weight: 900 !important;  /* ✅ EXTRA BOLD */
+         
+         
+         
+         
+         .secao strong {
+            font-weight: 900 !important;
           }
-          
-<div class="secao">
-  <h3>VALORES</h3>
-  <table style="width:100%; border-collapse:collapse;">
-    <tr>
-      <td style="font-size:11pt; font-weight:700; padding:3px 0;">Valor da Diaria:</td>
-      <td style="font-size:11pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">R$ ${this.formatarMoeda(this.reserva.valorDiaria)}</td>
-    </tr>
-    <tr>
-      <td style="font-size:12pt; font-weight:900; padding:5px 0;">Total Estimado:</td>
-      <td style="font-size:12pt; font-weight:900; text-align:right; white-space:nowrap; padding:5px 0;">R$ ${this.formatarMoeda(this.reserva.totalDiaria)}</td>
-    </tr>
-  </table>
-</div>
-          
-          .assinatura { 
-            margin-top: 12px; 
-            text-align: center; 
+          .assinatura {
+            margin-top: 12px;
+            text-align: left;
           }
-          
-          .texto-assinatura { 
-            font-size: 11pt !important;  /* ✅ AUMENTADO */
+          .texto-assinatura {
+            font-size: 11pt !important;
             font-weight: 700 !important;
-            margin: 2px 0; 
+            margin: 2px 0;
           }
-          
-          .linha-assinatura { 
-            border-top: 2px solid #000;  /* ✅ LINHA MAIS GROSSA */
-            margin: 10px 15mm 4px 15mm;
+          .linha-assinatura {
+            border-top: 2px solid #000;
+            margin: 10px 0 4px 0;
             width: auto;
           }
-          
-          .label-assinatura { 
-            font-size: 10pt !important;  /* ✅ AUMENTADO */
+          .label-assinatura {
+            font-size: 10pt !important;
             font-weight: 700 !important;
-            margin: 2px 0; 
+            margin: 2px 0;
           }
-          
-          .rodape { 
-            text-align: left; 
-            margin-top: 10px; 
-            font-size: 11pt !important;  /* ✅ AUMENTADO */
+          .rodape {
+            text-align: left;
+            margin-top: 10px;
+            font-size: 11pt !important;
           }
-          
-          .rodape p { 
-            margin: 2px 0; 
+          .rodape p {
+            margin: 2px 0;
             font-weight: 700 !important;
           }
-
-         .imagem-assinatura {
-  max-width: 80%;
-  max-height: 22mm;
-  margin-bottom: 2px;
-  display: block;
-  margin-left: 0;
-}
-
         </style>
       </head>
       <body>
@@ -3340,25 +3377,20 @@ ngOnDestroy(): void {
           <p class="endereco">Arapiraca - AL</p>
           <div class="separador">================================</div>
         </div>
-
         <div class="titulo-documento">
           <h2>FICHA DE CHECK-IN</h2>
           <p class="numero-reserva">Reserva Nº ${this.reserva.id}</p>
           <p class="data-emissao">${this.dataAtualCompleta()}</p>
         </div>
-
         <div class="separador">================================</div>
-
         <div class="secao">
-  <h3>DADOS DO HOSPEDE</h3>
-  <p><strong>Nome:</strong> ${this.reserva.cliente?.nome}</p>
-  ${empresaNomeCliente ? '<p><strong>Empresa:</strong> ' + empresaNomeCliente + '</p>' : ''}
-  <p><strong>CPF:</strong> ${this.formatarCPF(this.reserva.cliente?.cpf)}</p>
-  <p><strong>Telefone:</strong> ${this.reserva.cliente?.celular || this.reserva.cliente?.telefone || 'Nao informado'}</p>
-</div>
-
-<div class="separador">- - - - - - - - - - - - - - - -</div>
-
+          <h3>DADOS DO HOSPEDE</h3>
+          <p><strong>Nome:</strong> ${this.reserva.cliente?.nome}</p>
+          ${empresaNomeCliente ? '<p><strong>Empresa:</strong> ' + empresaNomeCliente + '</p>' : ''}
+          <p><strong>CPF:</strong> ${this.formatarCPF(this.reserva.cliente?.cpf)}</p>
+          <p><strong>Telefone:</strong> ${this.reserva.cliente?.celular || this.reserva.cliente?.telefone || 'Nao informado'}</p>
+        </div>
+        <div class="separador">- - - - - - - - - - - - - - - -</div>
         <div class="secao">
           <h3>INFORMACOES DA RESERVA</h3>
           <p><strong>Apartamento:</strong> ${this.reserva.apartamento?.numeroApartamento}</p>
@@ -3367,9 +3399,7 @@ ngOnDestroy(): void {
           <p><strong>Diarias:</strong> ${this.reserva.quantidadeDiaria} dia(s)</p>
           <p><strong>Hospedes:</strong> ${this.reserva.quantidadeHospede} pessoa(s)</p>
         </div>
-
         <div class="separador">- - - - - - - - - - - - - - - -</div>
-
         <div class="secao">
           <h3>VALORES</h3>
           <div class="linha-valor">
@@ -3381,9 +3411,7 @@ ngOnDestroy(): void {
             <span>R$ ${this.formatarMoeda(this.reserva.totalDiaria)}</span>
           </div>
         </div>
-
         <div class="separador">================================</div>
-
         <div class="assinatura">
           <p class="texto-assinatura">Declaro estar ciente das condicoes</p>
           <p class="texto-assinatura">da reserva e dos valores cobrados.</p>
@@ -3392,23 +3420,24 @@ ngOnDestroy(): void {
           <div class="linha-assinatura"></div>
           <p class="label-assinatura">Data: ____/____/________</p>
         </div>
-
         <div class="rodape">
           <p>Obrigado pela preferencia!</p>
           <p>Tenha uma excelente estadia!</p>
         </div>
-
         <script>
           window.onload = function() {
             window.print();
-            window.onafterprint = function() {
-              window.close();
-            };
+            window.onafterprint = function() { window.close(); };
           };
         </script>
       </body>
       </html>
     `;
+
+
+
+
+
 
     const janelaImpressao = window.open('', '_blank', 'width=800,height=600');
     if (janelaImpressao) {
@@ -3758,12 +3787,13 @@ gerarHtmlFatura(valorTotal: number, valorPago: number, saldo: number): void {
         .secao { margin: 8px 0; }
         .secao h3 { font-size: 11pt; margin: 0 0 6px 0; text-decoration: underline; font-weight: 900 !important; }
         .secao p { margin: 3px 0; font-size: 10pt; line-height: 1.4; }
-        .assinatura { margin-top: 15px; text-align: center; }
+        .assinatura { margin-top: 4px; text-align: left; }
         .linha-assinatura { border-top: 1px solid #000; margin: 12px 15px 4px 15px; }
         .label-assinatura { font-size: 10pt; margin: 2px 0; }
         .rodape { text-align: left; margin-top: 12px; font-size: 10pt; }
         .rodape p { margin: 2px 0; }
-      </style>
+       .imagem-assinatura { max-width: 90%; max-height: 75mm; display: block; margin: 2px 0; }
+      </style>  
     </head>
     <body>
       <div class="cabecalho">
@@ -4460,14 +4490,13 @@ salvarAdiantamento(): void {
   }
 
   this.modalAssinatura = false;
-
-  // ✅ APENAS SALVA ASSINATURA E GERA FATURA — SEM FINALIZAR
-  this.salvarAssinatura();
-  this.alertasStateService.notificarAlertasAtualizados();
-  alert('✅ Assinatura registrada! Valor enviado para Contas a Receber.');
-  this.carregarReserva(this.reserva!.id);
-  setTimeout(() => {
-    this.gerarFatura();
+const assinaturaParaImprimir = this.assinaturaCapturada; // ← guarda antes de qualquer coisa
+this.salvarAssinatura();
+this.alertasStateService.notificarAlertasAtualizados();
+alert('✅ Assinatura registrada! Valor enviado para Contas a Receber.');
+this.carregarReserva(this.reserva!.id);
+setTimeout(() => {
+  this.gerarFaturaComAssinatura(assinaturaParaImprimir);
     // ✅ BUSCAR E IMPRIMIR BILHETES
     this.http.get<any[]>(`/api/reservas/${this.reserva!.id}/bilhetes-sorteio`).subscribe({
       next: (bilhetes) => {
@@ -4481,7 +4510,25 @@ salvarAdiantamento(): void {
   }, 800);
 }    
 
-
+gerarFaturaComAssinatura(assinatura: string | null): void {
+  if (!this.reserva) return;
+  this.http.get<any[]>('/api/contas-receber').subscribe({
+    next: (contas) => {
+      const conta = contas.find((c: any) => c.reservaId === this.reserva!.id);
+      const valorTotal = conta ? (conta.valor || 0) :
+        ((this.reserva!.totalHospedagem || 0) - (this.reserva!.desconto || 0));
+      const valorPago = conta ? (conta.valorPago || 0) : 0;
+      const saldo = conta ? (conta.saldo || 0) : valorTotal;
+      this.assinaturaCapturada = assinatura; // ← restaura antes de imprimir
+      this.gerarHtmlFatura(valorTotal, valorPago, saldo);
+    },
+    error: () => {
+      const valorTotal = (this.reserva!.totalHospedagem || 0) - (this.reserva!.desconto || 0);
+      this.assinaturaCapturada = assinatura; // ← restaura antes de imprimir
+      this.gerarHtmlFatura(valorTotal, 0, valorTotal);
+    }
+  });
+}
   // ✅ SALVAR ASSINATURA NO BACKEND
   private salvarAssinatura(): void {
     if (!this.assinaturaCapturada || !this.reserva) return;

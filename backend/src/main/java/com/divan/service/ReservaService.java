@@ -821,7 +821,7 @@ public class ReservaService {
 
         if (diasNovos > diasAntigos) {
             System.out.println("➕ Adicionando " + (diasNovos - diasAntigos) + " dia(s)");
-            criarExtratosDiariasTransferencia(reserva, checkoutAnterior, novaDataCheckout);            
+            criarExtratosDiariasTransferencia(reserva, checkoutAnterior, novaDataCheckout);
         } else if (diasNovos < diasAntigos) {
             System.out.println("➖ Removendo " + (diasAntigos - diasNovos) + " dia(s) - Criando estornos");
             criarEstornosDiarias(reserva, novaDataCheckout, checkoutAnterior);

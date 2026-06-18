@@ -9,8 +9,8 @@ import { CommonModule } from '@angular/common';
     <div class="signature-wrapper">
       <div class="signature-instrucao">✏️ Assine acima da linha</div>
       <canvas #canvas
-              width="760"
-              height="360"
+              width="1920"
+              height="1080"
               class="signature-canvas"
               (mousedown)="iniciarDesenho($event)"
               (mousemove)="desenhar($event)"
@@ -26,46 +26,54 @@ import { CommonModule } from '@angular/common';
     </div>
   `,
   styles: [`
-    .signature-wrapper { width: 100%; }
+.signature-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
 
-    .signature-instrucao {
-      font-size: 13px;
-      color: #555;
-      margin-bottom: 6px;
-      text-align: center;
-    }
+.signature-instrucao {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 4px;
+  text-align: center;
+  flex-shrink: 0;
+}
 
-    .signature-canvas {
-      width: 100%;
-      max-width: 760px;
-      height: 300px;
-      border: 2px dashed #999;
-      border-radius: 8px;
-      background: #fff;
-      cursor: crosshair;
-      touch-action: none;
-      display: block;
-    }
+.signature-canvas {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border: 2px dashed #999;
+  border-radius: 4px;
+  background: #fff;
+  cursor: crosshair;
+  touch-action: none;
+  display: block;
+}
 
-    .signature-canvas:active {
-      border-color: #2980b9;
-      border-style: solid;
-    }
+.signature-canvas:active {
+  border-color: #2980b9;
+  border-style: solid;
+}
 
-    .signature-actions {
-      text-align: right;
-      margin-top: 6px;
-    }
+.signature-actions {
+  text-align: right;
+  margin-top: 6px;
+  padding-bottom: 4px;
+  flex-shrink: 0;
+}
 
-    .btn-limpar {
-      padding: 6px 14px;
-      background: #e74c3c;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-    }
+.btn-limpar {
+  padding: 6px 14px;
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
   `]
 })
 export class SignaturePadComponent implements AfterViewInit {
@@ -185,8 +193,17 @@ export class SignaturePadComponent implements AfterViewInit {
     this.desenharGuia();
   }
 
-  obterAssinatura(): string | null {
-    if (!this.temAssinatura) return null;
-    return this.canvasRef.nativeElement.toDataURL('image/png');
-  }
+ obterAssinatura(): string | null {
+  if (!this.temAssinatura) return null;
+  const canvas = this.canvasRef.nativeElement;
+  
+  // Cria canvas menor só com a área da assinatura
+  const recorte = document.createElement('canvas');
+  recorte.width = canvas.width;
+  recorte.height = Math.floor(canvas.height * 0.85); // só até a linha base
+  const ctx = recorte.getContext('2d')!;
+  ctx.drawImage(canvas, 0, 0);
+  
+  return recorte.toDataURL('image/png');
+}
 }
