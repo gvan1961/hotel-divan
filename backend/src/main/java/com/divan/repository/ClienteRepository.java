@@ -66,6 +66,9 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     		List<Object[]> buscarPorCpfParcialOuNome(@Param("cpf") String cpf, @Param("nome") String nome);
     		
     		List<Cliente> findByTipoCliente(String tipoCliente);
+    		
+    		@Query("SELECT c FROM Cliente c WHERE c.celularCompleto = :celular OR c.celular = :celular")
+    		Optional<Cliente> findByCelularCompleto(@Param("celular") String celular);
 }
 
 
