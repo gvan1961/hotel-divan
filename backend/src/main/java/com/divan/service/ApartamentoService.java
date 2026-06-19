@@ -66,21 +66,38 @@ public class ApartamentoService {
         Apartamento apartamento = apartamentoRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Apartamento não encontrado"));
         
-        if (apartamento.getStatus() == Apartamento.StatusEnum.OCUPADO) {
-            throw new RuntimeException("Não é possível editar apartamento OCUPADO. Finalize a reserva primeiro.");
-        }
-        
         TipoApartamento tipoApartamento = tipoApartamentoRepository.findById(dto.getTipoApartamentoId())
-            .orElseThrow(() -> new RuntimeException("Tipo de apartamento não encontrado"));
-        
-        if (!apartamento.getNumeroApartamento().equals(dto.getNumeroApartamento()) &&
-            apartamentoRepository.existsByNumeroApartamento(dto.getNumeroApartamento())) {
-            throw new RuntimeException("Já existe outro apartamento com este número");
+        	    .orElseThrow(() -> new RuntimeException("Tipo de apartamento não encontrado"));
+
+        if (apartamento.getStatus() == Apartamento.StatusEnum.OCUPADO) {
+            // Permite editar apenas campos físicos — bloqueia número e tipo
+            if (!apartamento.getNumeroApartamento().equals(dto.getNumeroApartamento())) {
+                throw new RuntimeException("Não é possível alterar o número do apartamento enquanto ocupado.");
+            }
+            if (!apartamento.getTipoApartamento().getId().equals(dto.getTipoApartamentoId())) {
+                throw new RuntimeException("Não é possível alterar o tipo do apartamento enquanto ocupado.");
+            }
+            // ✅ VALIDA CAPACIDADE MÍNIMA
+            int hospedesAtivos = reservaRepository
+                .findByApartamentoIdAndStatus(apartamento.getId(), Reserva.StatusReservaEnum.ATIVA)
+                .stream()
+                .mapToInt(r -> r.getQuantidadeHospede())
+                .sum();
+            if (dto.getCapacidade() < hospedesAtivos) {
+                throw new RuntimeException(String.format(
+                    "Capacidade não pode ser menor que %d hóspede(s) atualmente hospedados.", hospedesAtivos));
+            }
+        } else {
+            if (!apartamento.getNumeroApartamento().equals(dto.getNumeroApartamento()) &&
+                apartamentoRepository.existsByNumeroApartamento(dto.getNumeroApartamento())) {
+                throw new RuntimeException("Já existe outro apartamento com este número");
+            }
+            apartamento.setNumeroApartamento(dto.getNumeroApartamento());
+            apartamento.setTipoApartamento(tipoApartamento);
         }
         
-        apartamento.setNumeroApartamento(dto.getNumeroApartamento());
-        apartamento.setTipoApartamento(tipoApartamento);
-        apartamento.setCapacidade(dto.getCapacidade());
+        
+        apartamento.setCapacidade(dto.getCapacidade());        
         apartamento.setCamasDoApartamento(dto.getCamasDoApartamento());
         apartamento.setTv(dto.getTv());
         apartamento.setTemCamaDeCasal(dto.getTemCamaDeCasal() != null ? dto.getTemCamaDeCasal() : false);

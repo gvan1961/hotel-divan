@@ -17,34 +17,33 @@ import { TipoApartamento } from '../../models/tipo-apartamento.model';
         <h1>{{ isEdit ? 'Editar Apartamento' : 'Novo Apartamento' }}</h1>
         <button class="btn-back" (click)="voltar()">← Voltar</button>
       </div>
-
-      <button type="submit" class="btn-save" [disabled]="loading || apartamentoOcupado">
-         {{ loading ? 'Salvando...' : (apartamentoOcupado ? 'Bloqueado' : 'Salvar') }}
-      </button>
+   
 
       <!-- ✅ AVISO SE OCUPADO -->
     <div *ngIf="apartamentoOcupado" class="warning-ocupado">
-      <div class="warning-icon">🔴</div>
-      <div class="warning-content">
-        <strong>Apartamento OCUPADO</strong>
-        <p>Este apartamento não pode ser editado enquanto estiver ocupado. Finalize a reserva primeiro.</p>
-      </div>
-    </div>
+  <div class="warning-icon">⚠️</div>
+  <div class="warning-content">
+    <strong>Apartamento OCUPADO</strong>
+    <p>Número e tipo não podem ser alterados. Capacidade, camas e TV podem ser editados normalmente.</p>
+  </div>
+</div>
 
       <div class="form-card">
         <form (ngSubmit)="salvar()">
           <div class="form-row">
             <div class="form-group">
               <label>Número do Apartamento *</label>
-              <input type="text" [(ngModel)]="apartamento.numeroApartamento" 
-                     name="numeroApartamento" required 
-                     placeholder="Ex: 101, 202, 305" />
+              <input type="text" [(ngModel)]="apartamento.numeroApartamento"
+       name="numeroApartamento" required
+       [disabled]="apartamentoOcupado"
+       placeholder="Ex: 101, 202, 305" />
             </div>
 
             <div class="form-group">
               <label>Tipo de Apartamento *</label>
-              <select [(ngModel)]="apartamento.tipoApartamentoId" 
-                      name="tipoApartamentoId" required>
+              <select [(ngModel)]="apartamento.tipoApartamentoId"
+        name="tipoApartamentoId" required
+        [disabled]="apartamentoOcupado">
                 <option [ngValue]="0">Selecione o tipo</option>
                 <option *ngFor="let tipo of tiposApartamento" [ngValue]="tipo.id">
                   {{ tipo.tipo }} - {{ tipo.descricao }}
@@ -111,6 +110,10 @@ import { TipoApartamento } from '../../models/tipo-apartamento.model';
             <button type="submit" class="btn-save" [disabled]="loading">
               {{ loading ? 'Salvando...' : 'Salvar' }}
             </button>
+
+            
+
+
           </div>
         </form>
       </div>
@@ -424,11 +427,10 @@ export class ApartamentoFormApp implements OnInit {
       // ✅ VERIFICAR SE ESTÁ OCUPADO
       this.statusApartamento = data.status;
       this.apartamentoOcupado = data.status === 'OCUPADO';
-      
-      if (this.apartamentoOcupado) {
-        console.log('🔴 Apartamento OCUPADO - bloqueando edição');
-        this.errorMessage = '⚠️ Este apartamento está OCUPADO e não pode ser editado. Finalize a reserva primeiro.';
-      }
+if (this.apartamentoOcupado) {
+  console.log('⚠️ Apartamento OCUPADO - número e tipo bloqueados');
+  this.errorMessage = '';
+}
       
       const tipoId = data.tipoApartamento?.id || data.tipoApartamentoId;
       
@@ -455,11 +457,7 @@ export class ApartamentoFormApp implements OnInit {
     console.log('📝 Estado atual do formulário:', this.apartamento);
 
     // ✅ BLOQUEAR SALVAMENTO SE OCUPADO
-  if (this.apartamentoOcupado) {
-    this.errorMessage = '⚠️ Não é possível editar apartamento OCUPADO!';
-    alert('⚠️ Não é possível editar apartamento OCUPADO! Finalize a reserva primeiro.');
-    return;
-  }
+  // ✅ SE OCUPADO, apenas número e tipo são bloqueados (validado no backend)
     
     if (!this.validarFormulario()) {
       console.log('⚠️ Validação falhou');

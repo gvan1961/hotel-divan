@@ -253,13 +253,12 @@ import { ReservaService } from '../../services/reserva.service';
             </button>
 
             <!-- EDITAR -->
-            <button 
-              class="btn-acao btn-edit"
-              (click)="editar(apt.id!)"
-              [disabled]="apt.status === 'OCUPADO'"
-              [title]="apt.status === 'OCUPADO' ? 'Não pode editar apartamento ocupado' : 'Editar apartamento'">
-              ✏️ Editar
-            </button>
+           <button
+  class="btn-acao btn-edit"
+  (click)="editar(apt.id!)"
+  [title]="apt.status === 'OCUPADO' ? 'Editar apartamento (ocupado - número e tipo bloqueados)' : 'Editar apartamento'">
+  ✏️ Editar
+</button>
           </div>
         </div>
       </div>

@@ -58,8 +58,19 @@ interface ApartamentoMapa {
         </div>
 
         <button class="btn-hoje" (click)="voltarParaHoje()">📅 Hoje</button>
-        <button class="btn-atualizar" (click)="carregarMapa()">🔄 Atualizar</button>
+        <button class="btn-atualizar" (click)="carregarMapa()">🔄 Atualizar</button>    
+        
       </div>
+
+      <div class="filtro-busca-reserva">
+  <label>🔢 Nº Reserva:</label>
+  <input type="number" 
+         [(ngModel)]="buscaNumeroReserva" 
+         (input)="buscarPorNumeroReserva()"
+         placeholder="Ex: 1024"
+         class="input-busca-reserva">
+  <button *ngIf="buscaNumeroReserva" class="btn-limpar-busca" (click)="limparBuscaReserva()">✕</button>
+</div>
 
       <!-- LEGENDA -->
       <div class="legenda">
@@ -1344,6 +1355,38 @@ td.col-reserva.hoje {
   overflow-y: auto;
 }
 }
+
+.filtro-busca-reserva {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.input-busca-reserva {
+  width: 100px;
+  padding: 6px 8px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.input-busca-reserva:focus {
+  outline: none;
+  border-color: #3498db;
+}
+.btn-limpar-busca {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.reserva-destacada {
+  outline: 3px solid #f39c12 !important;
+  box-shadow: 0 0 8px rgba(243,156,18,0.8) !important;
+  z-index: 10;
+}
+
 `]
 })
 export class MapaReservasApp implements OnInit {
@@ -1384,6 +1427,9 @@ aptDestinoTransfId = 0;
 motivoTransferencia = '';
 loadingTransf = false; 
 novaDataCheckinTransf = '';
+
+buscaNumeroReserva: number | null = null;
+reservaDestacadaId: number | null = null;
 
   mapaReservas: Map<string, ReservaMapa> = new Map();
 
@@ -1612,37 +1658,43 @@ for (let d = new Date(checkin); d < checkoutEfetivo; d.setDate(d.getDate() + 1))
   getClasseReserva(apt: ApartamentoMapa, data: string): string {
   const chave = `${apt.id}-${data}`;
   const reserva = this.mapaReservas.get(chave);
-
+  let classe = '';
+  
   if (reserva) {
     if (reserva.status === 'ATIVA') {
-      return 'celula-ocupado';
+      classe = 'celula-ocupado';
     } else if (reserva.status === 'PRE_RESERVA') {
       if (this.isPreReservaHoje(reserva)) {
-        return 'celula-pre-reserva-hoje';
+        classe = 'celula-pre-reserva-hoje';
       } else if (this.isPreReservaAmanha(reserva)) {
-        return 'celula-pre-reserva-amanha';
+        classe = 'celula-pre-reserva-amanha';
       } else {
-        return 'celula-pre-reserva';
+        classe = 'celula-pre-reserva';
       }
     } else if (reserva.status === 'FINALIZADA') {
-      return 'celula-finalizada';
+      classe = 'celula-finalizada';
     } else if (reserva.status === 'CHECKOUT_VENCIDO') {
-      return 'celula-checkout-vencido';
+      classe = 'celula-checkout-vencido';
+    }
+    // ✅ DESTAQUE POR NÚMERO DE RESERVA
+    if (this.reservaDestacadaId && reserva.id === this.reservaDestacadaId) {
+      classe += ' reserva-destacada';
+    }
+  } else {
+    const hoje = new Date().toISOString().split('T')[0];
+    const dataClicada = new Date(data + 'T00:00:00');
+    const dataHoje = new Date(hoje + 'T00:00:00');
+    if (dataClicada > dataHoje) {
+      classe = 'celula-disponivel';
+    } else if (apt.status === 'LIMPEZA') {
+      classe = 'celula-limpeza';
+    } else if (apt.status === 'MANUTENCAO') {
+      classe = 'celula-manutencao';
+    } else {
+      classe = 'celula-disponivel';
     }
   }
-
-  const hoje = new Date().toISOString().split('T')[0];
-  const dataClicada = new Date(data + 'T00:00:00');
-  const dataHoje = new Date(hoje + 'T00:00:00');
-
-  if (dataClicada > dataHoje) {
-    return 'celula-disponivel';
-  }
-
-  if (apt.status === 'LIMPEZA') return 'celula-limpeza';
-  if (apt.status === 'MANUTENCAO') return 'celula-manutencao';
-
-  return 'celula-disponivel';
+  return classe;
 }
 
   getTituloReserva(apt: ApartamentoMapa, data: string): string {
@@ -2300,6 +2352,32 @@ confirmarTransferencia(): void {
     
   imprimir(): void {
   window.print();
+}
+
+private buscaTimeout: any = null;
+
+buscarPorNumeroReserva(): void {
+  clearTimeout(this.buscaTimeout);
+  this.reservaDestacadaId = null;
+  
+  if (!this.buscaNumeroReserva) return;
+  
+  this.buscaTimeout = setTimeout(() => {
+    this.reservaDestacadaId = this.buscaNumeroReserva;
+    setTimeout(() => {
+      const el = document.querySelector('.reserva-destacada');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        alert(`❌ Reserva #${this.buscaNumeroReserva} não encontrada no período atual.`);
+      }
+    }, 150);
+  }, 600); // ← aguarda 600ms após parar de digitar
+}
+
+limparBuscaReserva(): void {
+  this.buscaNumeroReserva = null;
+  this.reservaDestacadaId = null;
 }
   
   voltar(): void {    

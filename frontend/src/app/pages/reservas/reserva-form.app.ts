@@ -58,12 +58,13 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
             </div>
 
             <div class="resultados-busca" *ngIf="mostrarResultados && clientesFiltrados.length > 0">
-              <div class="resultado-item" *ngFor="let cliente of clientesFiltrados"
-                (click)="selecionarCliente(cliente)">
-                <div class="resultado-nome">{{ cliente.nome }}</div>
-                <div class="resultado-cpf">CPF: {{ formatarCPF(cliente.cpf) }}</div>
-                <div class="resultado-info" *ngIf="cliente.celular">📞 {{ cliente.celular }}</div>
-              </div>
+             <div class="resultado-item" *ngFor="let cliente of clientesFiltrados"
+              (click)="selecionarCliente(cliente)">
+              <div class="resultado-nome">{{ cliente.nome }}</div>
+  <div class="resultado-empresa" *ngIf="cliente.empresaNome">🏢 {{ cliente.empresaNome }}</div>
+  <div class="resultado-cpf">CPF: {{ formatarCPF(cliente.cpf) }}</div>
+  <div class="resultado-info" *ngIf="cliente.celular">📞 {{ cliente.celular }}</div>
+</div>
             </div>
 
            <div class="sem-resultado" *ngIf="mostrarResultados && clientesFiltrados.length === 0 && buscaCliente.length >= 2">
