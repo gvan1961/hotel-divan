@@ -459,8 +459,17 @@ template: `
             <p><strong>👥 Hóspedes:</strong> {{ s.quantidadeHospedes }}</p>
             <p><strong>🕐 Solicitado em:</strong> {{ s.dataSolicitacao }}</p>
             <div class="solicitacao-acoes">
-              <button class="btn-atender" (click)="atenderSolicitacao(s.id)">✅ Marcar como Atendida</button>
-            </div>
+  <textarea class="input-resposta" [(ngModel)]="s.respostaTexto"
+    placeholder="Digite a resposta para o cliente..." rows="2"></textarea>
+  <div class="acoes-btns">
+    <button class="btn-responder" (click)="responderSolicitacao(s)">
+      📤 Enviar Resposta
+    </button>
+    <button class="btn-atender" (click)="atenderSolicitacao(s.id)">
+      ✅ Atendida
+    </button>
+  </div>
+</div>
           </div>
         </div>
       </div>
@@ -1051,6 +1060,20 @@ template: `
 }
 .btn-atender:hover { background: #1da851; }
 
+.input-resposta {
+  width: 100%; padding: 8px; border: 1px solid #ddd;
+  border-radius: 6px; font-size: 13px; resize: none;
+  margin-bottom: 8px; font-family: inherit;
+}
+.input-resposta:focus { outline: none; border-color: #25D366; }
+.acoes-btns { display: flex; gap: 8px; }
+.btn-responder {
+  background: #128C7E; color: white; border: none;
+  padding: 8px 12px; border-radius: 6px; cursor: pointer;
+  font-size: 13px; font-weight: 600; flex: 1;
+}
+.btn-responder:hover { background: #0f7369; }
+
   `]
 })
 export class PainelRecepcaoApp implements OnInit, OnDestroy {
@@ -1616,6 +1639,23 @@ registrarLimpezaDiaria(apt: ApartamentoCard): void {
         alert('❌ Erro: ' + msg);
       }
     }
+  });
+}
+
+responderSolicitacao(s: any): void {
+  if (!s.respostaTexto || s.respostaTexto.trim() === '') {
+    alert('⚠️ Digite uma mensagem para enviar.');
+    return;
+  }
+  const token = localStorage.getItem('token');
+  const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+  this.http.post(`/api/solicitacoes-whatsapp/${s.id}/responder`,
+    { mensagem: s.respostaTexto }, { headers }).subscribe({
+    next: () => {
+      alert('✅ Resposta enviada para ' + s.nome + '!');
+      s.respostaTexto = '';
+    },
+    error: () => alert('❌ Erro ao enviar resposta.')
   });
 }
 
