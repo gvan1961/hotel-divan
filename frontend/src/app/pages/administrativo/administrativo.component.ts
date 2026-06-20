@@ -40,7 +40,7 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
               class="card" (click)="ir('/contas-receber')">
             <div class="card-icon">💰</div>
             <div class="card-info">
-              <h3>Contas a Receber</h3>
+              <h3>Contas a Receber e Recebidas</h3>
               <p>Controle financeiro de contas</p>
             </div>
             <span class="seta">›</span>

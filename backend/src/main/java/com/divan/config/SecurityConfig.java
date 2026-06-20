@@ -65,6 +65,7 @@ public class SecurityConfig {
                 // ========== ENDPOINTS PÚBLICOS ==========
             		.requestMatchers("/api/auth/**").permitAll()
             		.requestMatchers("/api/public/**").permitAll()
+            		.requestMatchers("/api/publico/**").permitAll()
             		.requestMatchers("/api/ponto/registrar").permitAll()
             		.requestMatchers("/api/ponto/hoje").permitAll()
             		.requestMatchers("/api/ponto/ultimo-registro/**").permitAll()
