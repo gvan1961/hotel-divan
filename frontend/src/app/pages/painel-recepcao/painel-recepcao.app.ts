@@ -443,6 +443,29 @@ template: `
         </div>
       </div>
 
+      <!-- POPUP SOLICITAÇÃO WHATSAPP -->
+    <div class="popup-whatsapp-overlay" *ngIf="mostrarPopupWhatsapp" (click)="fecharPopupWhatsapp()">
+      <div class="popup-whatsapp" (click)="$event.stopPropagation()">
+        <div class="popup-whatsapp-header">
+          <span>📱 Nova Solicitação de Reserva via WhatsApp</span>
+          <button (click)="fecharPopupWhatsapp()">✕</button>
+        </div>
+        <div class="popup-whatsapp-body">
+          <div class="solicitacao-item" *ngFor="let s of solicitacoesPendentes">
+            <p><strong>👤 Nome:</strong> {{ s.nome }}</p>
+            <p><strong>📱 WhatsApp:</strong> {{ s.numeroWhatsapp }}</p>
+            <p><strong>📅 Check-in:</strong> {{ s.dataCheckin }}</p>
+            <p><strong>📅 Check-out:</strong> {{ s.dataCheckout }}</p>
+            <p><strong>👥 Hóspedes:</strong> {{ s.quantidadeHospedes }}</p>
+            <p><strong>🕐 Solicitado em:</strong> {{ s.dataSolicitacao }}</p>
+            <div class="solicitacao-acoes">
+              <button class="btn-atender" (click)="atenderSolicitacao(s.id)">✅ Marcar como Atendida</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     </div>
   `,
   styles: [`
@@ -995,6 +1018,39 @@ template: `
 .btn-limpeza-diaria { background: #8e44ad; color: #fff; }
 .btn-limpeza-diaria:hover { background: #6c3483; }
 
+.popup-whatsapp-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5); z-index: 9999;
+  display: flex; align-items: flex-start; justify-content: flex-end;
+  padding: 20px;
+}
+.popup-whatsapp {
+  background: white; border-radius: 12px; width: 380px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3); overflow: hidden;
+  animation: slideIn 0.3s ease;
+}
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.popup-whatsapp-header {
+  background: #25D366; color: white; padding: 14px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-weight: 700; font-size: 14px;
+}
+.popup-whatsapp-header button {
+  background: none; border: none; color: white;
+  font-size: 18px; cursor: pointer; padding: 0;
+}
+.popup-whatsapp-body { padding: 16px; max-height: 400px; overflow-y: auto; }
+.solicitacao-item { border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 12px; }
+.solicitacao-item:last-child { border-bottom: none; margin-bottom: 0; }
+.solicitacao-item p { margin: 4px 0; font-size: 13px; color: #333; }
+.solicitacao-acoes { margin-top: 10px; }
+.btn-atender {
+  background: #25D366; color: white; border: none;
+  padding: 8px 16px; border-radius: 6px; cursor: pointer;
+  font-size: 13px; font-weight: 600; width: 100%;
+}
+.btn-atender:hover { background: #1da851; }
+
   `]
 })
 export class PainelRecepcaoApp implements OnInit, OnDestroy {
@@ -1027,6 +1083,10 @@ mostrarResultadosEmpresa = false;
 
   filtroDataCheckin: string = '';
   
+  mostrarPopupWhatsapp = false;
+solicitacoesPendentes: any[] = [];
+private intervaloWhatsapp: any;
+private ultimoTotalSolicitacoes = 0;
   
   private intervalo: any;
   private apiUrl = '/api/apartamentos/painel';
@@ -1036,10 +1096,60 @@ mostrarResultadosEmpresa = false;
   ngOnInit(): void {
     this.carregarDados();
     this.intervalo = setInterval(() => this.carregarDados(), 60000);    
+    this.iniciarPollingWhatsapp();
   }
+
+  // Polling de solicitações WhatsApp
+private iniciarPollingWhatsapp(): void {
+  this.verificarSolicitacoesWhatsapp();
+  this.intervaloWhatsapp = setInterval(() => this.verificarSolicitacoesWhatsapp(), 30000);
+}
+
+private verificarSolicitacoesWhatsapp(): void {
+  const token = localStorage.getItem('token');
+  const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+  this.http.get<any>('/api/solicitacoes-whatsapp/pendentes/count', { headers }).subscribe({
+    next: (resp) => {
+      const total = resp.total || 0;
+      if (total > this.ultimoTotalSolicitacoes) {
+        this.carregarSolicitacoesPendentes(headers);
+      }
+      this.ultimoTotalSolicitacoes = total;
+    },
+    error: () => {}
+  });
+}
+
+private carregarSolicitacoesPendentes(headers: HttpHeaders): void {
+  this.http.get<any[]>('/api/solicitacoes-whatsapp/pendentes', { headers }).subscribe({
+    next: (data) => {
+      this.solicitacoesPendentes = data;
+      if (data.length > 0) this.mostrarPopupWhatsapp = true;
+    },
+    error: () => {}
+  });
+}
+
+fecharPopupWhatsapp(): void {
+  this.mostrarPopupWhatsapp = false;
+}
+
+atenderSolicitacao(id: number): void {
+  const token = localStorage.getItem('token');
+  const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+  this.http.patch(`/api/solicitacoes-whatsapp/${id}/atender`, {}, { headers }).subscribe({
+    next: () => {
+      this.solicitacoesPendentes = this.solicitacoesPendentes.filter(s => s.id !== id);
+      this.ultimoTotalSolicitacoes = this.solicitacoesPendentes.length;
+      if (this.solicitacoesPendentes.length === 0) this.mostrarPopupWhatsapp = false;
+    },
+    error: () => {}
+  });
+}
 
   ngOnDestroy(): void {
     if (this.intervalo) clearInterval(this.intervalo);
+     if (this.intervaloWhatsapp) clearInterval(this.intervaloWhatsapp);
   }
 
   carregarDados(): void {
