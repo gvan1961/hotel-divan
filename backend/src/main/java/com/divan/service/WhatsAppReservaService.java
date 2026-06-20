@@ -24,6 +24,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import com.divan.repository.SolicitacaoReservaWhatsappRepository;
+import com.divan.entity.SolicitacaoReservaWhatsapp;
 
 @Service
 public class WhatsAppReservaService {
@@ -40,6 +42,7 @@ public class WhatsAppReservaService {
     @Autowired private ApartamentoRepository apartamentoRepository;
     @Autowired private ReservaRepository reservaRepository;
     @Autowired private DiariaRepository diariaRepository;
+    @Autowired private SolicitacaoReservaWhatsappRepository solicitacaoRepository;
 
     private enum Estado {
         INICIO,
@@ -356,8 +359,9 @@ public class WhatsAppReservaService {
     }
 
     private void processarConfirmacao(String numero, String texto, SessaoConversa sessao) {
-        if (texto.equals("1") || texto.equals("sim") || texto.equals("s")) {
-            notificarRecepcao(numero, sessao);
+    	if (texto.equals("1") || texto.equals("sim") || texto.equals("s")) {
+    	    salvarSolicitacao(numero, sessao);
+    	    notificarRecepcao(numero, sessao);
             enviar(numero,
                 "✅ *Solicitação enviada com sucesso!*\n\n" +
                 "Nossa recepção recebeu seu pedido e entrará em contato em breve para confirmar a disponibilidade e finalizar sua reserva.\n\n" +
@@ -369,6 +373,22 @@ public class WhatsAppReservaService {
             enviar(numero, "✅ Solicitação cancelada. Digite *oi* para voltar ao menu.");
         } else {
             enviar(numero, "Por favor, responda *1* para confirmar ou *2* para cancelar:");
+        }
+    }
+    
+    private void salvarSolicitacao(String numeroCliente, SessaoConversa sessao) {
+        try {
+            SolicitacaoReservaWhatsapp s = new SolicitacaoReservaWhatsapp();
+            s.setNome(sessao.nome);
+            s.setCpf(sessao.cpf);
+            s.setNumeroWhatsapp(numeroCliente);
+            s.setDataCheckin(sessao.checkin);
+            s.setDataCheckout(sessao.checkout);
+            s.setQuantidadeHospedes(sessao.hospedes);
+            solicitacaoRepository.save(s);
+            log.info("✅ Solicitação salva no banco: {}", sessao.nome);
+        } catch (Exception e) {
+            log.error("❌ Erro ao salvar solicitação: {}", e.getMessage());
         }
     }
 
