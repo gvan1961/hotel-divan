@@ -19,9 +19,11 @@ com\divan\dto\CategoriaRequestDTO.class
 com\divan\dto\ReservaResponseDTO.class
 com\divan\dto\DiariaResponseDTO.class
 com\divan\entity\Perfil.class
+com\divan\controller\DescontoController.class
 com\divan\dto\DiariaRequestDTO.class
 com\divan\controller\DiariaController.class
 com\divan\dto\AlertaResumoDTO.class
+com\divan\entity\Desconto.class
 com\divan\dto\TransferenciaApartamentoDTO.class
 com\divan\dto\PagamentoRequestDTO.class
 com\divan\repository\HistoricoHospedeRepository.class
@@ -36,6 +38,7 @@ com\divan\dto\VendaReservaRequestDTO.class
 com\divan\repository\ProdutoRepository.class
 com\divan\security\JwtUtil.class
 com\divan\controller\TipoApartamentoController.class
+com\divan\repository\DescontoRepository.class
 com\divan\DivanApplication.class
 com\divan\dto\ReservaDetalhesDTO$HistoricoSimples.class
 com\divan\dto\UsuarioResponseDTO.class
@@ -123,6 +126,7 @@ com\divan\service\ReservaService.class
 com\divan\dto\ExtratoReservaDTO.class
 com\divan\dto\PermissaoResponseDTO.class
 com\divan\dto\LancamentoDTO.class
+com\divan\util\DataUtil.class
 com\divan\controller\AuthController.class
 com\divan\dto\ComandaRapidaDTO.class
 com\divan\dto\ApartamentoResponseDTO.class

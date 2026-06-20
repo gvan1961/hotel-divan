@@ -2,6 +2,7 @@ package com.divan.controller;
 
 import com.divan.entity.SolicitacaoReservaWhatsapp;
 import com.divan.repository.SolicitacaoReservaWhatsappRepository;
+import com.divan.service.WhatsAppService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,8 @@ public class SolicitacaoWhatsappController {
 
     @Autowired
     private SolicitacaoReservaWhatsappRepository repository;
+    @Autowired
+    private WhatsAppService whatsAppService;
 
     @GetMapping("/pendentes")
     public ResponseEntity<?> listarPendentes() {
@@ -63,6 +66,18 @@ public class SolicitacaoWhatsappController {
             return ResponseEntity.ok(Map.of("mensagem", "Marcada como atendida"));
         }).orElse(ResponseEntity.notFound().build());
     }
+    @PostMapping("/{id}/responder")
+    public ResponseEntity<?> responder(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return repository.findById(id).map(s -> {
+            String mensagem = body.get("mensagem");
+            if (mensagem == null || mensagem.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Mensagem nao informada"));
+            }
+            whatsAppService.enviarTexto(s.getNumeroWhatsapp(),
+                "🏨 *Hotel Di Van*\n\n" + mensagem);
+            return ResponseEntity.ok(Map.of("mensagem", "Resposta enviada com sucesso"));
+        }).orElse(ResponseEntity.notFound().build());
+    }
 
     @GetMapping
     public ResponseEntity<?> listarTodas() {
@@ -81,3 +96,4 @@ public class SolicitacaoWhatsappController {
         return ResponseEntity.ok(resultado);
     }
 }
+
