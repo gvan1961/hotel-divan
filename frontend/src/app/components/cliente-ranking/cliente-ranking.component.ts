@@ -19,19 +19,7 @@ interface HospedeRanking {
 
   celular: string;
 
-  /**
-
-   * Empresa do hóspede — pode vir como:
-
-   *   - String (denormalizado, ex: "Hotel Sol")
-
-   *   - Objeto com nomeEmpresa (relacionamento)
-
-   *   - undefined (cliente sem empresa)
-
-   */
-
-  empresa?: string | { id: number; nomeEmpresa: string } | null;
+  empresa?: string;            // ← nova info, se o backend retornar
 
   totalHospedagens: number;
 
@@ -54,7 +42,7 @@ interface HospedeRanking {
 
 @Component({
 
-  selector: 'app-ranking-hospedes',
+  selector: 'app-cliente-ranking',
 
   standalone: true,
 
@@ -347,7 +335,7 @@ interface HospedeRanking {
 
                 <td>{{ h.celular || '—' }}</td>
 
-                <td>{{ extrairNomeEmpresa(h) }}</td>
+                <td>{{ h.empresa || '—' }}</td>
 
                 <td class="text-center"><strong>{{ h.totalHospedagens }}</strong></td>
 
@@ -771,7 +759,7 @@ interface HospedeRanking {
 
 })
 
-export class RankingHospedesApp implements OnInit {
+export class ClienteRankingComponent implements OnInit {
 
   private http = inject(HttpClient);
 
@@ -928,7 +916,7 @@ export class RankingHospedesApp implements OnInit {
 
       const matchEmpresa =
 
-        !empresa || this.extrairNomeEmpresa(h).toLowerCase().includes(empresa);
+        !empresa || (h.empresa || '').toLowerCase().includes(empresa);
 
 
       return matchNome && matchCpf && matchEmpresa;
@@ -1050,27 +1038,6 @@ export class RankingHospedesApp implements OnInit {
       currency: 'BRL'
 
     });
-
-  }
-
-
-  /**
-
-   * Extrai o nome da empresa de um hóspede,
-
-   * funcionando tanto se vier como String quanto como objeto do relacionamento.
-
-   * Vem direto do @ManyToOne Empresa da entity Cliente.
-
-   */
-
-  extrairNomeEmpresa(h: HospedeRanking): string {
-
-    if (!h.empresa) return '';
-
-    if (typeof h.empresa === 'string') return h.empresa;
-
-    return h.empresa.nomeEmpresa || '';
 
   }
 
