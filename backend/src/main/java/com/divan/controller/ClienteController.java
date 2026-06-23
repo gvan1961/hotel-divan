@@ -71,18 +71,48 @@ public class ClienteController {
     @GetMapping
     public ResponseEntity<?> listarTodos(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
-        
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String nome,
+            @RequestParam(required = false) String cpf,
+            @RequestParam(required = false) String empresa) {
+
+        // Com filtros — busca no banco
+        if ((nome != null && !nome.isBlank()) ||
+            (cpf  != null && !cpf.isBlank())  ||
+            (empresa != null && !empresa.isBlank())) {
+
+            List<com.divan.entity.Cliente> todos = clienteRepository.findAll(
+                org.springframework.data.domain.Sort.by("nome"));
+
+            String nomeLower    = nome    != null ? nome.toLowerCase().trim()    : "";
+            String cpfLimpo     = cpf     != null ? cpf.replaceAll("\\D", "")    : "";
+            String empresaLower = empresa != null ? empresa.toLowerCase().trim()  : "";
+
+            var filtrados = todos.stream()
+                .filter(c -> nomeLower.isEmpty()    || (c.getNome()    != null && c.getNome().toLowerCase().contains(nomeLower)))
+                .filter(c -> cpfLimpo.isEmpty()     || (c.getCpf()     != null && c.getCpf().replaceAll("\\D","").contains(cpfLimpo)))
+                .filter(c -> empresaLower.isEmpty() || (c.getEmpresa() != null && c.getEmpresa().getNomeEmpresa() != null
+                             && c.getEmpresa().getNomeEmpresa().toLowerCase().contains(empresaLower)))
+                .collect(java.util.stream.Collectors.toList());
+
+            return ResponseEntity.ok(Map.of(
+                "clientes",       filtrados,
+                "totalPaginas",   1,
+                "totalElementos", filtrados.size(),
+                "paginaAtual",    0
+            ));
+        }
+
+        // Sem filtros — paginação normal
         var pagina = clienteRepository.findAll(
             org.springframework.data.domain.PageRequest.of(
-                page, size, 
+                page, size,
                 org.springframework.data.domain.Sort.by("nome")));
-        
         return ResponseEntity.ok(Map.of(
-            "clientes", pagina.getContent(),
-            "totalPaginas", pagina.getTotalPages(),
+            "clientes",       pagina.getContent(),
+            "totalPaginas",   pagina.getTotalPages(),
             "totalElementos", pagina.getTotalElements(),
-            "paginaAtual", pagina.getNumber()
+            "paginaAtual",    pagina.getNumber()
         ));
     }
     

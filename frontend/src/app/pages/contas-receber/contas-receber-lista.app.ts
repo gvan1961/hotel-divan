@@ -139,6 +139,7 @@ interface FiltrosAvancados {
           <thead>
            <tr>
   <th>Reserva</th>
+  <th>Apto</th>
   <th>Hóspedes</th>
   <th>Empresa</th>
   <th>Check-in/Check-out</th>
@@ -151,6 +152,7 @@ interface FiltrosAvancados {
           <tbody>
             <tr *ngFor="let conta of contasFiltradas" [class]="'linha-' + conta.status.toLowerCase()">
              <td>#{{ conta.reservaId }}</td>
+             <td>{{ conta.numeroApartamento || '-' }}</td>
              <td>{{ conta.todosHospedes || conta.clienteNome }}</td>
               <td>
                 <span *ngIf="conta.empresaNome" class="badge-empresa">
@@ -1229,7 +1231,9 @@ ngOnInit(): void {
           const reserva = reservas.find(r => r.id === conta.reservaId);
           if (reserva) {
             (conta as any).reserva = reserva;
-            (conta as any).numeroApartamento = reserva.apartamento?.numeroApartamento;
+            if (!(conta as any).numeroApartamento) {
+              (conta as any).numeroApartamento = reserva.apartamento?.numeroApartamento || '-';
+            }
             (conta as any).quantidadeHospede = reserva.quantidadeHospede;
             (conta as any).quantidadeDiaria = reserva.quantidadeDiaria;
             (conta as any).totalDiaria = reserva.totalDiaria;

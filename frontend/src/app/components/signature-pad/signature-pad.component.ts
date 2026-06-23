@@ -87,14 +87,13 @@ export class SignaturePadComponent implements AfterViewInit {
     return Math.floor(this.canvasRef.nativeElement.height * 0.80);
   }
 
-  ngAfterViewInit() {
-    this.ctx = this.canvasRef.nativeElement.getContext('2d')!;
-    this.ctx.strokeStyle = '#000';
-    this.ctx.lineWidth = 3;
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
-    this.desenharGuia();
-  }
+ ngAfterViewInit() {
+  this.ctx = this.canvasRef.nativeElement.getContext('2d')!;
+  this.ctx.strokeStyle = '#000000';
+  this.ctx.lineWidth = 6;  // ← era 3, aumenta para 6
+  this.ctx.lineCap = 'round';
+  this.ctx.lineJoin = 'round';
+}
 
   private desenharGuia() {
     const canvas = this.canvasRef.nativeElement;
@@ -140,8 +139,8 @@ export class SignaturePadComponent implements AfterViewInit {
     this.desenhando = true;
     this.temAssinatura = true;
     const { x, y } = this.getCoordenadas(e.clientX, e.clientY);
-    this.ctx.strokeStyle = '#000';
-    this.ctx.lineWidth = 3;
+    this.ctx.strokeStyle = '#000000';
+    this.ctx.lineWidth = 6;
     this.ctx.beginPath();
     this.ctx.moveTo(x, y);
   }
@@ -161,8 +160,8 @@ export class SignaturePadComponent implements AfterViewInit {
     this.desenhando = true;
     this.temAssinatura = true;
     const { x, y } = this.getCoordenadas(touch.clientX, touch.clientY);
-    this.ctx.strokeStyle = '#000';
-    this.ctx.lineWidth = 3;
+    this.ctx.strokeStyle = '#000000';
+    this.ctx.lineWidth = 6;
     this.ctx.beginPath();
     this.ctx.moveTo(x, y);
   }
@@ -195,15 +194,6 @@ export class SignaturePadComponent implements AfterViewInit {
 
  obterAssinatura(): string | null {
   if (!this.temAssinatura) return null;
-  const canvas = this.canvasRef.nativeElement;
-  
-  // Cria canvas menor só com a área da assinatura
-  const recorte = document.createElement('canvas');
-  recorte.width = canvas.width;
-  recorte.height = Math.floor(canvas.height * 0.85); // só até a linha base
-  const ctx = recorte.getContext('2d')!;
-  ctx.drawImage(canvas, 0, 0);
-  
-  return recorte.toDataURL('image/png');
+  return this.canvasRef.nativeElement.toDataURL('image/png');
 }
 }

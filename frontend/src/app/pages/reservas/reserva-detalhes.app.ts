@@ -3789,10 +3789,10 @@ gerarHtmlFatura(valorTotal: number, valorPago: number, saldo: number): void {
         .secao p { margin: 3px 0; font-size: 10pt; line-height: 1.4; }
         .assinatura { margin-top: 4px; text-align: left; }
         .linha-assinatura { border-top: 1px solid #000; margin: 12px 15px 4px 15px; }
-        .label-assinatura { font-size: 10pt; margin: 2px 0; }
+        .label-assinatura { font-size: 11pt; margin: 2px 0; font-weight: 900 !important; letter-spacing: 1px; text-transform: uppercase; }
         .rodape { text-align: left; margin-top: 12px; font-size: 10pt; }
         .rodape p { margin: 2px 0; }
-       .imagem-assinatura { max-width: 90%; max-height: 75mm; display: block; margin: 2px 0; }
+       .imagem-assinatura { max-width: 90%; max-height: 40mm; display: block; margin: 2px 0; }
       </style>  
     </head>
     <body>
