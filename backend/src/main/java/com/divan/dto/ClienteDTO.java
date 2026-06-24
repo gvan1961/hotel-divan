@@ -1,5 +1,6 @@
 package com.divan.dto;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.validation.constraints.NotBlank;
@@ -35,6 +36,8 @@ public class ClienteDTO {
     private String responsavelNome;
     private String responsavelCpf;
     
+    
+    
    // @Pattern(regexp = "\\d{5}-\\d{3}", message = "CEP deve estar no formato XXXXX-XXX")
     @Pattern(regexp = "\\d{5}-?\\d{3}", message = "CEP deve ter 8 dígitos")
     private String cep;
@@ -60,6 +63,12 @@ public class ClienteDTO {
     private Boolean creditoAprovado;
     private Boolean autorizadoJantar;
     private String tipoCliente;
+    
+    private String classificacao;
+    private Boolean fumante;
+    
+    
+    
     
     @NotNull(message = "Data de nascimento é obrigatória")
     private LocalDate dataNascimento;
@@ -193,6 +202,11 @@ public class ClienteDTO {
 	}
 	public void setTipoCliente(String tipoCliente) {
 		this.tipoCliente = tipoCliente;
-	}   
+	}  
+	
+	public String getClassificacao() { return classificacao; }
+	public void setClassificacao(String classificacao) { this.classificacao = classificacao; }
+	public Boolean getFumante() { return fumante; }
+	public void setFumante(Boolean fumante) { this.fumante = fumante; }
 			        
 }

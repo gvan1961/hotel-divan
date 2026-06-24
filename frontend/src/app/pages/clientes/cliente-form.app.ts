@@ -202,6 +202,27 @@ import { HttpClient } from '@angular/common/http';
             <small class="field-help">Cliente poderá jantar no hotel</small>
           </div>
 
+          <!-- CLASSIFICAÇÃO - SÓ PARA HÓSPEDES -->
+<div class="form-group" *ngIf="cliente.tipoCliente === TipoCliente.HOSPEDE">
+  <label>🏅 Classificação</label>
+  <select [(ngModel)]="cliente.classificacao" name="classificacao">
+    <option [ngValue]="null">Sem classificação</option>
+    <option value="BRONZE">🥉 Bronze</option>
+    <option value="PRATA">🥈 Prata</option>
+    <option value="OURO">🥇 Ouro</option>
+  </select>
+</div>
+
+<!-- FUMANTE - SÓ PARA HÓSPEDES -->
+<div class="form-group checkbox-group" *ngIf="cliente.tipoCliente === TipoCliente.HOSPEDE">
+  <label class="checkbox-label">
+    <input type="checkbox"
+           [(ngModel)]="cliente.fumante"
+           name="fumante">
+    <span class="checkbox-text">🚬 Fumante</span>
+  </label>
+</div>
+
           <div *ngIf="errorMessage" class="error-message">
             {{ errorMessage }}
           </div>
@@ -312,7 +333,9 @@ export class ClienteFormApp implements OnInit {
     dataNascimento: '',
     creditoAprovado: false,
     autorizadoJantar: true,
-    tipoCliente: TipoCliente.HOSPEDE
+    tipoCliente: TipoCliente.HOSPEDE,
+    classificacao: null,
+    fumante: false,
   };
 
   dataNascimento = '';

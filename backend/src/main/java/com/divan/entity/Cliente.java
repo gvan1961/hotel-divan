@@ -89,6 +89,11 @@ public class Cliente {
     public void setCpf(String cpf) { this.cpf = cpf; }
     public String getCelular() { return celular; }
     public void setCelular(String celular) { this.celular = celular; }
+    @Column(name = "classificacao", length = 20)
+    private String classificacao;
+
+    @Column(name = "fumante")
+    private Boolean fumante = false;
             
     
 	public String getDdi() {
@@ -146,6 +151,12 @@ public class Cliente {
 	public void setCelular2Completo(String celular2Completo) {
 		this.celular2Completo = celular2Completo;
 	}
+	
+	public String getClassificacao() { return classificacao; }
+	public void setClassificacao(String classificacao) { this.classificacao = classificacao; }
+	public Boolean getFumante() { return fumante; }
+	public void setFumante(Boolean fumante) { this.fumante = fumante; }
+	
 	@Override
     public int hashCode() { return Objects.hash(id); }
 

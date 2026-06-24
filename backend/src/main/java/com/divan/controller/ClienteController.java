@@ -54,7 +54,8 @@ public class ClienteController {
             cliente.setMenorDeIdade(dto.getMenorDeIdade() != null ? dto.getMenorDeIdade() : false);
             cliente.setCreditoAprovado(dto.getCreditoAprovado() != null ? dto.getCreditoAprovado() : false);
             cliente.setAutorizadoJantar(dto.getAutorizadoJantar() != null ? dto.getAutorizadoJantar() : false);
-
+            cliente.setClassificacao(dto.getClassificacao());
+            cliente.setFumante(dto.getFumante() != null ? dto.getFumante() : false);
             System.out.println("🍽️ autorizadoJantar antes de salvar: " + cliente.getAutorizadoJantar());
             Cliente clienteSalvo = clienteService.salvar(cliente, dto.getEmpresaId(), dto.getResponsavelId());
             System.out.println("🍽️ autorizadoJantar após salvar: " + clienteSalvo.getAutorizadoJantar());
@@ -235,7 +236,8 @@ public class ClienteController {
             if (dto.getAutorizadoJantar() != null) {
                 cliente.setAutorizadoJantar(dto.getAutorizadoJantar());
             }
-
+            cliente.setClassificacao(dto.getClassificacao());
+            cliente.setFumante(dto.getFumante() != null ? dto.getFumante() : false);
             Cliente clienteAtualizado = clienteService.atualizar(id, cliente, dto.getEmpresaId(), dto.getResponsavelId());
             return ResponseEntity.ok(clienteAtualizado);
         } catch (Exception e) {

@@ -28,6 +28,8 @@ public class ClienteRequestDTO {
     public void setCpf(String cpf) { this.cpf = cpf; }
     public String getCelular() { return celular; }
     public void setCelular(String celular) { this.celular = celular; }
+    private String classificacao;
+    private Boolean fumante;
     
     public String getDdi() {
 		return ddi;
@@ -66,4 +68,8 @@ public class ClienteRequestDTO {
     public void setMenorDeIdade(Boolean menorDeIdade) { this.menorDeIdade = menorDeIdade; }
     public Long getResponsavelId() { return responsavelId; }
     public void setResponsavelId(Long responsavelId) { this.responsavelId = responsavelId; }
+    public String getClassificacao() { return classificacao; }
+    public void setClassificacao(String classificacao) { this.classificacao = classificacao; }
+    public Boolean getFumante() { return fumante; }
+    public void setFumante(Boolean fumante) { this.fumante = fumante; }
 }

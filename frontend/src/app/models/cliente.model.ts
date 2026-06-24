@@ -21,6 +21,8 @@ export interface Cliente {
   responsavelId?: number;
   responsavelNome?: string;
   responsavelCpf?: string;
+  classificacao?: string | null;
+  fumante?: boolean;
 }
 
 export interface ClienteRequest {
@@ -41,6 +43,8 @@ export interface ClienteRequest {
   tipoCliente?: TipoCliente;
   menorDeIdade?: boolean;
   responsavelId?: number;
+  classificacao?: string | null;
+  fumante?: boolean;
 }
 
 export enum TipoCliente {

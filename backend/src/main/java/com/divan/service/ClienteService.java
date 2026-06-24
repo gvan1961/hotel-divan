@@ -130,6 +130,8 @@ public class ClienteService {
         dto.setCreditoAprovado(cliente.getCreditoAprovado());
         dto.setAutorizadoJantar(cliente.getAutorizadoJantar());
         dto.setTipoCliente(cliente.getTipoCliente());
+        dto.setClassificacao(cliente.getClassificacao());
+        dto.setFumante(cliente.getFumante());
         
         // ✅ ADICIONE OUTROS CAMPOS SE EXISTIREM NO DTO
         // dto.setEmail(cliente.getEmail());
@@ -187,6 +189,11 @@ public class ClienteService {
         }
         if (clienteAtualizado.getAutorizadoJantar() != null) {
             clienteExistente.setAutorizadoJantar(clienteAtualizado.getAutorizadoJantar());
+        }
+        
+        clienteExistente.setClassificacao(clienteAtualizado.getClassificacao());
+        if (clienteAtualizado.getFumante() != null) {
+            clienteExistente.setFumante(clienteAtualizado.getFumante());
         }
 
         // ✅ RESPONSÁVEL (menor de idade)

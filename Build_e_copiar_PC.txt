@@ -1,0 +1,25 @@
+cd C:\spanggit\backend
+.\mvnw clean package -DskipTests
+
+cd C:\spanggit\frontend
+ng build --configuration production
+
+cd C:\spanggit
+copy backend\target\hotel-divan-1.0.0.jar D:\deploy\
+xcopy frontend\dist\divan\browser D:\deploy\browser\ /E /I /Y
+
+Get-ChildItem D:\deploy\
+
+sudo systemctl stop hotel-divan && sudo cp /media/div/AL-8U-8/deploy/hotel-divan-1.0.0.jar /home/div/hotel-divan/backend/ && sudo cp -r /media/div/AL-8U-8/deploy/browser/* /home/div/hotel-divan/frontend/dist/divan/browser/ && sudo systemctl start hotel-divan
+
+sudo systemctl status hotel-divan 
+
+BUILD E GRAVAÇÃO.
+
+
+Commit
+
+cd C:\spanggit
+git add .
+git commit -m "feat: apartamento em contas a receber, assinatura mais grossa, negrito label assinatura fatura, busca clientes todas paginas"
+git push origin main
