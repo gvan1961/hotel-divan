@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { FaceMonitorService, FaceResultado } from '../../services/face-monitor.service';
 
 interface ProximaReserva {
   id: number;
@@ -131,7 +132,70 @@ template: `
           </span>
         </div>
         <button class="btn-pdv" (click)="irParaPDV()" title="PDV - Vendas">💳 PDV</button>
+        <button class="btn-reconhecimento" (click)="irParaReconhecimento()" title="Reconhecimento Facial">📷 Reconhecimento</button>
         <button class="btn-atualizar" (click)="carregarDados()" title="Atualizar">↻</button>
+      </div>
+
+       <!-- TARJA RECONHECIMENTO FACIAL -->
+      <div class="face-monitor-bar">
+        <div class="face-monitor-controle">
+          <button type="button" (click)="toggleFaceMonitor()"
+            [style.background]="faceAtivo ? '#ff9800' : '#4caf50'"
+            class="btn-face-toggle">
+            {{ faceAtivo ? '⏸ Pausar Câmera' : '📷 Ativar Câmera' }}
+          </button>
+          <span class="face-status">{{ faceStatus }}</span>
+        </div>
+
+        <!-- RESULTADO -->
+        <div *ngIf="faceResultado" class="face-resultado"
+          [class.face-reconhecido]="faceResultado.reconhecido"
+          [class.face-desconhecido]="!faceResultado.reconhecido">
+
+          <!-- RECONHECIDO -->
+          <ng-container *ngIf="faceResultado.reconhecido">
+            <img *ngIf="faceResultado.fotoBase64" [src]="faceResultado.fotoBase64"
+              width="60" height="50" style="border-radius:6px;" />
+            <div class="face-info">
+              <strong>✅ {{ faceResultado.nomeCliente }}</strong>
+              <span class="face-badge"
+                [style.color]="faceResultado.classificacao === 'OURO' ? '#f57f17' :
+                               faceResultado.classificacao === 'PRATA' ? '#616161' : '#bf360c'">
+                {{ faceResultado.classificacao || '' }}
+              </span>
+            </div>
+
+            <div class="face-acoes">
+
+              <button type="button" 
+               *ngIf="!faceResultado.hospedadoAtualmente"
+               (click)="irParaCheckin(faceResultado.clienteId!)"
+                class="btn-face-checkin">✅ Check-in</button>
+
+                <span *ngIf="faceResultado.hospedadoAtualmente"
+                style="color: #81c784; font-size: 12px; font-weight: bold;">
+                🏨 Já hospedado
+                </span>               
+              <button type="button"
+                (click)="verFichaCliente(faceResultado.clienteId!)"
+                class="btn-face-ficha">👤 Ficha</button>
+              <button type="button" (click)="fecharResultadoFace()"
+                class="btn-face-fechar">✕</button>
+            </div>
+          </ng-container>
+
+          <!-- DESCONHECIDO -->
+          <ng-container *ngIf="!faceResultado.reconhecido">
+            <div style="font-size:28px">⚠️</div>
+            <div class="face-info">
+              <strong>Pessoa não identificada</strong>
+              <small>Alerta registrado</small>
+            </div>
+            <button type="button" (click)="fecharResultadoFace()"
+              class="btn-face-fechar">✕</button>
+          </ng-container>
+
+        </div>
       </div>
 
       <!-- FILTROS -->
@@ -1074,6 +1138,110 @@ template: `
 }
 .btn-responder:hover { background: #0f7369; }
 
+.btn-reconhecimento {
+  background: #1976d2;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+.btn-reconhecimento:hover {
+  background: #1565c0;
+}
+
+.face-monitor-bar {
+  background: #1a1a2e;
+  padding: 8px 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.face-monitor-controle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.btn-face-toggle {
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+}
+.face-status {
+  color: #aaa;
+  font-size: 13px;
+}
+.face-resultado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  animation: slideIn 0.3s ease;
+}
+.face-reconhecido {
+  background: #1b5e20;
+  border: 1px solid #4caf50;
+}
+.face-desconhecido {
+  background: #b71c1c;
+  border: 1px solid #ef5350;
+}
+.face-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  color: white;
+  gap: 2px;
+}
+.face-badge {
+  font-weight: bold;
+  font-size: 12px;
+}
+.face-acoes {
+  display: flex;
+  gap: 6px;
+}
+.btn-face-checkin {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.btn-face-ficha {
+  background: #1976d2;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.btn-face-fechar {
+  background: #555;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
   `]
 })
 export class PainelRecepcaoApp implements OnInit, OnDestroy {
@@ -1105,21 +1273,35 @@ mostrarResultadosEmpresa = false;
   apartamentosComAvisoDiaria: string[] = [];
 
   filtroDataCheckin: string = '';
+
+  faceResultado: FaceResultado | null = null;
+  faceStatus = '';
+  faceAtivo = false;
   
   mostrarPopupWhatsapp = false;
 solicitacoesPendentes: any[] = [];
 private intervaloWhatsapp: any;
 private ultimoTotalSolicitacoes = 0;
   
+  
   private intervalo: any;
   private apiUrl = '/api/apartamentos/painel';
 
-  constructor(private http: HttpClient, private router: Router) {}
+    constructor(
+  private http: HttpClient, 
+  private router: Router,
+  public faceMonitor: FaceMonitorService
+) {}
 
   ngOnInit(): void {
     this.carregarDados();
     this.intervalo = setInterval(() => this.carregarDados(), 60000);    
     this.iniciarPollingWhatsapp();
+
+    this.faceMonitor.resultado$.subscribe(r => this.faceResultado = r);
+    this.faceMonitor.statusMsg$.subscribe(s => this.faceStatus = s);
+    this.faceMonitor.ativo$.subscribe(a => this.faceAtivo = a);
+    
   }
 
   // Polling de solicitações WhatsApp
@@ -1642,6 +1824,10 @@ registrarLimpezaDiaria(apt: ApartamentoCard): void {
   });
 }
 
+irParaReconhecimento(): void {
+  this.router.navigate(['/reconhecimento-facial']);
+}
+
 responderSolicitacao(s: any): void {
   if (!s.respostaTexto || s.respostaTexto.trim() === '') {
     alert('⚠️ Digite uma mensagem para enviar.');
@@ -1659,4 +1845,26 @@ responderSolicitacao(s: any): void {
   });
 }
 
+toggleFaceMonitor() {
+  if (this.faceAtivo) {
+    this.faceMonitor.pausar();
+  } else {
+    this.faceMonitor.ativar();
+  }
 }
+
+irParaCheckin(clienteId: number) {
+  this.router.navigate(['/reservas/novo'], { 
+    queryParams: { clienteId } 
+  });
+}
+
+fecharResultadoFace() {
+  this.faceMonitor.limparResultado();
+}
+
+verFichaCliente(clienteId: number): void {
+  this.router.navigate(['/clientes/editar', clienteId]);
+}
+
+}  

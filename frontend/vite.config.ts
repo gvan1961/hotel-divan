@@ -9,7 +9,7 @@ export default defineConfig({
       ]
     })
   ],
-  assetsInclude: ['**/*.bin'],
+  assetsInclude: ['**/*.bin', '**/*-shard*', '**/*-shard1', '**/*-shard2'],
   optimizeDeps: {
     exclude: ['face-api.js']
   }

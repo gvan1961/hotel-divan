@@ -24,12 +24,12 @@
             "tsConfig": "tsconfig.app.json",
             "assets": [
   "src/favicon.ico", 
-  "src/assets",
-  {
-    "glob": "**/*",
-    "input": "public/models",
-    "output": "models"
-  }
+ "src/assets",
+{
+  "glob": "**/*",
+  "input": "public/models",
+  "output": "/assets/models"
+}
 ],
             "styles": ["src/styles.css"],
             "scripts": []

@@ -97,6 +97,20 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
                 <span class="label">🏢 Empresa:</span>
                 <span class="value-empresa">{{ clienteSelecionado.empresa.nomeEmpresa }}</span>
               </div>
+
+              <div class="info-item info-classificacao" *ngIf="clienteSelecionado.classificacao">
+  <span class="label">🏅 Classificação:</span>
+  <span class="value-classificacao">
+    <span *ngIf="clienteSelecionado.classificacao === 'OURO'">🥇 Ouro</span>
+    <span *ngIf="clienteSelecionado.classificacao === 'PRATA'">🥈 Prata</span>
+    <span *ngIf="clienteSelecionado.classificacao === 'BRONZE'">🥉 Bronze</span>
+  </span>
+</div>
+<div class="info-item info-fumante" *ngIf="clienteSelecionado.fumante">
+  <span class="label">🚬 Fumante:</span>
+  <span class="value-fumante">Sim</span>
+</div>
+
             </div>
             <div class="placa-titular-campo">
               <label>🚗 Placa do Veículo do Titular <small>(opcional)</small></label>
@@ -560,6 +574,12 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
   font-size: 0.88em;
   color: #1565c0;
 }
+
+   .info-classificacao { background: #fff9e6; border-left: 3px solid #f39c12; }
+.value-classificacao { color: #e67e22; font-weight: 700; }
+.info-fumante { background: #ffeaea; border-left: 3px solid #e74c3c; }
+.value-fumante { color: #c0392b; font-weight: 700; }
+
   `]
 })
 export class ReservaFormApp implements OnInit {

@@ -109,6 +109,19 @@ public class ClienteService {
                 if (row.length > 5 && row[5] != null) {
                     dto.setTipoCliente((String) row[5]);
                 }
+                
+                if (row.length > 6 && row[6] != null) {
+                    dto.setClassificacao((String) row[6]);
+                }
+                if (row.length > 7 && row[7] != null) {
+                    Object fumante = row[7];
+                    if (fumante instanceof Boolean) {
+                        dto.setFumante((Boolean) fumante);
+                    } else if (fumante instanceof Number) {
+                        dto.setFumante(((Number) fumante).intValue() == 1);
+                    }
+                }
+                
                 return dto;
             }).collect(Collectors.toList());
         } catch (Exception e) {
@@ -132,23 +145,24 @@ public class ClienteService {
         dto.setTipoCliente(cliente.getTipoCliente());
         dto.setClassificacao(cliente.getClassificacao());
         dto.setFumante(cliente.getFumante());
-        
-        // ✅ ADICIONE OUTROS CAMPOS SE EXISTIREM NO DTO
-        // dto.setEmail(cliente.getEmail());
-        // dto.setEndereco(cliente.getEndereco());
-        
+
+        // ✅ CAMPOS DE FACE — adicione estas linhas
+        dto.setFotoBase64(cliente.getFotoBase64());
+        dto.setFaceAtivo(cliente.getFaceAtivo());
+        dto.setFaceCriadoEm(cliente.getFaceCriadoEm());
+
         if (cliente.getEmpresa() != null) {
             dto.setEmpresaId(cliente.getEmpresa().getId());
             dto.setEmpresaNome(cliente.getEmpresa().getNomeEmpresa());
         }
-        
+
         dto.setMenorDeIdade(cliente.getMenorDeIdade());
         if (cliente.getResponsavel() != null) {
             dto.setResponsavelId(cliente.getResponsavel().getId());
             dto.setResponsavelNome(cliente.getResponsavel().getNome());
             dto.setResponsavelCpf(cliente.getResponsavel().getCpf());
         }
-        
+
         return dto;
     }
     

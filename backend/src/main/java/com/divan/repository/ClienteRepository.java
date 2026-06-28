@@ -33,7 +33,7 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     List<Cliente> findByApartamento(String numeroApartamento);
 
     @Query(value = """
-            SELECT c.id, c.nome, c.cpf, c.celular, e.nome_empresa, c.tipo_cliente
+            SELECT c.id, c.nome, c.cpf, c.celular, e.nome_empresa, c.tipo_cliente, c.classificacao, c.fumante
             FROM clientes c
             LEFT JOIN empresas e ON c.empresa_id = e.id
             WHERE MATCH(c.nome) AGAINST(:termo IN BOOLEAN MODE)
@@ -56,19 +56,28 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     	List<Object[]> buscarPorCpfOuNome(@Param("cpf") String cpf, @Param("nome") String nome);
     	
     	@Query(value = """
-    		    SELECT c.id, c.nome, c.cpf, c.celular, e.nome_empresa, c.tipo_cliente
-    		    FROM clientes c
-    		    LEFT JOIN empresas e ON c.empresa_id = e.id
-    		    WHERE REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), '/', '') LIKE :cpf
-    		    OR MATCH(c.nome) AGAINST (:nome IN BOOLEAN MODE)
-    		    LIMIT 50
-    		    """, nativeQuery = true)
-    		List<Object[]> buscarPorCpfParcialOuNome(@Param("cpf") String cpf, @Param("nome") String nome);
+                SELECT c.id, c.nome, c.cpf, c.celular, e.nome_empresa, c.tipo_cliente, c.classificacao, c.fumante
+                FROM clientes c
+                LEFT JOIN empresas e ON c.empresa_id = e.id
+                WHERE REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), '/', '') LIKE :cpf
+                OR MATCH(c.nome) AGAINST (:nome IN BOOLEAN MODE)
+                LIMIT 50
+                """, nativeQuery = true)
+            List<Object[]> buscarPorCpfParcialOuNome(@Param("cpf") String cpf, @Param("nome") String nome);
     		
     		List<Cliente> findByTipoCliente(String tipoCliente);
     		
     		@Query("SELECT c FROM Cliente c WHERE c.celularCompleto = :celular OR c.celular = :celular")
     		Optional<Cliente> findByCelularCompleto(@Param("celular") String celular);
+    		
+    		List<Cliente> findByFaceAtivoTrue();
+
+    		@Query("""
+    			    SELECT COUNT(h) > 0 FROM HospedagemHospede h
+    			    WHERE h.cliente.id = :clienteId
+    			    AND h.status = 'HOSPEDADO'
+    			""")
+    			boolean existeHospedagemAtiva(@Param("clienteId") Long clienteId);
 }
 
 

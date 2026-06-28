@@ -11,6 +11,7 @@ import org.hibernate.validator.constraints.br.CPF;
 
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class ClienteDTO {
     
@@ -36,7 +37,9 @@ public class ClienteDTO {
     private String responsavelNome;
     private String responsavelCpf;
     
-    
+    private String fotoBase64;
+    private Boolean faceAtivo;
+    private LocalDateTime faceCriadoEm;
     
    // @Pattern(regexp = "\\d{5}-\\d{3}", message = "CEP deve estar no formato XXXXX-XXX")
     @Pattern(regexp = "\\d{5}-?\\d{3}", message = "CEP deve ter 8 dígitos")
@@ -208,5 +211,24 @@ public class ClienteDTO {
 	public void setClassificacao(String classificacao) { this.classificacao = classificacao; }
 	public Boolean getFumante() { return fumante; }
 	public void setFumante(Boolean fumante) { this.fumante = fumante; }
-			        
+	public String getFotoBase64() {
+		return fotoBase64;
+	}
+	public void setFotoBase64(String fotoBase64) {
+		this.fotoBase64 = fotoBase64;
+	}
+	public Boolean getFaceAtivo() {
+		return faceAtivo;
+	}
+	public void setFaceAtivo(Boolean faceAtivo) {
+		this.faceAtivo = faceAtivo;
+	}
+	public LocalDateTime getFaceCriadoEm() {
+		return faceCriadoEm;
+	}
+	public void setFaceCriadoEm(LocalDateTime faceCriadoEm) {
+		this.faceCriadoEm = faceCriadoEm;
+	}
+	
+				        
 }

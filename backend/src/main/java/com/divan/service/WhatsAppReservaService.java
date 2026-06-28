@@ -211,11 +211,12 @@ public class WhatsAppReservaService {
                 return;
             }
 
+            // Busca apartamentos do painel
+            List<Apartamento> todos = apartamentoRepository.findAll();
             LocalDateTime inicio = data.atStartOfDay();
             LocalDateTime fim = data.plusDays(1).atStartOfDay();
 
-            // Conta apartamentos disponíveis para essa data
-            List<Apartamento> todos = apartamentoRepository.findAll();
+            // Conta ocupados para a data informada
             long ocupados = reservaRepository.findAll().stream()
                 .filter(r -> r.getStatus() == Reserva.StatusReservaEnum.ATIVA
                           || r.getStatus() == Reserva.StatusReservaEnum.PRE_RESERVA)
@@ -224,14 +225,23 @@ public class WhatsAppReservaService {
                 .distinct()
                 .count();
 
-            long disponiveis = todos.size() - ocupados;
+            // Desconta também os bloqueados/manutenção/limpeza
+            long indisponiveis = todos.stream()
+                .filter(a -> a.getStatus() != null &&
+                    (a.getStatus().name().equals("MANUTENCAO") ||
+                     a.getStatus().name().equals("INDISPONIVEL")))
+                .count();
+
+            long totalIndisponiveis = ocupados + indisponiveis;
+            long disponiveis = todos.size() - totalIndisponiveis;
+            if (disponiveis < 0) disponiveis = 0;
 
             StringBuilder sb = new StringBuilder();
             sb.append("📅 *Disponibilidade para ").append(data.format(FMT_DATA)).append("*\n\n");
 
             if (disponiveis > 0) {
                 sb.append("✅ Temos *").append(disponiveis).append("* apartamento(s) disponível(is)!\n\n");
-                sb.append("Para solicitar uma reserva, entre em contato com nossa recepção ou escolha a opção *1* no menu.\n\n");
+                sb.append("Para solicitar uma reserva, escolha a opção *1* no menu.\n\n");
             } else {
                 sb.append("😔 Não há apartamentos disponíveis para esta data.\n\n");
                 sb.append("Tente outras datas ou fale com nossa recepção.\n\n");

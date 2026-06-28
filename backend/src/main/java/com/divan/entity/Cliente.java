@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -94,6 +95,18 @@ public class Cliente {
 
     @Column(name = "fumante")
     private Boolean fumante = false;
+    
+    @Column(name = "face_descriptor", columnDefinition = "JSON")
+    private String faceDescriptor;
+
+    @Column(name = "foto_base64", columnDefinition = "MEDIUMTEXT")
+    private String fotoBase64;
+
+    @Column(name = "face_criado_em")
+    private LocalDateTime faceCriadoEm;
+
+    @Column(name = "face_ativo")
+    private Boolean faceAtivo = false;
             
     
 	public String getDdi() {
@@ -157,6 +170,33 @@ public class Cliente {
 	public Boolean getFumante() { return fumante; }
 	public void setFumante(Boolean fumante) { this.fumante = fumante; }
 	
+	
+	
+	
+	public String getFaceDescriptor() {
+		return faceDescriptor;
+	}
+	public void setFaceDescriptor(String faceDescriptor) {
+		this.faceDescriptor = faceDescriptor;
+	}
+	public String getFotoBase64() {
+		return fotoBase64;
+	}
+	public void setFotoBase64(String fotoBase64) {
+		this.fotoBase64 = fotoBase64;
+	}
+	public LocalDateTime getFaceCriadoEm() {
+		return faceCriadoEm;
+	}
+	public void setFaceCriadoEm(LocalDateTime faceCriadoEm) {
+		this.faceCriadoEm = faceCriadoEm;
+	}
+	public Boolean getFaceAtivo() {
+		return faceAtivo;
+	}
+	public void setFaceAtivo(Boolean faceAtivo) {
+		this.faceAtivo = faceAtivo;
+	}
 	@Override
     public int hashCode() { return Objects.hash(id); }
 

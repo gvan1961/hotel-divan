@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -7,11 +7,12 @@ import { EmpresaService } from '../../services/empresa.service';
 import { ClienteRequest, TipoCliente, TIPO_CLIENTE_LABELS } from '../../models/cliente.model';
 import { Empresa } from '../../models/empresa.model';
 import { HttpClient } from '@angular/common/http';
+import { FaceCaptureComponent } from '../../face-capture/face-capture.component';
 
 @Component({
   selector: 'app-cliente-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FaceCaptureComponent],
   template: `
     <div class="container">
       <div class="header">
@@ -227,6 +228,47 @@ import { HttpClient } from '@angular/common/http';
             {{ errorMessage }}
           </div>
 
+          <!-- RECONHECIMENTO FACIAL - SÓ PARA HÓSPEDES EM EDIÇÃO -->
+<div class="form-group" *ngIf="isEdit && cliente.tipoCliente === TipoCliente.HOSPEDE">
+  <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+              padding: 20px; border-radius: 8px; border: 2px solid #4caf50;">
+    <label style="font-size: 16px; font-weight: 600; color: #2e7d32;">
+      📷 Reconhecimento Facial
+    </label>
+
+    <!-- Foto já cadastrada -->
+    <div *ngIf="cliente.fotoBase64 && !faceCaptureAberto" style="margin-top: 12px;">
+      <img [src]="cliente.fotoBase64" width="160" height="120"
+           style="border-radius: 8px; border: 2px solid #4caf50; display: block; margin-bottom: 8px;" />
+      <small style="color: #2e7d32;">✅ Rosto cadastrado</small>
+    </div>
+
+    <div *ngIf="!cliente.fotoBase64 && !faceCaptureAberto" style="margin-top: 8px;">
+      <small style="color: #666;">⚠️ Nenhum rosto cadastrado ainda</small>
+    </div>
+
+    <!-- Componente de captura -->
+    <app-face-capture *ngIf="faceCaptureAberto" #faceCapture></app-face-capture>
+
+    <div style="margin-top: 12px;">
+      <button type="button"
+              (click)="abrirFaceCapture()"
+              *ngIf="!faceCaptureAberto"
+              style="background: #4caf50; color: white; border: none;
+                     padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+        {{ cliente.fotoBase64 ? '🔄 Atualizar Rosto' : '📷 Cadastrar Rosto' }}
+      </button>
+      <button type="button"
+              (click)="fecharFaceCapture()"
+              *ngIf="faceCaptureAberto"
+              style="background: #f44336; color: white; border: none;
+                     padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+        ❌ Fechar Câmera
+      </button>
+    </div>
+  </div>
+</div>
+
           <div class="form-actions">
             <button type="button" class="btn-cancel" (click)="voltar()">Cancelar</button>
             <button type="submit" class="btn-save" [disabled]="loading">
@@ -304,6 +346,9 @@ export class ClienteFormApp implements OnInit {
   resultadosResponsavel: any[] = [];
   responsavelSelecionado: any = null;
 
+  faceCaptureAberto = false;
+  @ViewChild('faceCapture') faceCapture?: FaceCaptureComponent;
+
   paises = [
   { ddi: '55', flag: '🇧🇷', nome: 'Brasil' },
   { ddi: '1', flag: '🇺🇸', nome: 'EUA' },
@@ -336,6 +381,7 @@ export class ClienteFormApp implements OnInit {
     tipoCliente: TipoCliente.HOSPEDE,
     classificacao: null,
     fumante: false,
+    fotoBase64: '',
   };
 
   dataNascimento = '';
@@ -382,7 +428,9 @@ export class ClienteFormApp implements OnInit {
         empresaId: data.empresaId,
         creditoAprovado: data.creditoAprovado ?? false,
         autorizadoJantar: data.autorizadoJantar ?? false,
-        tipoCliente: data.tipoCliente === 'FUNCIONARIO' ? TipoCliente.FUNCIONARIO : TipoCliente.HOSPEDE
+        tipoCliente: data.tipoCliente === 'FUNCIONARIO' ? TipoCliente.FUNCIONARIO : TipoCliente.HOSPEDE,
+        classificacao: data.classificacao || null,
+        fumante: data.fumante ?? false
       };
 
       // ✅ FORMATAR CPF AO CARREGAR
@@ -420,6 +468,10 @@ export class ClienteFormApp implements OnInit {
       if (data.dataNascimento) {
         this.dataNascimento = data.dataNascimento.split('T')[0];
       }
+      this.cliente.fotoBase64 = data.fotoBase64 ?? '';
+      
+      console.log('fotoBase64 recebido:', data.fotoBase64 ? 'SIM - ' + data.fotoBase64.length + ' chars' : 'NÃO');
+      console.log('fotoBase64 inicio:', data.fotoBase64?.substring(0, 100));
     },
     error: (err) => {
       console.error('Erro ao carregar cliente', err);
@@ -489,6 +541,8 @@ export class ClienteFormApp implements OnInit {
       autorizadoJantar: this.cliente.autorizadoJantar !== undefined ? this.cliente.autorizadoJantar : true,
       tipoCliente: this.cliente.tipoCliente,
       menorDeIdade: this.menorDeIdade,
+      classificacao: this.cliente.classificacao || null,
+      fumante: this.cliente.fumante || false,
       responsavelId: this.responsavelSelecionado ? this.responsavelSelecionado.id : null
     };
 
@@ -627,6 +681,23 @@ isCpfValido(cpf: string): boolean {
   if (celular.length > 3) celular = celular.substring(0, 3) + ') ' + celular.substring(3);
   if (celular.length > 10) celular = celular.substring(0, 10) + '-' + celular.substring(10, 14);
   this.celular2 = celular;
+}
+
+abrirFaceCapture(): void {
+  this.faceCaptureAberto = true;
+  // Aguarda o componente renderizar antes de iniciar
+  setTimeout(() => {
+    this.faceCapture?.iniciar(this.clienteId!);
+  }, 300);
+}
+
+fecharFaceCapture(): void {
+  this.faceCapture?.encerrar();
+  this.faceCaptureAberto = false;
+  // Recarrega cliente para mostrar foto atualizada
+  if (this.clienteId) {
+    this.carregarCliente(this.clienteId);
+  }
 }
 
   voltar(): void {

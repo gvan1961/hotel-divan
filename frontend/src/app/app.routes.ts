@@ -126,6 +126,13 @@ export const routes: Routes = [
       { path: 'reservas', component: ReservaListaApp },
       { path: 'painel-recepcao', component: PainelRecepcaoApp },
 
+      // ===== RECONHECIMENTO FACIAL =====
+      { 
+        path: 'reconhecimento-facial', 
+        loadComponent: () => import('./face-recognition/face-recognition.component')
+        .then(m => m.FaceRecognitionComponent) 
+      },
+
       // ===== CATEGORIAS =====
       { path: 'categorias/novo', component: CategoriaFormApp },
       { path: 'categorias/editar/:id', component: CategoriaFormApp },

@@ -23,6 +23,7 @@ export interface Cliente {
   responsavelCpf?: string;
   classificacao?: string | null;
   fumante?: boolean;
+  fotoBase64?: string;
 }
 
 export interface ClienteRequest {
@@ -45,6 +46,7 @@ export interface ClienteRequest {
   responsavelId?: number;
   classificacao?: string | null;
   fumante?: boolean;
+  fotoBase64?: string;
 }
 
 export enum TipoCliente {

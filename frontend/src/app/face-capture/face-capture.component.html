@@ -1,0 +1,25 @@
+<div class="face-capture">
+
+  <div *ngIf="isCapturing">
+    <video id="videoCaptura" width="320" height="240" autoplay muted></video>
+  </div>
+
+  <div *ngIf="fotoCapturada && !isCapturing">
+    <img [src]="fotoCapturada" width="320" height="240" alt="Foto capturada" />
+  </div>
+
+  <p>{{ mensagem }}</p>
+
+  <button *ngIf="!isCapturing" (click)="iniciar(clienteId)">
+    📷 Iniciar Captura
+  </button>
+
+  <button *ngIf="isCapturing" (click)="capturar()">
+    ✅ Capturar Rosto
+  </button>
+
+  <button *ngIf="isCapturing" (click)="encerrar()">
+    ❌ Cancelar
+  </button>
+
+</div>
