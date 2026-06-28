@@ -48,9 +48,10 @@ public class Vale {
     
     @Column(name = "motivo_cancelamento", length = 500)
     private String motivoCancelamento;
-
-    @Column(name = "assinatura_base64", columnDefinition = "TEXT")
+       
+    @Column(name = "assinatura_base64", columnDefinition = "LONGTEXT")
     private String assinaturaBase64;
+    
 
     @Column(length = 500)
     private String observacao;

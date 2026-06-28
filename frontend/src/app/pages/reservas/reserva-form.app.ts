@@ -10,6 +10,9 @@ import { ReservaRequest } from '../../models/reserva.model';
 import { Apartamento } from '../../models/apartamento.model';
 import { Diaria } from '../../models/diaria.model';
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { FaceMonitorService } from '../../services/face-monitor.service';
+import { Subscription } from 'rxjs';
+
 
 @Component({
   selector: 'app-reserva-form',
@@ -583,7 +586,8 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
   `]
 })
 export class ReservaFormApp implements OnInit {
-  private reservaService = inject(ReservaService);
+
+   private reservaService = inject(ReservaService);
   private clienteService = inject(ClienteService);
   private apartamentoService = inject(ApartamentoService);
   private diariaService = inject(DiariaService);
@@ -591,6 +595,9 @@ export class ReservaFormApp implements OnInit {
   private http = inject(HttpClient);
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
+  private faceMonitor = inject(FaceMonitorService);
+  private faceSubscription: Subscription | null = null; 
+
 
   reserva: ReservaRequest = { clienteId: 0, apartamentoId: 0, quantidadeHospede: 1, dataCheckin: '', dataCheckout: '' };
   apartamentos: Apartamento[] = [];
@@ -636,44 +643,53 @@ novoHospedeForm: any = {
   empresas: any[] = [];
 
   ngOnInit(): void {
-    console.log('🚀 ReservaForm ngOnInit chamado');
+  console.log('🚀 ReservaForm ngOnInit chamado');
   console.log('📋 QueryParams:', this.route.snapshot.queryParams);
-    this.setDatasPadrao();
-    this.definirDataMinima();
-   
-    this.http.get<any[]>('/api/empresas').subscribe({
-    next: (data) => this.empresas = data.sort((a, b) => 
+  this.setDatasPadrao();
+  this.definirDataMinima();
+
+  this.http.get<any[]>('/api/empresas').subscribe({
+    next: (data) => this.empresas = data.sort((a, b) =>
       a.nomeEmpresa.localeCompare(b.nomeEmpresa, 'pt-BR')),
     error: () => {}
   });
 
+  // 👁️ Reconhecimento facial → preenche cliente automaticamente
+ this.faceSubscription = this.faceMonitor.resultado$.subscribe((res: any) => {
+  if (res?.reconhecido && res.clienteId) {
+    this.preencherClientePorFace(res.clienteId);
+  }
+});
 
-    this.route.queryParams.subscribe(params => {
-      if (params['bloqueado'] === 'true') { this.apartamentoBloqueado = true; this.voltarParaMapa = true; }
-      if (params['origem']) { this.origem = params['origem']; }
+  this.route.queryParams.subscribe(params => {
+    if (params['bloqueado'] === 'true') { this.apartamentoBloqueado = true; this.voltarParaMapa = true; }
+    if (params['origem']) { this.origem = params['origem']; }
 
     if (params['dataCheckin']) {
-  // ✅ Sincroniza os campos visuais
-  this.checkinData = params['dataCheckin']; // data do mapa (ex: 2026-05-25)
-  this.checkinHora = '14';
-  this.checkinMinuto = '00';
-  this.montarDataCheckin();
+      this.checkinData = params['dataCheckin'];
+      this.checkinHora = '14';
+      this.checkinMinuto = '00';
+      this.montarDataCheckin();
 
-  const dataCheckout = new Date(params['dataCheckin'] + 'T14:00:00');
-  dataCheckout.setDate(dataCheckout.getDate() + 1);
-  dataCheckout.setHours(12, 0, 0, 0);
-  this.reserva.dataCheckout = this.formatDateTimeLocal(dataCheckout);
+      const dataCheckout = new Date(params['dataCheckin'] + 'T14:00:00');
+      dataCheckout.setDate(dataCheckout.getDate() + 1);
+      dataCheckout.setHours(12, 0, 0, 0);
+      this.reserva.dataCheckout = this.formatDateTimeLocal(dataCheckout);
 
-        this.http.get<any[]>('/api/empresas').subscribe({
-        next: (data) => this.empresas = data.sort((a, b) => 
-           a.nomeEmpresa.localeCompare(b.nomeEmpresa, 'pt-BR')),
-         error: () => {}
-        });        
+      this.http.get<any[]>('/api/empresas').subscribe({
+        next: (data) => this.empresas = data.sort((a, b) =>
+          a.nomeEmpresa.localeCompare(b.nomeEmpresa, 'pt-BR')),
+        error: () => {}
+      });
+    }
 
-      }
-      setTimeout(() => this.carregarApartamentos(), 300);
-    });
-  }
+    setTimeout(() => this.carregarApartamentos(), 300);
+  });
+}
+
+ngOnDestroy(): void {
+  this.faceSubscription?.unsubscribe();
+}
 
   setDatasPadrao(): void {
     const agora = new Date();
@@ -1264,7 +1280,20 @@ get cpfNovoHospedeInvalido(): boolean {
   const nums = cpf.replace(/\D/g, '');
   return nums.length === 11 && !this.validarCPF(cpf);
 }
-
+   preencherClientePorFace(clienteId: number): void {
+  this.http.get<any>(`/api/clientes/${clienteId}`).subscribe({
+    next: (cliente: any) => {  // ← 'any' explícito resolve o TS7006
+      if (this.reserva.dataCheckin && this.reserva.dataCheckout) {
+        this.selecionarCliente(cliente);
+      } else {
+        this.adicionarClientePrincipal(cliente);
+        this.mostrarBannerAviso('✅ Cliente reconhecido! Preencha as datas para continuar.');
+      }
+    },
+    error: () => console.error('Erro ao buscar cliente por ID')
+  });
+}
+ 
   voltar(): void {
     if (this.origem === 'painel-recepcao') this.router.navigate(['/painel-recepcao']);
     else if (this.voltarParaMapa) this.router.navigate(['/reservas/mapa']);
