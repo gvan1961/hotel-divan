@@ -229,7 +229,7 @@ import { FaceCaptureComponent } from '../../face-capture/face-capture.component'
           </div>
 
           <!-- RECONHECIMENTO FACIAL - SÓ PARA HÓSPEDES EM EDIÇÃO -->
-<div class="form-group" *ngIf="isEdit && cliente.tipoCliente === TipoCliente.HOSPEDE">
+<div class="form-group" *ngIf="isEdit && (cliente.tipoCliente === TipoCliente.HOSPEDE || cliente.tipoCliente === TipoCliente.FUNCIONARIO)">
   <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
               padding: 20px; border-radius: 8px; border: 2px solid #4caf50;">
     <label style="font-size: 16px; font-weight: 600; color: #2e7d32;">

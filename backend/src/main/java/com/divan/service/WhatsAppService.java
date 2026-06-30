@@ -27,6 +27,9 @@ public class WhatsAppService {
 
     @Value("${evolution.api.timeout-segundos:10}")
     private int timeoutSegundos;
+    
+    @Value("${evolution.api.instancia-funcionarios}")
+    private String instanciaFuncionarios;
 
     /**
      * Resultado de envio com sucesso/erro e payload de resposta.
@@ -123,5 +126,42 @@ public class WhatsAppService {
         String celularLimpo = celular.replaceAll("\\D", "");
         if (celularLimpo.isEmpty()) return null;
         return ddiLimpo + celularLimpo;
+    }      
+
+    private ResultadoEnvio enviarTextoParaInstancia(String numero, String texto, String inst) {
+        try {
+            String numeroLimpo = limparNumero(numero);
+            if (numeroLimpo == null) {
+                return ResultadoEnvio.erro("Número inválido: " + numero);
+            }
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("number", numeroLimpo);
+            body.put("text", texto);
+
+            RestClient client = RestClient.builder()
+                    .baseUrl(apiUrl)
+                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .defaultHeader("apikey", apiKey)
+                    .build();
+
+            String response = client.post()
+                    .uri("/message/sendText/{instancia}", inst)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+
+            log.info("✅ WhatsApp enviado para {} via {}: {}", numeroLimpo, inst, response);
+            return ResultadoEnvio.sucesso(response);
+
+        } catch (Exception e) {
+            String erro = "Erro ao enviar WhatsApp para " + numero + ": " + e.getMessage();
+            log.error("❌ {}", erro, e);
+            return ResultadoEnvio.erro(erro);
+        }
+    }
+
+    public ResultadoEnvio enviarTextoFuncionario(String numero, String texto) {
+        return enviarTextoParaInstancia(numero, texto, instanciaFuncionarios);
     }
 }

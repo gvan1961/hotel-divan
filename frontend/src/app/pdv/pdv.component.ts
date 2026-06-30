@@ -243,9 +243,6 @@ interface ItemCarrinho {
   </div>
 </div>
 
-
-
-
           <!-- VENDA FATURADA -->
           <div *ngIf="tipoVenda === 'FATURADO'" class="form-faturado">
             <div class="campo">
@@ -288,8 +285,8 @@ interface ItemCarrinho {
             <button class="btn-cancelar-modal" (click)="fecharModalFinalizacao()">
               Cancelar
             </button>
-            <button class="btn-confirmar" (click)="confirmarVenda()">
-              ✅ Confirmar Venda
+            <button class="btn-confirmar" (click)="confirmarVenda()" [disabled]="loadingVenda">
+              {{ loadingVenda ? '⏳ Processando...' : '✅ Confirmar Venda' }}
             </button>
           </div>
         </div>
@@ -785,6 +782,8 @@ interface ItemCarrinho {
     reservaIdPreSelecionada = 0;
     origem: string = '';
 
+    loadingVenda = false;
+
     
 
     // ✅ Getter para mostrar info da reserva selecionada
@@ -1042,6 +1041,10 @@ carregarHospedesApartamento(reservaId: number): void {
     
 
     realizarVendaAVista(): void {
+
+      if (this.loadingVenda) return;
+        this.loadingVenda = true;
+
       const request = {
         formaPagamento: this.formaPagamento,
         valorPago: this.valorPago,
@@ -1104,6 +1107,10 @@ carregarHospedesApartamento(reservaId: number): void {
 }
 
     realizarVendaFaturada(): void {
+
+    if (this.loadingVenda) return;
+      this.loadingVenda = true;
+
   const usuarioId = this.authService.getUsuarioId();
   const isFuncionario = this.tipoVenda === 'FUNCIONARIO';
 
@@ -1158,6 +1165,10 @@ carregarHospedesApartamento(reservaId: number): void {
     }
 
     realizarVendaApartamento(): void {
+
+      if (this.loadingVenda) return;
+       this.loadingVenda = true;
+
     // ✅ Buscar dados da reserva selecionada
     const reserva = this.reservas.find(r => r.id === Number(this.reservaSelecionadaId));
     
