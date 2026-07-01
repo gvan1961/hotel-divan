@@ -84,9 +84,9 @@ public class MikrotikService {
 
                 // Ativa o profile
                 String cmdProfile = String.format(
-                    "/tool/user-manager/user/create-and-activate-profile numbers=%s customer=%s profile=%s",
-                    codigo, CUSTOMER, profile
-                );
+                	    "/tool/user-manager/user/create-and-activate-profile numbers=%s customer=%s profile=\"%s\"",
+                	    codigo, CUSTOMER, profile
+                	);
                 con.execute(cmdProfile);
 
                 vouchers.add(new VoucherGerado(codigo));

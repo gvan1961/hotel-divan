@@ -1,0 +1,33 @@
+Apagado em 30.06.2026 private void recalcularValores(Reserva reserva) {
+        long dias = ChronoUnit.DAYS.between(
+            reserva.getDataCheckin().toLocalDate(),
+            reserva.getDataCheckout().toLocalDate()
+        );
+        reserva.setQuantidadeDiaria((int) dias);
+
+        // ✅ CALCULAR TOTAL DE DIÁRIAS SOMANDO O EXTRATO (não recalcula pela diária atual)
+        BigDecimal totalDiaria = extratoReservaRepository.findByReservaId(reserva.getId())
+            .stream()
+            .filter(e -> e.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
+                      || e.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.ESTORNO)
+            .map(ExtratoReserva::getTotalLancamento)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        reserva.setTotalDiaria(totalDiaria);
+
+        // ✅ Buscar diária correta para atualizar referência (sem recalcular total)
+        Apartamento apartamento = reserva.getApartamento();
+        Integer quantidadeHospedes = reserva.getQuantidadeHospede();
+
+        diariaService.buscarDiariaPara(apartamento, quantidadeHospedes)
+            .ifPresent(reserva::setDiaria);
+
+        // ✅ Recalcular total da hospedagem
+        BigDecimal totalConsumo = reserva.getTotalProduto() != null 
+            ? reserva.getTotalProduto() : BigDecimal.ZERO;
+        BigDecimal totalHospedagem = totalDiaria.add(totalConsumo);
+        reserva.setTotalHospedagem(totalHospedagem);
+        reserva.setTotalApagar(totalHospedagem.subtract(
+            reserva.getTotalRecebido() != null ? reserva.getTotalRecebido() : BigDecimal.ZERO
+        ));
+    }   Do ReservaService.java

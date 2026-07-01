@@ -90,33 +90,31 @@ public class ReservaService {
      */
     private boolean existeConflitoDeDatas(Long apartamentoId, LocalDateTime checkin, LocalDateTime checkout, Long reservaIdExcluir) {
         List<Reserva> reservasDoApartamento = reservaRepository.findByApartamentoId(apartamentoId);
-
         System.out.println("🔍 VERIFICANDO CONFLITO APT ID: " + apartamentoId);
         System.out.println("   Novo checkin: " + checkin);
         System.out.println("   Novo checkout: " + checkout);
         System.out.println("   Total reservas encontradas: " + reservasDoApartamento.size());
-
         for (Reserva r : reservasDoApartamento) {
             if (reservaIdExcluir != null && r.getId().equals(reservaIdExcluir)) continue;
             if (r.getStatus() == Reserva.StatusReservaEnum.CANCELADA ||
                 r.getStatus() == Reserva.StatusReservaEnum.FINALIZADA) continue;
 
-            System.out.println("   Comparando com #" + r.getId() + 
-                " status=" + r.getStatus() +
-                " checkin=" + r.getDataCheckin() + 
-                " checkout=" + r.getDataCheckout());
-
-         // Se reserva está ATIVA e atrasada, usa data atual como checkout efetivo
-            LocalDateTime checkoutEfetivo = r.getDataCheckout();
-            if (r.getStatus() == Reserva.StatusReservaEnum.ATIVA && 
-                r.getDataCheckout().isBefore(LocalDateTime.now(ZoneId.of("America/Fortaleza")))) {
-                checkoutEfetivo = LocalDateTime.now(ZoneId.of("America/Fortaleza")).plusDays(1);
+            // ✅ BLOQUEIO DEFINITIVO: reserva ATIVA no apartamento = bloqueia sempre
+            if (r.getStatus() == Reserva.StatusReservaEnum.ATIVA) {
+                System.out.println("❌ BLOQUEADO — Apt " + apartamentoId + 
+                    " já possui reserva ATIVA #" + r.getId());
+                return true;
             }
 
+            // Verifica conflito de datas apenas para PRÉ-RESERVAS
+            System.out.println("   Comparando com #" + r.getId() +
+                " status=" + r.getStatus() +
+                " checkin=" + r.getDataCheckin() +
+                " checkout=" + r.getDataCheckout());
+            LocalDateTime checkoutEfetivo = r.getDataCheckout();
             boolean semConflito = !checkin.isBefore(checkoutEfetivo)
                     || !checkout.isAfter(r.getDataCheckin());
             System.out.println("   semConflito=" + semConflito);
-
             if (!semConflito) {
                 System.out.println("❌ CONFLITO com reserva #" + r.getId());
                 return true;
@@ -254,45 +252,7 @@ public class ReservaService {
 
         System.out.println("✅ Ajuste concluído | Nova qtd: " + novaQuantidade + " | Dias recalculados: " + diasRestantes);
     }  
-    
- 
-    /**
-     * Recalcula valores da reserva após alterações
-     */
-    private void recalcularValores(Reserva reserva) {
-        long dias = ChronoUnit.DAYS.between(
-            reserva.getDataCheckin().toLocalDate(),
-            reserva.getDataCheckout().toLocalDate()
-        );
-        reserva.setQuantidadeDiaria((int) dias);
-
-        // ✅ CALCULAR TOTAL DE DIÁRIAS SOMANDO O EXTRATO (não recalcula pela diária atual)
-        BigDecimal totalDiaria = extratoReservaRepository.findByReservaId(reserva.getId())
-            .stream()
-            .filter(e -> e.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
-                      || e.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.ESTORNO)
-            .map(ExtratoReserva::getTotalLancamento)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        reserva.setTotalDiaria(totalDiaria);
-
-        // ✅ Buscar diária correta para atualizar referência (sem recalcular total)
-        Apartamento apartamento = reserva.getApartamento();
-        Integer quantidadeHospedes = reserva.getQuantidadeHospede();
-
-        diariaService.buscarDiariaPara(apartamento, quantidadeHospedes)
-            .ifPresent(reserva::setDiaria);
-
-        // ✅ Recalcular total da hospedagem
-        BigDecimal totalConsumo = reserva.getTotalProduto() != null 
-            ? reserva.getTotalProduto() : BigDecimal.ZERO;
-        BigDecimal totalHospedagem = totalDiaria.add(totalConsumo);
-        reserva.setTotalHospedagem(totalHospedagem);
-        reserva.setTotalApagar(totalHospedagem.subtract(
-            reserva.getTotalRecebido() != null ? reserva.getTotalRecebido() : BigDecimal.ZERO
-        ));
-    }
-    
+        
     // ============================================
     // ✅ CRIAR RESERVA
     // ============================================

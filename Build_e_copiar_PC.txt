@@ -17,7 +17,9 @@ sudo systemctl status hotel-divan
 BUILD E GRAVAÇÃO.
 
 
-Commit
+Commitcd..
+cd..
+cd..
 
 cd C:\spanggit
 git add .

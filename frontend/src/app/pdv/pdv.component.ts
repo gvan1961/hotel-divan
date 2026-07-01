@@ -929,6 +929,12 @@ carregarHospedesApartamento(reservaId: number): void {
       }
 
       this.calcularTotal();
+
+      // ✅ Limpa busca e recoloca foco no scanner
+       this.termoBusca = '';
+       this.produtosFiltrados = [...this.produtos];
+       setTimeout(() => this.inputCodigoBarras?.nativeElement?.focus(), 100);
+
     }
 
     aumentarQuantidade(index: number): void {
@@ -1454,12 +1460,13 @@ carregarHospedesApartamento(reservaId: number): void {
   this.codigoBarras = '';
   setTimeout(() => this.inputCodigoBarras?.nativeElement?.focus(), 100);
 }
-
 onKeyDown(event: KeyboardEvent): void {
   console.log('🔑 Key:', event.key);
   if (event.key === 'Enter') {
     event.preventDefault();
     this.buscarPorCodigo();
-  }   
+    // ✅ Recoloca foco após busca
+    setTimeout(() => this.inputCodigoBarras?.nativeElement?.focus(), 200);
+  }
 }
   }
