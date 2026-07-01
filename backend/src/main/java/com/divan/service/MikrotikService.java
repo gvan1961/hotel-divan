@@ -16,6 +16,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class MikrotikService {
 
@@ -38,6 +41,8 @@ public class MikrotikService {
     private ReservaRepository reservaRepository;
 
     private static final String CUSTOMER = "admin";
+    
+    private static final Logger log = LoggerFactory.getLogger(MikrotikService.class);
 
     public static class VoucherGerado {
         public String codigo;
@@ -77,17 +82,18 @@ public class MikrotikService {
 
                 // Cria o usuário
                 String cmdAdd = String.format(
-                    "/tool/user-manager/user/add customer=%s username=%s password=%s",
-                    CUSTOMER, codigo, codigo
-                );
-                con.execute(cmdAdd);
-
-                // Ativa o profile
-                String cmdProfile = String.format(
-                	    "/tool/user-manager/user/create-and-activate-profile numbers=%s customer=%s profile=\"%s\"",
-                	    codigo, CUSTOMER, profile
+                	    "/tool/user-manager/user/add customer=%s username=%s password=%s",
+                	    CUSTOMER, codigo, codigo
                 	);
-                con.execute(cmdProfile);
+                	log.info("🔧 CMD ADD: {}", cmdAdd);
+                	con.execute(cmdAdd);
+                // Ativa o profile
+                	String cmdProfile = String.format(
+                		    "/tool/user-manager/user/create-and-activate-profile numbers=%s customer=%s profile=\"%s\"",
+                		    codigo, CUSTOMER, profile
+                		);
+                		log.info("🔧 CMD PROFILE: {}", cmdProfile);
+                		con.execute(cmdProfile);
 
                 vouchers.add(new VoucherGerado(codigo));
             }

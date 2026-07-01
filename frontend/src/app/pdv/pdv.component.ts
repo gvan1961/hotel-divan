@@ -974,13 +974,13 @@ carregarHospedesApartamento(reservaId: number): void {
       this.carrinho.splice(index, 1);
       this.calcularTotal();
     }
-
-    limparCarrinho(): void {
-      if (confirm('⚠️ Confirma limpar o carrinho?')) {
-        this.carrinho = [];
-        this.calcularTotal();
-      }
-    }
+limparCarrinho(): void {
+  if (confirm('⚠️ Confirma limpar o carrinho?')) {
+    this.carrinho = [];
+    this.calcularTotal();
+    setTimeout(() => this.inputCodigoBarras?.nativeElement?.focus(), 100);
+  }
+}
 
     calcularTotal(): void {
       this.totalCarrinho = this.carrinho.reduce((sum, item) => sum + item.total, 0);

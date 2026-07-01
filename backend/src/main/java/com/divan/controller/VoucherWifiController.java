@@ -1,5 +1,6 @@
 package com.divan.controller;
 
+import com.divan.dto.VoucherWifiDTO;
 import com.divan.entity.VoucherWifi;
 import com.divan.service.MikrotikService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +26,17 @@ public class VoucherWifiController {
             @RequestParam(defaultValue = "2") int quantidade) {
         try {
             List<VoucherWifi> vouchers = mikrotikService.gerarESalvarVouchers(reservaId, quantidade);
-            return ResponseEntity.ok(vouchers);
+            List<VoucherWifiDTO> dtos = vouchers.stream()
+                .map(v -> new VoucherWifiDTO(
+                    v.getId(),
+                    v.getReserva().getId(),
+                    v.getReserva().getApartamento().getNumeroApartamento(),
+                    v.getUsername(),
+                    v.getDataGeracao(),
+                    v.getCancelado()
+                ))
+                .toList();
+            return ResponseEntity.ok(dtos);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
@@ -51,7 +62,17 @@ public class VoucherWifiController {
     public ResponseEntity<?> listarVouchers(@PathVariable Long reservaId) {
         try {
             List<VoucherWifi> vouchers = mikrotikService.listarVouchersDaReserva(reservaId);
-            return ResponseEntity.ok(vouchers);
+            List<VoucherWifiDTO> dtos = vouchers.stream()
+                .map(v -> new VoucherWifiDTO(
+                    v.getId(),
+                    v.getReserva().getId(),
+                    v.getReserva().getApartamento().getNumeroApartamento(),
+                    v.getUsername(),
+                    v.getDataGeracao(),
+                    v.getCancelado()
+                ))
+                .toList();
+            return ResponseEntity.ok(dtos);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }

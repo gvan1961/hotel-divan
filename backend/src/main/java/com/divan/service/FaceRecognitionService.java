@@ -5,7 +5,11 @@ import com.divan.entity.Cliente;
 import com.divan.repository.AlertaAcessoRepository;
 import com.divan.repository.ClienteRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.transaction.Transactional;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -67,6 +71,18 @@ public class FaceRecognitionService {
     }
     
     public AlertaAcesso registrarDesconhecido(String fotoBase64) {
+        // ✅ Evita duplicatas — se já existe alerta não resolvido nos últimos 5 minutos, ignora
+        LocalDateTime cincoMinutosAtras = LocalDateTime.now().minusMinutes(5);
+        boolean jaExisteAlertaRecente = alertaAcessoRepository
+            .existsByResolvidoFalseAndCriadoEmAfter(cincoMinutosAtras);
+
+        if (jaExisteAlertaRecente) {
+            // Retorna o alerta mais recente em vez de criar um novo
+            return alertaAcessoRepository
+                .findFirstByResolvidoFalseOrderByCriadoEmDesc()
+                .orElse(null);
+        }
+
         AlertaAcesso alerta = new AlertaAcesso();
         alerta.setFotoBase64(fotoBase64);
         alerta.setCriadoEm(LocalDateTime.now());
@@ -90,5 +106,12 @@ public class FaceRecognitionService {
         alerta.setResolvidoPor(resolvidoPor);
         alerta.setObservacao(observacao);
         alertaAcessoRepository.save(alerta);
+    }
+    
+    @Scheduled(fixedDelay = 60000) // Roda a cada 1 minuto
+    @Transactional
+    public void limparAlertasAntigos() {
+        LocalDateTime cincoMinutosAtras = LocalDateTime.now().minusMinutes(5);
+        alertaAcessoRepository.deleteByResolvidoFalseAndCriadoEmBefore(cincoMinutosAtras);
     }
 }

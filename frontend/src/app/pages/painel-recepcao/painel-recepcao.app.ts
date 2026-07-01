@@ -448,6 +448,9 @@ template: `
           <!-- AÇÕES -->
           <div class="card-acoes">
 
+           
+
+
             <!-- EM LIMPEZA -->
             <ng-container *ngIf="getStatusFinal(apt) === 'LIMPEZA'">
   <button class="btn-acao btn-liberar" (click)="liberarApartamento(apt)">↩ Liberar UH</button>
@@ -457,12 +460,11 @@ template: `
 </ng-container>
             <!-- ATRASADO -->
            <ng-container *ngIf="apt.reserva?.atrasado">
-              <div class="aviso-atraso" [title]="'Checkout previsto: ' + formatarData(apt.reserva!.dataCheckout)">
-                ⚠️ CHECKOUT ATRASADO {{ calcularHorasAtraso(apt.reserva!.dataCheckout) }}
-              </div>
-              <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒</button>
-              <button class="btn-icone" title="Ver detalhes" (click)="irParaReserva(apt)">📋</button>
-            </ng-container>
+  <div class="aviso-atraso" ...>⚠️ CHECKOUT ATRASADO ...</div>
+  <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒</button>
+  <button class="btn-icone" title="Ver detalhes" (click)="irParaReserva(apt)">📋</button>
+  <button class="btn-icone" title="Gerar senha Wi-Fi" (click)="gerarVoucherWifi(apt)">📶</button>
+</ng-container>
 
             <!-- ATIVA (não atrasado) -->
             <ng-container *ngIf="getStatusFinal(apt) === 'ATIVA' && !apt.reserva?.atrasado">
@@ -470,8 +472,8 @@ template: `
   <button class="btn-icone" title="Hóspedes"          (click)="irParaReserva(apt)">👥</button>
   <button class="btn-icone" title="Transferir"        (click)="irParaReserva(apt)">➜</button>
   <button class="btn-icone btn-limpeza-diaria" title="Registrar limpeza diária" (click)="registrarLimpezaDiaria(apt)">🧹</button>
+  <button class="btn-icone" title="Gerar senha Wi-Fi" (click)="gerarVoucherWifi(apt)">📶</button>
 </ng-container>
-
             <!-- PRÓXIMA RESERVA -->
             <div class="proxima-reserva" *ngIf="apt.reserva?.proximaReserva">
               <span class="proxima-label">📌 Próxima:</span>
@@ -1865,6 +1867,203 @@ fecharResultadoFace() {
 
 verFichaCliente(clienteId: number): void {
   this.router.navigate(['/clientes/editar', clienteId]);
+}
+
+gerarVoucherWifi(apt: ApartamentoCard): void {
+  const reservaId = apt.reserva?.id;
+  if (!reservaId) {
+    alert('⚠️ Reserva não encontrada');
+    return;
+  }
+
+  const quantidade = prompt('Quantas senhas Wi-Fi deseja gerar?', '2');
+  if (!quantidade) return;
+
+  const qtd = parseInt(quantidade, 10);
+  if (isNaN(qtd) || qtd < 1) {
+    alert('⚠️ Quantidade inválida');
+    return;
+  }
+
+  this.http.post<any[]>(
+    `/api/voucher-wifi/gerar/${reservaId}?quantidade=${qtd}`,
+    {}
+  ).subscribe({
+    next: (vouchers) => {
+      this.imprimirVouchersWifi(apt, vouchers);
+    },
+    error: (err) => {
+      alert('❌ Erro ao gerar Wi-Fi: ' + (err.error?.erro || err.message));
+    }
+  });
+}
+
+imprimirVouchersWifi(apt: ApartamentoCard, vouchers: any[]): void {
+  const agora = new Date();
+  const dataHora = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR');
+
+  const senhasHtml = vouchers.map(v => `
+    <div class="voucher-item">
+      <div class="separador">- - - - - - - - - - - - - - - -</div>
+      <p class="label-senha">SENHA WI-FI:</p>
+      <p class="senha">${v.codigo}</p>
+      <p class="info-rede">Rede: Hotel Di Van</p>
+    </div>
+  `).join('');
+
+  const htmlImpressao = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Wi-Fi - Apt ${apt.numero}</title>
+      <style>
+        @page {
+          size: 80mm auto;
+          margin: 0;
+        }
+
+        * {
+          font-family: 'Courier New', monospace !important;
+          font-weight: 700 !important;
+          color: #000 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        body {
+          width: 72mm;
+          max-width: 72mm;
+          margin: 0;
+          padding: 1mm 2mm;
+          font-size: 8pt !important;
+          line-height: 1.3;
+        }
+
+        .cabecalho {
+          text-align: left;
+          margin-bottom: 6px;
+        }
+
+        .cabecalho h1 {
+          font-size: 16pt !important;
+          font-weight: 900 !important;
+          margin: 0 0 2px 0;
+          letter-spacing: 1px;
+        }
+
+        .cnpj, .endereco {
+          font-size: 10pt !important;
+          font-weight: 700 !important;
+          margin: 1px 0;
+        }
+
+        .separador {
+          text-align: center;
+          margin: 5px 0;
+          font-size: 10pt !important;
+          font-weight: 700 !important;
+        }
+
+        .titulo {
+          font-size: 14pt !important;
+          font-weight: 900 !important;
+          margin: 6px 0 3px 0;
+        }
+
+        .info-apto {
+          font-size: 11pt !important;
+          font-weight: 900 !important;
+          margin: 3px 0;
+        }
+
+        .data-emissao {
+          font-size: 10pt !important;
+          font-weight: 700 !important;
+          margin: 2px 0;
+        }
+
+        .voucher-item {
+          margin: 8px 0;
+          text-align: center;
+        }
+
+        .label-senha {
+          font-size: 11pt !important;
+          font-weight: 900 !important;
+          margin: 4px 0 2px 0;
+          text-align: center;
+        }
+
+        .senha {
+          font-size: 32pt !important;
+          font-weight: 900 !important;
+          margin: 4px 0;
+          text-align: center;
+          letter-spacing: 8px;
+          border: 3px solid #000;
+          padding: 4px;
+        }
+
+        .info-rede {
+          font-size: 10pt !important;
+          font-weight: 700 !important;
+          text-align: center;
+          margin: 2px 0;
+        }
+
+        .rodape {
+          text-align: left;
+          margin-top: 10px;
+          font-size: 10pt !important;
+          font-weight: 700 !important;
+          border-top: 1px dashed #000;
+          padding-top: 6px;
+        }
+
+        .rodape p {
+          margin: 2px 0;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="cabecalho">
+        <h1>HOTEL DI VAN</h1>
+        <p class="cnpj">CNPJ: 07.757.726/0001-12</p>
+        <p class="endereco">Arapiraca - AL</p>
+        <div class="separador">================================</div>
+      </div>
+
+      <p class="titulo">ACESSO WI-FI</p>
+      <p class="info-apto">Apartamento: ${apt.numero}</p>
+      <p class="info-apto">Hóspede: ${apt.reserva?.clienteNome || ''}</p>
+      <p class="data-emissao">Emitido em: ${dataHora}</p>
+
+      <div class="separador">================================</div>
+
+      ${senhasHtml}
+
+      <div class="separador">================================</div>
+
+      <div class="rodape">
+        <p>⚠️ Uso pessoal e intransferível</p>
+        <p>Válido durante a hospedagem</p>
+        <p>Obrigado pela preferência!</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const janela = window.open('', '_blank', 'width=400,height=600');
+  if (janela) {
+    janela.document.write(htmlImpressao);
+    janela.document.close();
+    janela.focus();
+    setTimeout(() => {
+      janela.print();
+      janela.close();
+    }, 500);
+  }
 }
 
 }  
