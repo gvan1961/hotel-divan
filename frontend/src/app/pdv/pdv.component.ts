@@ -1437,15 +1437,19 @@ limparCarrinho(): void {
   buscarPorCodigo(): void {
   if (!this.codigoBarras || this.codigoBarras.trim() === '') return;
 
-  const codigo = this.codigoBarras.trim();
-  
-  const produto = this.produtos.find(p => 
-    p.codigoBarras === codigo ||
+  // ✅ Remove TODOS os caracteres invisíveis que o scanner pode enviar
+  const codigo = this.codigoBarras.replace(/[\r\n\t]/g, '').trim();
+
+  if (!codigo) return;
+
+  console.log('📷 Código recebido:', JSON.stringify(codigo));
+
+  const produto = this.produtos.find(p =>
+    p.codigoBarras?.replace(/[\r\n\t]/g, '').trim() === codigo ||
     p.nomeProduto.toLowerCase() === codigo.toLowerCase()
   );
 
   if (produto) {
-    // ✅ VERIFICAR ESTOQUE ANTES DE ADICIONAR
     if (produto.quantidade <= 0) {
       alert(`❌ Produto "${produto.nomeProduto}" está sem estoque!`);
       this.codigoBarras = '';
@@ -1454,19 +1458,23 @@ limparCarrinho(): void {
     }
     this.adicionarAoCarrinho(produto);
   } else {
+    console.warn('❌ Não encontrado. Código:', JSON.stringify(codigo));
+    console.warn('📦 Códigos cadastrados:', this.produtos.map(p => JSON.stringify(p.codigoBarras)));
     alert(`❌ Produto não encontrado para o código: ${codigo}`);
   }
 
   this.codigoBarras = '';
   setTimeout(() => this.inputCodigoBarras?.nativeElement?.focus(), 100);
 }
+
 onKeyDown(event: KeyboardEvent): void {
-  console.log('🔑 Key:', event.key);
   if (event.key === 'Enter') {
     event.preventDefault();
-    this.buscarPorCodigo();
-    // ✅ Recoloca foco após busca
-    setTimeout(() => this.inputCodigoBarras?.nativeElement?.focus(), 200);
+    // ✅ Pequeno delay para garantir que o ngModel atualizou
+    setTimeout(() => {
+      this.buscarPorCodigo();
+      setTimeout(() => this.inputCodigoBarras?.nativeElement?.focus(), 150);
+    }, 50);
   }
 }
   }

@@ -15,9 +15,11 @@ sudo systemctl stop hotel-divan && sudo cp /media/div/AL-8U-8/deploy/hotel-divan
 sudo systemctl status hotel-divan 
 
 BUILD E GRAVAÇÃO.
+ usar o banco no PC   ssh : mysql -u root -p bancodivan
 
+Commitcd..cd..
+cd..
 
-Commitcd..
 cd..
 cd..
 

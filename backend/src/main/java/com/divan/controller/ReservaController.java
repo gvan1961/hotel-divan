@@ -1090,30 +1090,22 @@ public class ReservaController {
            
             // ✅ VERIFICAR SE JÁ EXISTE RESERVA ATIVA NO MESMO APARTAMENTO COM CONFLITO DE DATAS
             List<Reserva> ativas = reservaRepository.findByApartamentoIdAndStatusIn(
-                reserva.getApartamento().getId(),
-                List.of(Reserva.StatusReservaEnum.ATIVA)
-            );
-
-            for (Reserva ativa : ativas) {
-                boolean semConflito = !reserva.getDataCheckin().toLocalDate()
-                                        .isBefore(ativa.getDataCheckout().toLocalDate())
-                                   || !reserva.getDataCheckout().toLocalDate()
-                                        .isAfter(ativa.getDataCheckin().toLocalDate());
-
-                if (!semConflito) {
-                    return ResponseEntity.badRequest().body(Map.of(
-                        "erro", String.format(
-                            "Apartamento %s já possui reserva ATIVA #%d (%s) no período %s a %s.",
-                            reserva.getApartamento().getNumeroApartamento(),
-                            ativa.getId(),
-                            ativa.getCliente().getNome(),
-                            ativa.getDataCheckin().toLocalDate(),
-                            ativa.getDataCheckout().toLocalDate()
-                        )
-                    ));
-                }
-            }
-
+            	    reserva.getApartamento().getId(),
+            	    List.of(Reserva.StatusReservaEnum.ATIVA)
+            	);
+            	if (!ativas.isEmpty()) {
+            	    Reserva ativa = ativas.get(0);
+            	    return ResponseEntity.badRequest().body(Map.of(
+            	        "erro", String.format(
+            	            "Apartamento %s já possui reserva ATIVA #%d (%s). Faça o checkout antes de ativar.",
+            	            reserva.getApartamento().getNumeroApartamento(),
+            	            ativa.getId(),
+            	            ativa.getCliente().getNome()
+            	        )
+            	    ));
+            	}
+            
+    
             // ✅ VERIFICAR SE CLIENTE JÁ ESTÁ HOSPEDADO EM OUTRO APARTAMENTO
             List<HospedagemHospede> hospedesAtivos = hospedagemHospedeRepository
                 .findByClienteIdAndStatus(reserva.getCliente().getId(),

@@ -82,8 +82,8 @@ public class MikrotikService {
 
                 // Cria o usuário
                 String cmdAdd = String.format(
-                	    "/tool/user-manager/user/add customer=%s username=%s password=%s",
-                	    CUSTOMER, codigo, codigo
+                	    "/tool/user-manager/user/add customer=%s username=%s",                	    
+                	    CUSTOMER, codigo
                 	);
                 	log.info("🔧 CMD ADD: {}", cmdAdd);
                 	con.execute(cmdAdd);
@@ -114,7 +114,7 @@ public class MikrotikService {
 
         List<VoucherWifi> vouchersSalvos = new ArrayList<>();
         for (VoucherGerado vg : vouchersGerados) {
-            VoucherWifi voucher = new VoucherWifi(reserva, vg.codigo, vg.codigo);
+            VoucherWifi voucher = new VoucherWifi(reserva, vg.codigo, "");            
             vouchersSalvos.add(voucherWifiRepository.save(voucher));
         }
 

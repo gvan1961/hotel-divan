@@ -1,6 +1,4 @@
 
-
-
 export interface Reserva {
   id: number;
   cliente: {

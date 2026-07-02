@@ -83,6 +83,11 @@ public class ReservaService {
     
     @Autowired
     private SorteioService sorteioService;    
+    
+    @Autowired
+    private MikrotikService mikrotikService;
+    
+    
         
      
     /**
@@ -1086,6 +1091,15 @@ public class ReservaService {
                 System.err.println("⚠️ Erro ao disparar notificação WhatsApp: " + e.getMessage());
             }
         }
+        
+        // ✅ CANCELAR VOUCHERS WI-FI DO MIKROTIK
+        try {
+            mikrotikService.cancelarVouchersDaReserva(reservaId);
+            System.out.println("📶 Vouchers Wi-Fi cancelados no MikroTik");
+        } catch (Exception e) {
+            System.err.println("⚠️ Erro ao cancelar vouchers Wi-Fi: " + e.getMessage());
+        }
+        
 
         return salva;
     }
@@ -1832,6 +1846,14 @@ public class ReservaService {
         	    " — Cliente: " + reserva.getCliente().getNome() +
         	    " — Total: R$ " + reserva.getTotalHospedagem(),
         	    reserva);
+        
+     // ✅ CANCELAR VOUCHERS WI-FI DO MIKROTIK
+        try {
+            mikrotikService.cancelarVouchersDaReserva(reservaId);
+            System.out.println("📶 Vouchers Wi-Fi cancelados no MikroTik");
+        } catch (Exception e) {
+            System.err.println("⚠️ Erro ao cancelar vouchers Wi-Fi: " + e.getMessage());
+        }
 
         return reserva;
     }

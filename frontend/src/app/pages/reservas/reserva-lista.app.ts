@@ -26,6 +26,7 @@ interface ReservaLista {
   dataCheckout: string;
   totalHospedagem: number;
   totalApagar: number;
+  totalRecebido: number;
   status: string;
 }
 
@@ -451,14 +452,14 @@ interface ReservaLista {
   </ng-container>
   
   <ng-container *hasPermission="'RESERVA_CANCELAR'">
-    <button 
-      *ngIf="reserva.status === 'ATIVA'"
-      class="btn-cancelar" 
-      (click)="confirmarCancelamento(reserva)"
-      title="Cancelar reserva">
-      ❌
-    </button>
-  </ng-container>
+  <button
+    *ngIf="reserva.status === 'PRE_RESERVA' && (reserva.totalRecebido || 0) === 0"    
+    class="btn-cancelar"
+    (click)="confirmarCancelamento(reserva)"
+    title="Cancelar pré-reserva">
+    ❌
+  </button>
+</ng-container>
 </td>
             </tr>
           </tbody>

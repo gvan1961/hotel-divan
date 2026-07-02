@@ -1903,13 +1903,13 @@ imprimirVouchersWifi(apt: ApartamentoCard, vouchers: any[]): void {
   const dataHora = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR');
 
   const senhasHtml = vouchers.map(v => `
-    <div class="voucher-item">
-      <div class="separador">- - - - - - - - - - - - - - - -</div>
-      <p class="label-senha">SENHA WI-FI:</p>
-      <p class="senha">${v.codigo}</p>
-      <p class="info-rede">Rede: Hotel Di Van</p>
-    </div>
-  `).join('');
+  <div class="voucher-item">
+    <div class="separador">- - - - - - - - - - - - - - - -</div>
+    <p class="info-rede">Rede: Hotel Di Van</p>
+    <p class="label-senha">CÓDIGO DE ACESSO WI-FI:</p>
+    <p class="senha">${v.codigo}</p>
+  </div>
+`).join('');
 
   const htmlImpressao = `
     <!DOCTYPE html>
