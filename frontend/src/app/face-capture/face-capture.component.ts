@@ -1,7 +1,10 @@
-import { Component, OnDestroy, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import * as faceapi from 'face-api.js';
+
+import { Component, OnDestroy, ViewChild, ElementRef, inject, Output, EventEmitter } from '@angular/core';
+
+
 
 @Component({
   selector: 'app-face-capture',
@@ -20,6 +23,13 @@ import * as faceapi from 'face-api.js';
         <img [src]="fotoCapturada" width="320" height="240"
           style="border-radius: 8px; border: 2px solid green;" />
       </div>
+
+      <!-- BOTÃO TEMPORÁRIO DE TESTE SEM CÂMERA -->
+<button type="button" *ngIf="!isCapturing"
+  (click)="simularFoto()"
+  style="margin: 4px; padding: 8px 16px; background: orange; color: white; border: none; border-radius: 5px; cursor: pointer;">
+  🧪 Simular Foto (Teste)
+</button>
 
       <p style="margin: 12px 0; font-weight: bold;">{{ mensagem }}</p>
 
@@ -49,46 +59,53 @@ export class FaceCaptureComponent implements OnDestroy {
   modelsCarregados = false;
   clienteId: number = 0;
 
-  async iniciar(clienteId: number) {
+  @Output() fotoCadastrada = new EventEmitter<void>();
+
+ async iniciar(clienteId: number) {
   this.clienteId = clienteId;
   this.fotoCapturada = '';
   this.isCapturing = true;
   this.mensagem = 'Carregando modelos...';
 
-  await new Promise(resolve => setTimeout(resolve, 100));
+  try {
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-  if (!this.modelsCarregados) {
-    await faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models');
-    await faceapi.nets.faceLandmark68Net.loadFromUri('/assets/models');
-    await faceapi.nets.faceRecognitionNet.loadFromUri('/assets/models');
-    this.modelsCarregados = true;
-  }
+    if (!this.modelsCarregados) {
+      await faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models');
+      await faceapi.nets.faceLandmark68Net.loadFromUri('/assets/models');
+      await faceapi.nets.faceRecognitionNet.loadFromUri('/assets/models');
+      this.modelsCarregados = true;
+    }
 
-  // Lista todos os dispositivos de vídeo
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  const cameras = devices.filter(d => d.kind === 'videoinput');
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cameras = devices.filter(d => d.kind === 'videoinput');
 
-  console.log('Câmeras disponíveis:', cameras.map(c => c.label));
+    console.log('Câmeras disponíveis:', cameras.map(c => c.label));
 
-  // Tenta usar a Redragon — se não achar, usa a padrão
-  const redragon = cameras.find(c =>
-    c.label.toLowerCase().includes('redragon') ||
-    c.label.toLowerCase().includes('gw910') ||
-    c.label.toLowerCase().includes('oneshot')
-  );
+    const redragon = cameras.find(c =>
+      c.label.toLowerCase().includes('redragon') ||
+      c.label.toLowerCase().includes('gw910') ||
+      c.label.toLowerCase().includes('oneshot')
+    );
 
-  const deviceId = redragon ? redragon.deviceId : undefined;
+    const deviceId = redragon ? redragon.deviceId : undefined;
 
-  this.videoStream = await navigator.mediaDevices.getUserMedia({
-    video: deviceId ? { deviceId: { exact: deviceId } } : true
-  });
+    this.videoStream = await navigator.mediaDevices.getUserMedia({
+      video: deviceId ? { deviceId: { exact: deviceId } } : true
+    });
 
-  this.videoEl.nativeElement.srcObject = this.videoStream;
-  await this.videoEl.nativeElement.play();
+    this.videoEl.nativeElement.srcObject = this.videoStream;
+    await this.videoEl.nativeElement.play();
 
-  this.mensagem = redragon
-    ? '📷 Redragon GW910 ativa — posicione o rosto'
-    : '📷 Câmera padrão ativa — posicione o rosto';
+    this.mensagem = redragon
+      ? '📷 Redragon GW910 ativa — posicione o rosto'
+      : '📷 Câmera padrão ativa — posicione o rosto';
+
+  } catch (e: any) {
+  console.error('❌ Erro ao iniciar câmera:', e);
+  this.mensagem = '❌ Câmera não encontrada. Clique em Simular para testar.';
+  this.isCapturing = false; // ← isso vai mostrar o botão de simular
+}
 }
 
   async capturar() {
@@ -144,6 +161,7 @@ export class FaceCaptureComponent implements OnDestroy {
   next: () => {
     this.mensagem = '✅ Rosto cadastrado com sucesso!';
     this.encerrar();
+    this.fotoCadastrada.emit(); // ← avisa o pai
   },
   error: (err) => {
     console.error('Erro ao cadastrar:', err.status, err.error);
@@ -153,10 +171,17 @@ export class FaceCaptureComponent implements OnDestroy {
 }
 
   encerrar() {
+    console.log('🔴 FaceCapture encerrar() chamado');
     this.videoStream?.getTracks().forEach(t => t.stop());
     this.videoStream = null;
     this.isCapturing = false;
   }
+
+  // Botão temporário para teste
+simularFoto(): void {
+  this.mensagem = '✅ Foto simulada!';
+  this.fotoCadastrada.emit();
+}
 
   ngOnDestroy() {
     this.encerrar();

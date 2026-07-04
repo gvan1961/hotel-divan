@@ -1546,6 +1546,15 @@ limparClienteFiltro(): void {
 
   private gerarHTMLFatura(conta: ContaAReceber, reserva: any, assinatura: string | null): void {
     const extratos: any[] = reserva.extratos || [];
+    console.log('📋 Primeiro extrato:', JSON.stringify(extratos[0]));
+
+    console.log('📋 Extratos:', extratos.map(e => ({ 
+  descricao: e.descricao, 
+  statusLancamento: e.statusLancamento,
+  status: e.status,
+  tipo: e.tipo
+})));
+
     const totalDiaria = (conta as any).totalDiaria || 0;
     const totalConsumo = (conta as any).totalConsumo || 0;
     const desconto = (conta as any).desconto || 0;
@@ -1555,17 +1564,21 @@ limparClienteFiltro(): void {
     
     const saldo = conta.saldo || 0;
 
-    const linhasExtrato = extratos.length > 0 ? `
-      <div class="separador">- - - - - - - - - - - - - - - -</div>
-      <div class="secao">
-        <h3>CONSUMO DETALHADO</h3>
-        ${extratos.map(e => `
-          <div class="linha-valor">
-            <span>${e.descricao} (${e.quantidade}x)</span>
-            <span>R$ ${this.fmt(e.totalLancamento)}</span>
-          </div>
-        `).join('')}
+   const extratosSemPagamento = extratos.filter(e => 
+  e.statusLancamento !== 'PAGAMENTO' && e.statusLancamento !== 'ADIANTAMENTO'
+);
+
+const linhasExtrato = extratosSemPagamento.length > 0 ? `
+  <div class="separador">- - - - - - - - - - - - - - - -</div>
+  <div class="secao">
+    <h3>CONSUMO DETALHADO</h3>
+    ${extratosSemPagamento.map(e => `
+      <div class="linha-valor">
+        <span>${e.descricao} (${e.quantidade || 1}x)</span>
+        <span>R$ ${this.fmt(e.totalLancamento)}</span>
       </div>
+    `).join('')}
+  </div>
     ` : '';
 
     const htmlImpressao = `
@@ -1607,7 +1620,7 @@ limparClienteFiltro(): void {
         </div>
 
         <div class="titulo-documento">
-          <h2>FATURA - PAGAMENTO FATURADO</h2>
+          <h2>${conta.status === 'PAGA' ? 'RECIBO DE PAGAMENTO' : 'FATURA - PAGAMENTO FATURADO'}</h2>
           <p class="numero-reserva">Reserva Nº ${reserva.id}</p>
           <p class="data-emissao">Emitida em: ${new Date().toLocaleString('pt-BR')}</p>
           <p class="data-emissao">Status: ${this.obterTextoStatus(conta.status)}</p>
@@ -1681,13 +1694,23 @@ limparClienteFiltro(): void {
 
         <div class="separador">================================</div>
 
-        <div class="declaracao">
-          <p>O(A) Sr(a). ${conta.clienteNome}</p>
-          <p>deverá pagar a importância de</p>
-          <p><strong>R$ ${this.fmt(saldo)}</strong></p>
-          <p>referente à hospedagem no período citado.</p>
-          <p>Vencimento: ${this.formatarData(conta.dataVencimento)}</p>
-        </div>
+        ${conta.status === 'PAGA' ? `
+  <div class="declaracao">
+    <p>Recebemos do(a) Sr(a). ${conta.clienteNome}</p>
+    <p>a importância de</p>
+    <p><strong>R$ ${this.fmt(totalHospedagem)}</strong></p>
+    <p>referente à hospedagem no período citado.</p>
+    <p>Pagamento em: ${new Date().toLocaleDateString('pt-BR')}</p>
+  </div>
+` : `
+  <div class="declaracao">
+    <p>O(A) Sr(a). ${conta.clienteNome}</p>
+    <p>deverá pagar a importância de</p>
+    <p><strong>R$ ${this.fmt(saldo)}</strong></p>
+    <p>referente à hospedagem no período citado.</p>
+    <p>Vencimento: ${this.formatarData(conta.dataVencimento)}</p>
+  </div>
+`}
 
         <div class="assinatura">
   ${assinatura ? `

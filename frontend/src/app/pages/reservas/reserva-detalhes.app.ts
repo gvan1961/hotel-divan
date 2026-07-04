@@ -3042,7 +3042,7 @@ novaDataCheckoutAntecipado = '';
   
 get podeCancelar(): boolean {
   const status = this.reserva?.status;
-  return status !== 'CANCELADA' && status !== 'FINALIZADA';
+  return status === 'PRE_RESERVA';
 }
   
   private intervaloAtualizacao: any;

@@ -53,7 +53,7 @@ import { Subscription } from 'rxjs';
             <label>Cliente Titular *</label>
             <div class="busca-wrapper">
               <input type="text" [(ngModel)]="buscaCliente" name="buscaCliente"
-                (input)="filtrarClientes()" (focus)="filtrarClientes()"
+                (input)="filtrarClientes()" 
                 placeholder="Digite o nome ou CPF do cliente..."
                 class="input-busca" autocomplete="off">
               <button type="button" class="btn-limpar-busca" *ngIf="buscaCliente"
@@ -643,6 +643,9 @@ novoHospedeForm: any = {
   empresas: any[] = [];
 
   ngOnInit(): void {
+
+  this.faceMonitor.pausar();
+
   console.log('🚀 ReservaForm ngOnInit chamado');
   console.log('📋 QueryParams:', this.route.snapshot.queryParams);
   this.setDatasPadrao();
@@ -655,11 +658,15 @@ novoHospedeForm: any = {
   });
 
   // 👁️ Reconhecimento facial → preenche cliente automaticamente
- this.faceSubscription = this.faceMonitor.resultado$.subscribe((res: any) => {
-  if (res?.reconhecido && res.clienteId) {
-    this.preencherClientePorFace(res.clienteId);
-  }
-});
+ // 👁️ Reconhecimento facial → apenas em dispositivos não-iOS
+const isSafariIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+if (!isSafariIOS) {
+  this.faceSubscription = this.faceMonitor.resultado$.subscribe((res: any) => {
+    if (res?.reconhecido && res.clienteId) {
+      this.preencherClientePorFace(res.clienteId);
+    }
+  });
+}
 
   this.route.queryParams.subscribe(params => {
     if (params['bloqueado'] === 'true') { this.apartamentoBloqueado = true; this.voltarParaMapa = true; }
@@ -688,6 +695,7 @@ novoHospedeForm: any = {
 }
 
 ngOnDestroy(): void {
+  this.faceMonitor.ativar();
   this.faceSubscription?.unsubscribe();
 }
 
@@ -774,7 +782,7 @@ ngOnDestroy(): void {
                     } else { this.apartamentoBloqueado = false; }
                   } else {
                     this.apartamentoBloqueado = false;
-                    alert(`⚠️ Apartamento não disponível para este período.`);
+                    this.mostrarBannerAviso('⚠️ Apartamento não disponível para este período.');
                   }
                 },
                 error: () => this.apartamentoBloqueado = false
@@ -783,7 +791,7 @@ ngOnDestroy(): void {
           }
         });
       },
-      error: () => { alert('❌ Erro ao carregar apartamentos'); this.apartamentos = []; }
+      error: () => { this.mostrarBannerErro('❌ Erro ao carregar apartamentos'); this.apartamentos = []; }
     });
   }
 
@@ -798,13 +806,13 @@ ngOnDestroy(): void {
 
   selecionarCliente(cliente: any): void {
     if (!this.reserva.dataCheckin || !this.reserva.dataCheckout) {
-      alert('⚠️ Selecione as datas antes de escolher o cliente!'); return;
+      this.mostrarBannerAviso('⚠️ Selecione as datas antes de escolher o cliente!'); return;
     }
     const payload = {
-      clienteId: cliente.id,
-      dataCheckin: new Date(this.reserva.dataCheckin).toISOString(),
-      dataCheckout: new Date(this.reserva.dataCheckout).toISOString()
-    };
+  clienteId: cliente.id,
+  dataCheckin: new Date(this.reserva.dataCheckin.replace('T', ' ')).toISOString(),
+  dataCheckout: new Date(this.reserva.dataCheckout.replace('T', ' ')).toISOString()
+};
     this.http.post<any>('/api/reservas/validar-hospede', payload).subscribe({
       next: (resposta) => {
         if (!resposta.disponivel) { this.mostrarBannerErro(`❌ CLIENTE INDISPONÍVEL!\n\n${resposta.mensagem}`); return; }
@@ -872,18 +880,21 @@ ngOnDestroy(): void {
   }
 
   aoSelecionarApartamento(): void {
-    const apartamentoId = this.reserva.apartamentoId;
-    if (!apartamentoId || apartamentoId === 0) return;
-    this.apartamentoService.verificarCheckoutVencido(apartamentoId).subscribe({
-      next: (response) => {
-        if (response.temCheckoutVencido) {
-          alert(`⚠️ APARTAMENTO COM CHECKOUT VENCIDO!\n\nHóspede: ${response.hospedeNome}\nAtraso: ${response.horasAtraso} hora(s)\n\nFaça o checkout antes de criar nova reserva.`);
-          this.reserva.apartamentoId = 0; this.apartamentoSelecionado = null;
-        } else { this.onApartamentoChange(); }
-      },
-      error: () => {}
-    });
-  }
+  const apartamentoId = this.reserva.apartamentoId;
+  if (!apartamentoId || apartamentoId === 0) return;
+  this.apartamentoService.verificarCheckoutVencido(apartamentoId).subscribe({
+    next: (response) => {
+      if (response.temCheckoutVencido) {
+        this.mostrarBannerErro(`⚠️ APARTAMENTO COM CHECKOUT VENCIDO! Hóspede: ${response.hospedeNome} — Atraso: ${response.horasAtraso} hora(s). Faça o checkout antes de criar nova reserva.`);
+        this.reserva.apartamentoId = 0; 
+        this.apartamentoSelecionado = null;
+      } else { 
+        this.onApartamentoChange(); 
+      }
+    },
+    error: () => {}
+  });
+}
 
   abrirModalAdicionarHospede(): void {
     if (!this.reserva.clienteId) { this.mostrarBannerAviso('⚠️ Selecione o cliente principal primeiro!'); return; }
