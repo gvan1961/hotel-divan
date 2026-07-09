@@ -113,7 +113,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/reservas/**").hasAnyAuthority("RESERVA_CREATE", "RESERVA_CRIAR", "CADASTRAR_RESERVA", "ROLE_ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/reservas/**").hasAnyAuthority("RESERVA_UPDATE", "RESERVA_EDITAR", "ROLE_ADMIN")
                 .requestMatchers(HttpMethod.PATCH, "/api/reservas/**").hasAnyAuthority("RESERVA_UPDATE", "RESERVA_EDITAR", "RESERVA_FINALIZAR", "RESERVA_CANCELAR", "ROLE_ADMIN")
-
+                .requestMatchers(HttpMethod.DELETE, "/api/reservas/**").hasAnyAuthority("RESERVA_CANCELAR", "CANCELAR_RESERVA", "ROLE_ADMIN")
+                
                 // ========== PRODUTOS ==========
                 .requestMatchers(HttpMethod.GET, "/api/produtos/**").hasAnyAuthority("PRODUTO_READ", "PRODUTO_VISUALIZAR", "ROLE_ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/produtos").hasAnyAuthority("PRODUTO_CREATE", "PRODUTO_CRIAR", "ROLE_ADMIN")

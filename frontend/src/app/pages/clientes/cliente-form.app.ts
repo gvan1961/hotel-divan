@@ -51,6 +51,26 @@ import { FaceCaptureComponent } from '../../face-capture/face-capture.component'
             </small>
           </div>
 
+          <!-- INDICADOR DE FOTO -->
+<div *ngIf="isEdit" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+  <span (click)="cliente.faceAtivo && carregarFoto()"
+        [style.cursor]="cliente.faceAtivo ? 'pointer' : 'default'"
+        [style.opacity]="cliente.faceAtivo ? '1' : '0.3'"
+        [title]="cliente.faceAtivo ? 'Ver foto cadastrada' : 'Sem foto cadastrada'"
+        style="font-size: 24px;">
+    📷
+  </span>
+  <img *ngIf="mostrarFoto && fotoCarregada"
+       [src]="fotoCarregada"
+       width="60" height="60"
+       style="border: 2px solid #4caf50; object-fit: cover; cursor: pointer;"
+       (click)="mostrarFoto = false"
+       title="Clique para fechar" />
+  <small *ngIf="cliente.faceAtivo && !mostrarFoto" style="color: #4caf50;">
+    ✅ Foto cadastrada — clique em 📷 para ver
+  </small>
+</div>
+
           <div class="form-row">
             <div class="form-group">
               <label>Nome *</label>
@@ -394,6 +414,9 @@ export class ClienteFormApp implements OnInit {
   cpfInvalido = false;
   cpfDuplicado = false;
 
+  mostrarFoto = false;
+  fotoCarregada = '';
+
 
   ngOnInit(): void {
     this.carregarEmpresas();
@@ -430,7 +453,9 @@ export class ClienteFormApp implements OnInit {
         autorizadoJantar: data.autorizadoJantar ?? false,
         tipoCliente: data.tipoCliente === 'FUNCIONARIO' ? TipoCliente.FUNCIONARIO : TipoCliente.HOSPEDE,
         classificacao: data.classificacao || null,
-        fumante: data.fumante ?? false
+        fumante: data.fumante ?? false,
+        faceAtivo: data.faceAtivo ?? false, 
+        fotoBase64: data.fotoBase64 ?? ''    
       };
 
       // ✅ FORMATAR CPF AO CARREGAR
@@ -698,6 +723,20 @@ fecharFaceCapture(): void {
   if (this.clienteId) {
     this.carregarCliente(this.clienteId);
   }
+}
+
+  carregarFoto(): void {
+  if (this.fotoCarregada) {
+    this.mostrarFoto = !this.mostrarFoto;
+    return;
+  }
+  this.http.get<any>(`/api/clientes/${this.clienteId}/foto`).subscribe({
+    next: (res) => {
+      this.fotoCarregada = res.fotoBase64;
+      this.mostrarFoto = true;
+    },
+    error: () => console.error('Erro ao carregar foto')
+  });
 }
 
   voltar(): void {

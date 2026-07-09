@@ -47,6 +47,7 @@ import { Cliente } from '../../models/cliente.model';
         <table>
           <thead>
             <tr>
+              <th style="width: 40px; text-align: center;">📷</th>
               <th>Nome</th>
               <th>CPF</th>
               <th>Celular</th>
@@ -57,6 +58,27 @@ import { Cliente } from '../../models/cliente.model';
           </thead>
            <tbody>
   <tr *ngFor="let cliente of clientesFiltrados">
+  <td style="text-align: center; position: relative;">
+    <span [title]="cliente.faceAtivo ? 'Ver foto' : 'Sem foto'"
+          [style.opacity]="cliente.faceAtivo ? '1' : '0.3'"
+          [style.cursor]="cliente.faceAtivo ? 'pointer' : 'default'"
+          style="font-size: 18px;"
+          (click)="cliente.faceAtivo && toggleFoto(cliente.id!)">
+      📷
+    </span>
+
+    <!-- POPUP DA FOTO -->
+    <div *ngIf="fotoVisivel === cliente.id && fotoCarregada[cliente.id!]"
+         style="position: absolute; top: 30px; left: 0; z-index: 999;
+                background: white; border: 2px solid #4caf50;
+                border-radius: 8px; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+      <img [src]="fotoCarregada[cliente.id!]"
+           width="80" height="80"
+           style="object-fit: cover; display: block; cursor: pointer;"
+           (click)="fotoVisivel = null"
+           title="Clique para fechar" />
+    </div>
+  </td>
     <td>{{ cliente.nome }}</td>
     <td>{{ cliente.cpf || '-' }}</td>
     <td>{{ cliente.ddi || '55' }} {{ cliente.celular || '-' }}</td>
@@ -191,33 +213,36 @@ export class ClienteListaApp implements OnInit {
   filtroEmpresa = '';
   empresas: any[] = [];
 
+  fotoVisivel: number | null = null;
+  fotoCarregada: { [id: number]: string } = {};
+
   ngOnInit(): void {
-  this.carregarPagina(0);
-  this.http.get<any[]>('/api/empresas').subscribe({
-    next: (data) => this.empresas = data.sort((a, b) => a.nomeEmpresa.localeCompare(b.nomeEmpresa, 'pt-BR')),
-    error: () => {}
-  });
-}
+    this.carregarPagina(0);
+    this.http.get<any[]>('/api/empresas').subscribe({
+      next: (data) => this.empresas = data.sort((a, b) => a.nomeEmpresa.localeCompare(b.nomeEmpresa, 'pt-BR')),
+      error: () => { }
+    });
+  }
 
   carregarPagina(pagina: number): void {
-  this.loading = true;
-  this.http.get<any>(`/api/clientes?page=${pagina}&size=${this.tamanhoPagina}`).subscribe({
-    next: (data) => {
-      this.clientes = data.clientes
-        .sort((a: Cliente, b: Cliente) => a.nome.localeCompare(b.nome, 'pt-BR'))
-        .map((c: any) => ({ ...c, cpf: this.formatarCpf(c.cpf) })); // ← adicionar
-      this.clientesFiltrados = [...this.clientes];
-      this.paginaAtual = data.paginaAtual;
-      this.totalPaginas = data.totalPaginas;
-      this.totalElementos = data.totalElementos;
-      this.loading = false;
-    },
-    error: (err) => {
-      console.error('Erro ao carregar clientes', err);
-      this.loading = false;
-    }
-  });
-} 
+    this.loading = true;
+    this.http.get<any>(`/api/clientes?page=${pagina}&size=${this.tamanhoPagina}`).subscribe({
+      next: (data) => {
+        this.clientes = data.clientes
+          .sort((a: Cliente, b: Cliente) => a.nome.localeCompare(b.nome, 'pt-BR'))
+          .map((c: any) => ({ ...c, cpf: this.formatarCpf(c.cpf) })); // ← adicionar
+        this.clientesFiltrados = [...this.clientes];
+        this.paginaAtual = data.paginaAtual;
+        this.totalPaginas = data.totalPaginas;
+        this.totalElementos = data.totalElementos;
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Erro ao carregar clientes', err);
+        this.loading = false;
+      }
+    });
+  }
 
   irParaPagina(pagina: number): void {
     if (pagina >= 0 && pagina < this.totalPaginas) {
@@ -226,27 +251,27 @@ export class ClienteListaApp implements OnInit {
   }
 
   onFiltrar(): void {
-  const termo = this.filtro.toLowerCase().trim();
-  
-  if (!termo) {
-    this.clientesFiltrados = [...this.clientes];
-    return;
+    const termo = this.filtro.toLowerCase().trim();
+
+    if (!termo) {
+      this.clientesFiltrados = [...this.clientes];
+      return;
+    }
+
+    if (termo.length < 2) return;
+
+    // Remove formatação do CPF para busca
+    const termoBusca = termo.replace(/[.\-\/]/g, '');
+
+    this.loading = true;
+    this.http.get<any[]>(`/api/clientes/buscar?termo=${termoBusca}`).subscribe({
+      next: (data) => {
+        this.clientesFiltrados = data.map((c: any) => ({ ...c, cpf: this.formatarCpf(c.cpf) }));
+        this.loading = false;
+      },
+      error: () => this.loading = false
+    });
   }
-
-  if (termo.length < 2) return;
-
-  // Remove formatação do CPF para busca
-  const termoBusca = termo.replace(/[.\-\/]/g, '');
-
-  this.loading = true;
-  this.http.get<any[]>(`/api/clientes/buscar?termo=${termoBusca}`).subscribe({
-    next: (data) => {
-      this.clientesFiltrados = data.map((c: any) => ({ ...c, cpf: this.formatarCpf(c.cpf) }));
-      this.loading = false;
-    },
-    error: () => this.loading = false
-  });
-}
 
   novo(): void { this.router.navigate(['/clientes/novo']); }
   editar(id: number): void { this.router.navigate(['/clientes/editar', id]); }
@@ -261,48 +286,66 @@ export class ClienteListaApp implements OnInit {
   }
 
   formatarCpf(cpf: string | null | undefined): string {
-  if (!cpf) return '';
-  const numeros = cpf.replace(/\D/g, '');
-  if (numeros.length !== 11) return cpf;
-  return numeros.substring(0,3) + '.' +
-         numeros.substring(3,6) + '.' +
-         numeros.substring(6,9) + '-' +
-         numeros.substring(9);
-}
-
- verHistorico(id: number): void {
-  this.router.navigate(['/clientes', id, 'historico']);
-}
-
- filtrarPorEmpresa(): void {
-  if (!this.filtroEmpresa) {
-    this.carregarPagina(0);
-    return;
+    if (!cpf) return '';
+    const numeros = cpf.replace(/\D/g, '');
+    if (numeros.length !== 11) return cpf;
+    return numeros.substring(0, 3) + '.' +
+      numeros.substring(3, 6) + '.' +
+      numeros.substring(6, 9) + '-' +
+      numeros.substring(9);
   }
-  if (this.filtroEmpresa === 'SEM_EMPRESA') {
-    this.http.get<any[]>('/api/clientes/buscar?termo=*').subscribe({
+
+  verHistorico(id: number): void {
+    this.router.navigate(['/clientes', id, 'historico']);
+  }
+
+  filtrarPorEmpresa(): void {
+    if (!this.filtroEmpresa) {
+      this.carregarPagina(0);
+      return;
+    }
+    if (this.filtroEmpresa === 'SEM_EMPRESA') {
+      this.http.get<any[]>('/api/clientes/buscar?termo=*').subscribe({
+        next: (data) => {
+          this.clientesFiltrados = data.filter(c => !c.empresaNome);
+          this.loading = false;
+        },
+        error: () => this.loading = false
+      });
+      return;
+    }
+    // ✅ AQUI — substitua o subscribe existente por este:
+    this.http.get<any[]>(`/api/clientes/empresa/${this.filtroEmpresa}`).subscribe({
       next: (data) => {
-        this.clientesFiltrados = data.filter(c => !c.empresaNome);
+        this.clientesFiltrados = data
+          .sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR'))
+          .map((c: any) => ({ ...c, cpf: this.formatarCpf(c.cpf) }));
         this.loading = false;
       },
       error: () => this.loading = false
     });
-    return;
   }
-  // ✅ AQUI — substitua o subscribe existente por este:
-  this.http.get<any[]>(`/api/clientes/empresa/${this.filtroEmpresa}`).subscribe({
-  next: (data) => {
-    this.clientesFiltrados = data
-      .sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR'))
-      .map((c: any) => ({ ...c, cpf: this.formatarCpf(c.cpf) }));
-    this.loading = false;
-  },
-    error: () => this.loading = false
-  });
-}
 
-verRanking(): void {
-  this.router.navigate(['/clientes/ranking']);
-}
+  toggleFoto(clienteId: number): void {
+    if (this.fotoVisivel === clienteId) {
+      this.fotoVisivel = null;
+      return;
+    }
+    if (this.fotoCarregada[clienteId]) {
+      this.fotoVisivel = clienteId;
+      return;
+    }
+    this.http.get<any>(`/api/clientes/${clienteId}/foto`).subscribe({
+      next: (res) => {
+        this.fotoCarregada[clienteId] = res.fotoBase64;
+        this.fotoVisivel = clienteId;
+      },
+      error: () => console.error('Erro ao carregar foto')
+    });
+  }
+
+  verRanking(): void {
+    this.router.navigate(['/clientes/ranking']);
+  }
 
 }

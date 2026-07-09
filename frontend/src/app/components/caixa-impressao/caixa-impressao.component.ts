@@ -19,7 +19,7 @@ import { CaixaConsultaService } from '../../services/caixa-consulta.service';
       <div *ngIf="!loading && caixa" class="impressao">
         <!-- CABEÇALHO -->
         <div class="cabecalho">
-          <h1>🏨 HOTEL DIVAN</h1>
+          <h1>🏨 HOTEL DI VAN</h1>
           <h2>Fechamento de Caixa #{{ caixa.id }}</h2>
           <div class="status">
             Status: {{ caixa.status === 'ABERTO' ? '🔓 ABERTO' : '🔒 FECHADO' }}

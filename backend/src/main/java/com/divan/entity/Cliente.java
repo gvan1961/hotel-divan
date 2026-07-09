@@ -1,5 +1,6 @@
 package com.divan.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -8,6 +9,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+
 
 @Entity
 @Table(name = "clientes")
@@ -81,6 +83,13 @@ public class Cliente {
 
     @Column(name = "celular2_completo", length = 25)
     private String celular2Completo;
+    
+   
+    @Column(name = "consentimento_facial")
+    private Boolean consentimentoFacial = false;
+
+    @Column(name = "consentimento_facial_em")
+    private LocalDateTime consentimentoFacialEm;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -90,15 +99,35 @@ public class Cliente {
     public void setCpf(String cpf) { this.cpf = cpf; }
     public String getCelular() { return celular; }
     public void setCelular(String celular) { this.celular = celular; }
-    @Column(name = "classificacao", length = 20)
+    
+    
+    
+    public Boolean getConsentimentoFacial() {
+		return consentimentoFacial;
+	}
+	public void setConsentimentoFacial(Boolean consentimentoFacial) {
+		this.consentimentoFacial = consentimentoFacial;
+	}
+	public LocalDateTime getConsentimentoFacialEm() {
+		return consentimentoFacialEm;
+	}
+	public void setConsentimentoFacialEm(LocalDateTime consentimentoFacialEm) {
+		this.consentimentoFacialEm = consentimentoFacialEm;
+	}
+
+
+
+	@Column(name = "classificacao", length = 20)
     private String classificacao;
 
     @Column(name = "fumante")
     private Boolean fumante = false;
     
+    @JsonIgnore
     @Column(name = "face_descriptor", columnDefinition = "JSON")
     private String faceDescriptor;
 
+    @JsonIgnore
     @Column(name = "foto_base64", columnDefinition = "MEDIUMTEXT")
     private String fotoBase64;
 

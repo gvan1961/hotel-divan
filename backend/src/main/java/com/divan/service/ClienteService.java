@@ -13,10 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import com.divan.dto.ClienteResumoDTO;
 
 @Service
 @Transactional
@@ -79,49 +81,38 @@ public class ClienteService {
         return clienteRepository.save(cliente);
     }
     
-    public List<ClienteDTO> buscarPorTermo(String termo) {
+    public List<ClienteResumoDTO> buscarPorTermo(String termo) {
         String termoLimpo = termo.trim();
         System.out.println("🔍 Buscando por: " + termoLimpo);
-
         try {
             List<Object[]> resultados;
-
             String apenasNumeros = termoLimpo.replaceAll("\\D", "");
             if (apenasNumeros.length() >= 2) {
-                // Busca pelo número parcial no CPF sem formatação E pelo nome
                 resultados = clienteRepository.buscarPorCpfParcialOuNome(
                     "%" + apenasNumeros + "%", termoLimpo + "*");
             } else {
                 resultados = clienteRepository.buscarPorNomeFull(termoLimpo + "*");
             }
-
             System.out.println("✅ Resultados encontrados: " + resultados.size());
-
             return resultados.stream().map(row -> {
-                ClienteDTO dto = new ClienteDTO();
+                ClienteResumoDTO dto = new ClienteResumoDTO();
                 dto.setId(((Number) row[0]).longValue());
                 dto.setNome((String) row[1]);
                 dto.setCpf((String) row[2]);
                 dto.setCelular((String) row[3]);
-                if (row[4] != null) {
-                    dto.setEmpresaNome((String) row[4]);
-                }
-                if (row.length > 5 && row[5] != null) {
-                    dto.setTipoCliente((String) row[5]);
-                }
-                
-                if (row.length > 6 && row[6] != null) {
-                    dto.setClassificacao((String) row[6]);
-                }
+                if (row[4] != null) dto.setEmpresaNome((String) row[4]);
+                if (row.length > 5 && row[5] != null) dto.setTipoCliente((String) row[5]);
+                if (row.length > 6 && row[6] != null) dto.setClassificacao((String) row[6]);
                 if (row.length > 7 && row[7] != null) {
                     Object fumante = row[7];
-                    if (fumante instanceof Boolean) {
-                        dto.setFumante((Boolean) fumante);
-                    } else if (fumante instanceof Number) {
-                        dto.setFumante(((Number) fumante).intValue() == 1);
-                    }
+                    if (fumante instanceof Boolean) dto.setFumante((Boolean) fumante);
+                    else if (fumante instanceof Number) dto.setFumante(((Number) fumante).intValue() == 1);
                 }
-                
+                if (row.length > 8 && row[8] != null) {
+                    Object faceAtivo = row[8];
+                    if (faceAtivo instanceof Boolean) dto.setFaceAtivo((Boolean) faceAtivo);
+                    else if (faceAtivo instanceof Number) dto.setFaceAtivo(((Number) faceAtivo).intValue() == 1);
+                }
                 return dto;
             }).collect(Collectors.toList());
         } catch (Exception e) {
@@ -147,7 +138,8 @@ public class ClienteService {
         dto.setFumante(cliente.getFumante());
 
         // ✅ CAMPOS DE FACE — adicione estas linhas
-        dto.setFotoBase64(cliente.getFotoBase64());
+        //dto.setFotoBase64(cliente.getFotoBase64());
+        
         dto.setFaceAtivo(cliente.getFaceAtivo());
         dto.setFaceCriadoEm(cliente.getFaceCriadoEm());
 
@@ -310,4 +302,30 @@ public class ClienteService {
         
         return segundo == (numeros.charAt(10) - '0');
     }
+    
+    public Cliente cadastrarFace(Long clienteId, String faceDescriptor, String fotoBase64) {
+        Cliente cliente = clienteRepository.findById(clienteId)
+            .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+
+        cliente.setFaceDescriptor(faceDescriptor);
+        cliente.setFotoBase64(fotoBase64);
+        cliente.setFaceCriadoEm(LocalDateTime.now());
+        cliente.setFaceAtivo(true);
+
+        return clienteRepository.save(cliente);
+    }
+    
+    public Cliente desativarFace(Long clienteId) {
+        Cliente cliente = clienteRepository.findById(clienteId)
+            .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+
+        cliente.setFaceDescriptor(null);
+        cliente.setFotoBase64(null);
+        cliente.setFaceCriadoEm(null);
+        cliente.setFaceAtivo(false);
+
+        return clienteRepository.save(cliente);
+    }
+
+    
 }

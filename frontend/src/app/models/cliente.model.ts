@@ -24,6 +24,7 @@ export interface Cliente {
   classificacao?: string | null;
   fumante?: boolean;
   fotoBase64?: string;
+  faceAtivo?: boolean;
 }
 
 export interface ClienteRequest {
@@ -47,6 +48,7 @@ export interface ClienteRequest {
   classificacao?: string | null;
   fumante?: boolean;
   fotoBase64?: string;
+  faceAtivo?: boolean;
 }
 
 export enum TipoCliente {

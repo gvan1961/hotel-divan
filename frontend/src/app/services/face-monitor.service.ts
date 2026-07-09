@@ -99,10 +99,7 @@ export class FaceMonitorService implements OnDestroy {
 
   private async loop() {
     while (this.loopAtivo && this.videoEl) {
-      try {
-
-         console.log('Loop rodando - videoEl:', this.videoEl?.videoWidth, 'x', this.videoEl?.videoHeight);
-      console.log('readyState:', this.videoEl?.readyState);
+      try {       
 
         const detection = await faceapi
           .detectSingleFace(
@@ -111,9 +108,7 @@ export class FaceMonitorService implements OnDestroy {
           )
           .withFaceLandmarks()
           .withFaceDescriptor();
-
-          console.log('Detection:', detection ? `score: ${detection.detection.score}` : 'não detectado');
-
+          
        if (detection && detection.detection.score > 0.5) {
   console.log('✅ Rosto detectado! Enviando ao backend...');
   this.statusMsg$.next('🔍 Rosto detectado...');

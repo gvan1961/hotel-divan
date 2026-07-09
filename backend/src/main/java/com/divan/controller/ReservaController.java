@@ -10,8 +10,6 @@ import com.divan.repository.LogAuditoriaRepository;
 import com.divan.entity.HospedagemHospede;
 import com.divan.entity.Cliente;
 import com.divan.entity.ExtratoReserva;
-import com.divan.entity.Diaria;
-import com.divan.entity.TipoApartamento;
 import com.divan.entity.Usuario;
 import com.divan.repository.EmpresaRepository;
 import com.divan.repository.ExtratoReservaRepository;
@@ -40,6 +38,8 @@ import com.divan.service.ClienteService;
 import com.divan.service.ReservaService;
 import com.divan.service.SorteioService;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -48,7 +48,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.temporal.ChronoUnit;
 import java.time.LocalDate;
-
 import java.util.Map;
 
 import java.util.ArrayList;
@@ -59,6 +58,9 @@ import java.util.List;
 @RequestMapping("/api/reservas")
 @CrossOrigin(origins = "*")
 public class ReservaController {
+	
+	private static final DateTimeFormatter FMT_DATA_BR =
+	        DateTimeFormatter.ofPattern("dd/MM/yyyy");
 	
 	@Autowired
 	private LogAuditoriaRepository logAuditoriaRepository;
@@ -104,6 +106,8 @@ public class ReservaController {
     
     @Autowired
     private LogAuditoriaService logAuditoriaService;
+    
+    
     
     @PostMapping
     public ResponseEntity<?> criarReserva(@Valid @RequestBody ReservaRequestDTO dto) {
@@ -586,11 +590,12 @@ public class ReservaController {
                             "Cliente já possui pré-reserva no apartamento %s (Reserva #%d) de %s a %s.",
                             r.getApartamento().getNumeroApartamento(),
                             r.getId(),
-                            r.getDataCheckin().toLocalDate(),
-                            r.getDataCheckout().toLocalDate()
+                            r.getDataCheckin().format(FMT_DATA_BR),
+                            r.getDataCheckout().format(FMT_DATA_BR)
                         )
                     ));
                 }
+
             }
 
             return ResponseEntity.ok(Map.of(
@@ -1065,116 +1070,7 @@ public class ReservaController {
         }
     }
     
-    @PostMapping("/{id}/ativar-pre-reserva")
-    public ResponseEntity<?> ativarPreReserva(@PathVariable Long id) {
-        try {
-            Reserva reserva = reservaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
-
-            if (reserva.getStatus() != Reserva.StatusReservaEnum.PRE_RESERVA) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Reserva não está como PRÉ-RESERVA. Status atual: " + reserva.getStatus()));
-            }
-
-            // ✅ VERIFICAR SE APARTAMENTO ESTÁ EM LIMPEZA
-            if (reserva.getApartamento().getStatus() == Apartamento.StatusEnum.LIMPEZA) {
-                return ResponseEntity.badRequest().body(Map.of(
-                    "erro", String.format(
-                        "Apartamento %s está em LIMPEZA. Libere o apartamento antes de ativar a reserva.",
-                        reserva.getApartamento().getNumeroApartamento()
-                    )
-                ));
-            }
-            
-         // ✅ VALIDAÇÃO CENTRALIZADA DE CONFLITOS
-           
-            // ✅ VERIFICAR SE JÁ EXISTE RESERVA ATIVA NO MESMO APARTAMENTO COM CONFLITO DE DATAS
-            List<Reserva> ativas = reservaRepository.findByApartamentoIdAndStatusIn(
-            	    reserva.getApartamento().getId(),
-            	    List.of(Reserva.StatusReservaEnum.ATIVA)
-            	);
-            	if (!ativas.isEmpty()) {
-            	    Reserva ativa = ativas.get(0);
-            	    return ResponseEntity.badRequest().body(Map.of(
-            	        "erro", String.format(
-            	            "Apartamento %s já possui reserva ATIVA #%d (%s). Faça o checkout antes de ativar.",
-            	            reserva.getApartamento().getNumeroApartamento(),
-            	            ativa.getId(),
-            	            ativa.getCliente().getNome()
-            	        )
-            	    ));
-            	}
-            
-    
-            // ✅ VERIFICAR SE CLIENTE JÁ ESTÁ HOSPEDADO EM OUTRO APARTAMENTO
-            List<HospedagemHospede> hospedesAtivos = hospedagemHospedeRepository
-                .findByClienteIdAndStatus(reserva.getCliente().getId(),
-                    HospedagemHospede.StatusEnum.HOSPEDADO);
-
-            for (HospedagemHospede hAtivo : hospedesAtivos) {
-                Reserva rAtiva = hAtivo.getReserva();
-                if (rAtiva == null) continue;
-                if (rAtiva.getStatus() != Reserva.StatusReservaEnum.ATIVA) continue;
-
-                boolean conflito =
-                    reserva.getDataCheckin().isBefore(rAtiva.getDataCheckout())
-                    && reserva.getDataCheckout().isAfter(rAtiva.getDataCheckin());
-
-                if (conflito) {
-                    return ResponseEntity.badRequest().body(Map.of(
-                        "erro", String.format(
-                            "%s já está hospedado no apartamento %s (Reserva #%d) de %s a %s.",
-                            reserva.getCliente().getNome(),
-                            rAtiva.getApartamento().getNumeroApartamento(),
-                            rAtiva.getId(),
-                            rAtiva.getDataCheckin().toLocalDate(),
-                            rAtiva.getDataCheckout().toLocalDate()
-                        )
-                    ));
-                }
-            }
-
-            // ✅ ATIVAR RESERVA
-            reserva.setStatus(Reserva.StatusReservaEnum.ATIVA);
-            reserva.setDataCheckin(reserva.getDataCheckin().toLocalDate()
-            	    .atTime(LocalDateTime.now().toLocalTime()));
-            LocalDateTime checkoutPadronizado = reserva.getDataCheckout().toLocalDate().atTime(12, 0);
-            reserva.setDataCheckout(checkoutPadronizado);
-            reservaRepository.save(reserva);
-
-            // ✅ ATUALIZAR APARTAMENTO PARA OCUPADO
-            Apartamento apartamento = reserva.getApartamento();
-            apartamento.setStatus(Apartamento.StatusEnum.OCUPADO);
-            apartamentoRepository.save(apartamento);
-
-            // ✅ ADICIONAR TITULAR EM HOSPEDAGEM_HOSPEDES AO ATIVAR
-            boolean titularJaExiste = hospedagemHospedeRepository
-            	    .findByReservaId(reserva.getId())
-            	    .stream()
-            	    .anyMatch(h -> h.getCliente().getId().equals(reserva.getCliente().getId())
-            	               && h.isTitular());
-
-            	if (!titularJaExiste) {
-            	    HospedagemHospede hospedeTitular = new HospedagemHospede();
-            	    hospedeTitular.setReserva(reserva);
-            	    hospedeTitular.setCliente(reserva.getCliente());
-            	    hospedeTitular.setTitular(true);
-            	    hospedeTitular.setStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
-            	    hospedeTitular.setDataHoraEntrada(LocalDateTime.now());
-            	    hospedagemHospedeRepository.save(hospedeTitular);
-            	    System.out.println("✅ Titular adicionado ao ativar pré-reserva: " + reserva.getCliente().getNome());
-            	} else {
-            	    System.out.println("ℹ️ Titular já existia em hospedagem_hospedes — mantido.");
-            	}
-
-            return ResponseEntity.ok(Map.of(
-                "mensagem", "Pré-reserva #" + id + " ativada com sucesso!",
-                "status", "ATIVA"
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
-        }
-    }
+     
     
     @PatchMapping("/{id}/responsavel-pagamento")
     public ResponseEntity<?> definirResponsavelPagamento(
@@ -1453,5 +1349,83 @@ public class ReservaController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    @PostMapping("/{id}/ativar-pre-reserva")
+    public ResponseEntity<?> ativarPreReserva(@PathVariable Long id) {
+        try {
+            Reserva reserva = reservaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+
+            if (reserva.getStatus() != Reserva.StatusReservaEnum.PRE_RESERVA) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("erro", "Reserva não está como PRÉ-RESERVA. Status atual: " + reserva.getStatus()));
+            }
+
+            // ✅ VERIFICAR SE APARTAMENTO ESTÁ EM LIMPEZA
+            if (reserva.getApartamento().getStatus() == Apartamento.StatusEnum.LIMPEZA) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "erro", String.format(
+                        "Apartamento %s está em LIMPEZA. Libere o apartamento antes de ativar a reserva.",
+                        reserva.getApartamento().getNumeroApartamento()
+                    )
+                ));
+            }
+
+            /*
+             * ✅ Ao ativar pré-reserva, o check-in passa a ser agora.
+             * Isso é importante para a validação entender que a reserva vai ficar ATIVA.
+             */
+            //reserva.setDataCheckin(LocalDateTime.now());
+            reserva.setDataCheckin(reserva.getDataCheckin().toLocalDate()
+            	    .atTime(LocalDateTime.now().toLocalTime()));
+
+            // ✅ Check-out sempre às 12:00
+            LocalDateTime checkoutPadronizado = reserva.getDataCheckout().toLocalDate().atTime(12, 0);
+            reserva.setDataCheckout(checkoutPadronizado);
+
+            // ✅ VALIDAÇÃO CENTRALIZADA
+            // Ignora a própria reserva para não conflitar com ela mesma
+            reservaService.validarConflitosAtivacaoPreReserva(reserva);
+
+            // ✅ ATIVAR RESERVA
+            reserva.setStatus(Reserva.StatusReservaEnum.ATIVA);
+            reservaRepository.save(reserva);
+
+            // ✅ ATUALIZAR APARTAMENTO PARA OCUPADO
+            Apartamento apartamento = reserva.getApartamento();
+            apartamento.setStatus(Apartamento.StatusEnum.OCUPADO);
+            apartamentoRepository.save(apartamento);
+
+            // ✅ ADICIONAR TITULAR EM HOSPEDAGEM_HOSPEDES AO ATIVAR
+            boolean titularJaExiste = hospedagemHospedeRepository
+                .findByReservaId(reserva.getId())
+                .stream()
+                .anyMatch(h -> h.getCliente().getId().equals(reserva.getCliente().getId())
+                           && h.isTitular());
+
+            if (!titularJaExiste) {
+                HospedagemHospede hospedeTitular = new HospedagemHospede();
+                hospedeTitular.setReserva(reserva);
+                hospedeTitular.setCliente(reserva.getCliente());
+                hospedeTitular.setTitular(true);
+                hospedeTitular.setStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
+                hospedeTitular.setDataHoraEntrada(LocalDateTime.now());
+                hospedagemHospedeRepository.save(hospedeTitular);
+
+                System.out.println("✅ Titular adicionado ao ativar pré-reserva: " + reserva.getCliente().getNome());
+            } else {
+                System.out.println("ℹ️ Titular já existia em hospedagem_hospedes — mantido.");
+            }
+
+            return ResponseEntity.ok(Map.of(
+                "mensagem", "Pré-reserva #" + id + " ativada com sucesso!",
+                "status", "ATIVA"
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+
         
 }

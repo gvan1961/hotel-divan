@@ -182,31 +182,19 @@ public class ApartamentoService {
     }
     
     public List<Apartamento> buscarDisponiveisParaPeriodo(LocalDateTime checkin, LocalDateTime checkout) {
+        long inicio = System.currentTimeMillis();
+        
         List<Apartamento> todos = apartamentoRepository.findAll();
-
+        System.out.println("⏱️ findAll apartamentos: " + (System.currentTimeMillis() - inicio) + "ms");
+        
+        long inicio2 = System.currentTimeMillis();
+        List<Long> aptsBloqueados = reservaRepository.findApartamentosComConflito(checkin, checkout);
+        System.out.println("⏱️ findApartamentosComConflito: " + (System.currentTimeMillis() - inicio2) + "ms");
+        System.out.println("⏱️ Apts bloqueados: " + aptsBloqueados.size());
+        
         return todos.stream().filter(apt -> {
-            // Bloqueia apenas INDISPONIVEL
-            if (apt.getStatus() == Apartamento.StatusEnum.INDISPONIVEL) {
-                return false;
-            }
-
-            List<Reserva> reservas = reservaRepository.findByApartamentoId(apt.getId());
-
-            for (Reserva r : reservas) {
-                if (r.getStatus() == Reserva.StatusReservaEnum.CANCELADA ||
-                    r.getStatus() == Reserva.StatusReservaEnum.FINALIZADA) {
-                    continue;
-                }
-
-                // Conflito de período
-                boolean semConflito =
-                    !checkin.toLocalDate().isBefore(r.getDataCheckout().toLocalDate()) ||
-                    !checkout.toLocalDate().isAfter(r.getDataCheckin().toLocalDate());
-
-                if (!semConflito) return false;
-            }
-
-            return true;
+            if (apt.getStatus() == Apartamento.StatusEnum.INDISPONIVEL) return false;
+            return !aptsBloqueados.contains(apt.getId());
         }).collect(Collectors.toList());
     }
     

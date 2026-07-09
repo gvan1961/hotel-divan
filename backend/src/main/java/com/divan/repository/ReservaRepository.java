@@ -96,5 +96,77 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     	);
     
     List<Reserva> findByStatusAndDataCheckinBefore(String status, LocalDateTime dataHora);
+    
+    @Query("""
+    	    SELECT DISTINCT r.apartamento.id FROM Reserva r
+    	    WHERE r.status NOT IN ('CANCELADA', 'FINALIZADA')
+    	    AND r.dataCheckin < :checkout
+    	    AND r.dataCheckout > :checkin
+    	    """)
+    	List<Long> findApartamentosComConflito(
+    	    @Param("checkin") LocalDateTime checkin,
+    	    @Param("checkout") LocalDateTime checkout
+    	);
+    
+    @Query("""
+    	    SELECT r FROM Reserva r
+    	    WHERE r.apartamento.id = :apartamentoId
+    	      AND r.status IN :status
+    	      AND (:ignorarReservaId IS NULL OR r.id <> :ignorarReservaId)
+    	      AND r.dataCheckin < :dataCheckout
+    	      AND r.dataCheckout > :dataCheckin
+    	    ORDER BY r.dataCheckin ASC
+    	""")
+    	List<Reserva> buscarConflitosApartamento(
+    	    @Param("apartamentoId") Long apartamentoId,
+    	    @Param("dataCheckin") LocalDateTime dataCheckin,
+    	    @Param("dataCheckout") LocalDateTime dataCheckout,
+    	    @Param("status") List<Reserva.StatusReservaEnum> status,
+    	    @Param("ignorarReservaId") Long ignorarReservaId
+    	);
+
+    	@Query("""
+    	    SELECT r FROM Reserva r
+    	    WHERE r.apartamento.id = :apartamentoId
+    	      AND r.status = :status
+    	      AND (:ignorarReservaId IS NULL OR r.id <> :ignorarReservaId)
+    	    ORDER BY r.dataCheckin DESC
+    	""")
+    	List<Reserva> buscarReservasAtivasDoApartamento(
+    	    @Param("apartamentoId") Long apartamentoId,
+    	    @Param("status") Reserva.StatusReservaEnum status,
+    	    @Param("ignorarReservaId") Long ignorarReservaId
+    	);
+          
+    	@Query("""
+    		    SELECT r FROM Reserva r
+    		    WHERE r.cliente.id = :clienteId
+    		      AND r.status IN :statusReservas
+    		      AND (:ignorarReservaId IS NULL OR r.id <> :ignorarReservaId)
+    		      AND r.dataCheckin < :dataCheckout
+    		      AND r.dataCheckout > :dataCheckin
+    		    ORDER BY r.dataCheckin ASC
+    		""")
+    		List<Reserva> buscarConflitosClienteTitular(
+    		    @Param("clienteId") Long clienteId,
+    		    @Param("dataCheckin") LocalDateTime dataCheckin,
+    		    @Param("dataCheckout") LocalDateTime dataCheckout,
+    		    @Param("statusReservas") List<Reserva.StatusReservaEnum> statusReservas,
+    		    @Param("ignorarReservaId") Long ignorarReservaId
+    		);
+
+    		@Query("""
+    		    SELECT r FROM Reserva r
+    		    WHERE r.cliente.id = :clienteId
+    		      AND r.status = :statusReserva
+    		      AND (:ignorarReservaId IS NULL OR r.id <> :ignorarReservaId)
+    		    ORDER BY r.dataCheckin DESC
+    		""")
+    		List<Reserva> buscarReservasAtivasClienteTitular(
+    		    @Param("clienteId") Long clienteId,
+    		    @Param("statusReserva") Reserva.StatusReservaEnum statusReserva,
+    		    @Param("ignorarReservaId") Long ignorarReservaId
+    		);
+
         
 }

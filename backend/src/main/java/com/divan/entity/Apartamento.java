@@ -1,5 +1,6 @@
 package com.divan.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
@@ -48,11 +49,11 @@ public class Apartamento {
     private StatusEnum status = StatusEnum.DISPONIVEL;
     
     @OneToMany(mappedBy = "apartamento")
-    @JsonIgnoreProperties("apartamento")
+    @JsonIgnore
     private List<Reserva> reservas;
     
     @OneToMany(mappedBy = "apartamento")
-    @JsonIgnoreProperties("apartamento")
+    @JsonIgnore
     private List<ManutencaoApartamento> manutencoes;
     
     @Column(name = "tem_cama_de_casal", nullable = false)

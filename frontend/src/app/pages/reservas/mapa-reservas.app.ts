@@ -1428,6 +1428,9 @@ motivoTransferencia = '';
 loadingTransf = false; 
 novaDataCheckinTransf = '';
 
+apartamentoIdViaMapa: number | null = null;
+apartamentoNumeroViaMapa: string = '';
+
 buscaNumeroReserva: number | null = null;
 reservaDestacadaId: number | null = null;
 
@@ -1922,11 +1925,12 @@ if (reserva.status === 'ATIVA' && dataCheckout < hoje) {
     return;
   }
 
-  const queryParams = {
-    apartamentoId: apartamentoId.toString(),
-    dataCheckin: dataCheckin,
-    bloqueado: 'true'
-  };
+const queryParams = {
+  apartamentoId: apartamentoId.toString(),
+  apartamentoNumero: apartamentoNumero?.toString(),
+  dataCheckin: dataCheckin,
+  bloqueado: 'true'
+};
 
   console.log('📤 Query Params:', queryParams);
   console.log('🔒 Fechando modal...');

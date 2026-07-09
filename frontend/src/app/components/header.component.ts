@@ -11,7 +11,7 @@ import { Subscription } from 'rxjs';
     <header class="app-header no-print" *ngIf="isLogado">
       <div class="header-content">
         <div class="logo">
-          <h1>🏨 Hotel Divan</h1>
+          <h1>🏨 Hotel Di Van</h1>
         </div>
         
         <div class="user-info">

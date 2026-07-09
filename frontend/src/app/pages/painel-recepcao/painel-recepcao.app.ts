@@ -59,6 +59,7 @@ interface Contadores {
 @Component({
   selector: 'app-painel-recepcao',
   standalone: true,
+  providers: [FaceMonitorService],
   imports: [CommonModule, FormsModule],
 template: `
     <div class="painel-wrapper">
@@ -1578,41 +1579,48 @@ if (this.filtroDataCheckin) {
 }
 
    aoClicarFaixa(apt: ApartamentoCard): void {
-    const status = this.getStatusFinal(apt);
+  const status = this.getStatusFinal(apt);
 
-    if (status === 'ATIVA' && apt.reserva?.id) {
-      this.router.navigate(['/reservas', apt.reserva.id]);
-      return;
-    }
-
-    if (status === 'PRE_RESERVA') {
-      this.router.navigate(['/reservas/mapa']);
-      return;
-    }
-
-    if (status === 'LIMPEZA') {
-      if (apt.reserva?.id) {
-        this.router.navigate(['/reservas', apt.reserva.id]);
-      } else {
-        alert('🧹 Apartamento em limpeza — sem reserva anterior disponível.');
-      }
-      return;
-    }
-
-    if (status === 'DISPONIVEL') {
-      this.novaReserva(apt);
-      return;
-    }
-
-    if (status === 'MANUTENCAO') {
-      alert('🔧 Apartamento em manutenção.');
-      return;
-    }
-    if (status === 'BLOQUEADO' || status === 'INDISPONIVEL') {
-      alert('🚫 Apartamento indisponível.');
-      return;
-    }
+  if (status === 'ATIVA' && apt.reserva?.id) {
+    this.router.navigate(['/reservas', apt.reserva.id]);
+    return;
   }
+
+  // ✅ ALTERADO: pré-reserva agora vai para /reservas/id
+  if (status === 'PRE_RESERVA') {
+    if (apt.reserva?.id) {
+      this.router.navigate(['/reservas', apt.reserva.id]);
+    } else {
+      alert('⚠️ Pré-reserva sem ID disponível.');
+    }
+    return;
+  }
+
+  if (status === 'LIMPEZA') {
+    if (apt.reserva?.id) {
+      this.router.navigate(['/reservas', apt.reserva.id]);
+    } else {
+      alert('🧹 Apartamento em limpeza — sem reserva anterior disponível.');
+    }
+    return;
+  }
+
+  if (status === 'DISPONIVEL') {
+    this.novaReserva(apt);
+    return;
+  }
+
+  if (status === 'MANUTENCAO') {
+    alert('🔧 Apartamento em manutenção.');
+    return;
+  }
+
+  if (status === 'BLOQUEADO' || status === 'INDISPONIVEL') {
+    alert('🚫 Apartamento indisponível.');
+    return;
+  }
+}
+
   
   getTooltipFaixa(apt: ApartamentoCard): string { 
   const status = this.getStatusFinal(apt);

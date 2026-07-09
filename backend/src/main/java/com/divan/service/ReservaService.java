@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,6 +29,8 @@ import java.time.LocalDate;
 import com.divan.entity.ContaAReceber;
 import com.divan.entity.HospedagemHospede;
 import com.divan.repository.ContaAReceberRepository;
+import java.time.format.DateTimeFormatter;
+
 
 @Service
 @Transactional
@@ -87,7 +90,8 @@ public class ReservaService {
     @Autowired
     private MikrotikService mikrotikService;
     
-    
+    private static final DateTimeFormatter FMT_DATA =
+    	    DateTimeFormatter.ofPattern("dd/MM/yyyy");
         
      
     /**
@@ -99,26 +103,27 @@ public class ReservaService {
         System.out.println("   Novo checkin: " + checkin);
         System.out.println("   Novo checkout: " + checkout);
         System.out.println("   Total reservas encontradas: " + reservasDoApartamento.size());
+
         for (Reserva r : reservasDoApartamento) {
             if (reservaIdExcluir != null && r.getId().equals(reservaIdExcluir)) continue;
             if (r.getStatus() == Reserva.StatusReservaEnum.CANCELADA ||
                 r.getStatus() == Reserva.StatusReservaEnum.FINALIZADA) continue;
 
-            // ✅ BLOQUEIO DEFINITIVO: reserva ATIVA no apartamento = bloqueia sempre
-            if (r.getStatus() == Reserva.StatusReservaEnum.ATIVA) {
-                System.out.println("❌ BLOQUEADO — Apt " + apartamentoId + 
-                    " já possui reserva ATIVA #" + r.getId());
-                return true;
-            }
-
-            // Verifica conflito de datas apenas para PRÉ-RESERVAS
             System.out.println("   Comparando com #" + r.getId() +
                 " status=" + r.getStatus() +
                 " checkin=" + r.getDataCheckin() +
                 " checkout=" + r.getDataCheckout());
+
+            // Para reserva ATIVA com checkout vencido, usa data atual como checkout efetivo
             LocalDateTime checkoutEfetivo = r.getDataCheckout();
+            if (r.getStatus() == Reserva.StatusReservaEnum.ATIVA &&
+                r.getDataCheckout().isBefore(LocalDateTime.now(ZoneId.of("America/Fortaleza")))) {
+                checkoutEfetivo = LocalDateTime.now(ZoneId.of("America/Fortaleza")).plusDays(1);
+            }
+
             boolean semConflito = !checkin.isBefore(checkoutEfetivo)
                     || !checkout.isAfter(r.getDataCheckin());
+
             System.out.println("   semConflito=" + semConflito);
             if (!semConflito) {
                 System.out.println("❌ CONFLITO com reserva #" + r.getId());
@@ -343,6 +348,12 @@ public class ReservaService {
      // ✅ Check-out: sempre fixo às 12:00
      LocalDateTime checkoutPadronizado = reserva.getDataCheckout().toLocalDate().atTime(12, 0);
      reserva.setDataCheckout(checkoutPadronizado);
+     
+  // ✅ Valida se o apartamento está disponível
+     validarApartamentoDisponivelParaReserva(reserva, null);
+     
+     validarClienteNaoEstaEmOutraReserva(reserva, null);
+     
 
      System.out.println("🕐 Check-in (hora real): " + reserva.getDataCheckin());
      System.out.println("🕐 Check-out (12:00): " + reserva.getDataCheckout());
@@ -448,13 +459,17 @@ public class ReservaService {
      // ✅ ADICIONAR CLIENTE TITULAR COMO HÓSPEDE APENAS SE RESERVA ATIVA
      // PRÉ-RESERVA: titular será adicionado somente ao ativar o check-in      
                         
-        HospedagemHospede hospedeTitular = new HospedagemHospede();
-        hospedeTitular.setReserva(salva);
-        hospedeTitular.setCliente(reserva.getCliente());
-        hospedeTitular.setTitular(true);
-        hospedeTitular.setStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
-        hospedeTitular.setDataHoraEntrada(LocalDateTime.now());
-        hospedagemHospedeRepository.save(hospedeTitular);
+        if (salva.getStatus() == Reserva.StatusReservaEnum.ATIVA) {
+            HospedagemHospede hospedeTitular = new HospedagemHospede();
+            hospedeTitular.setReserva(salva);
+            hospedeTitular.setCliente(reserva.getCliente());
+            hospedeTitular.setTitular(true);
+            hospedeTitular.setStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
+            hospedeTitular.setDataHoraEntrada(LocalDateTime.now());
+            hospedagemHospedeRepository.save(hospedeTitular);
+        }
+
+        
         System.out.println("✅ Titular adicionado: " + reserva.getCliente().getNome() +
             " | Status: " + salva.getStatus());
 
@@ -2169,4 +2184,176 @@ public class ReservaService {
             extratoReservaRepository.save(extrato);
         }
     }
+    
+    private void validarApartamentoDisponivelParaReserva(Reserva reserva, Long ignorarReservaId) {
+        Long apartamentoId = reserva.getApartamento().getId();
+
+        List<Reserva.StatusReservaEnum> statusQueBloqueiam = List.of(
+            Reserva.StatusReservaEnum.ATIVA,
+            Reserva.StatusReservaEnum.PRE_RESERVA
+        );
+
+        List<Reserva> conflitos = reservaRepository.buscarConflitosApartamento(
+            apartamentoId,
+            reserva.getDataCheckin(),
+            reserva.getDataCheckout(),
+            statusQueBloqueiam,
+            ignorarReservaId
+        );
+
+        if (!conflitos.isEmpty()) {
+            Reserva c = conflitos.get(0);
+            throw new RuntimeException(
+                "❌ APARTAMENTO INDISPONÍVEL!\n\n" +
+                "O apartamento " + reserva.getApartamento().getNumeroApartamento() +
+                " já possui " + descreverStatus(c.getStatus()) +
+                " (Reserva #" + c.getId() + ") de " +
+                c.getDataCheckin().format(FMT_DATA) + " a " +
+                c.getDataCheckout().format(FMT_DATA) +
+                " para o cliente " + c.getCliente().getNome() + "."
+            );
+        }
+
+        boolean checkinAgoraOuPassado = !reserva.getDataCheckin().isAfter(LocalDateTime.now());
+
+        if (checkinAgoraOuPassado) {
+            List<Reserva> ativas = reservaRepository.buscarReservasAtivasDoApartamento(
+                apartamentoId,
+                Reserva.StatusReservaEnum.ATIVA,
+                ignorarReservaId
+            );
+
+            if (!ativas.isEmpty()) {
+                Reserva a = ativas.get(0);
+                throw new RuntimeException(
+                    "❌ APARTAMENTO INDISPONÍVEL!\n\n" +
+                    "O apartamento " + reserva.getApartamento().getNumeroApartamento() +
+                    " já possui reserva ativa (Reserva #" + a.getId() + ") de " +
+                    a.getDataCheckin().format(FMT_DATA) + " a " +
+                    a.getDataCheckout().format(FMT_DATA) +
+                    " para o cliente " + a.getCliente().getNome() + ". " +
+                    "Faça o checkout antes de criar outra reserva."
+                );
+            }
+        }
+    }
+
+    private void validarClienteNaoEstaEmOutraReserva(Reserva reserva, Long ignorarReservaId) {
+        if (reserva.getCliente() == null || reserva.getCliente().getId() == null) {
+            throw new RuntimeException("Cliente da reserva não informado");
+        }
+
+        Long clienteId = reserva.getCliente().getId();
+
+        List<Reserva.StatusReservaEnum> statusQueBloqueiam = List.of(
+            Reserva.StatusReservaEnum.ATIVA,
+            Reserva.StatusReservaEnum.PRE_RESERVA
+        );
+
+        // ✅ 1. Conflito como TITULAR
+        List<Reserva> conflitosTitular = reservaRepository.buscarConflitosClienteTitular(
+            clienteId,
+            reserva.getDataCheckin(),
+            reserva.getDataCheckout(),
+            statusQueBloqueiam,
+            ignorarReservaId
+        );
+
+        if (!conflitosTitular.isEmpty()) {
+            Reserva c = conflitosTitular.get(0);
+            throw new RuntimeException(
+                "❌ CLIENTE INDISPONÍVEL!\n\n" +
+                "Cliente já possui " + descreverStatus(c.getStatus()) +
+                " no apartamento " + c.getApartamento().getNumeroApartamento() +
+                " (Reserva #" + c.getId() + ") de " +
+                c.getDataCheckin().format(FMT_DATA) + " a " +
+                c.getDataCheckout().format(FMT_DATA) + "."
+            );
+        }
+
+        // ✅ 2. Conflito como HÓSPEDE em HospedagemHospede
+        List<HospedagemHospede> conflitosHospede = hospedagemHospedeRepository.buscarConflitosHospedePeriodo(
+            clienteId,
+            reserva.getDataCheckin(),
+            reserva.getDataCheckout(),
+            HospedagemHospede.StatusEnum.HOSPEDADO,
+            statusQueBloqueiam,
+            ignorarReservaId
+        );
+
+        if (!conflitosHospede.isEmpty()) {
+            Reserva c = conflitosHospede.get(0).getReserva();
+            throw new RuntimeException(
+                "❌ CLIENTE INDISPONÍVEL!\n\n" +
+                "Cliente já é hóspede em " + descreverStatus(c.getStatus()) +
+                " no apartamento " + c.getApartamento().getNumeroApartamento() +
+                " (Reserva #" + c.getId() + ") de " +
+                c.getDataCheckin().format(FMT_DATA) + " a " +
+                c.getDataCheckout().format(FMT_DATA) + "."
+            );
+        }
+
+        // ✅ 3. Reserva ATIVA ainda aberta (checkin agora ou passado)
+        boolean checkinAgoraOuPassado = !reserva.getDataCheckin().isAfter(LocalDateTime.now());
+
+        if (checkinAgoraOuPassado) {
+
+            List<Reserva> titularAtivo = reservaRepository.buscarReservasAtivasClienteTitular(
+                clienteId,
+                Reserva.StatusReservaEnum.ATIVA,
+                ignorarReservaId
+            );
+
+            if (!titularAtivo.isEmpty()) {
+                Reserva a = titularAtivo.get(0);
+                throw new RuntimeException(
+                    "❌ CLIENTE INDISPONÍVEL!\n\n" +
+                    "Cliente já possui reserva ativa no apartamento " +
+                    a.getApartamento().getNumeroApartamento() +
+                    " (Reserva #" + a.getId() + ") de " +
+                    a.getDataCheckin().format(FMT_DATA) + " a " +
+                    a.getDataCheckout().format(FMT_DATA) + ". " +
+                    "Faça o checkout antes de criar outra reserva."
+                );
+            }
+
+            List<HospedagemHospede> hospedagensAtivas = hospedagemHospedeRepository.buscarHospedagensAtivasCliente(
+                clienteId,
+                HospedagemHospede.StatusEnum.HOSPEDADO,
+                Reserva.StatusReservaEnum.ATIVA,
+                ignorarReservaId
+            );
+
+            if (!hospedagensAtivas.isEmpty()) {
+                Reserva a = hospedagensAtivas.get(0).getReserva();
+                throw new RuntimeException(
+                    "❌ CLIENTE INDISPONÍVEL!\n\n" +
+                    "Cliente já está hospedado no apartamento " +
+                    a.getApartamento().getNumeroApartamento() +
+                    " (Reserva #" + a.getId() + ") de " +
+                    a.getDataCheckin().format(FMT_DATA) + " a " +
+                    a.getDataCheckout().format(FMT_DATA) + ". " +
+                    "Faça o checkout antes de criar outra reserva."
+                );
+            }
+        }
+    }
+
+    
+    private String descreverStatus(Reserva.StatusReservaEnum status) {
+        if (status == Reserva.StatusReservaEnum.PRE_RESERVA) {
+            return "pré-reserva";
+        }
+        if (status == Reserva.StatusReservaEnum.ATIVA) {
+            return "reserva";
+        }
+        return "reserva";
+    }
+    
+    public void validarConflitosAtivacaoPreReserva(Reserva reserva) {
+        validarApartamentoDisponivelParaReserva(reserva, reserva.getId());
+        validarClienteNaoEstaEmOutraReserva(reserva, reserva.getId());
+    }
+
+    
 }

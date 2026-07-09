@@ -10,8 +10,8 @@ import { ReservaRequest } from '../../models/reserva.model';
 import { Apartamento } from '../../models/apartamento.model';
 import { Diaria } from '../../models/diaria.model';
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
-import { FaceMonitorService } from '../../services/face-monitor.service';
 import { Subscription } from 'rxjs';
+import { take } from 'rxjs/operators';
 
 
 @Component({
@@ -125,28 +125,61 @@ import { Subscription } from 'rxjs';
           </div>
           </div>
 
+
+
           <!-- APARTAMENTO E QUANTIDADE -->
-          <div class="form-row">
-            <div class="form-group">
-              <label>Apartamento *</label>
-              <div class="aviso-mapa" *ngIf="apartamentoBloqueado">
-                <span class="icone">🔒</span>
-                <div class="aviso-texto">
-                  <strong>Apartamento pré-selecionado</strong>
-                  <p>Este apartamento foi escolhido na tela anterior e não pode ser alterado aqui</p>
-                </div>
-              </div>
-              <select [(ngModel)]="reserva.apartamentoId" name="apartamentoId" required
-                [disabled]="apartamentoBloqueado" (change)="aoSelecionarApartamento()">
-                <option [ngValue]="0">Selecione o apartamento</option>
-                <option *ngFor="let apt of apartamentos" [ngValue]="apt.id">
-                  {{ apt.numeroApartamento }} - {{ apt.tipoApartamento?.tipo || apt.tipoApartamentoNome || 'Sem tipo' }} (Cap: {{ apt.capacidade }})
-                </option>
-              </select>
-              <small class="field-help" *ngIf="apartamentoSelecionado && !apartamentoBloqueado">
-                ✅ Apt {{ apartamentoSelecionado.numeroApartamento }} - Cap: {{ apartamentoSelecionado.capacidade }} pessoa(s)
-              </small>
-            </div>
+          <!-- APARTAMENTO E QUANTIDADE -->
+<div class="form-row">
+  <div class="form-group">
+    <label>Apartamento *</label>
+
+    <!-- QUANDO VEIO DO MAPA DE RESERVAS -->
+    <div *ngIf="apartamentoBloqueado; else selecionarApartamento">
+      <div class="aviso-mapa">
+        <span class="icone">🔒</span>
+        <div class="aviso-texto">
+          <strong>Apartamento pré-selecionado</strong>
+          <p>Este apartamento foi escolhido na tela anterior e não pode ser alterado aqui</p>
+        </div>
+      </div>
+
+      <div class="field-help">
+        ✅ Apt {{ apartamentoNumeroViaMapa || apartamentoSelecionado?.numeroApartamento }}
+
+        <ng-container *ngIf="apartamentoSelecionado?.tipoApartamento?.tipo || apartamentoSelecionado?.tipoApartamentoNome as tipo">
+          - {{ tipo }}
+        </ng-container>
+
+        <ng-container *ngIf="apartamentoSelecionado?.capacidade as capacidade">
+          (Cap: {{ capacidade }} pessoa(s))
+        </ng-container>
+      </div>
+
+      <!-- Mantém o apartamentoId no formulário -->
+      <input type="hidden" name="apartamentoId" [(ngModel)]="reserva.apartamentoId">
+    </div>
+
+    <!-- QUANDO NÃO VEIO DO MAPA: USUÁRIO ESCOLHE NORMALMENTE -->
+    <ng-template #selecionarApartamento>
+      <select [(ngModel)]="reserva.apartamentoId" name="apartamentoId" required
+        (change)="aoSelecionarApartamento()">
+        <option [ngValue]="0">Selecione o apartamento</option>
+        <option *ngFor="let apt of apartamentos" [ngValue]="apt.id">
+          {{ apt.numeroApartamento }} - {{ apt.tipoApartamento?.tipo || apt.tipoApartamentoNome || 'Sem tipo' }} (Cap: {{ apt.capacidade }})
+        </option>
+      </select>
+
+      <small class="field-help" *ngIf="apartamentoSelecionado">
+        ✅ Apt {{ apartamentoSelecionado?.numeroApartamento }}
+
+        <ng-container *ngIf="apartamentoSelecionado?.capacidade as capacidade">
+          - Cap: {{ capacidade }} pessoa(s)
+        </ng-container>
+      </small>
+    </ng-template>
+  </div>
+
+
             <div class="form-group">
               <label>Quantidade de Hóspedes *</label>
               <input type="number" [(ngModel)]="reserva.quantidadeHospede" name="quantidadeHospede"
@@ -595,8 +628,8 @@ export class ReservaFormApp implements OnInit {
   private http = inject(HttpClient);
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
-  private faceMonitor = inject(FaceMonitorService);
-  private faceSubscription: Subscription | null = null; 
+  
+  
 
 
   reserva: ReservaRequest = { clienteId: 0, apartamentoId: 0, quantidadeHospede: 1, dataCheckin: '', dataCheckout: '' };
@@ -642,61 +675,71 @@ novoHospedeForm: any = {
   cadastrandoTitular = false;
   empresas: any[] = [];
 
-  ngOnInit(): void {
+  apartamentoIdViaMapa: number | null = null;
+  apartamentoNumeroViaMapa: string = '';
 
-  this.faceMonitor.pausar();
+ ngOnInit(): void {  
 
   console.log('🚀 ReservaForm ngOnInit chamado');
   console.log('📋 QueryParams:', this.route.snapshot.queryParams);
+
   this.setDatasPadrao();
   this.definirDataMinima();
 
+  // ✅ Carrega empresas apenas UMA vez
   this.http.get<any[]>('/api/empresas').subscribe({
     next: (data) => this.empresas = data.sort((a, b) =>
       a.nomeEmpresa.localeCompare(b.nomeEmpresa, 'pt-BR')),
     error: () => {}
   });
 
-  // 👁️ Reconhecimento facial → preenche cliente automaticamente
- // 👁️ Reconhecimento facial → apenas em dispositivos não-iOS
-const isSafariIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-if (!isSafariIOS) {
-  this.faceSubscription = this.faceMonitor.resultado$.subscribe((res: any) => {
-    if (res?.reconhecido && res.clienteId) {
-      this.preencherClientePorFace(res.clienteId);
+  this.route.queryParams.pipe(take(1)).subscribe(params => {
+
+    // ✅ Veio do Mapa de Reservas com apartamento bloqueado
+    if (params['bloqueado'] === 'true') { 
+      this.apartamentoBloqueado = true; 
+      this.voltarParaMapa = true; 
     }
-  });
-}
 
-  this.route.queryParams.subscribe(params => {
-    if (params['bloqueado'] === 'true') { this.apartamentoBloqueado = true; this.voltarParaMapa = true; }
-    if (params['origem']) { this.origem = params['origem']; }
+    if (params['origem']) { 
+      this.origem = params['origem']; 
+    }
 
+    // ✅ Pega ID do apartamento vindo do mapa
+    if (params['apartamentoId']) {
+      this.apartamentoIdViaMapa = Number(params['apartamentoId']);
+    }
+
+    // ✅ Pega número do apartamento vindo do mapa
+    // Assim aparece imediatamente, sem esperar carregarApartamentos()
+    if (params['apartamentoNumero']) {
+      this.apartamentoNumeroViaMapa = params['apartamentoNumero'];
+    }
+
+    // ✅ Pega data de check-in vinda do mapa
     if (params['dataCheckin']) {
       this.checkinData = params['dataCheckin'];
       this.checkinHora = '14';
       this.checkinMinuto = '00';
+
       this.montarDataCheckin();
 
       const dataCheckout = new Date(params['dataCheckin'] + 'T14:00:00');
       dataCheckout.setDate(dataCheckout.getDate() + 1);
       dataCheckout.setHours(12, 0, 0, 0);
-      this.reserva.dataCheckout = this.formatDateTimeLocal(dataCheckout);
 
-      this.http.get<any[]>('/api/empresas').subscribe({
-        next: (data) => this.empresas = data.sort((a, b) =>
-          a.nomeEmpresa.localeCompare(b.nomeEmpresa, 'pt-BR')),
-        error: () => {}
-      });
+      this.reserva.dataCheckout = this.formatDateTimeLocal(dataCheckout);
     }
 
-    setTimeout(() => this.carregarApartamentos(), 300);
+    // ✅ Sem delay artificial
+    this.carregarApartamentos();
   });
 }
 
+
+
 ngOnDestroy(): void {
-  this.faceMonitor.ativar();
-  this.faceSubscription?.unsubscribe();
+  
 }
 
   setDatasPadrao(): void {
@@ -736,12 +779,15 @@ ngOnDestroy(): void {
   }
 
   onDataChange(): void {
-    this.calcularDiarias();
-    if (this.reserva.dataCheckin && this.reserva.dataCheckout) {
-      if (new Date(this.reserva.dataCheckout) <= new Date(this.reserva.dataCheckin)) return;
-      this.carregarApartamentos();
-    }
+  this.calcularDiarias();
+  if (this.reserva.dataCheckin && this.reserva.dataCheckout) {
+    // ✅ Compatível com Safari iOS
+    const checkin = new Date(this.reserva.dataCheckin.replace('T', ' '));
+    const checkout = new Date(this.reserva.dataCheckout.replace('T', ' '));
+    if (checkout <= checkin) return;
+    this.carregarApartamentos();
   }
+}
 
   montarDataCheckin(): void {
     if (!this.checkinData) return;
@@ -870,7 +916,7 @@ ngOnDestroy(): void {
 
   calcularDiarias(): void {
     if (!this.reserva.dataCheckin || !this.reserva.dataCheckout) return;
-    const diffTime = new Date(this.reserva.dataCheckout).getTime() - new Date(this.reserva.dataCheckin).getTime();
+    const diffTime = new Date(this.reserva.dataCheckout.replace('T', ' ')).getTime() - new Date(this.reserva.dataCheckin.replace('T', ' ')).getTime()
     this.quantidadeDiarias = Math.max(Math.ceil(diffTime / (1000*60*60*24)), 0);
     if (this.diarias.length > 0 && this.quantidadeDiarias > 0) {
       this.diariaAplicada = this.diarias.filter(d => d.quantidade <= this.quantidadeDiarias).sort((a,b) => b.quantidade - a.quantidade)[0] || this.diarias[0];
@@ -928,8 +974,8 @@ ngOnDestroy(): void {
     }
     const payload = {
       clienteId: cliente.id,
-      dataCheckin: new Date(this.reserva.dataCheckin).toISOString(),
-      dataCheckout: new Date(this.reserva.dataCheckout).toISOString()
+      dataCheckin: new Date(this.reserva.dataCheckin.replace('T', ' ')).toISOString(),
+      dataCheckout: new Date(this.reserva.dataCheckout.replace('T', ' ')).toISOString()
     };
     this.http.post<any>('/api/reservas/validar-hospede', payload).subscribe({
       next: (resposta) => {
@@ -995,7 +1041,7 @@ ngOnDestroy(): void {
   if (!this.validarFormulario()) return;
 
   // ✅ VERIFICAR SE CHECKIN É ANTES DAS 12H
-  const checkin = new Date(this.reserva.dataCheckin);
+  const checkin = new Date(this.reserva.dataCheckin.replace('T', ' '));
   const horaCheckin = checkin.getHours();
   const hoje = new Date().toISOString().split('T')[0];
   const checkinData = checkin.toISOString().split('T')[0];
@@ -1100,8 +1146,8 @@ private enviarReserva(fmt: Function): void {
     clienteId: Number(this.reserva.clienteId),
     apartamentoId: Number(this.reserva.apartamentoId),
     quantidadeHospede: Number(this.reserva.quantidadeHospede),
-    dataCheckin: fmt(new Date(this.reserva.dataCheckin)),
-    dataCheckout: fmt(new Date(this.reserva.dataCheckout)),
+    dataCheckin: fmt(new Date(this.reserva.dataCheckin.replace('T', ' '))),
+    dataCheckout: fmt(new Date(this.reserva.dataCheckout.replace('T', ' '))),
     hospedes: this.hospedes,
     hospedesAdicionaisIds: this.hospedes.slice(1)
       .filter((h: any) => h.clienteId)
@@ -1132,7 +1178,7 @@ private enviarReserva(fmt: Function): void {
     if (this.hospedes.length === 0) { this.errorMessage = 'Adicione pelo menos 1 hóspede'; return false; }
     if (!this.reserva.dataCheckin) { this.errorMessage = 'Data de check-in é obrigatória'; return false; }
     if (!this.reserva.dataCheckout) { this.errorMessage = 'Data de check-out é obrigatória'; return false; }
-    if (new Date(this.reserva.dataCheckout) <= new Date(this.reserva.dataCheckin)) { this.errorMessage = 'Check-out deve ser posterior ao check-in'; return false; }
+    if (new Date(this.reserva.dataCheckout.replace('T', ' ')) <= new Date(this.reserva.dataCheckin.replace('T', ' '))) { this.errorMessage = 'Check-out deve ser posterior ao check-in'; return false; }
     return true;
   }
 
@@ -1291,20 +1337,7 @@ get cpfNovoHospedeInvalido(): boolean {
   const nums = cpf.replace(/\D/g, '');
   return nums.length === 11 && !this.validarCPF(cpf);
 }
-   preencherClientePorFace(clienteId: number): void {
-  this.http.get<any>(`/api/clientes/${clienteId}`).subscribe({
-    next: (cliente: any) => {  // ← 'any' explícito resolve o TS7006
-      if (this.reserva.dataCheckin && this.reserva.dataCheckout) {
-        this.selecionarCliente(cliente);
-      } else {
-        this.adicionarClientePrincipal(cliente);
-        this.mostrarBannerAviso('✅ Cliente reconhecido! Preencha as datas para continuar.');
-      }
-    },
-    error: () => console.error('Erro ao buscar cliente por ID')
-  });
-}
- 
+  
   voltar(): void {
     if (this.origem === 'painel-recepcao') this.router.navigate(['/painel-recepcao']);
     else if (this.voltarParaMapa) this.router.navigate(['/reservas/mapa']);
