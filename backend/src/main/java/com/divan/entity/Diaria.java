@@ -12,6 +12,7 @@ import java.util.Objects;
 
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.EnumType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "diarias", uniqueConstraints = @UniqueConstraint(columnNames = {"tipo_apartamento_id", "quantidade"}))
@@ -37,7 +38,7 @@ public class Diaria {
     private BigDecimal valor;
     
     @OneToMany(mappedBy = "diaria", cascade = CascadeType.ALL)
-    @JsonIgnoreProperties("diaria")
+    @JsonIgnore
     private List<Reserva> reservas;
     
     @Column(name = "modalidade", length = 20)

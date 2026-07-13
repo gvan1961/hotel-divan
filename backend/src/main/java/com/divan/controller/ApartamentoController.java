@@ -479,7 +479,13 @@ public class ApartamentoController {
                                
               
                 if (!reservasAtivas.isEmpty()) {
-                    Reserva r = reservasAtivas.get(0);
+                	Reserva r = reservasAtivas.stream()
+                		    .sorted((a, b) -> {
+                		        if (a.getStatus() == Reserva.StatusReservaEnum.ATIVA && b.getStatus() != Reserva.StatusReservaEnum.ATIVA) return -1;
+                		        if (b.getStatus() == Reserva.StatusReservaEnum.ATIVA && a.getStatus() != Reserva.StatusReservaEnum.ATIVA) return 1;
+                		        return 0;
+                		    })
+                		    .findFirst().get();
                     LocalDate checkin  = r.getDataCheckin().toLocalDate();
                     LocalDate checkout = r.getDataCheckout().toLocalDate();
                     boolean saiHoje   = checkout.isEqual(hoje);
@@ -506,7 +512,7 @@ public class ApartamentoController {
                     if (r.getStatus() == Reserva.StatusReservaEnum.ATIVA
                             && !todasPreReservas.isEmpty()) {
                         Reserva proxima = todasPreReservas.stream()
-                            .filter(p -> p.getDataCheckin().toLocalDate().isAfter(hoje))
+                        	.filter(p -> !p.getDataCheckin().toLocalDate().isBefore(hoje))
                             .min(Comparator.comparing(Reserva::getDataCheckin))
                             .orElse(null);
 

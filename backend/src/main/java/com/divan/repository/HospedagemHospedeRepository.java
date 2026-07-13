@@ -70,5 +70,7 @@ public interface HospedagemHospedeRepository extends JpaRepository<HospedagemHos
     	    @Param("ignorarReservaId") Long ignorarReservaId
     	);
 
+    	@Query("SELECT h FROM HospedagemHospede h WHERE h.reserva.id = :reservaId ORDER BY h.titular DESC, h.id ASC")
+    	List<HospedagemHospede> findByReservaIdOrdenado(@Param("reservaId") Long reservaId);
     
 }

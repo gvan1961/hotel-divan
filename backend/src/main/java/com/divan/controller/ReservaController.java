@@ -168,7 +168,7 @@ public class ReservaController {
        
     @GetMapping
     public ResponseEntity<List<ReservaResponseDTO>> listarTodas() {
-        List<ReservaResponseDTO> reservas = reservaService.listarTodasDTO();
+    	List<ReservaResponseDTO> reservas = reservaService.listarPorStatusDTO(Reserva.StatusReservaEnum.ATIVA);
         return ResponseEntity.ok(reservas);
     }
         
@@ -781,7 +781,7 @@ public class ReservaController {
     @GetMapping("/{id}/hospedes")
     public ResponseEntity<?> listarHospedes(@PathVariable Long id) {
         try {
-            List<HospedagemHospede> hospedes = hospedagemHospedeRepository.findByReservaId(id);
+        	List<HospedagemHospede> hospedes = hospedagemHospedeRepository.findByReservaIdOrdenado(id);
             List<Map<String, Object>> resultado = hospedes.stream().map(h -> {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id", h.getId());

@@ -459,7 +459,7 @@ public class ReservaService {
      // ✅ ADICIONAR CLIENTE TITULAR COMO HÓSPEDE APENAS SE RESERVA ATIVA
      // PRÉ-RESERVA: titular será adicionado somente ao ativar o check-in      
                         
-        if (salva.getStatus() == Reserva.StatusReservaEnum.ATIVA) {
+      //  if (salva.getStatus() == Reserva.StatusReservaEnum.ATIVA) {
             HospedagemHospede hospedeTitular = new HospedagemHospede();
             hospedeTitular.setReserva(salva);
             hospedeTitular.setCliente(reserva.getCliente());
@@ -467,7 +467,7 @@ public class ReservaService {
             hospedeTitular.setStatus(HospedagemHospede.StatusEnum.HOSPEDADO);
             hospedeTitular.setDataHoraEntrada(LocalDateTime.now());
             hospedagemHospedeRepository.save(hospedeTitular);
-        }
+       // }
 
         
         System.out.println("✅ Titular adicionado: " + reserva.getCliente().getNome() +

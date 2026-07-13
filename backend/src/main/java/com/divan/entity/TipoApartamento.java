@@ -1,11 +1,13 @@
 package com.divan.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 
 import java.util.List;
 import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "tipos_apartamento")
@@ -25,7 +27,7 @@ public class TipoApartamento {
     private String descricao;
     
     @OneToMany(mappedBy = "tipoApartamento", cascade = CascadeType.ALL)
-    @JsonIgnoreProperties("tipoApartamento")
+    @JsonIgnore
     private List<Apartamento> apartamentos;
     
     @OneToMany(mappedBy = "tipoApartamento", cascade = CascadeType.ALL)

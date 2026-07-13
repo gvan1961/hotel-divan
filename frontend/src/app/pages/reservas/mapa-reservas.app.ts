@@ -149,14 +149,29 @@ interface ApartamentoMapa {
             [class.hoje]="isHoje(data)"
             (click)="clicarCelula(apt, data)">
           
-          <div class="celula-reserva" 
-               [class]="getClasseReserva(apt, data)"
-               [title]="getTituloReserva(apt, data)">
-            
-            <span class="reserva-info" *ngIf="getReservaInfo(apt, data)">
-              {{ getReservaInfo(apt, data) }}
-            </span>
-          </div>
+          <div class="celula-reserva"
+     [class]="getClasseReserva(apt, data)"
+     [title]="getTituloReserva(apt, data)"
+     [style.position]="'relative'">
+  <span class="reserva-info" *ngIf="getReservaInfo(apt, data)">
+    {{ getReservaInfo(apt, data) }}
+  </span>
+
+  <!-- DIAGONAL NO ÚLTIMO DIA DA RESERVA -->
+  <ng-container *ngIf="isUltimoDiaReserva(apt, data)">
+    <svg class="diagonal-checkout"
+         xmlns="http://www.w3.org/2000/svg"
+         style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">
+      <line x1="0" y1="0" x2="100%" y2="100%"
+            stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+    </svg>
+    <button class="btn-pre-reserva-checkout"
+            title="Criar pré-reserva a partir deste checkout"
+            (click)="criarPreReservaNoCheckout(apt, data, $event)">
+      +
+    </button>
+  </ng-container>
+</div>
         </td>
       </ng-container>
     </ng-container>
@@ -1387,6 +1402,41 @@ td.col-reserva.hoje {
   z-index: 10;
 }
 
+.diagonal-checkout {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.btn-pre-reserva-checkout {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  background: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.btn-pre-reserva-checkout:hover {
+  background: #1e8449;
+}
+
 `]
 })
 export class MapaReservasApp implements OnInit {
@@ -2382,6 +2432,40 @@ buscarPorNumeroReserva(): void {
 limparBuscaReserva(): void {
   this.buscaNumeroReserva = null;
   this.reservaDestacadaId = null;
+}
+
+isUltimoDiaReserva(apt: ApartamentoMapa, data: string): boolean {
+  const chave = `${apt.id}-${data}`;
+  const reserva = this.mapaReservas.get(chave);
+  if (!reserva || reserva.status !== 'ATIVA') return false;
+
+  // Pega a data do próximo dia
+  const dataAtual = new Date(data + 'T00:00:00');
+  const proximoDia = new Date(dataAtual);
+  proximoDia.setDate(proximoDia.getDate() + 1);
+  const proximoDiaStr = proximoDia.toISOString().split('T')[0];
+
+  // Verifica se o próximo dia NÃO tem a mesma reserva (ou seja, hoje é o último dia)
+  const chaveProximoDia = `${apt.id}-${proximoDiaStr}`;
+  const reservaProximoDia = this.mapaReservas.get(chaveProximoDia);
+
+  return !reservaProximoDia || reservaProximoDia.id !== reserva.id;
+}
+
+criarPreReservaNoCheckout(apt: ApartamentoMapa, data: string, event: Event): void {
+  event.stopPropagation();
+  // Checkout é o dia seguinte ao último dia ocupado
+  const dataCheckout = new Date(data + 'T00:00:00');
+  dataCheckout.setDate(dataCheckout.getDate() + 1);
+  const dataCheckinNovaReserva = dataCheckout.toISOString().split('T')[0];
+
+  this.router.navigate(['/reservas/novo'], {
+    queryParams: {
+      apartamentoId: apt.id,
+      dataCheckin: dataCheckinNovaReserva,
+      origem: 'mapa-reservas'
+    }
+  });
 }
   
   voltar(): void {    
