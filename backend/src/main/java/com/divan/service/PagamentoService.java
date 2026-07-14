@@ -234,6 +234,43 @@ public class PagamentoService {
             reservaRepository.save(reserva);
         }
     }
+    
+    public Pagamento estornarPagamento(Long reservaId, BigDecimal valor, String motivo) {
+        Reserva reserva = reservaRepository.findById(reservaId)
+            .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+
+        if (valor.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Valor do estorno deve ser maior que zero");
+        }
+
+        // ✅ Registra o estorno como um Pagamento negativo (mesma tabela, mesmo histórico)
+        Pagamento estorno = new Pagamento();
+        estorno.setReserva(reserva);
+        estorno.setValor(valor.negate());
+        estorno.setFormaPagamento(Pagamento.FormaPagamentoEnum.ESTORNO);
+        estorno.setObservacao(motivo);
+        estorno.setTipo(Pagamento.TipoPagamentoEnum.PAGAMENTO);
+        estorno.setDataHoraPagamento(LocalDateTime.now());
+
+        Pagamento estornoSalvo = pagamentoRepository.save(estorno);
+
+        // ✅ Reduz totalRecebido (inverso de um pagamento normal)
+        atualizarTotalRecebidoReserva(reserva.getId(), valor.negate());
+
+        // ✅ Lançamento no extrato, visível na tela de detalhe
+        ExtratoReserva extrato = new ExtratoReserva();
+        extrato.setReserva(reserva);
+        extrato.setDataHoraLancamento(LocalDateTime.now());
+        extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
+        extrato.setTotalLancamento(valor);
+        extrato.setValorUnitario(valor);
+        extrato.setQuantidade(1);
+        extrato.setDescricao("ESTORNO DE PAGAMENTO: " + motivo);
+        extratoRepository.save(extrato);
+        System.out.println("✅ Estorno de pagamento: R$ " + valor + " — Motivo: " + motivo);
+
+        return estornoSalvo;
+    }
 
     private void criarExtratoPagamento(Pagamento pagamento) {
         ExtratoReserva extrato = new ExtratoReserva();

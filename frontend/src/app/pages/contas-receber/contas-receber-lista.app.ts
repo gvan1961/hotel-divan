@@ -162,8 +162,8 @@ interface FiltrosAvancados {
               </td>
             
               <td class="datas">
-                <div>✅ {{ formatarData(conta.reserva?.dataCheckin) }}</div>
-                <div>📤 {{ formatarData(conta.reserva?.dataCheckout) }}</div>
+                <div>✅ {{ formatarData(conta.dataCheckin) }}</div>
+                <div>📤 {{ formatarData(conta.dataCheckout) }}</div>
               </td>
               <td class="saldo">R$ {{ conta.saldo | number:'1.2-2' }}</td>
               <td>
@@ -1219,65 +1219,22 @@ ngOnInit(): void {
   carregarDados(): void {
     this.loading = true;
 
-    this.contaReceberService.listarTodas().subscribe({
+this.contaReceberService.listarTodas().subscribe({
   next: (contas) => {
     this.contas = contas;
 
-    this.http.get<any[]>('/api/reservas').subscribe({
-      next: (reservas) => {
-        this.reservas = reservas;
-
-        this.contas.forEach(conta => {
-          const reserva = reservas.find(r => r.id === conta.reservaId);
-          if (reserva) {
-            (conta as any).reserva = reserva;
-            if (!(conta as any).numeroApartamento) {
-              (conta as any).numeroApartamento = reserva.apartamento?.numeroApartamento || '-';
-            }
-            (conta as any).quantidadeHospede = reserva.quantidadeHospede;
-            (conta as any).quantidadeDiaria = reserva.quantidadeDiaria;
-            (conta as any).totalDiaria = reserva.totalDiaria;
-            (conta as any).dataCheckin = reserva.dataCheckin;
-            (conta as any).dataCheckout = reserva.dataCheckout;
-            (conta as any).totalConsumo = Math.max(0, (reserva.totalHospedagem || 0) - (reserva.totalDiaria || 0));
-            (conta as any).totalHospedagem = reserva.totalHospedagem;
-            (conta as any).totalRecebido = conta.totalRecebido || conta.valorPago || 0;
-            (conta as any).pagoAVista = conta.pagoAVista || 0;
-            (conta as any).desconto = conta.desconto || reserva.desconto || 0;
-            (conta as any).totalApagar = conta.saldo;
-          } else {
-            (conta as any).reserva = null;
-            (conta as any).numeroApartamento = '-';
-            (conta as any).quantidadeHospede = '-';
-            (conta as any).quantidadeDiaria = '-';
-            (conta as any).totalDiaria = 0;
-            (conta as any).totalConsumo = conta.valor;
-            (conta as any).totalHospedagem = conta.valor;
-            (conta as any).totalRecebido = conta.valorPago;
-            (conta as any).pagoAVista = conta.pagoAVista || 0;
-            (conta as any).desconto = 0;
-            (conta as any).totalApagar = conta.saldo;
-          }
-        });
-
-        // ✅ Extrai clientes únicos das contas
-       const clientesMap = new Map<string, any>();
-this.contas.forEach((conta: any) => {
-  if (conta.clienteNome && !clientesMap.has(conta.clienteNome)) {
-    clientesMap.set(conta.clienteNome, { id: conta.reservaId, nome: conta.clienteNome });
-  }
-});
-this.clientes = Array.from(clientesMap.values())
-  .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-
-        this.aplicarFiltros();
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error('❌ Erro ao carregar reservas:', err);
-        this.loading = false;
+    // ✅ Extrai clientes únicos das contas
+    const clientesMap = new Map<string, any>();
+    this.contas.forEach((conta: any) => {
+      if (conta.clienteNome && !clientesMap.has(conta.clienteNome)) {
+        clientesMap.set(conta.clienteNome, { id: conta.reservaId, nome: conta.clienteNome });
       }
     });
+    this.clientes = Array.from(clientesMap.values())
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+    this.aplicarFiltros();
+    this.loading = false;
   },
   error: (err) => {
     console.error('❌ Erro ao carregar contas:', err);
@@ -1345,22 +1302,22 @@ this.clientes = Array.from(clientesMap.values())
   }
 }
 
-    if (this.filtrosAplicados.dataCheckInInicio && this.filtrosAplicados.dataCheckInFim) {
-      resultado = resultado.filter(c => {
-        const reserva = (c as any).reserva;
-        if (!reserva) return false;
-        const dataCheckin = new Date(reserva.dataCheckin).toISOString().split('T')[0];
-        return dataCheckin >= this.filtrosAplicados.dataCheckInInicio! &&
-               dataCheckin <= this.filtrosAplicados.dataCheckInFim!;
-      });
-    }
+   if (this.filtrosAplicados.dataCheckInInicio && this.filtrosAplicados.dataCheckInFim) {
+  resultado = resultado.filter(c => {
+    const dataCheckinRaw = (c as any).dataCheckin;
+    if (!dataCheckinRaw) return false;
+    const dataCheckin = new Date(dataCheckinRaw).toISOString().split('T')[0];
+    return dataCheckin >= this.filtrosAplicados.dataCheckInInicio! &&
+           dataCheckin <= this.filtrosAplicados.dataCheckInFim!;
+  });
+}
 
     if (this.filtrosAplicados.dataCheckOutInicio && this.filtrosAplicados.dataCheckOutFim) {
-      resultado = resultado.filter(c => {
-        const reserva = (c as any).reserva;
-        if (!reserva) return false;
-        const dataCheckout = new Date(reserva.dataCheckout).toISOString().split('T')[0];
-        return dataCheckout >= this.filtrosAplicados.dataCheckOutInicio! &&
+  resultado = resultado.filter(c => {
+    const dataCheckoutRaw = (c as any).dataCheckout;
+    if (!dataCheckoutRaw) return false;
+    const dataCheckout = new Date(dataCheckoutRaw).toISOString().split('T')[0];
+    return dataCheckout >= this.filtrosAplicados.dataCheckOutInicio! &&
                dataCheckout <= this.filtrosAplicados.dataCheckOutFim!;
       });
     }
@@ -1525,22 +1482,21 @@ limparClienteFiltro(): void {
 
   // ========== IMPRIMIR FATURA INDIVIDUAL ==========
 
-  imprimirFatura(conta: ContaAReceber): void {
-  const reserva = (conta as any).reserva;
-  if (!reserva) {
+ imprimirFatura(conta: ContaAReceber): void {
+  const reservaId = (conta as any).reservaId;
+  if (!reservaId) {
     alert('Esta conta não possui reserva vinculada.');
     return;
   }
 
-  // Buscar detalhes + assinatura em paralelo
-  this.http.get<any>(`/api/reservas/${reserva.id}`).subscribe({
+  this.http.get<any>(`/api/reservas/${reservaId}`).subscribe({
     next: (detalhes) => {
-      this.http.get<any>(`/api/reservas/${reserva.id}/assinatura`).subscribe({
+     this.http.get<any>(`/api/reservas/${reservaId}/assinatura`).subscribe({
         next: (resp) => this.gerarHTMLFatura(conta, detalhes, resp?.assinatura || null),
         error: () => this.gerarHTMLFatura(conta, detalhes, null)
       });
     },
-    error: () => this.gerarHTMLFatura(conta, reserva, null)
+    error: () => this.gerarHTMLFatura(conta, null, null)
   });
 }
 
@@ -1588,8 +1544,10 @@ const linhasExtrato = extratosSemPagamento.length > 0 ? `
         <meta charset="UTF-8">
         <title>Fatura - Reserva #${reserva.id}</title>
         <style>
-          @page { size: 80mm auto; margin: 0; }
-          body { font-family: 'Courier New', monospace; font-size: 10px; width: 80mm; margin: 0; padding: 5mm; }
+           * { font-weight: bold !important; }
+           @page { size: 80mm auto; margin: 0; }
+           body { font-family: 'Courier New', monospace; font-size: 10px; width: 80mm; margin: 0; padding: 5mm; }
+           body { font-family: 'Courier New', monospace; font-size: 11px; width: 80mm; margin: 0; padding: 5mm; font-weight: bold; }
           .cabecalho { text-align: left; margin-bottom: 8px; }
           .cabecalho h1 { font-size: 14px; margin: 0; letter-spacing: 2px; }
           .cnpj, .endereco { font-size: 9px; margin: 2px 0; }
@@ -1897,8 +1855,8 @@ const linhasExtrato = extratosSemPagamento.length > 0 ? `
     return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).totalApagar || 0), 0);
   }
 
-  temReserva(conta: ContaAReceber): boolean {
-  return !!(conta as any).reserva;
+ temReserva(conta: ContaAReceber): boolean {
+  return !!(conta as any).reservaId;
 }
 
 darBaixaEmLote(): void {

@@ -746,18 +746,31 @@ public class ReservaController {
             int novaQuantidade = reserva.getQuantidadeHospede() + 1;
 
             // ✅ CALCULAR INÍCIO DA DIFERENÇA
+          
+            
+            
             LocalDateTime agora = LocalDateTime.now(ZoneId.of("America/Fortaleza"));
             LocalDate hoje = agora.toLocalDate();
 
-            // Verifica se há diária retroativa lançada hoje antes do meio-dia
-            boolean ehDiaCheckin = reserva.getDataCheckin().toLocalDate().isEqual(hoje);
-            boolean temDiariaHoje = extratoReservaRepository
-                .findByReservaId(id)
-                .stream()
-                .anyMatch(e -> e.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
-                            && e.getDataHoraLancamento().toLocalDate().equals(hoje));
+            LocalDate inicioDiferenca;
 
-            LocalDate inicioDiferenca = (ehDiaCheckin || temDiariaHoje) ? hoje : hoje.plusDays(1);
+            if (reserva.getStatus() == Reserva.StatusReservaEnum.PRE_RESERVA) {
+                // ✅ Pré-reserva: usa a data real de início da estadia, não "hoje"
+                int horaCheckin = reserva.getDataCheckin().getHour();
+                inicioDiferenca = horaCheckin < 12
+                    ? reserva.getDataCheckin().toLocalDate().minusDays(1)
+                    : reserva.getDataCheckin().toLocalDate();
+            } else {
+                boolean ehDiaCheckin = reserva.getDataCheckin().toLocalDate().isEqual(hoje);
+                boolean temDiariaHoje = extratoReservaRepository
+                    .findByReservaId(id)
+                    .stream()
+                    .anyMatch(e -> e.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
+                                && e.getDataHoraLancamento().toLocalDate().equals(hoje));
+
+                inicioDiferenca = (ehDiaCheckin || temDiariaHoje) ? hoje : hoje.plusDays(1);
+            }
+
 
             // ✅ AJUSTAR DIÁRIAS CENTRALIZADAMENTE
             reservaService.ajustarDiariasPorQuantidadeHospedes(
@@ -848,28 +861,17 @@ public class ReservaController {
             Reserva reserva = reservaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
 
-            LocalDateTime agora = LocalDateTime.now();
-            int horaAtual = agora.getHour();
-
-            // ✅ MARCAR CHECKOUT DO HÓSPEDE
-            hospede.setStatus(HospedagemHospede.StatusEnum.CHECKOUT_REALIZADO);
-            hospede.setDataHoraSaida(agora);
-            hospedagemHospedeRepository.save(hospede);
-
-            // ✅ GERAR BILHETES DO SORTEIO
-            List<BilheteSorteio> bilhetes = sorteioService.gerarBilhetesCheckout(hospede);
-            System.out.println("🎟️ Bilhetes gerados: " + bilhetes.size());
-
-            // ✅ NOVA QUANTIDADE
+            // ✅ NOVA QUANTIDADE (comum aos dois caminhos)
             int novaQuantidade = reserva.getQuantidadeHospede() - 1;
             if (novaQuantidade < 1) novaQuantidade = 1;
 
-            // ✅ PROMOVER PRÓXIMO TITULAR SE NECESSÁRIO
+            // ✅ PROMOVER PRÓXIMO TITULAR SE NECESSÁRIO (comum aos dois caminhos)
+            HospedagemHospede.StatusEnum statusAtivoParaBusca = HospedagemHospede.StatusEnum.HOSPEDADO;
             if (hospede.isTitular()) {
                 List<HospedagemHospede> hospedes = hospedagemHospedeRepository.findByReservaId(id);
                 HospedagemHospede proximo = hospedes.stream()
                     .filter(h -> !h.getId().equals(hospedagemHospedeId))
-                    .filter(h -> h.getStatus() == HospedagemHospede.StatusEnum.HOSPEDADO)
+                    .filter(h -> h.getStatus() == statusAtivoParaBusca)
                     .findFirst()
                     .orElse(null);
 
@@ -880,33 +882,75 @@ public class ReservaController {
                 }
             }
 
-            // ✅ CALCULAR INÍCIO DA DIFERENÇA (antes/após 12h)
-            LocalDate inicioDiferenca;
-            if (horaAtual < 12) {
-                inicioDiferenca = agora.toLocalDate();
-                System.out.println("⏰ Saída antes das 12h — recalcula a partir de HOJE");
+            List<Map<String, Object>> bilhetesResposta = new java.util.ArrayList<>();
+
+            if (reserva.getStatus() == Reserva.StatusReservaEnum.PRE_RESERVA) {
+                // ═══════════════════════════════════════════════
+                // ✅ CAMINHO PRÉ-RESERVA — remove hóspede, sem bilhete, sem "checkout"
+                // ═══════════════════════════════════════════════
+                hospede.setStatus(HospedagemHospede.StatusEnum.REMOVIDO);
+                hospede.setDataHoraSaida(LocalDateTime.now());
+                hospedagemHospedeRepository.save(hospede);
+
+                // ✅ Início da diferença = data REAL de check-in da pré-reserva (não "agora")
+                int horaCheckin = reserva.getDataCheckin().getHour();
+                LocalDate inicioDiferenca = horaCheckin < 12
+                    ? reserva.getDataCheckin().toLocalDate().minusDays(1)
+                    : reserva.getDataCheckin().toLocalDate();
+
+                reservaService.ajustarDiariasPorQuantidadeHospedes(
+                    reserva,
+                    novaQuantidade,
+                    inicioDiferenca,
+                    "Ajuste por remoção de hóspede da pré-reserva: "
+                );
+
             } else {
-                inicioDiferenca = agora.toLocalDate().plusDays(1);
-                System.out.println("⏰ Saída após as 12h — recalcula a partir de AMANHÃ");
-            }
+                // ═══════════════════════════════════════════════
+                // ✅ CAMINHO RESERVA ATIVA — comportamento original, sem alterações
+                // ═══════════════════════════════════════════════
+                hospede.setStatus(HospedagemHospede.StatusEnum.CHECKOUT_REALIZADO);
+                hospede.setDataHoraSaida(LocalDateTime.now());
+                hospedagemHospedeRepository.save(hospede);
 
-            // ✅ AJUSTAR DIÁRIAS CENTRALIZADAMENTE
-            reservaService.ajustarDiariasPorQuantidadeHospedes(
-                reserva,
-                novaQuantidade,
-                inicioDiferenca,
-                "Ajuste checkout parcial: "
-            );
-
-            return ResponseEntity.ok(Map.of(
-                "mensagem", "Checkout parcial realizado com sucesso",
-                "novaQuantidadeHospedes", novaQuantidade,
-                "bilhetesGerados", bilhetes.stream()
-                    .map(b -> Map.of(
+                List<BilheteSorteio> bilhetes = sorteioService.gerarBilhetesCheckout(hospede);
+                System.out.println("🎟️ Bilhetes gerados: " + bilhetes.size());
+                bilhetesResposta = bilhetes.stream()
+                    .map(b -> Map.<String, Object>of(
                         "numeroBilhete", b.getNumeroBilhete(),
                         "clienteNome", b.getHospedagemHospede().getCliente().getNome()
                     ))
-                    .collect(java.util.stream.Collectors.toList())
+                    .collect(java.util.stream.Collectors.toList());
+
+                LocalDateTime agora = LocalDateTime.now();
+                int horaAtual = agora.getHour();
+                LocalDate inicioDiferenca;
+                if (horaAtual < 12) {
+                    inicioDiferenca = agora.toLocalDate();
+                    System.out.println("⏰ Saída antes das 12h — recalcula a partir de HOJE");
+                } else {
+                    inicioDiferenca = agora.toLocalDate().plusDays(1);
+                    System.out.println("⏰ Saída após as 12h — recalcula a partir de AMANHÃ");
+                }
+
+                reservaService.ajustarDiariasPorQuantidadeHospedes(
+                    reserva,
+                    novaQuantidade,
+                    inicioDiferenca,
+                    "Ajuste checkout parcial: "
+                );
+            }
+
+            // ✅ Recarrega a reserva pra pegar o saldo já recalculado
+            Reserva reservaAtualizada = reservaRepository.findById(id).orElseThrow();
+            boolean geraCredito = reservaAtualizada.getTotalApagar().compareTo(BigDecimal.ZERO) < 0;
+
+            return ResponseEntity.ok(Map.of(
+                "mensagem", "Operação realizada com sucesso",
+                "novaQuantidadeHospedes", novaQuantidade,
+                "bilhetesGerados", bilhetesResposta,
+                "geraCredito", geraCredito,
+                "valorCredito", geraCredito ? reservaAtualizada.getTotalApagar().abs() : BigDecimal.ZERO
             ));
 
         } catch (Exception e) {

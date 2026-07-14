@@ -339,6 +339,8 @@ public class ContaAReceberService {
         Reserva reserva = conta.getReserva();
         if (reserva != null) {
             dto.setNumeroApartamento(reserva.getApartamento() != null ? reserva.getApartamento().getNumeroApartamento() : null);
+            dto.setDataCheckin(reserva.getDataCheckin() != null ? reserva.getDataCheckin().toLocalDate() : null);
+            dto.setDataCheckout(reserva.getDataCheckout() != null ? reserva.getDataCheckout().toLocalDate() : null);
             dto.setQuantidadeHospede(reserva.getQuantidadeHospede());
             dto.setQuantidadeDiaria(reserva.getQuantidadeDiaria());
             dto.setTotalDiaria(reserva.getTotalDiaria());

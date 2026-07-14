@@ -48,7 +48,8 @@ public class HospedagemHospede {
 
     public enum StatusEnum {
         HOSPEDADO,
-        CHECKOUT_REALIZADO
+        CHECKOUT_REALIZADO,
+        REMOVIDO
     }
 
     // ============= GETTERS E SETTERS =============

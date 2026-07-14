@@ -17,12 +17,8 @@ export interface ContaAReceber {
   descricao: string;
   diasVencido: number;
   pagoAVista?: number;
-  reserva?: {
-    id: number;
-    dataCheckin: string;
-    dataCheckout: string;
-    clienteNome: string;
-  };
+  dataCheckin?: string;
+  dataCheckout?: string;
   numeroApartamento?: string;
   quantidadeHospede?: number;
   quantidadeDiaria?: number;

@@ -238,4 +238,36 @@ public class PagamentoController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    @PostMapping("/estornar")
+    public ResponseEntity<?> estornarPagamento(@RequestBody Map<String, Object> body) {
+        try {
+            Long reservaId = Long.parseLong(body.get("reservaId").toString());
+            BigDecimal valor = new BigDecimal(body.get("valor").toString());
+            String motivo = body.containsKey("motivo") ? body.get("motivo").toString() : "Estorno de pagamento";
+
+            // ✅ Verifica caixa aberto (mesmo padrão do pagamento normal)
+            String login = SecurityContextHolder.getContext().getAuthentication().getName();
+            var usuarioOpt = usuarioRepository.findByUsername(login);
+            if (usuarioOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Usuário não encontrado"));
+            }
+
+            Long usuarioId = usuarioOpt.get().getId();
+            boolean caixaAberto = caixaRepository
+                .findByUsuarioIdAndStatus(usuarioId, FechamentoCaixa.StatusCaixa.ABERTO)
+                .isPresent();
+
+            if (!caixaAberto) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("erro", "Caixa não aberto. Abra o caixa antes de registrar estornos."));
+            }
+
+            Pagamento estorno = pagamentoService.estornarPagamento(reservaId, valor, motivo);
+            return ResponseEntity.status(HttpStatus.CREATED).body(estorno);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
 }

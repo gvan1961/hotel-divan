@@ -12,6 +12,7 @@ import { Diaria } from '../../models/diaria.model';
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
+import { HostListener } from '@angular/core';
 
 
 @Component({
@@ -1337,11 +1338,26 @@ get cpfNovoHospedeInvalido(): boolean {
   const nums = cpf.replace(/\D/g, '');
   return nums.length === 11 && !this.validarCPF(cpf);
 }
+
+temDadosNaoSalvos(): boolean {
+  return !!this.clienteSelecionado || this.hospedes.length > 0;
+}
+
+@HostListener('window:beforeunload', ['$event'])
+avisarSaidaComDados(event: BeforeUnloadEvent): void {
+  if (this.temDadosNaoSalvos()) {
+    event.preventDefault();
+  }
+}
   
   voltar(): void {
-    if (this.origem === 'painel-recepcao') this.router.navigate(['/painel-recepcao']);
-    else if (this.voltarParaMapa) this.router.navigate(['/reservas/mapa']);
-    else this.router.navigate(['/reservas']);
+  if (this.temDadosNaoSalvos()) {
+    const confirmar = confirm('⚠️ Existem dados preenchidos que serão perdidos. Deseja realmente sair sem criar a reserva?');
+    if (!confirmar) return;
   }
+  if (this.origem === 'painel-recepcao') this.router.navigate(['/painel-recepcao']);
+  else if (this.voltarParaMapa) this.router.navigate(['/reservas/mapa']);
+  else this.router.navigate(['/reservas']);
+}
 }
 

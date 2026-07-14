@@ -421,12 +421,12 @@ import { environment } from '../../../environments/environment';
 
     
             <button 
-              *ngIf="reserva.status === 'ATIVA'"
-              type="button"
-              class="btn-adicionar-hospede"
-              (click)="abrirModalAdicionarHospede()">
-              ➕ Adicionar Hóspede
-            </button>
+  *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
+  type="button"
+  class="btn-adicionar-hospede"
+  (click)="abrirModalAdicionarHospede()">
+  ➕ Adicionar Hóspede
+</button>
           </div>          
 
           <div class="lista-hospedes">
@@ -478,11 +478,11 @@ import { environment } from '../../../environments/environment';
                 </div>
               </div>
               <div class="hospede-acoes" 
-                  *ngIf="reserva.status === 'ATIVA' && hospede.status !== 'CHECKOUT_REALIZADO'">
+                  *ngIf="(reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA') && hospede.status !== 'CHECKOUT_REALIZADO'">
                <button
   type="button"
   class="btn-acao-hospede btn-transferir-hospede"
-  *ngIf="hospede.status !== 'CHECKOUT_REALIZADO'"
+  *ngIf="reserva.status === 'ATIVA' && hospede.status !== 'CHECKOUT_REALIZADO'"
   (click)="abrirModalTransferirHospede(hospede)"
   title="Transferir para outro apartamento">
   🔄

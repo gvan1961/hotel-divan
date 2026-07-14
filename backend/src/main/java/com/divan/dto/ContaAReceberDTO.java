@@ -30,6 +30,11 @@ public class ContaAReceberDTO {
     private BigDecimal desconto;
     private BigDecimal totalApagar;
     private BigDecimal pagoAVista;
+    
+    private LocalDate dataCheckin;
+    private LocalDate dataCheckout;
+    
+    
 	public Long getId() {
 		return id;
 	}
@@ -168,5 +173,19 @@ public class ContaAReceberDTO {
 	public void setPagoAVista(BigDecimal pagoAVista) {
 		this.pagoAVista = pagoAVista;
 	}
+	public LocalDate getDataCheckin() {
+		return dataCheckin;
+	}
+	public void setDataCheckin(LocalDate dataCheckin) {
+		this.dataCheckin = dataCheckin;
+	}
+	public LocalDate getDataCheckout() {
+		return dataCheckout;
+	}
+	public void setDataCheckout(LocalDate dataCheckout) {
+		this.dataCheckout = dataCheckout;
+	}
+	
+	
     	    
 }

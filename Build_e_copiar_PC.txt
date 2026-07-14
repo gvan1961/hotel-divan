@@ -1,3 +1,6 @@
+Tipo batch para o Notebook no powerShell 
+deploy.ps1 . Como acessar no powerShell :  .\deploy.ps1
+
 cd C:\spanggit\backend
 .\mvnw clean package -DskipTests
 
@@ -10,20 +13,39 @@ xcopy frontend\dist\divan\browser D:\deploy\browser\ /E /I /Y
 
 Get-ChildItem D:\deploy\
 
-sudo systemctl stop hotel-divan && sudo cp /media/div/AL-8U-8/deploy/hotel-divan-1.0.0.jar /home/div/hotel-divan/backend/ && sudo cp -r /media/div/AL-8U-8/deploy/browser/* /home/div/hotel-divan/frontend/dist/divan/browser/ && sudo systemctl start hotel-divan
+sudo systemctl stop hotel-divan && sudo cp /media/div/AL-8U-8/deploy/hotel-divan-1.0.0.jar /home/div/hotel-divan/backend/ && sudo 
+cp -r /media/div/AL-8U-8/deploy/browser/* /home/div/hotel-divan/frontend/dist/divan/browser/ && sudo systemctl start hotel-divan
 
 sudo systemctl status hotel-divan 
 
 BUILD E GRAVAÇÃO.
  usar o banco no PC   ssh : mysql -u root -p bancodivan
 
-Commitcd..cd..
-cd..
+Commit cd..
 
-cd..
-cd..
+
+
 
 cd C:\spanggit
 git add .
 git commit -m "feat: apartamento em contas a receber, assinatura mais grossa, negrito label assinatura fatura, busca clientes todas paginas"
 git push origin main
+
+Manuel no ssh :
+sudo systemctl stop hotel-divan
+sudo rm -rf /home/div/hotel-divan/frontend/dist/divan/browser/*
+sudo cp /media/div/844B-2A76/deploy/hotel-divan-1.0.0.jar /home/div/hotel-divan/backend/
+sudo cp -r /media/div/844B-2A76/deploy/browser/* /home/div/hotel-divan/frontend/dist/divan/browser/
+sudo systemctl start hotel-divan
+sudo systemctl reload nginx
+
+sudo systemctl status hotel-divan
+
+
+Novo sistema de deploy :
+Fazer no GIT bash
+
+cd /c/SpAngGit
+./deploy.sh
+
+usar muitas vezes a senha : hT@divan

@@ -37,6 +37,7 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
             FROM clientes c
             LEFT JOIN empresas e ON c.empresa_id = e.id
             WHERE MATCH(c.nome) AGAINST(:termo IN BOOLEAN MODE)
+            ORDER BY c.nome ASC
             LIMIT 20
             """, nativeQuery = true)
         List<Object[]> buscarPorNomeFull(@Param("termo") String termo);

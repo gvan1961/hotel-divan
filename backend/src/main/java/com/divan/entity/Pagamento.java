@@ -44,7 +44,7 @@ public class Pagamento {
     private TipoPagamentoEnum tipo = TipoPagamentoEnum.PAGAMENTO;
 
     public enum FormaPagamentoEnum {
-        ESCOLHA, DINHEIRO, PIX, CARTAO_DEBITO, CARTAO_CREDITO, 
+        ESCOLHA, DINHEIRO, PIX, CARTAO_DEBITO, CARTAO_CREDITO, ESTORNO,
         TRANSFERENCIA_BANCARIA, FATURADO, LINK_PIX, LINK_CARTAO, DEBITO_EM_CONTA  
     }
 
