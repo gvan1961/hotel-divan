@@ -7,6 +7,9 @@ import { HttpClient } from '@angular/common/http';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { ExportService } from '../../services/export.service';
+import { forkJoin, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+
 
 interface FiltrosAvancados {
   empresaId?: number;
@@ -129,10 +132,15 @@ interface FiltrosAvancados {
       <!-- TABELA -->
       <div *ngIf="!loading" class="tabela-container no-print">
         <div class="tabela-header">
-          <h3>📋 Resultados ({{ contasFiltradas.length }})</h3>
-          <button class="btn-imprimir" (click)="imprimirRelatorio()" *ngIf="contasFiltradas.length > 0">
-            🖨️ Imprimir
-          </button>
+          
+       <h3>📋 Resultados ({{ contasFiltradas.length }})</h3>
+<button class="btn-imprimir" (click)="imprimirRelatorio()" *ngIf="contasFiltradas.length > 0">
+  🖨️ Imprimir
+</button>
+<button class="btn-imprimir" (click)="imprimirTodasFaturas()"
+        *ngIf="(filtrosAplicados.empresaId || filtrosAplicados.clienteNome) && contasComFaturaImprimivel().length > 0">
+  🖨️ Imprimir Todas as Faturas ({{ contasComFaturaImprimivel().length }})
+</button>
         </div>
 
         <table class="tabela">
@@ -162,8 +170,8 @@ interface FiltrosAvancados {
               </td>
             
               <td class="datas">
-                <div>✅ {{ formatarData(conta.dataCheckin) }}</div>
-                <div>📤 {{ formatarData(conta.dataCheckout) }}</div>
+               <div>✅ {{ formatarData(conta.dataCheckin) }}</div>
+               <div>📤 {{ formatarData(conta.dataCheckout) }}</div>
               </td>
               <td class="saldo">R$ {{ conta.saldo | number:'1.2-2' }}</td>
               <td>
@@ -1703,6 +1711,255 @@ const linhasExtrato = extratosSemPagamento.length > 0 ? `
     if (!valor) return '0,00';
     return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
+
+
+  //========Imprimir faturas individuais por empresa ou pessoa 
+
+  contasComFaturaImprimivel(): ContaAReceber[] {
+  return this.contasFiltradas.filter(c => this.temReserva(c));
+}
+
+imprimirTodasFaturas(): void {
+  const contasComReserva = this.contasComFaturaImprimivel();
+
+  if (contasComReserva.length === 0) {
+    alert('⚠️ Nenhuma das contas filtradas possui reserva vinculada para impressão.');
+    return;
+  }
+
+  const confirmar = confirm(`🖨️ Imprimir ${contasComReserva.length} fatura(s)?\n\nIsso pode levar alguns segundos.`);
+  if (!confirmar) return;
+
+  const requisicoes = contasComReserva.map(conta => {
+    const reservaId = (conta as any).reservaId;
+    return forkJoin({
+      detalhes: this.http.get<any>(`/api/reservas/${reservaId}`).pipe(
+        catchError(() => of(null))
+      ),
+      assinatura: this.http.get<any>(`/api/reservas/${reservaId}/assinatura`).pipe(
+        map((resp: any) => resp?.assinatura || null),
+        catchError(() => of(null))
+      )
+    });
+  });
+
+  forkJoin(requisicoes).subscribe({
+    next: (resultados: any[]) => {
+      const blocos: string[] = [];
+      resultados.forEach((r, i) => {
+        if (r.detalhes) {
+          blocos.push(this.montarBlocoFaturaHTML(contasComReserva[i], r.detalhes, r.assinatura));
+        }
+      });
+
+      if (blocos.length === 0) {
+        alert('❌ Não foi possível carregar nenhuma fatura.');
+        return;
+      }
+
+      if (blocos.length < contasComReserva.length) {
+        alert(`⚠️ ${contasComReserva.length - blocos.length} fatura(s) não puderam ser carregadas e foram ignoradas.`);
+      }
+
+      this.abrirImpressaoLote(blocos);
+    },
+    error: (err) => {
+      alert('❌ Erro ao carregar faturas: ' + (err.error?.erro || err.message));
+    }
+  });
+}
+
+private montarBlocoFaturaHTML(conta: ContaAReceber, reserva: any, assinatura: string | null): string {
+  const extratos: any[] = reserva.extratos || [];
+
+  const totalDiaria = (conta as any).totalDiaria || 0;
+  const totalConsumo = (conta as any).totalConsumo || 0;
+  const desconto = (conta as any).desconto || 0;
+  const totalHospedagem = (conta as any).totalHospedagem || 0;
+  const pagoAVista = (conta as any).pagoAVista || conta.pagoAVista || 0;
+  const saldo = conta.saldo || 0;
+
+  const extratosSemPagamento = extratos.filter(e =>
+    e.statusLancamento !== 'PAGAMENTO' && e.statusLancamento !== 'ADIANTAMENTO'
+  );
+
+  const linhasExtrato = extratosSemPagamento.length > 0 ? `
+    <div class="separador">- - - - - - - - - - - - - - - -</div>
+    <div class="secao">
+      <h3>CONSUMO DETALHADO</h3>
+      ${extratosSemPagamento.map(e => `
+        <div class="linha-valor">
+          <span>${e.descricao} (${e.quantidade || 1}x)</span>
+          <span>R$ ${this.fmt(e.totalLancamento)}</span>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
+
+  return `
+    <div class="cabecalho">
+      <h1>HOTEL DI VAN</h1>
+      <p class="cnpj">CNPJ: 07.757.726/0001-12</p>
+      <p class="endereco">Arapiraca - AL</p>
+      <div class="separador">================================</div>
+    </div>
+
+    <div class="titulo-documento">
+      <h2>${conta.status === 'PAGA' ? 'RECIBO DE PAGAMENTO' : 'FATURA - PAGAMENTO FATURADO'}</h2>
+      <p class="numero-reserva">Reserva Nº ${reserva.id}</p>
+      <p class="data-emissao">Emitida em: ${new Date().toLocaleString('pt-BR')}</p>
+      <p class="data-emissao">Status: ${this.obterTextoStatus(conta.status)}</p>
+    </div>
+
+    <div class="separador">================================</div>
+
+    <div class="secao">
+      <h3>DADOS DO HÓSPEDE</h3>
+      <p><strong>Nome:</strong> ${conta.clienteNome}</p>
+      ${conta.empresaNome ? `<p><strong>Empresa:</strong> ${conta.empresaNome}</p>` : ''}
+    </div>
+
+    <div class="separador">- - - - - - - - - - - - - - - -</div>
+
+    <div class="secao">
+      <h3>PERÍODO DA HOSPEDAGEM</h3>
+      <p><strong>Apartamento:</strong> ${(conta as any).numeroApartamento || '-'}</p>
+      <p><strong>Check-in:</strong> ${this.formatarData(reserva.dataCheckin)}</p>
+      <p><strong>Check-out:</strong> ${this.formatarData(reserva.dataCheckout)}</p>
+      <p><strong>Diárias:</strong> ${(conta as any).quantidadeDiaria || '-'}</p>
+      <p><strong>Hóspedes:</strong> ${(conta as any).quantidadeHospede || '-'}</p>
+    </div>
+
+    <div class="separador">================================</div>
+
+    <div class="secao">
+      <h3>DISCRIMINAÇÃO DE VALORES</h3>
+      <div class="linha-valor">
+        <span>Diárias (${(conta as any).quantidadeDiaria || 0}x):</span>
+        <span>R$ ${this.fmt(totalDiaria)}</span>
+      </div>
+      ${totalConsumo > 0 ? `
+      <div class="linha-valor">
+        <span>Consumo:</span>
+        <span>R$ ${this.fmt(totalConsumo)}</span>
+      </div>` : ''}
+      ${desconto > 0 ? `
+      <div class="linha-valor">
+        <span>Desconto:</span>
+        <span>- R$ ${this.fmt(desconto)}</span>
+      </div>` : ''}
+      <div class="separador">- - - - - - - - - - - - - - - -</div>
+      <div class="linha-valor subtotal">
+        <span>Total Hospedagem:</span>
+        <span>R$ ${this.fmt(totalHospedagem)}</span>
+      </div>
+
+      ${pagoAVista > 0 ? `
+      <div class="linha-valor">
+        <span>Pago à Vista:</span>
+        <span>R$ ${this.fmt(pagoAVista)}</span>
+      </div>` : ''}
+
+      <div class="separador">================================</div>
+      <div class="linha-valor total">
+        <span>SALDO A PAGAR:</span>
+        <span>R$ ${this.fmt(saldo)}</span>
+      </div>
+    </div>
+
+    ${linhasExtrato}
+
+    <div class="destaque-apagar">
+      <p style="margin:0;font-size:10px;font-weight:bold;">
+        SALDO A PAGAR: R$ ${this.fmt(saldo)}
+      </p>
+    </div>
+
+    <div class="separador">================================</div>
+
+    ${conta.status === 'PAGA' ? `
+      <div class="declaracao">
+        <p>Recebemos do(a) Sr(a). ${conta.clienteNome}</p>
+        <p>a importância de</p>
+        <p><strong>R$ ${this.fmt(totalHospedagem)}</strong></p>
+        <p>referente à hospedagem no período citado.</p>
+        <p>Pagamento em: ${new Date().toLocaleDateString('pt-BR')}</p>
+      </div>
+    ` : `
+      <div class="declaracao">
+        <p>O(A) Sr(a). ${conta.clienteNome}</p>
+        <p>deverá pagar a importância de</p>
+        <p><strong>R$ ${this.fmt(saldo)}</strong></p>
+        <p>referente à hospedagem no período citado.</p>
+        <p>Vencimento: ${this.formatarData(conta.dataVencimento)}</p>
+      </div>
+    `}
+
+    <div class="assinatura">
+      ${assinatura ? `
+        <img src="${assinatura}" style="max-width:200px; max-height:80px; display:block; margin:0 auto;">
+      ` : `
+        <div class="linha-assinatura"></div>
+      `}
+      <p class="label-assinatura">Assinatura do Hóspede</p>
+      <div class="linha-assinatura"></div>
+      <p class="label-assinatura">Hotel Di Van</p>
+      <p class="label-assinatura">Data: ${new Date().toLocaleDateString('pt-BR')}</p>
+    </div>
+  `;
+}
+
+private abrirImpressaoLote(blocos: string[]): void {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Faturas em Lote</title>
+      <style>
+        @page { size: 80mm auto; margin: 0; }
+        body { font-family: 'Courier New', monospace; font-size: 10px; width: 80mm; margin: 0; padding: 0; }
+        .fatura-bloco { padding: 5mm; page-break-after: always; }
+        .fatura-bloco:last-child { page-break-after: auto; }
+        .cabecalho { text-align: left; margin-bottom: 8px; }
+        .cabecalho h1 { font-size: 14px; margin: 0; letter-spacing: 2px; }
+        .cnpj, .endereco { font-size: 9px; margin: 2px 0; }
+        .separador { text-align: center; margin: 6px 0; }
+        .titulo-documento h2 { font-size: 11px; margin: 0; }
+        .numero-reserva { font-size: 10px; font-weight: bold; margin: 4px 0; }
+        .data-emissao { font-size: 8px; margin: 2px 0; }
+        .secao { margin: 8px 0; }
+        .secao h3 { font-size: 10px; margin: 0 0 6px 0; text-decoration: underline; }
+        .secao p { margin: 3px 0; font-size: 9px; }
+        .linha-valor { display: flex; justify-content: space-between; margin: 4px 0; font-size: 9px; }
+        .linha-valor.subtotal { font-weight: bold; margin-top: 6px; }
+        .linha-valor.total { font-size: 11px; font-weight: bold; margin: 6px 0; }
+        .destaque-apagar { background: #000; color: #fff; padding: 6px; text-align: center; margin: 8px 0; }
+        .declaracao { margin: 12px 0; font-size: 9px; }
+        .declaracao p { margin: 2px 0; }
+        .assinatura { margin-top: 15px; text-align: center; }
+        .linha-assinatura { border-top: 1px solid #000; margin: 12px 15px 4px 15px; }
+        .label-assinatura { font-size: 8px; margin: 2px 0; }
+      </style>
+    </head>
+    <body>
+      ${blocos.map(b => `<div class="fatura-bloco">${b}</div>`).join('')}
+      <script>
+        window.onload = function() {
+          window.print();
+          window.onafterprint = function() { window.close(); };
+        };
+      </script>
+    </body>
+    </html>
+  `;
+
+  const janela = window.open('', '_blank', 'width=800,height=600');
+  if (janela) {
+    janela.document.write(html);
+    janela.document.close();
+  }
+}
 
   // ========== MODAL CRIAR ==========
 

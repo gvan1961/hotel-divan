@@ -717,28 +717,30 @@ novoHospedeForm: any = {
       this.apartamentoNumeroViaMapa = params['apartamentoNumero'];
     }
 
+    
+    
+
     // ✅ Pega data de check-in vinda do mapa
     if (params['dataCheckin']) {
-      this.checkinData = params['dataCheckin'];
-      this.checkinHora = '14';
-      this.checkinMinuto = '00';
+  this.checkinData = params['dataCheckin'];
+  this.checkinHora = '14';
+  this.checkinMinuto = '00';
 
-      this.montarDataCheckin();
+  // ✅ Monta a data de checkin SEM disparar busca prematura (evita corrida de requisições)
+  this.reserva.dataCheckin = `${this.checkinData}T${this.checkinHora}:${this.checkinMinuto}`;
 
-      const dataCheckout = new Date(params['dataCheckin'] + 'T14:00:00');
-      dataCheckout.setDate(dataCheckout.getDate() + 1);
-      dataCheckout.setHours(12, 0, 0, 0);
+  const dataCheckout = new Date(params['dataCheckin'] + 'T14:00:00');
+  dataCheckout.setDate(dataCheckout.getDate() + 1);
+  dataCheckout.setHours(12, 0, 0, 0);
 
-      this.reserva.dataCheckout = this.formatDateTimeLocal(dataCheckout);
-    }
-
-    // ✅ Sem delay artificial
-    this.carregarApartamentos();
-  });
+  this.reserva.dataCheckout = this.formatDateTimeLocal(dataCheckout);
 }
 
+// ✅ Única chamada, com checkin e checkout já corretos
+this.carregarApartamentos();
 
-
+  });
+}
 ngOnDestroy(): void {
   
 }
@@ -806,10 +808,12 @@ ngOnDestroy(): void {
   carregarApartamentos(): void {
     if (!this.reserva.dataCheckin || !this.reserva.dataCheckout) { this.apartamentos = []; return; }
     const url = `/api/apartamentos/disponiveis?dataInicio=${this.reserva.dataCheckin}:00&dataFim=${this.reserva.dataCheckout}:00`;
-    this.http.get<any[]>(url).subscribe({
-      next: (data) => {
-        this.apartamentos = data.sort((a,b) => (parseInt(a.numeroApartamento)||0) - (parseInt(b.numeroApartamento)||0));
-        this.route.queryParams.subscribe(params => {
+    
+   this.http.get<any[]>(url).subscribe({
+  next: (data) => {
+    this.apartamentos = data.sort((a,b) => (parseInt(a.numeroApartamento)||0) - (parseInt(b.numeroApartamento)||0));
+    this.route.queryParams.subscribe(params => {
+
           if (params['apartamentoId']) {
             const aptId = Number(params['apartamentoId']);
             const disponivel = this.apartamentos.find(a => a.id === aptId);

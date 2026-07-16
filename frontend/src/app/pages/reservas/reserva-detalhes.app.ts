@@ -477,12 +477,13 @@ import { environment } from '../../../environments/environment';
                   </small>
                 </div>
               </div>
+
               <div class="hospede-acoes" 
-                  *ngIf="(reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA') && hospede.status !== 'CHECKOUT_REALIZADO'">
+                  *ngIf="reserva.status === 'ATIVA' && hospede.status !== 'CHECKOUT_REALIZADO'">
                <button
   type="button"
   class="btn-acao-hospede btn-transferir-hospede"
-  *ngIf="reserva.status === 'ATIVA' && hospede.status !== 'CHECKOUT_REALIZADO'"
+  *ngIf="hospede.status !== 'CHECKOUT_REALIZADO'"
   (click)="abrirModalTransferirHospede(hospede)"
   title="Transferir para outro apartamento">
   🔄
@@ -581,6 +582,12 @@ import { environment } from '../../../environments/environment';
         *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) <= 0"
         (click)="finalizarCheckout()">
   💚 CheckOut
+</button>
+
+<button class="btn-acao btn-assinar-fatura"
+  *ngIf="reserva.status === 'ATIVA' && temDebitoSemAssinatura()"
+  (click)="reabrirAssinatura()">
+  ✍️ Assinar Fatura
 </button>
 
 </ng-container>
@@ -979,7 +986,9 @@ import { environment } from '../../../environments/environment';
             </div>
             <div class="modal-footer">
               <button class="btn-cancelar-modal" (click)="fecharModalPagamento()">Cancelar</button>
-              <button class="btn-confirmar" (click)="salvarPagamento()">Confirmar Pagamento</button>
+              <button class="btn-confirmar" (click)="salvarPagamento()" [disabled]="salvandoPagamento">
+                 {{ salvandoPagamento ? '⏳ Processando...' : 'Confirmar Pagamento' }}
+              </button>
             </div>
           </div>
         </div>
@@ -1016,7 +1025,9 @@ import { environment } from '../../../environments/environment';
             
             <div class="modal-footer">
               <button class="btn-cancelar-modal" (click)="fecharModalAdiantamento()">Cancelar</button>
-              <button class="btn-confirmar" (click)="salvarAdiantamento()">💵 Confirmar Adiantamento</button>
+             <button class="btn-confirmar" (click)="salvarAdiantamento()" [disabled]="salvandoAdiantamento">
+                {{ salvandoAdiantamento ? '⏳ Processando...' : '💵 Confirmar Adiantamento' }}
+             </button> 
             </div>
           </div>
         </div>
@@ -2041,6 +2052,12 @@ import { environment } from '../../../environments/environment';
     display: block; /* ✅ garante visibilidade */
   }
 
+     .btn-assinar-fatura {
+       background-color: #e67e22;
+       color: white;
+       display: block;
+      }
+
       .btn-recibo {
         background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
         color: white;
@@ -3039,6 +3056,10 @@ motivoCancelamento = '';
 modalCheckoutAntecipado = false;
 novaDataCheckoutAntecipado = '';
 
+salvandoPagamento = false;
+salvandoAdiantamento = false;
+
+reservaTemAssinatura = false;
   
 get podeCancelar(): boolean {
   const status = this.reserva?.status;
@@ -3103,6 +3124,20 @@ ngOnDestroy(): void {
     .filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
     .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
   this.pagoAVistaParaRecibo = Math.max(0, (data.totalRecebido || 0) - debitoEmConta);
+
+  this.pagoAVistaParaRecibo = Math.max(0, (data.totalRecebido || 0) - debitoEmConta);
+
+// ← ADICIONAR: verificar assinatura se tem débito em conta
+if (debitoEmConta > 0) {
+  this.http.get<any>(`/api/reservas/${data.id}/assinatura`).subscribe({
+    next: (res) => {
+      this.assinaturaCapturada = res?.assinatura || null;
+    },
+    error: () => {
+      this.assinaturaCapturada = null;
+    }
+  });
+}
       
       // ✅ DEBUG AUDITORIA
       console.log('🔍 AUDITORIA:', {
@@ -4101,6 +4136,9 @@ gerarHtmlFatura(valorTotal: number, valorPago: number, saldo: number): void {
 
       console.log('📦 DTO preparado:', dto);
 
+      if (this.salvandoPagamento) return; // ✅ Bloqueia clique duplo
+       this.salvandoPagamento = true;
+
       const url = `/api/pagamentos?usuarioId=${usuarioId}`;
       console.log('🌐 URL da requisição:', url);
 
@@ -4108,6 +4146,7 @@ gerarHtmlFatura(valorTotal: number, valorPago: number, saldo: number): void {
 
 
       next: (response: any) => {
+        this.salvandoPagamento = false;
   if (this.pagFormaPagamento === 'DEBITO_EM_CONTA') {
     this.pagouDebitoEmConta = true;
     this.valorDebitoEmConta = this.pagValor;
@@ -4130,6 +4169,7 @@ gerarHtmlFatura(valorTotal: number, valorPago: number, saldo: number): void {
 },
 
         error: (err: any) => {
+          this.salvandoPagamento = false;
           console.log('═══════════════════════════════════════════');
           console.error('❌ ERRO AO REGISTRAR PAGAMENTO');
           console.log('═══════════════════════════════════════════');
@@ -4226,8 +4266,12 @@ salvarAdiantamento(): void {
 
   console.log('📦 DTO preparado:', dto);
 
+  if (this.salvandoAdiantamento) return; // ✅ Bloqueia clique duplo
+    this.salvandoAdiantamento = true;
+
   this.http.post('/api/pagamentos/adiantamento', dto).subscribe({
     next: (response: any) => {
+      this.salvandoAdiantamento = false;
       console.log('✅ Adiantamento registrado:', response);
       alert('✅ Adiantamento registrado com sucesso!');
       this.fecharModalAdiantamento();
@@ -4236,6 +4280,7 @@ salvarAdiantamento(): void {
       }
     },
     error: (err: any) => {
+      this.salvandoAdiantamento = false;
       console.error('❌ Erro ao registrar adiantamento:', err);
 
       let mensagemErro = 'Erro ao registrar adiantamento';
@@ -4540,6 +4585,11 @@ gerarFaturaComAssinatura(assinatura: string | null): void {
       error: (err) => console.error('❌ Erro ao salvar assinatura:', err)
     });
   }
+
+  reabrirAssinatura(): void {
+  this.assinaturaCapturada = null;
+  this.modalAssinatura = true;
+}
 
   // ✅ CANCELAR MODAL DE ASSINATURA
   cancelarAssinatura(): void {
@@ -5178,45 +5228,91 @@ gerarFaturaComAssinatura(assinatura: string | null): void {
   }
 
   confirmarCheckoutParcial(): void {
-    if (!this.reserva || !this.hospedeParaCheckout) return;
-    
-    if (!this.motivoCheckoutParcial || this.motivoCheckoutParcial.trim() === '') {
-      alert('⚠️ Informe o motivo do checkout');
-      return;
-    }
-    
-    const dto = {
-      hospedagemHospedeId: this.hospedeParaCheckout.id,
-      dataHoraSaida: null, // null = agora
-      motivo: this.motivoCheckoutParcial
-    };
-    
-    console.log('🚪 Enviando checkout parcial:', dto);
-    
-    this.reservaService.checkoutParcial(this.reserva.id, dto).subscribe({
-     next: (response: any) => {
-  const mensagem = this.hospedeParaCheckout.titular
-    ? '✅ Checkout do titular realizado!\n\nO próximo hóspede foi promovido a titular.'
-    : '✅ Checkout realizado com sucesso!';
+  if (!this.reserva || !this.hospedeParaCheckout) return;
   
-  alert(mensagem + '\n\nQuantidade de hóspedes atualizada: ' + response.novaQuantidadeHospedes);
-
-  // ✅ IMPRIMIR BILHETES DO CHECKOUT PARCIAL
-  if (response.bilhetesGerados && response.bilhetesGerados.length > 0) {
-    const imprimir = confirm(`🎟️ ${response.bilhetesGerados.length} bilhete(s) gerado(s)! Deseja imprimir?`);
-    if (imprimir) this.imprimirBilhetes(response.bilhetesGerados);
+  if (!this.motivoCheckoutParcial || this.motivoCheckoutParcial.trim() === '') {
+    alert('⚠️ Informe o motivo do checkout');
+    return;
   }
+  
+  const dto = {
+    hospedagemHospedeId: this.hospedeParaCheckout.id,
+    dataHoraSaida: null,
+    motivo: this.motivoCheckoutParcial
+  };
+  
+  console.log('🚪 Enviando checkout parcial:', dto);
+  
+  this.reservaService.checkoutParcial(this.reserva.id, dto).subscribe({
+    next: (response: any) => {
+      const mensagem = this.hospedeParaCheckout.titular
+        ? '✅ Checkout do titular realizado!\n\nO próximo hóspede foi promovido a titular.'
+        : '✅ Checkout realizado com sucesso!';
+      
+      alert(mensagem + '\n\nQuantidade de hóspedes atualizada: ' + response.novaQuantidadeHospedes);
 
-  this.fecharModalCheckoutParcial();
-  this.carregarReserva(this.reserva!.id);
-},
-      error: (err: any) => {
-        console.error('❌ Erro no checkout parcial:', err);
-        const erro = err.error?.erro || err.error?.message || err.message || 'Erro desconhecido';
-        alert('❌ Erro ao fazer checkout: ' + erro);
+      if (response.bilhetesGerados && response.bilhetesGerados.length > 0) {
+        const imprimir = confirm(`🎟️ ${response.bilhetesGerados.length} bilhete(s) gerado(s)! Deseja imprimir?`);
+        if (imprimir) this.imprimirBilhetes(response.bilhetesGerados);
       }
-    });
+
+      this.fecharModalCheckoutParcial();
+      this.carregarReserva(this.reserva!.id);
+
+      // ✅ VERIFICA SE A REMOÇÃO GEROU CRÉDITO A FAVOR DO CLIENTE
+      if (response.geraCredito && response.valorCredito > 0) {
+        this.tratarCreditoAposRemocao(response.valorCredito);
+      }
+    },
+    error: (err: any) => {
+      console.error('❌ Erro no checkout parcial:', err);
+      const erro = err.error?.erro || err.error?.message || err.message || 'Erro desconhecido';
+      alert('❌ Erro ao fazer checkout: ' + erro);
+    }
+  });
+}
+
+tratarCreditoAposRemocao(valorCredito: number): void {
+  const valorFormatado = valorCredito.toFixed(2).replace('.', ',');
+  const registrarAgora = confirm(
+    `⚠️ Essa exclusão gerou um crédito de R$ ${valorFormatado} a favor do cliente.\n\n` +
+    `Deseja registrar o estorno agora?`
+  );
+
+  if (!registrarAgora) return;
+
+  const valorDigitado = prompt(
+    `Valor a estornar (R$):`,
+    valorCredito.toFixed(2)
+  );
+  if (!valorDigitado) return;
+
+  const valor = parseFloat(valorDigitado.replace(',', '.'));
+  if (isNaN(valor) || valor <= 0) {
+    alert('⚠️ Valor inválido.');
+    return;
   }
+
+  const motivo = prompt('Motivo do estorno:', 'Crédito gerado por exclusão de hóspede da pré-reserva');
+  if (!motivo || motivo.trim() === '') {
+    alert('⚠️ Informe o motivo do estorno.');
+    return;
+  }
+
+  this.http.post('/api/pagamentos/estornar', {
+    reservaId: this.reserva!.id,
+    valor: valor,
+    motivo: motivo
+  }).subscribe({
+    next: () => {
+      alert('✅ Estorno registrado com sucesso!');
+      this.carregarReserva(this.reserva!.id);
+    },
+    error: (err: any) => {
+      alert('❌ Erro ao registrar estorno: ' + (err.error?.erro || err.message));
+    }
+  });
+}
 
   abrirModalTransferirHospede(hospede: any): void {
     if (!hospede) {
@@ -6512,6 +6608,15 @@ onPagValorInput(event: any): void {
   this.pagValor = valor;
   this.pagValorTexto = valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   event.target.value = this.pagValorTexto;
+}
+
+temDebitoSemAssinatura(): boolean {
+  if (!this.reserva) return false;
+  const extratos = (this.reserva as any).extratos || [];
+  const temDebito = extratos.some((e: any) =>
+    e.descricao?.includes('DEBITO EM CONTA')
+  );
+  return temDebito && !this.assinaturaCapturada;
 }
 
 onPagValorFocus(event: any): void {
