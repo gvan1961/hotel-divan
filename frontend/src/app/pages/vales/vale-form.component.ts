@@ -432,13 +432,36 @@ import { SignaturePadComponent } from '../../components/signature-pad/signature-
     }
 
     .modal-content {
-      background: white;
-      border-radius: 12px;
-      padding: 0;
-      max-width: 600px;
-      width: 90%;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.modal-content.modal-assinatura {
+  max-width: 98vw;
+  width: 98vw;
+  height: 95vh;
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-content.modal-assinatura .modal-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-content.modal-assinatura app-signature-pad {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
 
     .modal-header {
       display: flex;

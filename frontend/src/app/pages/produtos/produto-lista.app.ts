@@ -577,27 +577,44 @@ export class ProdutoListaApp implements OnInit {
           </div>
         `;
 
-        produtos.forEach((produto: Produto) => {
+const comEstoque = produtos.filter((p: Produto) => Number(p.quantidade) > 0);
+const semEstoque = produtos.filter((p: Produto) => Number(p.quantidade) <= 0);
+
+comEstoque.forEach((produto: Produto) => {
+  html += `
+    <div class="produto-item">
+      <div class="produto-nome">${produto.nomeProduto}</div>
+      <table style="width:100%; border-collapse:collapse; font-size:11px; margin-top:3px;">
+        <tr>
+          <td style="padding:1px 0; width:20mm;">Estoque:</td>
+          <td style="font-weight:bold; padding:1px 0; width:15mm;">${produto.quantidade}</td>
+          <td style="padding:1px 0; width:22mm;">Conferido:</td>
+          <td style="border-bottom:1px solid #000; width:15mm; padding:1px 0;">&nbsp;</td>
+        </tr>
+      </table>
+    </div>
+  `;
+});
+
+if (semEstoque.length > 0) {
+  html += `
+    <div style="margin: 8px 0 4px 0; text-align:center; font-size:10px; border-top: 1px dashed #000; padding-top:5px;">
+      ⚠ SEM ESTOQUE
+    </div>
+  `;
+  semEstoque.forEach((produto: Produto) => {
     html += `
-      <div class="produto-item">
-        <div class="produto-nome">${produto.nomeProduto}</div>
-        <table style="width:100%; border-collapse:collapse; font-size:11px; margin-top:3px;">
-          <tr>
-            <td style="padding:1px 0; width:20mm;">Estoque:</td>
-            <td style="font-weight:bold; padding:1px 0; width:15mm;">${produto.quantidade}</td>
-            <td style="padding:1px 0; width:22mm;">Conferido:</td>
-            <td style="border-bottom:1px solid #000; width:15mm; padding:1px 0;">&nbsp;</td>
-          </tr>
-        </table>
+      <div style="font-size:9pt; padding: 2px 0; border-bottom: 1px dotted #ccc;">
+        ${produto.nomeProduto}
       </div>
     `;
   });
+}
       }
-
-      html += `
-          <div class="total">
-            Total de Produtos: ${this.produtosFiltrados.length}
-          </div>
+html += `
+    <div class="total">
+      Total de Produtos: ${this.produtosFiltrados.length}
+    </div>
           
           <div class="rodape">
             <p>_____________________________</p>

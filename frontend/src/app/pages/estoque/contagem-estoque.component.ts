@@ -375,17 +375,34 @@ export class ContagemEstoqueComponent implements OnInit {
       minute: '2-digit'
     });
 
-    let linhasProdutos = '';
-    
-    produtos.forEach((produto) => {
-      linhasProdutos += `
-        <div class="produto-linha">
-          <div class="produto-nome">${produto.nomeProduto}</div>
-           <div class="produto-qtd">${produto.quantidade || 0}</div>
-        </div>
-      `;
-    });
+   let linhasProdutos = '';
 
+const comEstoque = produtos.filter(p => Number(p.quantidade) > 0);
+const semEstoque = produtos.filter(p => Number(p.quantidade) <= 0);
+
+comEstoque.forEach((produto) => {
+  linhasProdutos += `
+    <div class="produto-linha">
+      <div class="produto-nome">${produto.nomeProduto}</div>
+      <div class="produto-qtd">${produto.quantidade || 0}</div>
+    </div>
+  `;
+});
+
+if (semEstoque.length > 0) {
+  linhasProdutos += `
+    <div style="text-align:center; margin: 8px 0 4px 0; border-top: 1px dashed #000; padding-top:5px; font-size:10px; font-weight:bold;">
+      ⚠ SEM ESTOQUE
+    </div>
+  `;
+  semEstoque.forEach((produto) => {
+    linhasProdutos += `
+      <div class="produto-linha">
+        <div class="produto-nome">${produto.nomeProduto}</div>
+      </div>
+    `;
+  });
+}
     const htmlImpressao = `
           <!DOCTYPE html>
           <html>

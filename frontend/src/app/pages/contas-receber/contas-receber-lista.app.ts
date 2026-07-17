@@ -2108,9 +2108,9 @@ private abrirImpressaoLote(blocos: string[]): void {
   return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).desconto || 0), 0);
 }
 
-  calcularTotalGeralAPagar(): number {
-    return this.contasFiltradas.reduce((sum, c) => sum + ((c as any).totalApagar || 0), 0);
-  }
+calcularTotalGeralAPagar(): number {
+  return this.contasFiltradas.reduce((sum, c) => sum + (c.valor || 0), 0);
+}
 
  temReserva(conta: ContaAReceber): boolean {
   return !!(conta as any).reservaId;
