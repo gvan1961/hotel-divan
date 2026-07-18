@@ -91,9 +91,10 @@ public class ClienteService {
                 resultados = clienteRepository.buscarPorCpfParcialOuNome(
                     "%" + apenasNumeros + "%", termoLimpo + "*");
             } else {
-                resultados = clienteRepository.buscarPorNomeFull(termoLimpo + "*");
+            	resultados = clienteRepository.buscarPorNomeFull(termoLimpo);
             }
             System.out.println("✅ Resultados encontrados: " + resultados.size());
+          
             return resultados.stream().map(row -> {
                 ClienteResumoDTO dto = new ClienteResumoDTO();
                 dto.setId(((Number) row[0]).longValue());
@@ -114,7 +115,19 @@ public class ClienteService {
                     else if (faceAtivo instanceof Number) dto.setFaceAtivo(((Number) faceAtivo).intValue() == 1);
                 }
                 return dto;
-            }).collect(Collectors.toList());
+            })
+            .sorted((a, b) -> {
+                String termoLower = termoLimpo.toLowerCase();
+                boolean aComeca = a.getNome().toLowerCase().startsWith(termoLower);
+                boolean bComeca = b.getNome().toLowerCase().startsWith(termoLower);
+                if (aComeca && !bComeca) return -1;
+                if (!aComeca && bComeca) return 1;
+                return a.getNome().compareToIgnoreCase(b.getNome());
+            })
+            .limit(50)
+            .collect(Collectors.toList());
+        
+        
         } catch (Exception e) {
             System.err.println("❌ ERRO na busca: " + e.getMessage());
             e.printStackTrace();

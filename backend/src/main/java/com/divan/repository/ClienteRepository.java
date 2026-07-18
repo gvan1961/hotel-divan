@@ -36,11 +36,14 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
             SELECT c.id, c.nome, c.cpf, c.celular, e.nome_empresa, c.tipo_cliente, c.classificacao, c.fumante, c.face_ativo
             FROM clientes c
             LEFT JOIN empresas e ON c.empresa_id = e.id
-            WHERE MATCH(c.nome) AGAINST(:termo IN BOOLEAN MODE)
-            ORDER BY c.nome ASC
-            LIMIT 20
+            WHERE c.nome LIKE CONCAT(:termo, '%')
+               OR c.nome LIKE CONCAT('% ', :termo, '%')
+            ORDER BY 
+                CASE WHEN c.nome LIKE CONCAT(:termo, '%') THEN 0 ELSE 1 END,
+                c.nome ASC
+            LIMIT 100
             """, nativeQuery = true)
-        List<Object[]> buscarPorNomeFull(@Param("termo") String termo);
+    List<Object[]> buscarPorNomeFull(@Param("termo") String termo);
     	
     @EntityGraph(attributePaths = {"empresa", "responsavel"})
     Page<Cliente> findByNomeContainingIgnoreCaseOrCpfContaining(
@@ -52,7 +55,7 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     	    LEFT JOIN empresas e ON c.empresa_id = e.id
     	    WHERE c.cpf LIKE :cpf
     	       OR MATCH(c.nome) AGAINST(:nome IN BOOLEAN MODE)
-    	    LIMIT 20
+    	    LIMIT 100
     	    """, nativeQuery = true)
     	List<Object[]> buscarPorCpfOuNome(@Param("cpf") String cpf, @Param("nome") String nome);
     	
