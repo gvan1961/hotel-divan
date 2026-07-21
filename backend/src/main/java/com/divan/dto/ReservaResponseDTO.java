@@ -43,6 +43,7 @@ public class ReservaResponseDTO {
     private BigDecimal saldoAdiantamento = BigDecimal.ZERO;
     
     private Boolean faturada;
+    private String assinaturaBase64;
     
 	public Long getId() {
 		return id;
@@ -183,6 +184,12 @@ public class ReservaResponseDTO {
 		this.faturada = faturada;
 	}   
 	
+	public String getAssinaturaBase64() {
+	    return assinaturaBase64;
+	}
+	public void setAssinaturaBase64(String assinaturaBase64) {
+	    this.assinaturaBase64 = assinaturaBase64;
+	}
 	
 		        
 }
