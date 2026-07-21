@@ -3060,6 +3060,8 @@ salvandoPagamento = false;
 salvandoAdiantamento = false;
 
 reservaTemAssinatura = false;
+
+adicionandoHospede = false;
   
 get podeCancelar(): boolean {
   const status = this.reserva?.status;
@@ -3446,15 +3448,28 @@ if (debitoEmConta > 0) {
             <span>R$ ${this.formatarMoeda(this.reserva.totalDiaria)}</span>
           </div>
         </div>
-        <div class="separador">================================</div>
         <div class="assinatura">
-          <p class="texto-assinatura">Declaro estar ciente das condicoes</p>
-          <p class="texto-assinatura">da reserva e dos valores cobrados.</p>
-          <div class="linha-assinatura"></div>
-          <p class="label-assinatura">Assinatura do Hospede</p>
-          <div class="linha-assinatura"></div>
-          <p class="label-assinatura">Data: ____/____/________</p>
-        </div>
+  <p class="texto-assinatura">Declaro estar ciente das condicoes</p>
+  <p class="texto-assinatura">da reserva e dos valores cobrados.</p>
+  ${(this.reserva as any).assinaturaBase64 ? `
+    <div style="text-align:center; margin: 8px 0;">
+      <img src="${(this.reserva as any).assinaturaBase64}" 
+           style="max-width:100%; height:80px; border:1px solid #000;" />
+      <p style="font-weight:900 !important; font-size:10pt !important; margin:2px 0;">
+        <strong>ASSINADO DIGITALMENTE</strong>
+      </p>
+      <p style="font-weight:700 !important; font-size:9pt !important; margin:1px 0;">
+        <strong>${(this.reserva as any).dataAssinatura ? 
+          new Date((this.reserva as any).dataAssinatura).toLocaleString('pt-BR') : ''}</strong>
+      </p>
+    </div>
+  ` : `
+    <div class="linha-assinatura"></div>
+    <p class="label-assinatura">Assinatura do Hospede</p>
+    <div class="linha-assinatura"></div>
+    <p class="label-assinatura">Data: ____/____/________</p>
+  `}
+</div>
         <div class="rodape">
           <p>Obrigado pela preferencia!</p>
           <p>Tenha uma excelente estadia!</p>
@@ -5021,17 +5036,22 @@ gerarFaturaComAssinatura(assinatura: string | null): void {
         cadastrarNovo: false
       };
       
-      this.http.post(`/api/reservas/${this.reserva.id}/hospedes`, request).subscribe({
-        next: (response: any) => {
-          alert('✅ Hóspede adicionado com sucesso!');
-          this.fecharModalAdicionarHospede();
-          this.carregarReserva(this.reserva!.id);
-        },
-        error: (err) => {
-          const erro = err.error?.erro || 'Erro ao adicionar hóspede';
-          alert(`❌ ${erro}`);
-        }
-      });
+      if (this.adicionandoHospede) return;
+this.adicionandoHospede = true;
+
+this.http.post(`/api/reservas/${this.reserva.id}/hospedes`, request).subscribe({
+  next: (response: any) => {
+    alert('✅ Hóspede adicionado com sucesso!');
+    this.adicionandoHospede = false;
+    this.fecharModalAdicionarHospede();
+    this.carregarReserva(this.reserva!.id);
+  },
+  error: (err) => {
+    this.adicionandoHospede = false;
+    const erro = err.error?.erro || 'Erro ao adicionar hóspede';
+    alert(`❌ ${erro}`);
+  }
+});
     }
 
     buscarDetalhes(): void {
@@ -5789,11 +5809,23 @@ tratarCreditoAposRemocao(valorCredito: number): void {
           </div>
         `}
 
-        <div class="rodape">
-          <p>Este e um extrato parcial.</p>
-          <p>Valores sujeitos a alteracao ate o checkout.</p>
-          <p>Emitido em: ${this.dataAtualCompleta()}</p>
-        </div>
+        ${(this.reserva as any).assinaturaBase64 ? `
+  <div style="text-align:center; margin: 8px 0; border-top: 1px dashed #000; padding-top:6px;">
+    <p style="font-weight:900 !important; font-size:10pt !important; margin:2px 0;">
+      <strong>ASSINADO DIGITALMENTE</strong>
+    </p>
+    <img src="${(this.reserva as any).assinaturaBase64}" 
+         style="max-width:100%; height:80px; border:1px solid #000; margin:4px 0;" />
+    <p style="font-weight:900 !important; font-size:9pt !important; margin:1px 0;">
+     
+    </p>
+  </div>
+` : ''}
+<div class="rodape">
+  <p>Este e um extrato parcial.</p>
+  <p>Valores sujeitos a alteracao ate o checkout.</p>
+  <p>Emitido em: ${this.dataAtualCompleta()}</p>
+</div>
 
         <script>
           window.onload = function() {

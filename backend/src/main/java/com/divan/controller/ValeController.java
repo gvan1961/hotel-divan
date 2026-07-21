@@ -14,8 +14,12 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+
 
 @RestController
 @RequestMapping("/api/vales")
@@ -222,4 +226,39 @@ public class ValeController {
             System.err.println("⚠️ Erro ao notificar pagamento de vale: " + e.getMessage());
         }
     }
+    
+    @GetMapping("/relatorio")
+    public ResponseEntity<List<Vale>> relatorio(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long clienteId,
+            @RequestParam(required = false) String dataInicio,
+            @RequestParam(required = false) String dataFim) {
+
+        List<Vale> vales = valeRepository.findAll();
+
+        if (status != null && !status.isEmpty()) {
+            StatusVale s = StatusVale.valueOf(status);
+            vales = vales.stream().filter(v -> v.getStatus() == s).collect(Collectors.toList());
+        }
+        if (clienteId != null) {
+            vales = vales.stream().filter(v -> v.getCliente() != null && v.getCliente().getId().equals(clienteId)).collect(Collectors.toList());
+        }
+        if (dataInicio != null && !dataInicio.isEmpty()) {
+            LocalDate inicio = LocalDate.parse(dataInicio);
+            vales = vales.stream()
+                .filter(v -> v.getDataEmissao() != null && !v.getDataEmissao().toLocalDate().isBefore(inicio))
+                .collect(Collectors.toList());
+        }
+        if (dataFim != null && !dataFim.isEmpty()) {
+            LocalDate fim = LocalDate.parse(dataFim);
+            vales = vales.stream()
+                .filter(v -> v.getDataEmissao() != null && !v.getDataEmissao().toLocalDate().isAfter(fim))
+                .collect(Collectors.toList());
+        }
+
+        vales.sort(Comparator.comparing(v -> v.getClienteNome() != null ? v.getClienteNome() : ""));
+        return ResponseEntity.ok(vales);
+    }
+    
+    
 }

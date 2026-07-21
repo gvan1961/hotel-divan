@@ -66,6 +66,7 @@ import { PontoRelatorioApp } from './pages/ponto/ponto-relatorio.app';
 import { PontoFotoApp } from './pages/ponto/ponto-foto.app';
 import { roleGuard } from './guards/role.guard';
 import { PontoAjusteApp } from './pages/ponto/ponto-ajuste.app';
+import { ValeRelatorioComponent } from './pages/vales/vale-relatorio.component';
 
 
 export const routes: Routes = [
@@ -182,6 +183,7 @@ export const routes: Routes = [
       { path: 'vales/editar/:id', component: ValeFormComponent },
       { path: 'vales/imprimir/:id', component: ValeImpressaoComponent },
       { path: 'vales/assinar/:id', component: ValeAssinaturaComponent },
+      { path: 'vales/relatorio', component: ValeRelatorioComponent },
 
       { path: 'usuarios', component: UsuarioListaComponent },
       { path: 'perfis', component: PerfilListaComponent },

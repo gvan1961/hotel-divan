@@ -75,6 +75,13 @@ import { Vale, TipoVale, StatusVale, TIPO_VALE_LABELS, STATUS_VALE_LABELS } from
           (click)="limparFiltros()">
           🗑️ Limpar Filtros
         </button>
+
+        <button 
+          class="btn-relatorio" 
+          (click)="irParaRelatorio()">
+          📊 Relatório
+        </button>
+
       </div>
 
       <button class="btn-baixa-lote" 
@@ -964,6 +971,10 @@ selecionarTodos(event: any): void {
   } else {
     this.valesSelecionados.clear();
   }
+}
+
+irParaRelatorio(): void {
+  this.router.navigate(['/vales/relatorio']);
 }
 
 darBaixaEmLote(): void {

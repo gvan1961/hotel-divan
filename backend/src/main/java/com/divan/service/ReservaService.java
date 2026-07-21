@@ -632,8 +632,9 @@ public class ReservaService {
         dto.setExtratos(reserva.getExtratos());
         dto.setHistoricos(reserva.getHistoricos());
         dto.setTotalReciboEmitido(reserva.getTotalReciboEmitido() != null ? reserva.getTotalReciboEmitido() : BigDecimal.ZERO);
-        dto.setSaldoAdiantamento(reserva.getSaldoAdiantamento() != null ? reserva.getSaldoAdiantamento() : BigDecimal.ZERO);        
+        dto.setSaldoAdiantamento(reserva.getSaldoAdiantamento() != null ? reserva.getSaldoAdiantamento() : BigDecimal.ZERO);
         dto.setFaturada(reserva.getFaturada() != null ? reserva.getFaturada() : false);
+        dto.setAssinaturaBase64(reserva.getAssinaturaBase64());
         return dto;
     }
     

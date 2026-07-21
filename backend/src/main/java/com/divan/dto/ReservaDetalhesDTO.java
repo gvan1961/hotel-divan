@@ -51,7 +51,8 @@ public class ReservaDetalhesDTO {
     private String numeroApartamentoResponsavel;
     
     private BigDecimal totalReciboEmitido = BigDecimal.ZERO;
-    
+    private String assinaturaBase64;
+   
     // CLASSES INTERNAS PARA DADOS SIMPLIFICADOS
     
     
@@ -269,6 +270,18 @@ public class ReservaDetalhesDTO {
 	public void setTotalReciboEmitido(BigDecimal totalReciboEmitido) {
 		this.totalReciboEmitido = totalReciboEmitido;
 	}
+	
+	
+
+	public String getAssinaturaBase64() {
+		return assinaturaBase64;
+	}
+
+
+	public void setAssinaturaBase64(String assinaturaBase64) {
+		this.assinaturaBase64 = assinaturaBase64;
+	}
+
 
 	public static class ClienteSimples {
 		
