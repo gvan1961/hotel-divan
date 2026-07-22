@@ -24,7 +24,7 @@ BUILD E GRAVAÇÃO.
 Commit cd..
 
 
-
+.\mvnw.cmd clean package -DskipTests (compilar no power - backend)
 
 cd C:\spanggit
 git add .

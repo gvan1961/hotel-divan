@@ -84,6 +84,37 @@ import { FornecedorService, Fornecedor } from '../../services/fornecedor.service
           </button>
         </div>
       </div>
+                
+      <!-- SESSÃO DE ENTRADAS -->
+      <div class="form-card" *ngIf="aba === 'entrada' && entradasSessao.length > 0">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+          <h3>📋 Entradas desta sessão ({{ entradasSessao.length }})</h3>
+          <div style="display:flex; gap:10px;">
+            <button class="btn-save" (click)="imprimirSessao()">🖨️ Imprimir Recebimento</button>
+            <button class="btn-limpar" (click)="entradasSessao = []">🗑️ Limpar</button>
+          </div>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:0.9em;">
+          <thead>
+            <tr style="background:#f8f9fa;">
+              <th style="padding:8px; text-align:left; border-bottom:2px solid #dee2e6;">Produto</th>
+              <th style="padding:8px; text-align:center; border-bottom:2px solid #dee2e6;">Qtd</th>
+              <th style="padding:8px; text-align:right; border-bottom:2px solid #dee2e6;">Vlr Unit.</th>
+              <th style="padding:8px; text-align:left; border-bottom:2px solid #dee2e6;">Motivo</th>
+              <th style="padding:8px; text-align:center; border-bottom:2px solid #dee2e6;">Horário</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of entradasSessao" style="border-bottom:1px solid #f0f0f0;">
+              <td style="padding:8px;">{{ item.produto }}</td>
+              <td style="padding:8px; text-align:center; font-weight:bold;">{{ item.quantidade }}</td>
+              <td style="padding:8px; text-align:right;">{{ item.valorUnitario > 0 ? (item.valorUnitario | currency:'BRL') : '-' }}</td>
+              <td style="padding:8px; color:#666;">{{ item.motivo || '-' }}</td>
+              <td style="padding:8px; text-align:center;">{{ item.horario }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <!-- ABA ACERTO -->
       <div class="form-card" *ngIf="aba === 'acerto'">
@@ -288,6 +319,8 @@ export class MovimentacaoEstoqueApp implements OnInit {
   filtroTipo = '';
   filtroProduto = '';
 
+  entradasSessao: any[] = []; 
+
   ngOnInit(): void {
     this.carregarProdutos();
     this.fornecedorService.listarAtivos().subscribe({
@@ -336,13 +369,22 @@ export class MovimentacaoEstoqueApp implements OnInit {
       fornecedorId: this.entrada.fornecedorId || undefined,
       motivo: this.entrada.motivo || undefined
     }).subscribe({
-      next: () => {
-        this.loading = false;
-        this.produtoSelecionado.quantidade += this.entrada.quantidade;
-        this.entrada = { quantidade: 0, valorUnitario: null, fornecedorId: null, motivo: '' };
-        alert('✅ Entrada registrada com sucesso!');
-        this.limparProduto();
-      },
+     next: () => {
+  this.loading = false;
+  
+  // Acumula na sessão
+  this.entradasSessao.push({
+    produto: this.produtoSelecionado.nomeProduto,
+    quantidade: this.entrada.quantidade,
+    valorUnitario: this.entrada.valorUnitario || 0,
+    motivo: this.entrada.motivo || '',
+    horario: new Date().toLocaleTimeString('pt-BR')
+  });
+
+  this.produtoSelecionado.quantidade += this.entrada.quantidade;
+  this.entrada = { quantidade: 0, valorUnitario: null, fornecedorId: null, motivo: '' };
+  this.limparProduto();
+},
       error: (e) => {
         this.loading = false;
         this.errorMessage = e.error?.erro || 'Erro ao registrar entrada';
@@ -404,4 +446,74 @@ export class MovimentacaoEstoqueApp implements OnInit {
   formatarMoeda(valor: number): string {
     return (valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
+
+  imprimirSessao(): void {
+  const agora = new Date().toLocaleString('pt-BR');
+  
+  let linhas = '';
+  this.entradasSessao.forEach((item, i) => {
+    linhas += `
+      <tr>
+        <td style="padding:6px; border-bottom:1px dotted #ccc;">${item.produto}</td>
+        <td style="padding:6px; border-bottom:1px dotted #ccc; text-align:center; font-weight:bold;">${item.quantidade}</td>
+        <td style="padding:6px; border-bottom:1px dotted #ccc; text-align:right;">${item.valorUnitario > 0 ? 'R$ ' + item.valorUnitario.toLocaleString('pt-BR', {minimumFractionDigits:2}) : '-'}</td>
+        <td style="padding:6px; border-bottom:1px dotted #ccc;">${item.motivo || '-'}</td>
+        <td style="padding:6px; border-bottom:1px dotted #ccc; text-align:center;">${item.horario}</td>
+      </tr>
+    `;
+  });
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Recebimento de Estoque</title>
+      <style>
+        @page { size: A4; margin: 15mm; }
+        body { font-family: Arial, sans-serif; font-size: 10pt; }
+        h1 { text-align: center; font-size: 14pt; margin: 0 0 5px 0; }
+        .subtitulo { text-align: center; font-size: 9pt; color: #555; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #f0f0f0; padding: 8px; text-align: left; border-bottom: 2px solid #000; font-size: 10pt; }
+        .total { margin-top: 15px; text-align: right; font-size: 11pt; font-weight: bold; }
+        .rodape { margin-top: 30px; border-top: 1px solid #000; padding-top: 10px; font-size: 9pt; color: #555; }
+        .assinatura { margin-top: 40px; display: flex; justify-content: space-around; }
+        .linha-assinatura { border-top: 1px solid #000; width: 200px; text-align: center; padding-top: 5px; font-size: 9pt; }
+      </style>
+    </head>
+    <body>
+      <h1>HOTEL DI VAN</h1>
+      <div class="subtitulo">COMPROVANTE DE RECEBIMENTO DE ESTOQUE<br>Emitido em: ${agora}</div>
+      <hr>
+      <table>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th style="text-align:center;">Qtd</th>
+            <th style="text-align:right;">Vlr Unit.</th>
+            <th>Motivo</th>
+            <th style="text-align:center;">Horário</th>
+          </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+      </table>
+      <div class="total">Total de itens recebidos: ${this.entradasSessao.length}</div>
+      <div class="assinatura">
+        <div class="linha-assinatura">Responsável pelo Recebimento</div>
+        <div class="linha-assinatura">Conferente</div>
+      </div>
+      <div class="rodape">Hotel Di Van — CNPJ: 07.757.726/0001-12 — Arapiraca - AL</div>
+      <script>window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; };</script>
+    </body>
+    </html>
+  `;
+
+  const janela = window.open('', '_blank', 'width=900,height=700');
+  if (janela) {
+    janela.document.write(html);
+    janela.document.close();
+  }
+}
+
 }
