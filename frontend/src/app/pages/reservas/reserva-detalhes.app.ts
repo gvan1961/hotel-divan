@@ -3268,10 +3268,18 @@ if (debitoEmConta > 0) {
     }
 
     // ============= IMPRIMIR CHECK-IN =============
-    imprimirCheckin(): void {
-    if (!this.reserva) return;
-    const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
-    const htmlImpressao = `
+  imprimirCheckin(): void {
+  if (!this.reserva) return;
+  const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
+  this.http.get<any>(`/api/reservas/${this.reserva.id}/assinatura`).subscribe({
+    next: (res) => this.gerarHtmlCheckin(empresaNomeCliente, res?.assinatura || null),
+    error: () => this.gerarHtmlCheckin(empresaNomeCliente, null)
+  });
+}
+
+gerarHtmlCheckin(empresaNomeCliente: string, assinatura: string | null): void {
+  if (!this.reserva) return;
+  const htmlImpressao = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -3451,6 +3459,8 @@ if (debitoEmConta > 0) {
         <div class="assinatura">
   <p class="texto-assinatura">Declaro estar ciente das condicoes</p>
   <p class="texto-assinatura">da reserva e dos valores cobrados.</p>
+
+
   ${(this.reserva as any).assinaturaBase64 ? `
     <div style="text-align:center; margin: 8px 0;">
       <img src="${(this.reserva as any).assinaturaBase64}" 
@@ -3469,6 +3479,9 @@ if (debitoEmConta > 0) {
     <div class="linha-assinatura"></div>
     <p class="label-assinatura">Data: ____/____/________</p>
   `}
+
+
+
 </div>
         <div class="rodape">
           <p>Obrigado pela preferencia!</p>
@@ -3483,11 +3496,6 @@ if (debitoEmConta > 0) {
       </body>
       </html>
     `;
-
-
-
-
-
 
     const janelaImpressao = window.open('', '_blank', 'width=800,height=600');
     if (janelaImpressao) {
@@ -3799,20 +3807,33 @@ ${debitoEmConta > 0 ? `<tr>
   this.http.get<any[]>('/api/contas-receber').subscribe({
     next: (contas) => {
       const conta = contas.find((c: any) => c.reservaId === this.reserva!.id);
-      const valorTotal = conta ? (conta.valor || 0) : 
-        ((this.reserva!.totalHospedagem || 0) - (this.reserva!.desconto || 0));
-      const valorPago = conta ? (conta.valorPago || 0) : 0;
-      const saldo = conta ? (conta.saldo || 0) : valorTotal;
-      this.gerarHtmlFatura(valorTotal, valorPago, saldo);
+     
+     
+    const valorTotal = (this.reserva!.totalHospedagem || 0) - (this.reserva!.desconto || 0);
+const extratos = (this.reserva!.extratos || []) as any[];
+
+// Pagamentos à vista (excluindo débito em conta)
+const pagoAVista = extratos
+  .filter(e => e.statusLancamento === 'PAGAMENTO' && !e.descricao?.includes('DEBITO EM CONTA'))
+  .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
+
+// Valor faturado (débito em conta)
+const valorFaturado = conta ? (conta.valor || 0) : extratos
+  .filter(e => e.descricao?.includes('DEBITO EM CONTA'))
+  .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
+
+const saldo = valorFaturado - (conta ? (conta.valorPago || 0) : 0);
+this.gerarHtmlFatura(valorTotal, pagoAVista, valorFaturado, saldo);
     },
     error: () => {
       const valorTotal = (this.reserva!.totalHospedagem || 0) - (this.reserva!.desconto || 0);
-      this.gerarHtmlFatura(valorTotal, 0, valorTotal);
+     this.gerarHtmlFatura(valorTotal, 0, valorTotal, valorTotal);
     }
   });
 }
 
-gerarHtmlFatura(valorTotal: number, valorPago: number, saldo: number): void {
+gerarHtmlFatura(valorTotal: number, pagoAVista: number, valorFaturado: number, saldo: number): void {
+
   if (!this.reserva) return;
   const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
   const htmlImpressao = `
@@ -3895,15 +3916,15 @@ gerarHtmlFatura(valorTotal: number, valorPago: number, saldo: number): void {
             <td style="font-size:10pt; font-weight:900; padding:3px 0; border-top:1px dashed #000;">Total Hospedagem:</td>
             <td style="font-size:10pt; font-weight:900; text-align:right; white-space:nowrap; padding:3px 0; border-top:1px dashed #000;">R$ ${this.formatarMoeda(valorTotal)}</td>
           </tr>
-          ${valorPago > 0 ? `
-          <tr>
-            <td style="font-size:10pt; font-weight:700; padding:3px 0;">Ja Pago:</td>
-            <td style="font-size:10pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">- R$ ${this.formatarMoeda(valorPago)}</td>
-          </tr>` : ''}
-          <tr>
-            <td style="font-size:12pt; font-weight:900; padding:5px 0; border-top:2px solid #000;">SALDO A PAGAR:</td>
-            <td style="font-size:12pt; font-weight:900; text-align:right; white-space:nowrap; padding:5px 0; border-top:2px solid #000;">R$ ${this.formatarMoeda(saldo)}</td>
-          </tr>
+         ${pagoAVista > 0 ? `
+<tr>
+  <td style="font-size:10pt; font-weight:700; padding:3px 0;">Pago à Vista:</td>
+  <td style="font-size:10pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">- R$ ${this.formatarMoeda(pagoAVista)}</td>
+</tr>` : ''}
+<tr>
+  <td style="font-size:12pt; font-weight:900; padding:5px 0; border-top:2px solid #000;">A PAGAR FATURADO:</td>
+  <td style="font-size:12pt; font-weight:900; text-align:right; white-space:nowrap; padding:5px 0; border-top:2px solid #000;">R$ ${this.formatarMoeda(saldo)}</td>
+</tr>
         </table>
       </div>
       <div class="assinatura">
@@ -4575,18 +4596,28 @@ gerarFaturaComAssinatura(assinatura: string | null): void {
   this.http.get<any[]>('/api/contas-receber').subscribe({
     next: (contas) => {
       const conta = contas.find((c: any) => c.reservaId === this.reserva!.id);
-      const valorTotal = conta ? (conta.valor || 0) :
-        ((this.reserva!.totalHospedagem || 0) - (this.reserva!.desconto || 0));
-      const valorPago = conta ? (conta.valorPago || 0) : 0;
-      const saldo = conta ? (conta.saldo || 0) : valorTotal;
-      this.assinaturaCapturada = assinatura; // ← restaura antes de imprimir
-      this.gerarHtmlFatura(valorTotal, valorPago, saldo);
-    },
-    error: () => {
+
+
+
+
       const valorTotal = (this.reserva!.totalHospedagem || 0) - (this.reserva!.desconto || 0);
-      this.assinaturaCapturada = assinatura; // ← restaura antes de imprimir
-      this.gerarHtmlFatura(valorTotal, 0, valorTotal);
-    }
+const extratos = (this.reserva!.extratos || []) as any[];
+const pagoAVista = extratos
+  .filter((e: any) => e.statusLancamento === 'PAGAMENTO' && !e.descricao?.includes('DEBITO EM CONTA'))
+  .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
+const valorFaturado = conta ? (conta.valor || 0) : extratos
+  .filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
+  .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
+const saldo = valorFaturado - (conta ? (conta.valorPago || 0) : 0);
+this.assinaturaCapturada = assinatura;
+this.gerarHtmlFatura(valorTotal, pagoAVista, valorFaturado, saldo);
+
+},
+error: () => {
+  const valorTotal = (this.reserva!.totalHospedagem || 0) - (this.reserva!.desconto || 0);
+  this.assinaturaCapturada = assinatura;
+  this.gerarHtmlFatura(valorTotal, 0, valorTotal, valorTotal);
+}
   });
 }
   // ✅ SALVAR ASSINATURA NO BACKEND
@@ -5460,217 +5491,114 @@ tratarCreditoAposRemocao(valorCredito: number): void {
   }
 
   // ============= IMPRIMIR EXTRATO =============
-  imprimirExtrato(): void {
+ imprimirExtrato(): void {
     if (!this.reserva) return;
-
     const totalComDesconto = (this.reserva.totalHospedagem || 0) - (this.reserva.desconto || 0);
     const saldo = totalComDesconto - (this.reserva.totalRecebido || 0);
     const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
+    const diarias = (this.reserva.extratos || []).filter(e => e.statusLancamento === 'DIARIA');
+    const produtos = (this.reserva.extratos || []).filter(e => e.statusLancamento === 'PRODUTO');
+    const pagamentos = (this.reserva.extratos || []).filter(e => e.statusLancamento === 'PAGAMENTO');
+    const estornos = (this.reserva.extratos || []).filter(e => e.statusLancamento === 'ESTORNO');
 
-    // Agrupar extratos por tipo
-    const diarias = (this.reserva.extratos || []).filter(e => 
-      e.statusLancamento === 'DIARIA'
-    );
-    
-    const produtos = (this.reserva.extratos || []).filter(e => 
-      e.statusLancamento === 'PRODUTO'
-    );
-    
-    const pagamentos = (this.reserva.extratos || []).filter(e => 
-      e.statusLancamento === 'PAGAMENTO'
-    );
-    
-    const estornos = (this.reserva.extratos || []).filter(e => 
-      e.statusLancamento === 'ESTORNO'
-    );
+    this.http.get<any>(`/api/reservas/${this.reserva.id}/assinatura`).subscribe({
+      next: (res) => this.gerarHtmlExtrato(empresaNomeCliente, saldo, diarias, produtos, pagamentos, estornos, res?.assinatura || null),
+      error: () => this.gerarHtmlExtrato(empresaNomeCliente, saldo, diarias, produtos, pagamentos, estornos, null)
+    });
+  }
 
+  gerarHtmlExtrato(
+    empresaNomeCliente: string,
+    saldo: number,
+    diarias: any[],
+    produtos: any[],
+    pagamentos: any[],
+    estornos: any[],
+    assinatura: string | null
+  ): void {
     const htmlImpressao = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Extrato - Reserva #${this.reserva.id}</title>
-  
-    <style>
-      @page { 
-      html, body {
-  margin: 0 !important;
-  padding: 0 !important;
-}
-      size: 80mm auto; 
-      margin: 0; 
-      html, body {
-      margin: 0 !important;
-     padding: 0 !important;
-    }
-    }
-    
-    * {
-      font-family: 'Courier New', monospace !important;
-      font-weight: 700 !important;  /* ✅ TUDO EM NEGRITO */
-      color: #000 !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-    
-    body { 
-  width: 72mm;
-  max-width: 72mm;
-  margin: 0; 
-  padding: 1mm 2mm;
-  font-size: 8pt !important;
-  line-height: 1.3;
-}
-    
-    .cabecalho { 
-      text-align: left; 
-      margin-bottom: 6px; 
-    }
-    
-    .cabecalho h1 { 
-      font-size: 16pt !important;  /* ✅ AUMENTADO */
-      font-weight: 900 !important;
-      margin: 0 0 2px 0; 
-      letter-spacing: 1px; 
-    }
-    
-    .cnpj, .endereco { 
-      font-size: 10pt !important;  /* ✅ AUMENTADO */
-      font-weight: 700 !important;
-      margin: 1px 0; 
-    }
-    
-    .separador { 
-      text-align: center; 
-      margin: 5px 0; 
-      font-size: 10pt !important;  /* ✅ AUMENTADO */
-      font-weight: 700 !important;
-    }
-    
-    .titulo-documento { 
-      text-align: left; 
-      margin: 6px 0; 
-    }
-    
-    .titulo-documento h2 { 
-      font-size: 14pt !important;  /* ✅ AUMENTADO */
-      font-weight: 900 !important;
-      margin: 0; 
-    }
-    
-    .numero-reserva { 
-      font-size: 11pt !important;  /* ✅ AUMENTADO */
-      font-weight: 900 !important; 
-      margin: 3px 0; 
-    }
-    
-    .data-emissao { 
-      font-size: 10pt !important;  /* ✅ AUMENTADO */
-      font-weight: 700 !important;
-      margin: 2px 0; 
-    }
-    
-    .secao { 
-      margin: 6px 0; 
-    }
-    
-    .secao h3 { 
-      font-size: 11pt !important;  /* ✅ AUMENTADO */
-      font-weight: 900 !important;
-      margin: 5px 0 3px 0; 
-      text-decoration: underline;
-      border-bottom: 1px dashed #000;
-      padding-bottom: 3px;
-    }
-    
-    .secao p { 
-      margin: 3px 0; 
-      font-size: 10pt !important;  /* ✅ AUMENTADO */
-      font-weight: 700 !important;
-      line-height: 1.3; 
-    }
-    
-    .secao strong {
-      font-weight: 900 !important;  /* ✅ EXTRA BOLD */
-    }      
-
-  .item-extrato { 
-  display: block;
-  margin: 2px 0; 
-  font-size: 9pt !important;
-  font-weight: 700 !important;
-  overflow: hidden;
-}
-
-    
- .item-descricao { 
-  display: block;
-  font-size: 9pt !important;
-}
-
-.item-valor { 
-  display: block;
-  text-align: right;
-  font-weight: 900 !important;
-  font-size: 9pt !important;
-}
-
-.linha-total { 
-  display: block;
-  margin: 4px 0; 
-  font-size: 10pt !important;
-  font-weight: 900 !important;
-  padding: 4px 0;
-  border-top: 2px solid #000;
-}
-
-.linha-total span:last-child {
-  display: block;
-  text-align: right;
-}
-
-.linha-saldo {
-  display: block;
-  margin: 5px 0; 
-  font-size: 11pt !important;
-  font-weight: 900 !important;
-  padding: 5px 0;
-  border-top: 3px solid #000;
-  border-bottom: 3px solid #000;
-}
-
-.linha-saldo span:last-child {
-  display: block;
-  text-align: right;
-}
-    
-    .rodape { 
-      text-align: left; 
-      margin-top: 10px; 
-      font-size: 10pt !important;  /* ✅ AUMENTADO */
-      font-weight: 700 !important;
-      border-top: 1px dashed #000;
-      padding-top: 6px;
-    }
-    
-    .rodape p { 
-      margin: 2px 0; 
-    }
-    
-    .observacao {
-      background: #f0f0f0;
-      padding: 6px;
-      margin: 6px 0;
-      border-left: 4px solid #000;  /* ✅ BORDA MAIS GROSSA */
-      font-size: 10pt !important;  /* ✅ AUMENTADO */
-      font-weight: 700 !important;
-    }
-    
-    .observacao strong {
-      font-weight: 900 !important;  /* ✅ EXTRA BOLD */
-    }
-  </style>
-
+        <title>Extrato - Reserva #${this.reserva!.id}</title>
+        <style>
+          @page { size: 80mm auto; margin: 0; }
+          html, body { margin: 0 !important; padding: 0 !important; }
+          * {
+            font-family: 'Courier New', monospace !important;
+            font-weight: 700 !important;
+            color: #000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          body {
+            width: 72mm;
+            max-width: 72mm;
+            margin: 0;
+            padding: 1mm 2mm;
+            font-size: 8pt !important;
+            line-height: 1.3;
+          }
+          .cabecalho { text-align: left; margin-bottom: 6px; }
+          .cabecalho h1 { font-size: 16pt !important; font-weight: 900 !important; margin: 0 0 2px 0; letter-spacing: 1px; }
+          .cnpj, .endereco { font-size: 10pt !important; font-weight: 700 !important; margin: 1px 0; }
+          .separador { text-align: center; margin: 5px 0; font-size: 9pt !important; font-weight: 700 !important; }
+          .titulo-documento { text-align: left; margin: 6px 0; }
+          .titulo-documento h2 { font-size: 14pt !important; font-weight: 900 !important; margin: 0; }
+          .numero-reserva { font-size: 11pt !important; font-weight: 900 !important; margin: 3px 0; }
+          .data-emissao { font-size: 10pt !important; font-weight: 700 !important; margin: 2px 0; }
+          .secao { margin: 6px 0; }
+          .secao h3 { font-size: 12pt !important; font-weight: 900 !important; margin: 0 0 4px 0; text-decoration: underline; }
+          .secao p { margin: 3px 0; font-size: 11pt !important; font-weight: 700 !important; line-height: 1.4; }
+          .secao strong { font-weight: 900 !important; }
+          .item-extrato {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+            font-size: 9pt !important;
+            font-weight: 700 !important;
+          }
+          .item-descricao { flex: 1; padding-right: 5px; font-size: 9pt !important; }
+          .item-valor { text-align: right; white-space: nowrap; font-size: 9pt !important; font-weight: 900 !important; }
+          .linha-total {
+            display: block;
+            margin: 4px 0;
+            font-size: 10pt !important;
+            font-weight: 900 !important;
+            padding: 4px 0;
+            border-top: 2px solid #000;
+          }
+          .linha-total span:last-child { display: block; text-align: right; }
+          .linha-saldo {
+            display: block;
+            margin: 5px 0;
+            font-size: 11pt !important;
+            font-weight: 900 !important;
+            padding: 5px 0;
+            border-top: 3px solid #000;
+            border-bottom: 3px solid #000;
+          }
+          .linha-saldo span:last-child { display: block; text-align: right; }
+          .rodape {
+            text-align: left;
+            margin-top: 10px;
+            font-size: 10pt !important;
+            font-weight: 700 !important;
+            border-top: 1px dashed #000;
+            padding-top: 6px;
+          }
+          .rodape p { margin: 2px 0; }
+          .observacao {
+            background: #f0f0f0;
+            padding: 6px;
+            margin: 6px 0;
+            border-left: 4px solid #000;
+            font-size: 10pt !important;
+            font-weight: 700 !important;
+          }
+          .observacao strong { font-weight: 900 !important; }
+        </style>
       </head>
       <body>
         <div class="cabecalho">
@@ -5679,27 +5607,21 @@ tratarCreditoAposRemocao(valorCredito: number): void {
           <p class="endereco">Arapiraca - AL</p>
           <div class="separador">================================</div>
         </div>
-
         <div class="titulo-documento">
           <h2>EXTRATO DA HOSPEDAGEM</h2>
-          <p class="numero-reserva">Reserva Nº ${this.reserva.id}</p>
+          <p class="numero-reserva">Reserva Nº ${this.reserva!.id}</p>
           <p class="data-emissao">${this.dataAtualCompleta()}</p>
         </div>
-
         <div class="separador">================================</div>
-
         <div class="secao">
-          <p><strong>Hospede:</strong> ${this.reserva.cliente?.nome}</p>
+          <p><strong>Hospede:</strong> ${this.reserva!.cliente?.nome}</p>
           ${empresaNomeCliente ? '<p><strong>Empresa:</strong> ' + empresaNomeCliente + '</p>' : ''}
-          <p><strong>Apartamento:</strong> ${this.reserva.apartamento?.numeroApartamento}</p>
-          <p><strong>Check-in:</strong> ${this.formatarDataCompleta(this.reserva.dataCheckin)}</p>
-          <p><strong>Check-out:</strong> ${this.formatarDataCompleta(this.reserva.dataCheckout)}</p>
-          <p><strong>Hospedes:</strong> ${this.reserva.quantidadeHospede} pessoa(s)</p>
+          <p><strong>Apartamento:</strong> ${this.reserva!.apartamento?.numeroApartamento}</p>
+          <p><strong>Check-in:</strong> ${this.formatarDataCompleta(this.reserva!.dataCheckin)}</p>
+          <p><strong>Check-out:</strong> ${this.formatarDataCompleta(this.reserva!.dataCheckout)}</p>
+          <p><strong>Hospedes:</strong> ${this.reserva!.quantidadeHospede} pessoa(s)</p>
         </div>
-
         <div class="separador">================================</div>
-
-        <!-- DIÁRIAS -->
         ${diarias.length > 0 ? `
           <div class="secao">
             <h3>DIARIAS (${diarias.length})</h3>
@@ -5711,8 +5633,6 @@ tratarCreditoAposRemocao(valorCredito: number): void {
             `).join('')}
           </div>
         ` : ''}
-
-        <!-- PRODUTOS/CONSUMO -->
         ${produtos.length > 0 ? `
           <div class="secao">
             <h3>CONSUMO (${produtos.length} item/ns)</h3>
@@ -5724,8 +5644,6 @@ tratarCreditoAposRemocao(valorCredito: number): void {
             `).join('')}
           </div>
         ` : ''}
-
-        <!-- ESTORNOS -->
         ${estornos.length > 0 ? `
           <div class="secao">
             <h3>AJUSTES/ESTORNOS</h3>
@@ -5737,108 +5655,153 @@ tratarCreditoAposRemocao(valorCredito: number): void {
             `).join('')}
           </div>
         ` : ''}
-
         <div class="separador">- - - - - - - - - - - - - - - -</div>
-
-        <!-- SUBTOTAIS -->
         <div class="secao">
           <div class="item-extrato">
             <span>Total Diarias:</span>
-            <span class="item-valor">R$ ${this.formatarMoeda(this.reserva.totalDiaria)}</span>
+            <span class="item-valor">R$ ${this.formatarMoeda(this.reserva!.totalDiaria)}</span>
           </div>
           <div class="item-extrato">
             <span>Total Consumo:</span>
-            <span class="item-valor">R$ ${this.formatarMoeda(this.reserva.totalProduto || 0)}</span>
+            <span class="item-valor">R$ ${this.formatarMoeda(this.reserva!.totalProduto || 0)}</span>
           </div>
           <div class="linha-total">
             <span>SUBTOTAL:</span>
-            <span>R$ ${this.formatarMoeda(this.reserva.totalHospedagem)}</span>
+            <span>R$ ${this.formatarMoeda(this.reserva!.totalHospedagem)}</span>
           </div>
         </div>
-
-        <!-- DESCONTOS -->
-        ${(this.reserva.desconto || 0) > 0 ? `
+        ${(this.reserva!.desconto || 0) > 0 ? `
           <div class="secao">
             <div class="item-extrato">
               <span>(-) Desconto:</span>
-              <span class="item-valor">R$ ${this.formatarMoeda(this.reserva.desconto)}</span>
+              <span class="item-valor">R$ ${this.formatarMoeda(this.reserva!.desconto)}</span>
             </div>
           </div>
         ` : ''}
 
-        <!-- PAGAMENTOS -->
-        ${pagamentos.length > 0 ? `
-          <div class="secao">
-            <h3>PAGAMENTOS REALIZADOS</h3>
-            ${pagamentos.map(pag => `
-              <div class="item-extrato">
-                <span class="item-descricao">${pag.descricao}</span>
-                <span class="item-valor">R$ ${this.formatarMoeda(Math.abs(pag.totalLancamento))}</span>
-              </div>
-            `).join('')}
-            <div class="linha-total">
-              <span>Total Recebido:</span>
-              <span>R$ ${this.formatarMoeda(this.reserva.totalRecebido)}</span>
-            </div>
-          </div>
-        ` : ''}
+
+
+
+${pagamentos.length > 0 ? (() => {
+ const temDebito = pagamentos.some((p: any) => p.descricao?.includes('DEBITO EM CONTA'));
+if (temDebito) {
+  const valorFaturado = pagamentos
+    .filter((p: any) => p.descricao?.includes('DEBITO EM CONTA'))
+    .reduce((sum: number, p: any) => sum + Math.abs(p.totalLancamento), 0);
+  const pagoAVista = pagamentos
+    .filter((p: any) => !p.descricao?.includes('DEBITO EM CONTA'))
+    .reduce((sum: number, p: any) => sum + Math.abs(p.totalLancamento), 0);
+  return `
+    <div class="secao">
+      <h3>PAGAMENTOS</h3>
+      ${pagoAVista > 0 ? `
+        <div class="item-extrato">
+          <span class="item-descricao">Pago à Vista:</span>
+          <span class="item-valor">R$ ${this.formatarMoeda(pagoAVista)}</span>
+        </div>
+      ` : ''}
+      <div class="item-extrato">
+        <span class="item-descricao">Débito em Conta (Faturado):</span>
+        <span class="item-valor">R$ ${this.formatarMoeda(valorFaturado)}</span>
+      </div>
+    </div>
+  `;
+}
+  return `
+    <div class="secao">
+      <h3>PAGAMENTOS REALIZADOS</h3>
+      ${pagamentos.map(pag => `
+        <div class="item-extrato">
+          <span class="item-descricao">${pag.descricao}</span>
+          <span class="item-valor">R$ ${this.formatarMoeda(Math.abs(pag.totalLancamento))}</span>
+        </div>
+      `).join('')}
+      <div class="linha-total">
+        <span>Total Recebido:</span>
+     //   <span>R$ ${this.formatarMoeda(this.reserva!.totalRecebido)}</span>
+      </div>
+    </div>
+  `;
+})() : ''}
+
+
+
+
 
         <div class="separador">================================</div>
-
-        <!-- SALDO FINAL -->
-        <div class="linha-saldo">
-          <span>SALDO A PAGAR:</span>
-          <span>R$ ${this.formatarMoeda(this.reserva.totalApagar)}</span>
-        </div>
-
-        ${saldo > 0 ? `
-          <div class="observacao">
-            <p><strong>ATENÇÃO:</strong></p>
-            <p>Saldo devedor de R$ ${this.formatarMoeda(saldo)}</p>
-            <p>Favor regularizar no checkout.</p>
-          </div>
-        ` : saldo < 0 ? `
-          <div class="observacao">
-            <p><strong>CRÉDITO:</strong></p>
-            <p>Valor a devolver: R$ ${this.formatarMoeda(Math.abs(saldo))}</p>
-          </div>
-        ` : `
-          <div class="observacao">
-            <p><strong>✅ QUITADO</strong></p>
-            <p>Hospedagem totalmente paga.</p>
-          </div>
-        `}
-
-        ${(this.reserva as any).assinaturaBase64 ? `
-  <div style="text-align:center; margin: 8px 0; border-top: 1px dashed #000; padding-top:6px;">
-    <p style="font-weight:900 !important; font-size:10pt !important; margin:2px 0;">
-      <strong>ASSINADO DIGITALMENTE</strong>
-    </p>
-    <img src="${(this.reserva as any).assinaturaBase64}" 
-         style="max-width:100%; height:80px; border:1px solid #000; margin:4px 0;" />
-    <p style="font-weight:900 !important; font-size:9pt !important; margin:1px 0;">
-     
-    </p>
-  </div>
-` : ''}
-<div class="rodape">
-  <p>Este e um extrato parcial.</p>
-  <p>Valores sujeitos a alteracao ate o checkout.</p>
-  <p>Emitido em: ${this.dataAtualCompleta()}</p>
+        ${!((this.reserva!.extratos || []).some((e: any) => e.descricao?.includes('DEBITO EM CONTA'))) ? `
+ <div class="linha-saldo">
+  <span>VALOR FATURADO:</span>
+  <span>R$ ${this.formatarMoeda(
+    (this.reserva!.extratos || []).filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
+    .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0)
+  )}</span>
 </div>
+` : `
+  <div class="linha-saldo">
+    <span>VALOR FATURADO:</span>
+    <span>R$ ${this.formatarMoeda(this.reserva!.totalRecebido)}</span>
+  </div>
+`}
+       
+       
+       
+       
+       
+        ${(() => {
+  const temDebitoEmConta = (this.reserva!.extratos || []).some((e: any) =>
+    e.descricao?.includes('DEBITO EM CONTA')
+  );
+  if (temDebitoEmConta) return '';
+  if (saldo > 0) return `
+    <div class="observacao">
+      <p><strong>ATENÇÃO:</strong></p>
+      <p>Saldo devedor de R$ ${this.formatarMoeda(saldo)}</p>
+      <p>Favor regularizar no checkout.</p>
+    </div>
+  `;
+  if (saldo < 0) return `
+    <div class="observacao">
+      <p><strong>CRÉDITO:</strong></p>
+      <p>Valor a devolver: R$ ${this.formatarMoeda(Math.abs(saldo))}</p>
+    </div>
+  `;
+  return `
+    <div class="observacao">
+      <p><strong>✅ QUITADO</strong></p>
+      <p>Hospedagem totalmente paga.</p>
+    </div>
+  `;
+})()}
 
+
+
+
+
+
+        ${assinatura ? `
+          <div style="text-align:center; margin: 8px 0; border-top: 1px dashed #000; padding-top:6px;">
+            <p style="font-weight:900 !important; font-size:10pt !important; margin:2px 0;">
+              <strong>ASSINADO DIGITALMENTE</strong>
+            </p>
+            <img src="${assinatura}"
+                 style="max-width:100%; height:80px; margin:4px 0;" />
+          </div>
+        ` : ''}
+        <div class="rodape">
+          <p>Este e um extrato parcial.</p>
+          <p>Valores sujeitos a alteracao ate o checkout.</p>
+          <p>Emitido em: ${this.dataAtualCompleta()}</p>
+        </div>
         <script>
           window.onload = function() {
             window.print();
-            window.onafterprint = function() {
-              window.close();
-            };
+            window.onafterprint = function() { window.close(); };
           };
         </script>
       </body>
       </html>
     `;
-
     const janelaImpressao = window.open('', '_blank', 'width=800,height=600');
     if (janelaImpressao) {
       janelaImpressao.document.write(htmlImpressao);

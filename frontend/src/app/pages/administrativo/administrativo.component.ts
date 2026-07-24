@@ -66,15 +66,6 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
   <span class="seta">›</span>
 </div>
 
-<div *hasPermission="'VALE_VISUALIZAR'"
-    class="card" (click)="ir('/vales')">
-  <div class="card-icon">💵</div>
-  <div class="card-info">
-    <h3>Vales</h3>
-    <p>Vales e descontos de funcionários</p>
-  </div>
-  <span class="seta">›</span>
-</div>
 
             <div *hasPermission="'ROLE_ADMIN'"
               class="card" (click)="ir('/auditoria')">

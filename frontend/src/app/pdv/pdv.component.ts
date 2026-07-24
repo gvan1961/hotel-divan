@@ -777,25 +777,12 @@ interface ItemCarrinho {
 
     //Apartamento
     reservas: any[] = [];
-    reservaSelecionadaId = 0;
+    reservaSelecionadaId: any = 0;
     apartamentoNomeVenda = '';
     reservaIdPreSelecionada = 0;
     origem: string = '';
 
-    loadingVenda = false;
-
-    
-
-    // ✅ Getter para mostrar info da reserva selecionada
-    get reservaSelecionadaInfo(): { apto: string; hospede: string } | null {
-      if (!this.reservaSelecionadaId || this.reservaSelecionadaId === 0) return null;
-      const reserva = this.reservas.find(r => r.id === Number(this.reservaSelecionadaId));
-      if (!reserva) return null;
-      return {
-        apto: reserva.apartamento?.numeroApartamento || '?',
-        hospede: reserva.cliente?.nome || 'Sem nome'
-      };
-    }
+    loadingVenda = false;   
     codigoBarras = '';
 
     termoBuscaApartamento = '';
@@ -1043,52 +1030,50 @@ limparCarrinho(): void {
       }
       this.realizarVendaApartamento();
     }
-  }
-    
+  }    
 
-    realizarVendaAVista(): void {
+   realizarVendaAVista(): void {
+  if (this.loadingVenda) return;
+  this.loadingVenda = true;
 
-      if (this.loadingVenda) return;
-        this.loadingVenda = true;
+  const request = {
+    formaPagamento: this.formaPagamento,
+    valorPago: this.valorPago,
+    observacao: this.observacao,
+    itens: this.carrinho.map(item => ({
+      produtoId: item.produto.id,
+      quantidade: item.quantidade,
+      valorUnitario: item.valorUnitario
+    }))
+  };
 
-      const request = {
-        formaPagamento: this.formaPagamento,
-        valorPago: this.valorPago,
-        observacao: this.observacao,
-        itens: this.carrinho.map(item => ({
-          produtoId: item.produto.id,
-          quantidade: item.quantidade,
-          valorUnitario: item.valorUnitario
-        }))
-      };
-
-      this.http.post<any>('/api/vendas/a-vista', request).subscribe({
-        next: (response) => {
-          this.notaVendaId = response.notaVendaId;
-          
-          // ✅ SALVAR DADOS PARA IMPRESSÃO
-          this.ultimosItensVendidos = [...this.carrinho];
-          this.ultimoTotalVenda = this.totalCarrinho;
-          const totalVenda = this.totalCarrinho;
-          const trocoVenda = this.troco;
-          
-          this.fecharModalFinalizacao();
-          
-          this.totalCarrinho = totalVenda;
-          this.troco = trocoVenda;
-          
-          this.modalSucesso = true;
-          
-          this.carrinho = [];
-          this.carregarProdutos();
-        },
-        error: (err) => {
-          console.error('❌ Erro completo:', err);
-          console.error('❌ Erro do backend:', err.error);
-          alert('❌ Erro: ' + (err.error?.erro || err.message));
-        }
-      });
+  this.http.post<any>('/api/vendas/a-vista', request).subscribe({
+    next: (response) => {
+      this.loadingVenda = false;
+      this.notaVendaId = response.notaVendaId;
+      this.ultimosItensVendidos = [...this.carrinho];
+      this.ultimoTotalVenda = this.totalCarrinho;
+      const totalVenda = this.totalCarrinho;
+      const trocoVenda = this.troco;
+      this.fecharModalFinalizacao();
+      this.totalCarrinho = totalVenda;
+      this.troco = trocoVenda;
+      this.modalSucesso = true;
+      this.carrinho = [];
+      this.carregarProdutos();
+    },
+    error: (err) => {
+      this.loadingVenda = false;
+      const msg = err.error?.erro || err.error?.message || err.message || '';
+      if ((err.status === 403 && err.error?.tipo === 'CAIXA_FECHADO') ||
+          (err.status === 400 && msg.toLowerCase().includes('caixa'))) {
+        alert('⚠️ CAIXA FECHADO!\n\n' + msg + '\n\nAbra o caixa antes de realizar vendas.');
+        return;
+      }
+      alert('❌ Erro: ' + msg);
     }
+  });
+}
 
     carregarReservasAtivas(): void {
   this.http.get<any[]>('/api/reservas/ativas').subscribe({
@@ -1148,10 +1133,12 @@ limparCarrinho(): void {
       this.carrinho = [];
       this.carregarProdutos();
     },
-    error: (err) => {
-      console.error('❌ Erro:', err);
-      alert('❌ Erro: ' + (err.error?.erro || err.message));
-    }
+   error: (err) => {
+  this.loadingVenda = false;
+  this.fecharModalFinalizacao();
+  const msg = err.error?.erro || err.error?.message || err.message || 'Erro desconhecido';
+  setTimeout(() => alert('❌ ' + msg), 300);
+}
   });
 }
   
@@ -1170,47 +1157,49 @@ limparCarrinho(): void {
       }
     }
 
-    realizarVendaApartamento(): void {
+   realizarVendaApartamento(): void {
+  if (this.loadingVenda) return;
+  this.loadingVenda = true;
 
-      if (this.loadingVenda) return;
-       this.loadingVenda = true;
+  const reserva = this.reservas.find(r => r.id === Number(this.reservaSelecionadaId));
 
-    // ✅ Buscar dados da reserva selecionada
-    const reserva = this.reservas.find(r => r.id === Number(this.reservaSelecionadaId));
-    
-    const request = {
-      reservaId: Number(this.reservaSelecionadaId),
-      observacao: this.observacao,
-      itens: this.carrinho.map(item => ({
-        produtoId: item.produto.id,
-        quantidade: item.quantidade,
-        valorUnitario: item.valorUnitario
-      }))
-    };
+  const request = {
+    reservaId: Number(this.reservaSelecionadaId),
+    observacao: this.observacao,
+    itens: this.carrinho.map(item => ({
+      produtoId: item.produto.id,
+      quantidade: item.quantidade,
+      valorUnitario: item.valorUnitario
+    }))
+  };
 
-    this.http.post<any>('/api/vendas/comanda-consumo', request).subscribe({
-      next: (response) => {
-        this.notaVendaId = response.notaVendaId;
-        this.ultimosItensVendidos = [...this.carrinho];
-        this.ultimoTotalVenda = this.totalCarrinho;
-        
-        // ✅ Salvar dados para impressão
-        this.apartamentoNomeVenda = reserva?.apartamento?.numeroApartamento || '';
-        this.clienteNomeVenda = reserva?.cliente?.nome || '';
-        
-        const totalVenda = this.totalCarrinho;
-        this.fecharModalFinalizacao();
-        this.totalCarrinho = totalVenda;
-        this.modalSucesso = true;
-        this.carrinho = [];
-        this.carregarProdutos();
-      },
-      error: (err) => {
-        console.error('❌ Erro:', err);
-        alert('❌ Erro: ' + (err.error?.erro || err.message));
+  this.http.post<any>('/api/vendas/comanda-consumo', request).subscribe({
+    next: (response) => {
+      this.loadingVenda = false;
+      this.notaVendaId = response.notaVendaId;
+      this.ultimosItensVendidos = [...this.carrinho];
+      this.ultimoTotalVenda = this.totalCarrinho;
+      this.apartamentoNomeVenda = reserva?.apartamento?.numeroApartamento || '';
+      this.clienteNomeVenda = reserva?.cliente?.nome || '';
+      const totalVenda = this.totalCarrinho;
+      this.fecharModalFinalizacao();
+      this.totalCarrinho = totalVenda;
+      this.modalSucesso = true;
+      this.carrinho = [];
+      this.carregarProdutos();
+    },
+    error: (err) => {
+      this.loadingVenda = false;
+      const msg = err.error?.erro || err.error?.message || err.message || '';
+      if ((err.status === 403 && err.error?.tipo === 'CAIXA_FECHADO') ||
+          (err.status === 400 && msg.toLowerCase().includes('caixa'))) {
+        alert('⚠️ CAIXA FECHADO!\n\n' + msg + '\n\nAbra o caixa antes de realizar vendas.');
+        return;
       }
-    });
-  }
+      alert('❌ Erro: ' + msg);
+    }
+  });
+}
 
     obterNomeFormaPagamento(): string {
       const formas: any = {
@@ -1465,6 +1454,17 @@ limparCarrinho(): void {
 
   this.codigoBarras = '';
   setTimeout(() => this.inputCodigoBarras?.nativeElement?.focus(), 100);
+}
+
+get reservaSelecionadaInfo(): { apto: string; hospede: string } | null {
+  if (!this.reservaSelecionadaId || Number(this.reservaSelecionadaId) === 0) return null;
+  const reserva = this.reservas.find(r => r.id === Number(this.reservaSelecionadaId))
+    || this.reservasFiltradas.find(r => r.id === Number(this.reservaSelecionadaId));
+  if (!reserva) return null;
+  return {
+    apto: reserva.apartamento?.numeroApartamento || '?',
+    hospede: reserva.cliente?.nome || 'Sem nome'
+  };
 }
 
 onKeyDown(event: KeyboardEvent): void {

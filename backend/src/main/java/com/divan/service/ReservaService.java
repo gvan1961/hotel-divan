@@ -634,9 +634,11 @@ public class ReservaService {
         dto.setTotalReciboEmitido(reserva.getTotalReciboEmitido() != null ? reserva.getTotalReciboEmitido() : BigDecimal.ZERO);
         dto.setSaldoAdiantamento(reserva.getSaldoAdiantamento() != null ? reserva.getSaldoAdiantamento() : BigDecimal.ZERO);
         dto.setFaturada(reserva.getFaturada() != null ? reserva.getFaturada() : false);
+        System.out.println("🖊️ assinaturaBase64 da reserva " + reserva.getId() + ": " + 
+            (reserva.getAssinaturaBase64() != null ? "TEM ASSINATURA" : "NULL"));
         dto.setAssinaturaBase64(reserva.getAssinaturaBase64());
-        return dto;
-    }
+        return dto; 
+        }
     
     // ============================================
     // ✅ ALTERAR DADOS DA RESERVA

@@ -440,6 +440,8 @@ export class DepositoProvisorioComponent implements OnInit {
     { codigo: 'CARTAO_CREDITO', nome: 'Cartão Crédito' },
   ];
 
+  processandoCodigo = false;
+
   termoCodigo = '';
 
   posX = 28;
@@ -569,33 +571,38 @@ export class DepositoProvisorioComponent implements OnInit {
   }
 
   buscarPorCodigo(): void {
-    if (this.termoCodigo.length < 3) return;
-    this.http.get<any[]>(`${environment.apiUrl}/produtos/buscar-codigo?codigo=${this.termoCodigo}`)
-      .subscribe({
-        next: (produtos) => {
-          if (produtos.length === 1) {
-            // ✅ VERIFICAR ESTOQUE
-            if (produtos[0].quantidade <= 0) {
-              alert(`❌ Produto "${produtos[0].nomeProduto}" está sem estoque!`);
-              this.termoCodigo = '';
-              setTimeout(() => {
-                const el = document.querySelector('input[placeholder*="Código"]') as HTMLInputElement;
-                if (el) el.focus();
-              }, 100);
-              return;
-            }
-            this.produtoSelecionado = produtos[0];
-            this.quantidadeAdicionar = 1;
+  if (this.termoCodigo.length < 3) return;
+  if (this.processandoCodigo) return;  // ← bloqueia duplo disparo
+  this.processandoCodigo = true;
+
+  this.http.get<any[]>(`${environment.apiUrl}/produtos/buscar-codigo?codigo=${this.termoCodigo}`)
+    .subscribe({
+      next: (produtos) => {
+        this.processandoCodigo = false;  // ← libera após resposta
+        if (produtos.length === 1) {
+          if (produtos[0].quantidade <= 0) {
+            alert(`❌ Produto "${produtos[0].nomeProduto}" está sem estoque!`);
             this.termoCodigo = '';
-            this.adicionarProduto();
-          } else if (produtos.length > 1) {
-            this.produtos = produtos;
-            this.termoCodigo = '';
+            setTimeout(() => {
+              const el = document.querySelector('input[placeholder*="Código"]') as HTMLInputElement;
+              if (el) el.focus();
+            }, 100);
+            return;
           }
-        },
-        error: () => {}
-      });
-  }
+          this.produtoSelecionado = produtos[0];
+          this.quantidadeAdicionar = 1;
+          this.termoCodigo = '';
+          this.adicionarProduto();
+        } else if (produtos.length > 1) {
+          this.produtos = produtos;
+          this.termoCodigo = '';
+        }
+      },
+      error: () => {
+        this.processandoCodigo = false;  // ← libera em caso de erro
+      }
+    });
+}
 
   adicionarProduto(): void {
     if (!this.produtoSelecionado || !this.quantidadeAdicionar) return;
