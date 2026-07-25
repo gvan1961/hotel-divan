@@ -1452,7 +1452,7 @@ apartamentosFiltrados(): ApartamentoCard[] {
           case 'limpeza':    return s === 'LIMPEZA';
           case 'manutencao': return s === 'MANUTENCAO';
           case 'bloqueado':  return s === 'BLOQUEADO' || s === 'INDISPONIVEL';
-          case 'entraHoje':  return apt.reserva?.entraHoje === true;
+          case 'entraHoje':  return apt.reserva?.entraHoje === true || (apt as any).entraHojeLimpeza === true;case 'entraHoje':  return apt.reserva?.entraHoje === true || (apt as any).entraHojeLimpeza === true;
           case 'saiHoje':    return this.isSaiHoje(apt);
           case 'atrasado':   return apt.reserva?.atrasado === true;
           default: return true;

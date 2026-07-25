@@ -422,8 +422,13 @@ public class ApartamentoController {
             		            res.put("dataCheckout",     r.getDataCheckout().toLocalDate().toString());
             		            res.put("quantidadeHospedes", r.getQuantidadeHospede());
             		            res.put("saiHoje",          false);
-            		            res.put("entraHoje",        false);
+            		          //  res.put("entraHoje",        false);
             		            res.put("atrasado",         false);
+            		            
+            		         // ✅ Verificar se tem pré-reserva com check-in hoje
+            		          
+            		            res.put("entraHoje", false);
+            		            
             		            res.put("renovacaoAutomatica", false);
             		            res.put("somenteLeitura",   true); // ← flag para frontend bloquear edição
             		            card.put("reserva", res);
@@ -443,11 +448,15 @@ public class ApartamentoController {
             		    List<Reserva> preReservasLimpeza = reservaRepository
             		        .findByApartamentoIdAndStatusIn(apt.getId(),
             		            List.of(Reserva.StatusReservaEnum.PRE_RESERVA));
-            		    card.put("temPreReservaFutura", !preReservasLimpeza.isEmpty());
-            		    card.put("quantidadePreReservas", preReservasLimpeza.size());
-            		    card.put("datasPreReservas", preReservasLimpeza.stream()
-            		        .map(r -> r.getDataCheckin().toLocalDate().toString())
-            		        .collect(java.util.stream.Collectors.joining(", ")));
+            		    boolean entraHojeLimpeza = preReservasLimpeza.stream()
+            		    	    .anyMatch(pr -> pr.getDataCheckin().toLocalDate().isEqual(hoje));
+            		    	card.put("temPreReservaFutura", !preReservasLimpeza.isEmpty());
+            		    	card.put("quantidadePreReservas", preReservasLimpeza.size());
+            		    	card.put("datasPreReservas", preReservasLimpeza.stream()
+            		    	    .map(r -> r.getDataCheckin().toLocalDate().toString())
+            		    	    .collect(java.util.stream.Collectors.joining(", ")));
+            		    	card.put("entraHojeLimpeza", entraHojeLimpeza);
+            		    	if (entraHojeLimpeza) cntEntraHoje++;
             		    cards.add(card);
             		    continue;
             		}
