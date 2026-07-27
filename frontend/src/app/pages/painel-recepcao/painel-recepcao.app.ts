@@ -378,6 +378,16 @@ template: `
      (click)="aoClicarFaixa(apt)"
      [title]="getTooltipFaixa(apt)">
   <span class="apt-numero">{{ apt.numero }}</span>
+
+  <button
+  *ngIf="getStatusFinal(apt) === 'ATIVA'"  
+  class="btn-foto-hospede"
+  (click)="$event.stopPropagation(); abrirFotosHospedes(apt)"
+  title="Ver fotos dos hóspedes">
+  📷
+</button>
+
+
   <span class="apt-tipo" *ngIf="apt.tipo">{{ apt.tipo }}</span>
    <span class="apt-empresa" 
         *ngIf="apt.reserva?.empresaNome">
@@ -541,6 +551,33 @@ template: `
         </div>
       </div>
     </div>
+
+    <!-- MODAL FOTOS HÓSPEDES -->
+<div class="modal-overlay" *ngIf="modalFotosHospedes" 
+     (click)="modalFotosHospedes = false"
+     style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:9999;">
+  <div class="modal-fotos" (click)="$event.stopPropagation()">
+    <div class="modal-fotos-header">
+      <h3>📷 Hóspedes — Apt {{ aptFotoSelecionado }}</h3>
+      <button (click)="modalFotosHospedes = false">✕</button>
+    </div>
+    <div class="modal-fotos-body">
+      <div *ngIf="carregandoFotos" style="text-align:center; padding:20px;">
+        Carregando fotos...
+      </div>
+      <div class="fotos-grid" *ngIf="!carregandoFotos">
+        <div class="foto-hospede-card" *ngFor="let h of fotosHospedes">
+          <img *ngIf="h.foto" [src]="h.foto" alt="Foto" class="foto-hospede-img">
+          <div *ngIf="!h.foto" class="sem-foto">👤</div>
+          <span class="foto-hospede-nome">{{ h.nome }}</span>
+        </div>
+        <div *ngIf="fotosHospedes.length === 0" style="text-align:center; color:#999;">
+          Nenhum hóspede ativo encontrado.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
     </div>
   `,
@@ -1245,6 +1282,78 @@ template: `
   to { opacity: 1; transform: translateY(0); }
 }
 
+.btn-foto-hospede {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1em;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.8;
+}
+.btn-foto-hospede:hover { opacity: 1; background: rgba(0,0,0,0.1); }
+.modal-fotos {
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+.modal-fotos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+}
+.modal-fotos-header h3 { margin: 0; }
+.modal-fotos-header button {
+  background: none;
+  border: none;
+  font-size: 1.3em;
+  cursor: pointer;
+}
+.modal-fotos-body { padding: 20px; }
+.fotos-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+}
+.foto-hospede-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.foto-hospede-img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #667eea;
+}
+.sem-foto {
+  width: 120px;
+  height: 120px;
+  background: #f0f0f0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3em;
+}
+.foto-hospede-nome {
+  font-size: 0.85em;
+  font-weight: 600;
+  text-align: center;
+  max-width: 120px;
+  color: #2c3e50;
+}
+
   `]
 })
 export class PainelRecepcaoApp implements OnInit, OnDestroy {
@@ -1280,6 +1389,11 @@ mostrarResultadosEmpresa = false;
   faceResultado: FaceResultado | null = null;
   faceStatus = '';
   faceAtivo = false;
+
+  modalFotosHospedes = false;
+fotosHospedes: {nome: string, foto: string | null}[] = [];
+aptFotoSelecionado = '';
+carregandoFotos = false;
   
   mostrarPopupWhatsapp = false;
 solicitacoesPendentes: any[] = [];
@@ -2072,6 +2186,29 @@ imprimirVouchersWifi(apt: ApartamentoCard, vouchers: any[]): void {
       janela.close();
     }, 500);
   }
+}
+
+abrirFotosHospedes(apt: ApartamentoCard): void {
+  if (!apt.reserva?.id) return;
+  this.carregandoFotos = true;
+  this.modalFotosHospedes = true;
+  this.aptFotoSelecionado = apt.numero;
+  this.fotosHospedes = [];
+
+  this.http.get<any[]>(`/api/reservas/${apt.reserva.id}/hospedes`).subscribe({
+    next: (hospedes) => {
+      this.fotosHospedes = hospedes
+        .filter(h => h.status === 'HOSPEDADO')
+        .map(h => ({
+          nome: h.nomeCompleto || h.cliente?.nome || 'Sem nome',
+          foto: h.cliente?.fotoBase64 || null
+        }));
+      this.carregandoFotos = false;
+    },
+    error: () => {
+      this.carregandoFotos = false;
+    }
+  });
 }
 
 }  

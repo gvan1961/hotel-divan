@@ -1,3 +1,6 @@
+Ir para o projeto do HotelDi Van : C:\SpAngGit\workspace-hotel-divan
+Ir para o projeto da Churra :
+
 Tipo batch para o Notebook no powerShell 
 deploy.ps1 . Como acessar no powerShell :  .\deploy.ps1
 

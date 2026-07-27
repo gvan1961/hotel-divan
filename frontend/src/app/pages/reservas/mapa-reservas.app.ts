@@ -11,6 +11,7 @@ interface ReservaMapa {
   apartamentoId: number;
   apartamentoNumero: string;
   clienteNome: string;
+  clienteCpf?: string;
   dataCheckin: string;
   dataCheckout: string;
   status: string;
@@ -61,6 +62,17 @@ interface ApartamentoMapa {
         <button class="btn-atualizar" (click)="carregarMapa()">🔄 Atualizar</button>    
         
       </div>
+
+      <div class="filtro-busca">
+  <label>Buscar hóspede:</label>
+  <input
+    type="text"
+    [(ngModel)]="termoBuscaHospede"
+    (input)="filtrarPorHospede()"
+    placeholder="🔍 Nome ou CPF..."
+    class="input-busca-hospede">
+  <button *ngIf="termoBuscaHospede" (click)="limparBuscaHospede()" class="btn-limpar-busca">✕</button>
+</div>
 
       <div class="filtro-busca-reserva">
   <label>🔢 Nº Reserva:</label>
@@ -134,7 +146,9 @@ interface ApartamentoMapa {
 
             <!-- CORPO COM APARTAMENTOS -->
             <tbody>
-  <tr *ngFor="let apt of apartamentos">
+  <tr *ngFor="let apt of apartamentos"
+      [style.display]="aptsFiltrados.size > 0 && !aptsFiltrados.has(apt.id) ? 'none' : ''">
+      
     <td class="col-apartamento">
       <div class="apt-info">
         <span class="apt-numero">{{ apt.numeroApartamento }}</span>
@@ -1484,6 +1498,11 @@ apartamentoNumeroViaMapa: string = '';
 buscaNumeroReserva: number | null = null;
 reservaDestacadaId: number | null = null;
 
+termoBuscaHospede = '';
+reservasOriginais: any[] = [];
+
+aptsFiltrados: Set<number> = new Set();
+
   mapaReservas: Map<string, ReservaMapa> = new Map();
 
   ngOnInit(): void {
@@ -1639,16 +1658,17 @@ for (let d = new Date(checkin); d < checkoutEfetivo; d.setDate(d.getDate() + 1))
               const dataStr = d.toISOString().split('T')[0];
               const chave = `${apartamentoId}-${dataStr}`;
 
-              this.mapaReservas.set(chave, {
+            this.mapaReservas.set(chave, {
   id: reserva.id,
   apartamentoId: apartamentoId,
   apartamentoNumero: apartamentoNumero,
   clienteNome: clienteNome || 'Sem nome',
+  clienteCpf: reserva.cliente?.cpf || '',
   dataCheckin: reserva.dataCheckin,
   dataCheckout: reserva.dataCheckout,
   status: reserva.status,
   quantidadeHospede: reserva.quantidadeHospede || 1,
-  totalRecebido: reserva.totalRecebido || 0  
+  totalRecebido: reserva.totalRecebido || 0
 });
 
               diasMapeados++;
@@ -2466,6 +2486,44 @@ criarPreReservaNoCheckout(apt: ApartamentoMapa, data: string, event: Event): voi
       origem: 'mapa-reservas'
     }
   });
+}
+
+filtrarPorHospede(): void {
+  this.aptsFiltrados.clear();
+  if (!this.termoBuscaHospede.trim()) return;
+  
+  const normalizar = (s: string) => s.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  
+  const termo = normalizar(this.termoBuscaHospede);
+  const apenasNumeros = termo.replace(/\D/g, '');
+  const temNumeros = /\d/.test(termo);
+
+  this.mapaReservas.forEach((reserva) => {
+    const nome = normalizar(reserva.clienteNome || '');
+    const cpf = (reserva.clienteCpf || '').replace(/\D/g, '');
+
+    let match = false;
+    if (temNumeros) {
+      match = cpf.includes(apenasNumeros);
+    } else {
+      const palavrasBusca = termo.trim().split(/\s+/);
+      const palavrasNome = nome.split(/\s+/);
+      match = palavrasBusca.every(pb =>
+        palavrasNome.some(pn => pn.startsWith(pb))
+      );
+    }
+
+    if (match) {
+      this.aptsFiltrados.add(reserva.apartamentoId);
+    }
+  });
+}
+
+limparBuscaHospede(): void {
+  this.termoBuscaHospede = '';
+  this.aptsFiltrados.clear();
 }
   
   voltar(): void {    
