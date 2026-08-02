@@ -52,3 +52,18 @@ cd /c/SpAngGit
 ./deploy.sh
 
 usar muitas vezes a senha : hT@divan
+
+
+Opção recomendada: Workspace separado pro hotel-lab
+
+1. Trocar de workspace no STS:
+
+Menu File → Switch Workspace → Other...
+Escolha (ou crie) uma pasta nova, por exemplo: C:\newspanggit\workspace-hotel-lab
+Clique OK — o STS vai reiniciar com esse workspace vazio
+
+2. Importar o projeto hotel-lab nesse novo workspace:
+
+File → Import... → Maven → Existing Maven Projects
+Browse até C:\newspanggit\hotel-lab
+Finish
