@@ -3220,16 +3220,26 @@ if (debitoEmConta > 0) {
   }
 
     formatarData(data: any): string {
-      if (!data) return '-';
-      const d = new Date(data);
-      return d.toLocaleDateString('pt-BR');
-    }
+  if (!data) return '-';
 
-    formatarDataHora(data: any): string {
-      if (!data) return '-';
-      const d = new Date(data);
-      return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    }
+  let dataString: string;
+  if (typeof data === 'string') {
+    dataString = data;
+  } else if (data instanceof Date) {
+    dataString = data.toISOString();
+  } else {
+    return '-';
+  }
+
+  const [ano, mes, dia] = dataString.split('T')[0].split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
+formatarDataHora(data: any): string {
+  if (!data) return '-';
+  const d = new Date(data);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
 
     formatarMoeda(valor: any): string {
       if (valor === null || valor === undefined) return '0,00';

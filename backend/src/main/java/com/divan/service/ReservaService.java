@@ -99,34 +99,23 @@ public class ReservaService {
      */
     private boolean existeConflitoDeDatas(Long apartamentoId, LocalDateTime checkin, LocalDateTime checkout, Long reservaIdExcluir) {
         List<Reserva> reservasDoApartamento = reservaRepository.findByApartamentoId(apartamentoId);
-        System.out.println("🔍 VERIFICANDO CONFLITO APT ID: " + apartamentoId);
-        System.out.println("   Novo checkin: " + checkin);
-        System.out.println("   Novo checkout: " + checkout);
-        System.out.println("   Total reservas encontradas: " + reservasDoApartamento.size());
 
         for (Reserva r : reservasDoApartamento) {
             if (reservaIdExcluir != null && r.getId().equals(reservaIdExcluir)) continue;
             if (r.getStatus() == Reserva.StatusReservaEnum.CANCELADA ||
                 r.getStatus() == Reserva.StatusReservaEnum.FINALIZADA) continue;
 
-            System.out.println("   Comparando com #" + r.getId() +
-                " status=" + r.getStatus() +
-                " checkin=" + r.getDataCheckin() +
-                " checkout=" + r.getDataCheckout());
-
-            // Para reserva ATIVA com checkout vencido, usa data atual como checkout efetivo
             LocalDateTime checkoutEfetivo = r.getDataCheckout();
             if (r.getStatus() == Reserva.StatusReservaEnum.ATIVA &&
                 r.getDataCheckout().isBefore(LocalDateTime.now(ZoneId.of("America/Fortaleza")))) {
                 checkoutEfetivo = LocalDateTime.now(ZoneId.of("America/Fortaleza")).plusDays(1);
             }
 
-            boolean semConflito = !checkin.isBefore(checkoutEfetivo)
-                    || !checkout.isAfter(r.getDataCheckin());
+            // Comparação por DIA (não por hora exata) — permite virada de diária no mesmo dia
+            boolean semConflito = !checkin.toLocalDate().isBefore(checkoutEfetivo.toLocalDate())
+                    || !checkout.toLocalDate().isAfter(r.getDataCheckin().toLocalDate());
 
-            System.out.println("   semConflito=" + semConflito);
             if (!semConflito) {
-                System.out.println("❌ CONFLITO com reserva #" + r.getId());
                 return true;
             }
         }

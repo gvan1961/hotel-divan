@@ -1435,6 +1435,14 @@ public class ReservaController {
             // ✅ ATIVAR RESERVA
             reserva.setStatus(Reserva.StatusReservaEnum.ATIVA);
             reservaRepository.save(reserva);
+            
+            LogAuditoria log = new LogAuditoria();
+            log.setReserva(reserva);
+            log.setAcao("ATIVAR_PRE_RESERVA");
+            log.setDataHora(LocalDateTime.now());
+            log.setDescricao("Pré-reserva ativada manualmente via Painel de Recepção");
+            logAuditoriaRepository.save(log);
+            
 
             // ✅ ATUALIZAR APARTAMENTO PARA OCUPADO
             Apartamento apartamento = reserva.getApartamento();
