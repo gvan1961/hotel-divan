@@ -11,6 +11,7 @@ export interface Usuario {
   email: string;
   password?: string;
   ativo: boolean;
+  fotoBase64?: string;
   perfis?: Perfil[];
   permissoes?: Permissao[];
 }
@@ -21,6 +22,7 @@ export interface UsuarioRequest {
   email: string;
   password: string;
   ativo: boolean;
+  fotoBase64?: string;
   perfisIds: number[];
 }
 

@@ -137,6 +137,18 @@
           class="input">
       </div>
       
+     <!-- FOTO -->
+<div class="form-group">
+  <label>Foto:</label>
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <img *ngIf="formulario.fotoBase64" [src]="formulario.fotoBase64"
+         style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd;" />
+    <input type="file" accept="image/*" (change)="onFotoSelecionada($event)" />
+    <button type="button" class="btn-editar" (click)="abrirCamera()">📷 Tirar Foto</button>
+    <button *ngIf="formulario.fotoBase64" type="button" class="btn-excluir" (click)="removerFoto()">Remover</button>
+  </div>
+</div>
+
       <!-- USERNAME -->
       <div class="form-group">
         <label>Username (Login): *</label>
@@ -217,7 +229,22 @@
         (click)="salvar()">
         {{ editando ? 'Atualizar' : 'Criar' }}
       </button>
+    </div>    
+  </div>
+</div>
+
+<!-- MODAL CÂMERA -->
+<div class="modal-overlay" *ngIf="mostrarCamera" (click)="onCameraCancelada()">
+  <div class="modal" (click)="$event.stopPropagation()" style="max-width: 400px;">
+    <div class="modal-header">
+      <h2>📷 Capturar Foto</h2>
     </div>
-    
+    <div class="modal-body">
+      <app-webcam-capture
+        #webcamCapture
+        (fotoCapturadaEvent)="onFotoCapturada($event)"
+        (cancelado)="onCameraCancelada()">
+      </app-webcam-capture>
+    </div>
   </div>
 </div>

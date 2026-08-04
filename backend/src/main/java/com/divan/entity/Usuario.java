@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import jakarta.persistence.Lob;
 
 @Entity
 @Table(name = "usuarios")
@@ -52,6 +53,10 @@ public class Usuario implements UserDetails {
     private LocalDateTime dataCriacao = LocalDateTime.now();
 
     private LocalDateTime ultimoAcesso;
+    
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
+    private String fotoBase64;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.MERGE)
     @JoinTable(
@@ -160,8 +165,18 @@ public class Usuario implements UserDetails {
     public void setEmail(String email) {
         this.email = email;
     }
+    
+    
 
-    public Boolean getAtivo() {
+    public String getFotoBase64() {
+		return fotoBase64;
+	}
+
+	public void setFotoBase64(String fotoBase64) {
+		this.fotoBase64 = fotoBase64;
+	}
+
+	public Boolean getAtivo() {
         return ativo;
     }
 

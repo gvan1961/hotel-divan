@@ -1654,7 +1654,7 @@ const checkoutEfetivo = (reserva.status === 'ATIVA' && checkout < hoje)
   ? new Date(hoje.getTime() + 86400000) // amanhã
   : checkout;
 
-for (let d = new Date(checkin); d < checkoutEfetivo; d.setDate(d.getDate() + 1)) {
+for (let d = new Date(checkin); d <= checkoutEfetivo; d.setDate(d.getDate() + 1)) {
               const dataStr = d.toISOString().split('T')[0];
               const chave = `${apartamentoId}-${dataStr}`;
 
@@ -1672,6 +1672,9 @@ for (let d = new Date(checkin); d < checkoutEfetivo; d.setDate(d.getDate() + 1))
 });
 
               diasMapeados++;
+
+              // Reserva de 1 dia só (checkin e checkout no mesmo dia calendário) — evita loop infinito
+              if (checkin.getTime() === checkoutEfetivo.getTime()) break;
             }
 
             console.log(`   ✅ ${diasMapeados} dias mapeados`);

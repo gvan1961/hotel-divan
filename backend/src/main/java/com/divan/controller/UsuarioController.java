@@ -44,7 +44,13 @@ public class UsuarioController {
             u.setUsername(body.get("username").toString());
             u.setEmail(body.get("email").toString());
             u.setPassword(passwordEncoder.encode(body.get("password").toString()));
+          
             u.setAtivo(Boolean.parseBoolean(body.getOrDefault("ativo", true).toString()));
+
+            if (body.get("fotoBase64") != null) {
+                u.setFotoBase64(body.get("fotoBase64").toString());
+            }           
+            
             
             // ✅ PROCESSAR PERFIS no criar
             if (body.get("perfisIds") != null) {
@@ -71,6 +77,11 @@ public class UsuarioController {
                 u.setPassword(passwordEncoder.encode(body.get("password").toString()));
             }
             u.setAtivo(Boolean.valueOf(body.getOrDefault("ativo", "true").toString()));
+
+            if (body.get("fotoBase64") != null) {
+                u.setFotoBase64(body.get("fotoBase64").toString());
+            }
+
 
             // ✅ SALVAR PERFIS
             if (body.get("perfisIds") != null) {

@@ -1,15 +1,16 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UsuarioService, Usuario, UsuarioRequest } from '../../services/usuario.service';
 import { PerfilService, Perfil } from '../../services/perfil.service';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
+import { WebcamCaptureComponent } from '../webcam-capture/webcam-capture.component';
 
 @Component({
   selector: 'app-usuario-lista',
   standalone: true,
-  imports: [CommonModule, FormsModule, HasPermissionDirective],
+  imports: [CommonModule, FormsModule, HasPermissionDirective, WebcamCaptureComponent],
   templateUrl: './usuario-lista.component.html',
   styleUrls: ['./usuario-lista.component.css']
 })
@@ -32,12 +33,17 @@ export class UsuarioListaComponent implements OnInit {
     email: '',
     password: '',
     ativo: true,
+    fotoBase64: undefined,
     perfisIds: []
   };
+
+  mostrarCamera = false;
   
   // FILTROS
   filtroNome = '';
   filtroAtivo = 'todos'; // todos, ativos, inativos
+
+  @ViewChild('webcamCapture') webcamCapture?: WebcamCaptureComponent;
   
   constructor(
     private usuarioService: UsuarioService,
@@ -100,6 +106,7 @@ export class UsuarioListaComponent implements OnInit {
       email: '',
       password: '',
       ativo: true,
+      fotoBase64: undefined,
       perfisIds: []
     };
     this.mostrarModal = true;
@@ -118,6 +125,7 @@ export class UsuarioListaComponent implements OnInit {
         email: u.email,
         password: '',
         ativo: u.ativo,
+        fotoBase64: u.fotoBase64,
         perfisIds: u.perfis?.map((p: any) => p.id) || []
       };
       this.mostrarModal = true;
@@ -251,6 +259,41 @@ export class UsuarioListaComponent implements OnInit {
   perfilSelecionado(perfilId: number): boolean {
     return this.formulario.perfisIds.includes(perfilId);
   }
+
+  onFotoSelecionada(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  const arquivo = input.files?.[0];
+  if (!arquivo) return;
+
+  if (arquivo.size > 2 * 1024 * 1024) {
+    alert('⚠️ A imagem deve ter no máximo 2MB.');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    this.formulario.fotoBase64 = reader.result as string;
+  };
+  reader.readAsDataURL(arquivo);
+}
+
+removerFoto(): void {
+  this.formulario.fotoBase64 = undefined;
+}
+
+abrirCamera(): void {
+  this.mostrarCamera = true;
+  setTimeout(() => this.webcamCapture?.iniciar(), 100);
+}
+
+onFotoCapturada(fotoBase64: string): void {
+  this.formulario.fotoBase64 = fotoBase64;
+  this.mostrarCamera = false;
+}
+
+onCameraCancelada(): void {
+  this.mostrarCamera = false;
+}
 
   voltar(): void {
   this.router.navigate(['/dashboard']);

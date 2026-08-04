@@ -1918,7 +1918,7 @@ private abrirImpressaoLote(blocos: string[]): void {
       <title>Faturas em Lote</title>
       <style>
         @page { size: 80mm auto; margin: 0; }
-        body { font-family: 'Courier New', monospace; font-size: 10px; width: 80mm; margin: 0; padding: 0; }
+          body { font-family: 'Courier New', monospace; font-size: 10px; font-weight: bold; width: 80mm; margin: 0; padding: 0; }
         .fatura-bloco { padding: 5mm; page-break-after: always; }
         .fatura-bloco:last-child { page-break-after: auto; }
         .cabecalho { text-align: left; margin-bottom: 8px; }

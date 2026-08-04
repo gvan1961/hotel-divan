@@ -34,14 +34,15 @@ export class AuthService {
           console.log('✅ Token salvo');
           
           // ✅✅✅ SALVAR COMO "usuario" (NÃO "user") ✅✅✅
-          const usuarioParaSalvar = {
-            id: response.id,
-            nome: response.nome,
-            email: response.email,
-            username: response.username,
-            perfis: response.perfis,
-            permissoes: response.permissoes
-          };
+         const usuarioParaSalvar = {
+  id: response.id,
+  nome: response.nome,
+  email: response.email,
+  username: response.username,
+  fotoBase64: response.fotoBase64,
+  perfis: response.perfis,
+  permissoes: response.permissoes
+};
           
           localStorage.setItem('usuario', JSON.stringify(usuarioParaSalvar));
           console.log('✅ Usuario salvo:', usuarioParaSalvar);

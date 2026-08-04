@@ -15,16 +15,21 @@ import { Subscription } from 'rxjs';
         </div>
         
         <div class="user-info">
-          <span class="user-greeting">
-            👤 Olá, <strong>{{ nomeUsuario }}</strong>
-          </span>
-          <a href="/ponto" class="btn-ponto" title="Registrar Ponto">
-            ⏱️ Ponto
-          </a>
-          <button class="btn-logout" (click)="sair()" title="Sair do sistema">
-            🚪 Sair
-          </button>
-        </div>
+  <span class="user-greeting">
+    @if (fotoUsuario) {
+      <img [src]="fotoUsuario" class="foto-usuario" alt="Foto do usuário" />
+    } @else {
+      👤
+    }
+    Olá, <strong>{{ nomeUsuario }}</strong>
+  </span>
+  <a href="/ponto" class="btn-ponto" title="Registrar Ponto">
+    ⏱️ Ponto
+  </a>
+  <button class="btn-logout" (click)="sair()" title="Sair do sistema">
+    🚪 Sair
+  </button>
+</div>
       </div>
     </header>
   `,
@@ -114,10 +119,23 @@ import { Subscription } from 'rxjs';
   background: rgba(255, 255, 255, 0.35);
   transform: translateY(-2px);
 }
+
+.foto-usuario {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: middle;
+  margin-right: 4px;
+  border: 1px solid rgba(255,255,255,0.5);
+}
+
   `]
 })
+
 export class HeaderComponent implements OnInit, OnDestroy {
   nomeUsuario: string = '';
+  fotoUsuario: string | null = null;
   isLogado: boolean = false;
   private sub: Subscription = new Subscription();
 
@@ -126,7 +144,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.atualizarHeader();
 
-    // Observa mudanças no localStorage a cada 1 segundo
     this.sub = new Subscription();
     const interval = setInterval(() => {
       this.atualizarHeader();
@@ -148,11 +165,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
         try {
           const usuario = JSON.parse(usuarioStr);
           this.nomeUsuario = usuario.nome || usuario.username || 'Usuário';
+          this.fotoUsuario = usuario.fotoBase64 || null;
         } catch (e) {
           this.nomeUsuario = 'Usuário';
+          this.fotoUsuario = null;
         }
       } else {
         this.nomeUsuario = this.authService.getUsuarioNome();
+        this.fotoUsuario = null;
       }
     }
   }

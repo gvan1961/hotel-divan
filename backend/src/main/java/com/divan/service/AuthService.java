@@ -137,6 +137,7 @@ public class AuthService {
         response.setUsername(usuario.getUsername());
         response.setNome(usuario.getNome());
         response.setEmail(usuario.getEmail());
+        response.setFotoBase64(usuario.getFotoBase64());       
         response.setPerfis(perfis);
         response.setPermissoes(permissoes);
 

@@ -67,3 +67,10 @@ Clique OK — o STS vai reiniciar com esse workspace vazio
 File → Import... → Maven → Existing Maven Projects
 Browse até C:\newspanggit\hotel-lab
 Finish
+
+COMO PASSEI O SPANGGIT PARA O NEWSPANGGIT :
+Remove-Item -Recurse -Force "C:\newspanggit\backend"
+Remove-Item -Recurse -Force "C:\newspanggit\frontend"
+
+robocopy "C:\SpAngGit\backend" "C:\newspanggit\backend" /E /XD target node_modules .git
+robocopy "C:\SpAngGit\frontend" "C:\newspanggit\frontend" /E /XD node_modules dist .git

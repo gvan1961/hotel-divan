@@ -229,8 +229,8 @@ interface ItemCarrinho {
 
     <div class="campo" *ngIf="reservasFiltradas.length > 0">
       <label>Selecionar Reserva *</label>
-      <select [(ngModel)]="reservaSelecionadaId" size="5" style="width:100%; height:120px;">
-        <option [value]="0">Selecione...</option>
+        <select [(ngModel)]="reservaSelecionadaId" (change)="onSelecionarReserva()" size="5" style="width:100%; height:120px;">  
+      <option [value]="0">Selecione...</option>
         <option *ngFor="let reserva of reservasFiltradas" [value]="reserva.id">
           Apto {{ reserva.apartamento?.numeroApartamento }} — {{ reserva.cliente?.nome }}
         </option>
@@ -847,6 +847,15 @@ ngAfterViewInit(): void {
   }, 300);
 }
 
+onSelecionarReserva(): void {
+  const id = Number(this.reservaSelecionadaId);
+  if (id > 0) {
+    this.carregarHospedesApartamento(id);
+  } else {
+    this.hospedesDoApartamento = [];
+  }
+}
+
 carregarHospedesApartamento(reservaId: number): void {
   this.http.get<any[]>(`/api/reservas/${reservaId}/hospedes`).subscribe({
     next: (hospedes) => {
@@ -1087,11 +1096,12 @@ limparCarrinho(): void {
       this.reservasFiltradas = [...this.reservas];
 
       if (this.reservaIdPreSelecionada > 0) {
-        const reservaExiste = this.reservas.find(r => r.id === this.reservaIdPreSelecionada);
-        if (reservaExiste) {
-          this.reservaSelecionadaId = this.reservaIdPreSelecionada;
-        }
-      }
+  const reservaExiste = this.reservas.find(r => r.id === this.reservaIdPreSelecionada);
+  if (reservaExiste) {
+    this.reservaSelecionadaId = this.reservaIdPreSelecionada;
+    this.carregarHospedesApartamento(this.reservaIdPreSelecionada); // ← linha adicionada
+  }
+}
     },
     error: (err) => console.error('❌ Erro ao carregar reservas:', err)
   });
