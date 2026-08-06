@@ -1,18 +1,51 @@
 package com.divan.service;
 
-import com.divan.dto.ApartamentoResponseDTO;
-import com.divan.dto.ClienteResponseDTO;
-import com.divan.dto.ComandaRapidaDTO;
-import com.divan.dto.LancamentoRapidoRequest;
-import com.divan.dto.ReservaResponseDTO;
-import com.divan.dto.TransferenciaApartamentoDTO;
-import com.divan.entity.*;
-import com.divan.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.divan.entity.Apartamento;
+import com.divan.entity.BilheteSorteio;
+import com.divan.entity.Cliente;
+import com.divan.entity.ContaAPagar;
+import com.divan.entity.ContaAReceber;
+import com.divan.entity.Desconto;
+import com.divan.entity.Diaria;
+import com.divan.entity.ExtratoReserva;
+import com.divan.entity.HistoricoHospede;
+import com.divan.entity.HospedagemHospede;
+import com.divan.entity.ItemVenda;
+import com.divan.entity.LogAuditoria;
+import com.divan.entity.NotaVenda;
+import com.divan.entity.Produto;
+import com.divan.entity.Reserva;
+import com.divan.entity.TipoApartamento;
+
+import com.divan.repository.ApartamentoRepository;
+import com.divan.repository.ClienteRepository;
+import com.divan.repository.ContaAPagarRepository;
+import com.divan.repository.ContaAReceberRepository;
+import com.divan.repository.DescontoRepository;
+import com.divan.repository.ExtratoReservaRepository;
+import com.divan.repository.HistoricoHospedeRepository;
+import com.divan.repository.HospedagemHospedeRepository;
+import com.divan.repository.ItemVendaRepository;
+import com.divan.repository.LogAuditoriaRepository;
+import com.divan.repository.ProdutoRepository;
+import com.divan.repository.ReservaRepository;
+import com.divan.repository.UsuarioRepository;
+
+import com.divan.dto.ApartamentoResponseDTO;
+import com.divan.dto.ClienteResponseDTO;
+import com.divan.dto.ComandaRapidaDTO;
+import com.divan.dto.LancamentoRapidoRequest;
+import com.divan.dto.ReservaDetalhesDTO;
+import com.divan.dto.ReservaResponseDTO;
+import com.divan.dto.TransferenciaApartamentoDTO;
+
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -23,14 +56,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import com.divan.dto.ReservaDetalhesDTO;
-import com.divan.repository.HospedagemHospedeRepository;
-import java.time.LocalDate;
-import com.divan.entity.ContaAReceber;
-import com.divan.entity.HospedagemHospede;
-import com.divan.repository.ContaAReceberRepository;
-import java.time.format.DateTimeFormatter;
-
 
 @Service
 @Transactional

@@ -3,6 +3,7 @@ package com.divan.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -27,10 +28,27 @@ public class WhatsAppService {
 
     @Value("${evolution.api.timeout-segundos:10}")
     private int timeoutSegundos;
+   
+    
+    
     
     @Value("${evolution.api.instancia-funcionarios}")
     private String instanciaFuncionarios;
+    
+    private RestClient criarClienteComTimeout() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(timeoutSegundos * 1000);
+        factory.setReadTimeout(timeoutSegundos * 1000);
 
+        return RestClient.builder()
+                .baseUrl(apiUrl)
+                .requestFactory(factory)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .defaultHeader("apikey", apiKey)
+                .build();
+    }
+    
+   
     /**
      * Resultado de envio com sucesso/erro e payload de resposta.
      */
@@ -76,11 +94,7 @@ public class WhatsAppService {
             body.put("number", numeroLimpo);
             body.put("text", texto);
 
-            RestClient client = RestClient.builder()
-                    .baseUrl(apiUrl)
-                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                    .defaultHeader("apikey", apiKey)
-                    .build();
+            RestClient client = criarClienteComTimeout();
 
             String response = client.post()
                     .uri("/message/sendText/{instancia}", instancia)
@@ -139,12 +153,7 @@ public class WhatsAppService {
             body.put("number", numeroLimpo);
             body.put("text", texto);
 
-            RestClient client = RestClient.builder()
-                    .baseUrl(apiUrl)
-                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                    .defaultHeader("apikey", apiKey)
-                    .build();
-
+            RestClient client = criarClienteComTimeout();
             String response = client.post()
                     .uri("/message/sendText/{instancia}", inst)
                     .body(body)

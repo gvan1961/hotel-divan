@@ -985,28 +985,28 @@ darBaixaEmLote(): void {
   let processados = 0;
   let erros = 0;
 
-  ids.forEach(id => {
-    this.valeService.marcarComoPago(id).subscribe({
+  const processarProximo = (index: number): void => {
+    if (index >= ids.length) {
+      alert(`✅ ${processados} vale(s) pagos com sucesso!${erros > 0 ? '\n❌ ' + erros + ' erro(s)' : ''}`);
+      this.modalBaixaLote = false;
+      this.valesSelecionados.clear();
+      this.carregarVales();
+      return;
+    }
+
+    this.valeService.marcarComoPago(ids[index]).subscribe({
       next: () => {
         processados++;
-        if (processados + erros === ids.length) {
-          alert(`✅ ${processados} vale(s) pagos com sucesso!${erros > 0 ? '\n❌ ' + erros + ' erro(s)' : ''}`);
-          this.modalBaixaLote = false;
-          this.valesSelecionados.clear();
-          this.carregarVales();
-        }
+        processarProximo(index + 1);
       },
       error: () => {
         erros++;
-        if (processados + erros === ids.length) {
-          alert(`✅ ${processados} pago(s)!\n❌ ${erros} erro(s)`);
-          this.modalBaixaLote = false;
-          this.valesSelecionados.clear();
-          this.carregarVales();
-        }
+        processarProximo(index + 1);
       }
     });
-  });
+  };
+
+  processarProximo(0);
 }
   
 }
