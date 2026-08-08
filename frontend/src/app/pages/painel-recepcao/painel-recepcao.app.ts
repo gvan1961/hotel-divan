@@ -24,6 +24,7 @@ interface Reserva {
   entraHoje: boolean;
   atrasado: boolean;
   renovacaoAutomatica: boolean;
+  mostrarBotaoAssinaturaCredito?: boolean;
   proximaReserva?: ProximaReserva;
 }
 
@@ -459,6 +460,13 @@ template: `
           <!-- AÇÕES -->
           <div class="card-acoes">
 
+            <!-- ASSINATURA APROVAÇÃO DE CRÉDITO -->
+            <!-- Só aparece se algum hóspede tem crédito aprovado E a reserva ainda não foi assinada -->
+            <button class="btn-icone btn-assinatura-credito"
+                    *ngIf="apt.reserva?.mostrarBotaoAssinaturaCredito"
+                    (click)="irParaAssinaturaCredito(apt)"
+                    title="Assinatura - Aprovação de Crédito">✍️</button>
+
            
 
 
@@ -860,6 +868,12 @@ template: `
       white-space: nowrap;
     }
     .btn-icone:hover { background: #e8eaec; }
+
+    .btn-assinatura-credito {
+      background: #fff8e1;
+      border: 1px solid #f0c419;
+    }
+    .btn-assinatura-credito:hover { background: #fdecc0; }
 
     /* ── PRÓXIMA RESERVA ────────────────────────── */
     .proxima-reserva {
@@ -1662,6 +1676,14 @@ if (this.filtroDataCheckin) {
     if (apt.reserva?.id) this.router.navigate(['/reservas', apt.reserva.id]);
   }
 
+  irParaAssinaturaCredito(apt: ApartamentoCard): void {
+    if (apt.reserva?.id) {
+      this.router.navigate(['/reservas', apt.reserva.id], {
+        queryParams: { abrirAssinatura: '1' }
+      });
+    }
+  }
+
   irCheckout(apt: ApartamentoCard): void {
     if (apt.reserva?.id) this.router.navigate(['/reservas', apt.reserva.id]);
   }
@@ -2211,4 +2233,4 @@ abrirFotosHospedes(apt: ApartamentoCard): void {
   });
 }
 
-}  
+}

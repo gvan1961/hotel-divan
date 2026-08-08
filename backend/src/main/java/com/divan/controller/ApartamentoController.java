@@ -516,6 +516,15 @@ public class ApartamentoController {
                     res.put("entraHoje",        entraHoje);
                     res.put("atrasado",         atrasado);
                     res.put("renovacaoAutomatica", r.getRenovacaoAutomatica() != null && r.getRenovacaoAutomatica());
+
+                    // ✅ BOTÃO DE ASSINATURA - APROVAÇÃO DE CRÉDITO
+                    // Mostra o botão só se: (1) algum hóspede da reserva tem crédito aprovado
+                    // e (2) a reserva ainda não tem assinatura registrada.
+                    boolean temAssinatura = r.getAssinaturaBase64() != null && !r.getAssinaturaBase64().isBlank();
+                    boolean temHospedeCreditoAprovado = hospedagemHospedeRepository
+                        .existsByReservaIdAndStatusNotAndClienteCreditoAprovadoTrue(
+                            r.getId(), HospedagemHospede.StatusEnum.REMOVIDO);
+                    res.put("mostrarBotaoAssinaturaCredito", temHospedeCreditoAprovado && !temAssinatura);
                   
                     // ✅ PRÓXIMA RESERVA (se ATIVA e tem pré-reserva futura)
                     if (r.getStatus() == Reserva.StatusReservaEnum.ATIVA

@@ -21,6 +21,11 @@ public interface HospedagemHospedeRepository extends JpaRepository<HospedagemHos
     // ✅ NOVO: busca em lote (evita N+1 ao converter listas de contas/reservas)
     List<HospedagemHospede> findByReservaIdIn(List<Long> reservaIds);
 
+    // ✅ NOVO: usado no card do Painel Recepção para saber se mostra o botão
+    // de assinatura de aprovação de crédito (EXISTS = leve, não carrega objetos)
+    boolean existsByReservaIdAndStatusNotAndClienteCreditoAprovadoTrue(
+        Long reservaId, HospedagemHospede.StatusEnum status);
+
     List<HospedagemHospede> findByReservaIdAndStatus(Long reservaId, HospedagemHospede.StatusEnum status);
 
     List<HospedagemHospede> findByClienteId(Long clienteId);

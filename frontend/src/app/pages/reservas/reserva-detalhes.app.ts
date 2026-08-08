@@ -3077,9 +3077,20 @@ get podeCancelar(): boolean {
   const id = this.route.snapshot.paramMap.get('id');
   if (id) {
     this.reservaId = Number(id);
+
+    // ✅ Veio do botão de Assinatura - Aprovação de Crédito (Painel Recepção)
+    const abrirAssinatura = this.route.snapshot.queryParamMap.get('abrirAssinatura');
+
     this.carregarReserva(this.reservaId);
     console.log('🏢 Chamando carregarEmpresas...');
     this.carregarEmpresas();
+
+    if (abrirAssinatura === '1') {
+      setTimeout(() => {
+        this.modalAssinatura = true;
+        this.assinaturaCapturada = null;
+      }, 800);
+    }
 
     // ✅ Atualizar a cada 30 segundos
     this.intervaloAtualizacao = setInterval(() => {
