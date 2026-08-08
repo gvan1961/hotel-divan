@@ -88,6 +88,12 @@ interface FiltrosAvancados {
         </button>
       </div>
 
+        <!-- MENSAGEM INICIAL (antes de qualquer busca) -->
+      <div *ngIf="contas.length === 0 && !loading && !modalFiltros" class="mensagem-inicial">
+        <p>🔍 Use os Filtros Avançados para buscar as contas a receber.</p>
+        <button class="btn btn-filtros" (click)="abrirModalFiltros()">Abrir Filtros</button>
+      </div>
+
       <!-- RESUMO -->
       <div class="resumo">
         <div class="card-resumo verde">
@@ -247,8 +253,11 @@ interface FiltrosAvancados {
             <!-- EMPRESA -->
             <div class="campo">
               <label>🏢 Empresa</label>
-              <select [(ngModel)]="filtrosTemp.empresaId">
-                <option [ngValue]="undefined">Todas as empresas</option>
+             
+              <select [(ngModel)]="filtrosTemp.empresaId">                
+                <option [ngValue]="undefined">
+                {{ empresas.length === 0 ? 'Carregando empresas...' : 'Todas as empresas' }}
+              </option>
                 <option *ngFor="let empresa of empresas" [ngValue]="empresa.id">
                   {{ empresa.nomeEmpresa }}
                 </option>
@@ -330,6 +339,7 @@ interface FiltrosAvancados {
           </div>
 
           <div class="modal-footer">
+            <button class="btn-voltar" (click)="voltarParaAdministrativo()">⬅️ Voltar</button>
             <button class="btn-cancelar" (click)="fecharModalFiltros()">Cancelar</button>
             <button class="btn-limpar" (click)="limparFiltrosTemp()">🗑️ Limpar</button>
             <button class="btn-confirmar" (click)="aplicarFiltrosAvancados()">Aplicar Filtros</button>
@@ -869,16 +879,17 @@ interface FiltrosAvancados {
     }
 
     .modal-content {
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      min-width: 500px;
-      max-width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  min-width: 500px;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 
-    .modal-grande { min-width: 800px; }
+.modal-grande { width: 800px; max-width: 90%; }
 
     .modal-content h2 {
       margin: 0 0 10px 0;
@@ -908,7 +919,7 @@ interface FiltrosAvancados {
 
     .info-conta p { margin: 8px 0; }
 
-    .campo { margin-bottom: 20px; }
+    .campo { margin-bottom: 20px; min-width: 0; }
 
     .campo label {
       display: block;
@@ -918,15 +929,16 @@ interface FiltrosAvancados {
     }
 
     .campo input,
-    .campo select,
-    .campo textarea {
-      width: 100%;
-      padding: 10px;
-      border: 2px solid #e0e0e0;
-      border-radius: 6px;
-      font-size: 1em;
-      font-family: inherit;
-    }
+.campo select,
+.campo textarea {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 1em;
+  font-family: inherit;
+  text-overflow: ellipsis;   /* ← adicionar essa linha */
+}
 
     .campo input:focus,
     .campo select:focus,
@@ -997,6 +1009,7 @@ interface FiltrosAvancados {
       margin-top: 20px;
     }
 
+    .btn-voltar,
     .btn-cancelar,
     .btn-limpar,
     .btn-confirmar {
@@ -1007,6 +1020,13 @@ interface FiltrosAvancados {
       cursor: pointer;
       transition: all 0.3s;
     }
+
+    .btn-voltar {
+  background: #ecf0f1;
+  color: #2c3e50;
+  margin-right: auto;
+}
+.btn-voltar:hover { background: #dfe4e6; }
 
     .btn-cancelar { background: #95a5a6; color: white; }
     .btn-cancelar:hover { background: #7f8c8d; }
@@ -1220,8 +1240,14 @@ pagamentoLote = {
     formaPagamento: '',
     observacao: ''
   };
+
 ngOnInit(): void {
-  this.carregarDados();
+  this.modalFiltros = true; // Abre direto no filtro, sem carregar nada ainda
+
+  // Carrega a lista de empresas imediatamente, independente das contas
+  this.http.get<any[]>('/api/empresas').subscribe({
+    next: (data) => this.empresas = data
+  });
 }
 
   carregarDados(): void {
@@ -1270,11 +1296,15 @@ this.contaReceberService.listarTodas().subscribe({
     this.modalFiltros = false;
   }
 
-  aplicarFiltrosAvancados(): void {
-    this.filtrosAplicados = { ...this.filtrosTemp };
-    this.aplicarFiltros();
-    this.fecharModalFiltros();
-  }
+  voltarParaAdministrativo(): void {
+  this.router.navigate(['/administrativo']);
+}
+
+aplicarFiltrosAvancados(): void {
+  this.filtrosAplicados = { ...this.filtrosTemp };
+  this.fecharModalFiltros();
+  this.carregarDados(); // agora só carrega quando o filtro é aplicado
+}
 
   aplicarFiltros(): void {
     let resultado = [...this.contas];

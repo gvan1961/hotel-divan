@@ -26,14 +26,13 @@ public class AlertasController {
 
         // Checkouts vencidos
         List<Reserva> reservasAtrasadas = reservaRepository
-            .findByStatusAndDataCheckoutBefore(StatusReservaEnum.ATIVA, agora);
+        	    .findByStatusAndDataCheckoutBeforeComRelacionamentos(StatusReservaEnum.ATIVA, agora);
         // No-shows
         List<Reserva> noShowReservas = reservaRepository
-            .findByStatusAndDataCheckinBefore(StatusReservaEnum.PRE_RESERVA, agora);
+        	    .findByStatusAndDataCheckinBeforeComRelacionamentos(StatusReservaEnum.PRE_RESERVA, agora);
         // ✅ Renovações automáticas pendentes de checkout
         List<Reserva> renovadasAuto = reservaRepository
-            .findAllByRenovacaoAutomaticaTrueAndStatus(StatusReservaEnum.ATIVA);
-        // Converte para AlertaDTO
+        	    .findAllByRenovacaoAutomaticaTrueAndStatusComRelacionamentos(StatusReservaEnum.ATIVA);        // Converte para AlertaDTO
         List<AlertaDTO> checkoutsVencidos = new ArrayList<>();
         for (Reserva r : reservasAtrasadas) {
             AlertaDTO dto = new AlertaDTO();

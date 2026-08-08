@@ -28,6 +28,19 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
         
     List<Reserva> findByStatus(Reserva.StatusReservaEnum status);
     
+      
+    @Query("""
+    	    SELECT DISTINCT r FROM Reserva r
+    	    LEFT JOIN FETCH r.cliente c
+    	    LEFT JOIN FETCH c.empresa
+    	    LEFT JOIN FETCH r.apartamento a
+    	    LEFT JOIN FETCH a.tipoApartamento
+    	    LEFT JOIN FETCH r.diaria d
+    	    LEFT JOIN FETCH d.tipoApartamento
+    	    WHERE r.status = :status
+    	    """)
+    	List<Reserva> findByStatusComRelacionamentos(@Param("status") Reserva.StatusReservaEnum status);
+    
     @Query("SELECT r FROM Reserva r WHERE r.status = 'ATIVA'")
     List<Reserva> findReservasAtivas();
     
@@ -167,6 +180,41 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     		    @Param("statusReserva") Reserva.StatusReservaEnum statusReserva,
     		    @Param("ignorarReservaId") Long ignorarReservaId
     		);
+    		
+    		@Query("""
+    			    SELECT DISTINCT r FROM Reserva r
+    			    LEFT JOIN FETCH r.cliente
+    			    LEFT JOIN FETCH r.apartamento a
+    			    LEFT JOIN FETCH a.tipoApartamento
+    			    WHERE r.status = :status AND r.dataCheckout < :data
+    			    """)
+    			List<Reserva> findByStatusAndDataCheckoutBeforeComRelacionamentos(
+    			    @Param("status") Reserva.StatusReservaEnum status,
+    			    @Param("data") LocalDateTime data
+    			);
+
+    			@Query("""
+    			    SELECT DISTINCT r FROM Reserva r
+    			    LEFT JOIN FETCH r.cliente
+    			    LEFT JOIN FETCH r.apartamento a
+    			    LEFT JOIN FETCH a.tipoApartamento
+    			    WHERE r.status = :status AND r.dataCheckin < :data
+    			    """)
+    			List<Reserva> findByStatusAndDataCheckinBeforeComRelacionamentos(
+    			    @Param("status") Reserva.StatusReservaEnum status,
+    			    @Param("data") LocalDateTime data
+    			);
+
+    			@Query("""
+    			    SELECT DISTINCT r FROM Reserva r
+    			    LEFT JOIN FETCH r.cliente
+    			    LEFT JOIN FETCH r.apartamento a
+    			    LEFT JOIN FETCH a.tipoApartamento
+    			    WHERE r.renovacaoAutomatica = true AND r.status = :status
+    			    """)
+    			List<Reserva> findAllByRenovacaoAutomaticaTrueAndStatusComRelacionamentos(
+    			    @Param("status") Reserva.StatusReservaEnum status
+    			);
 
         
 }

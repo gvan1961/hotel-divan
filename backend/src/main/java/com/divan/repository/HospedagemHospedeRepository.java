@@ -18,6 +18,9 @@ public interface HospedagemHospedeRepository extends JpaRepository<HospedagemHos
 
     List<HospedagemHospede> findByReservaId(Long reservaId);
 
+    // ✅ NOVO: busca em lote (evita N+1 ao converter listas de contas/reservas)
+    List<HospedagemHospede> findByReservaIdIn(List<Long> reservaIds);
+
     List<HospedagemHospede> findByReservaIdAndStatus(Long reservaId, HospedagemHospede.StatusEnum status);
 
     List<HospedagemHospede> findByClienteId(Long clienteId);

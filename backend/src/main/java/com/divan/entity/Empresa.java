@@ -1,6 +1,6 @@
 package com.divan.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -34,9 +34,12 @@ public class Empresa {
             message = "Celular deve estar no formato (XX) XXXXX-XXXX")
    private String celular;
     
-    // IMPORTANTE: JsonIgnoreProperties evita o loop infinito
+    // ✅ @JsonIgnore: a lista de clientes (e as reservas de cada cliente, em cascata)
+    // nunca é usada no frontend a partir do objeto Empresa. Sem isso, toda resposta
+    // de /api/empresas arrastava o cadastro completo de clientes + reservas de cada
+    // empresa, gerando payloads de megabytes só pra popular um dropdown de nome/id.
     @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL)
-    @JsonIgnoreProperties("empresa")
+    @JsonIgnore
     private List<Cliente> clientes;
     
     @Column(name = "contato_financeiro_nome", length = 100)

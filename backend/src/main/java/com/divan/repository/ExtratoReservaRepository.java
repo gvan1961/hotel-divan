@@ -25,6 +25,9 @@ public interface ExtratoReservaRepository extends JpaRepository<ExtratoReserva, 
     List<ExtratoReserva> findByPeriodo(LocalDateTime inicio, LocalDateTime fim);
     
     List<ExtratoReserva> findByReservaIdOrderByDataHoraLancamento(Long reservaId);
+
+    // ✅ NOVO: busca em lote (evita N+1 ao converter listas de contas/reservas)
+    List<ExtratoReserva> findByReservaIdInOrderByDataHoraLancamento(List<Long> reservaIds);
     
       
  //   List<HistoricoHospede> findByReservaId(Long reservaId);  

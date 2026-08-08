@@ -1,7 +1,9 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router, NavigationEnd } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-header',
@@ -139,17 +141,27 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isLogado: boolean = false;
   private sub: Subscription = new Subscription();
 
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService, private router: Router) {}
 
   ngOnInit(): void {
     this.atualizarHeader();
 
-    this.sub = new Subscription();
-    const interval = setInterval(() => {
-      this.atualizarHeader();
-    }, 1000);
+    // ✅ Atualiza ao navegar entre telas (cobre login/logout/troca de perfil)
+    // em vez de um setInterval de 1s que forçava re-render da aplicação inteira.
+    this.sub.add(
+      this.router.events
+        .pipe(filter(event => event instanceof NavigationEnd))
+        .subscribe(() => this.atualizarHeader())
+    );
 
-    this.sub.add({ unsubscribe: () => clearInterval(interval) });
+    // ✅ Atualiza se o localStorage mudar (ex: foto de perfil trocada em outra aba)
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === 'usuario' || event.key === 'user' || event.key === null) {
+        this.atualizarHeader();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    this.sub.add({ unsubscribe: () => window.removeEventListener('storage', onStorage) });
   }
 
   ngOnDestroy(): void {

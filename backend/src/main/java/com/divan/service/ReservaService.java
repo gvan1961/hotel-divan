@@ -581,7 +581,7 @@ public class ReservaService {
     }
     
     public List<ReservaResponseDTO> listarPorStatusDTO(Reserva.StatusReservaEnum status) {
-        return reservaRepository.findByStatus(status).stream()
+        return reservaRepository.findByStatusComRelacionamentos(status).stream()
             .map(this::converterParaDTO)
             .collect(Collectors.toList());
     }

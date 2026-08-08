@@ -8,6 +8,7 @@ import com.divan.entity.ContaAReceber;
 import com.divan.entity.ContaAReceber.StatusContaEnum;
 import com.divan.entity.Empresa;
 import com.divan.entity.ExtratoReserva;
+import com.divan.entity.HospedagemHospede;
 import com.divan.entity.Reserva;
 import com.divan.entity.VwExtratoCompleto;
 import com.divan.repository.ContaAReceberRepository;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,43 +52,31 @@ public class ContaAReceberService {
     // ========== LISTAR ==========
     
     public List<ContaAReceberDTO> listarTodas() {
-        return contaAReceberRepository.findAll().stream()
-                .map(this::converterParaDTO)
-                .collect(Collectors.toList());
+        return converterListaParaDTO(contaAReceberRepository.findAll());
     }
 
     public List<ContaAReceberDTO> listarPorStatus(StatusContaEnum status) {
-        return contaAReceberRepository.findByStatus(status).stream()
-                .map(this::converterParaDTO)
-                .collect(Collectors.toList());
+        return converterListaParaDTO(contaAReceberRepository.findByStatus(status));
     }
 
     public List<ContaAReceberDTO> listarContasEmAberto() {
-        return contaAReceberRepository.findContasEmAberto().stream()
-                .map(this::converterParaDTO)
-                .collect(Collectors.toList());
+        return converterListaParaDTO(contaAReceberRepository.findContasEmAberto());
     }
 
     public List<ContaAReceberDTO> listarContasVencidas() {
-        return contaAReceberRepository.findContasVencidas(LocalDate.now()).stream()
-                .map(this::converterParaDTO)
-                .collect(Collectors.toList());
+        return converterListaParaDTO(contaAReceberRepository.findContasVencidas(LocalDate.now()));
     }
 
     public List<ContaAReceberDTO> listarPorCliente(Long clienteId) {
         Cliente cliente = new Cliente();
         cliente.setId(clienteId);
-        return contaAReceberRepository.findByCliente(cliente).stream()
-                .map(this::converterParaDTO)
-                .collect(Collectors.toList());
+        return converterListaParaDTO(contaAReceberRepository.findByCliente(cliente));
     }
 
     public List<ContaAReceberDTO> listarPorEmpresa(Long empresaId) {
         Empresa empresa = new Empresa();
         empresa.setId(empresaId);
-        return contaAReceberRepository.findByEmpresa(empresa).stream()
-                .map(this::converterParaDTO)
-                .collect(Collectors.toList());
+        return converterListaParaDTO(contaAReceberRepository.findByEmpresa(empresa));
     }
 
     public ContaAReceberDTO buscarPorId(Long id) {
@@ -301,18 +291,70 @@ public class ContaAReceberService {
     }
     
 
-    // ========== CONVERTER PARA DTO ==========
-    
+    // ========== CONVERTER PARA DTO (LISTAS - SEM N+1) ==========
+
+    /**
+     * Converte uma lista de contas para DTO buscando hóspedes e extratos
+     * EM LOTE (2 queries no total), em vez de 2 queries por conta.
+     */
+    private List<ContaAReceberDTO> converterListaParaDTO(List<ContaAReceber> contas) {
+        List<Long> reservaIds = contas.stream()
+                .map(ContaAReceber::getReserva)
+                .filter(r -> r != null)
+                .map(Reserva::getId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Long, List<HospedagemHospede>> hospedesPorReserva;
+        Map<Long, List<ExtratoReserva>> extratosPorReserva;
+
+        if (reservaIds.isEmpty()) {
+            hospedesPorReserva = Collections.emptyMap();
+            extratosPorReserva = Collections.emptyMap();
+        } else {
+            hospedesPorReserva = hospedagemHospedeRepository.findByReservaIdIn(reservaIds).stream()
+                    .collect(Collectors.groupingBy(h -> h.getReserva().getId()));
+
+            extratosPorReserva = extratoReservaRepository.findByReservaIdInOrderByDataHoraLancamento(reservaIds).stream()
+                    .collect(Collectors.groupingBy(e -> e.getReserva().getId()));
+        }
+
+        return contas.stream()
+                .map(conta -> converterParaDTO(conta, hospedesPorReserva, extratosPorReserva))
+                .collect(Collectors.toList());
+    }
+
+    // ========== CONVERTER PARA DTO (REGISTRO ÚNICO) ==========
+
     private ContaAReceberDTO converterParaDTO(ContaAReceber conta) {
+        Long reservaId = conta.getReserva() != null ? conta.getReserva().getId() : null;
+
+        Map<Long, List<HospedagemHospede>> hospedesPorReserva = reservaId == null
+                ? Collections.emptyMap()
+                : Map.of(reservaId, hospedagemHospedeRepository.findByReservaId(reservaId));
+
+        Map<Long, List<ExtratoReserva>> extratosPorReserva = reservaId == null
+                ? Collections.emptyMap()
+                : Map.of(reservaId, extratoReservaRepository.findByReservaIdOrderByDataHoraLancamento(reservaId));
+
+        return converterParaDTO(conta, hospedesPorReserva, extratosPorReserva);
+    }
+
+    // ========== CONVERTER PARA DTO (NÚCLEO - RECEBE OS DADOS JÁ CARREGADOS) ==========
+
+    private ContaAReceberDTO converterParaDTO(ContaAReceber conta,
+                                               Map<Long, List<HospedagemHospede>> hospedesPorReserva,
+                                               Map<Long, List<ExtratoReserva>> extratosPorReserva) {
         ContaAReceberDTO dto = new ContaAReceberDTO();
         dto.setId(conta.getId());
         dto.setReservaId(conta.getReserva().getId());
-        dto.setClienteNome(conta.getCliente().getNome());      
-        
-        if (conta.getReserva() != null) {
-            String todosHospedes = hospedagemHospedeRepository
-                .findByReservaId(conta.getReserva().getId())
-                .stream()
+        dto.setClienteNome(conta.getCliente().getNome());
+
+        Long reservaId = conta.getReserva() != null ? conta.getReserva().getId() : null;
+
+        if (reservaId != null) {
+            List<HospedagemHospede> hospedes = hospedesPorReserva.getOrDefault(reservaId, Collections.emptyList());
+            String todosHospedes = hospedes.stream()
                 .map(h -> h.getCliente() != null ? h.getCliente().getNome() : h.getNomeCompleto())
                 .filter(n -> n != null && !n.isBlank())
                 .collect(Collectors.joining(", "));
@@ -353,17 +395,15 @@ public class ContaAReceberService {
             BigDecimal valorPagoContaReceber = conta.getValorPago() != null ? conta.getValorPago() : BigDecimal.ZERO;
 
             // ✅ CALCULAR PAGO À VISTA (exclui débito em conta)
-            List<ExtratoReserva> extratos = extratoReservaRepository
-            	    .findByReservaIdOrderByDataHoraLancamento(reserva.getId());
-            System.out.println("📋 Extratos da reserva " + reserva.getId() + ": " + extratos.size());
-            extratos.forEach(e -> System.out.println("  → " + e.getDescricao() + " = " + e.getTotalLancamento()));
+            List<ExtratoReserva> extratos = reservaId != null
+                    ? extratosPorReserva.getOrDefault(reservaId, Collections.emptyList())
+                    : Collections.emptyList();
 
             BigDecimal debitoEmConta = extratos.stream()
                 .filter(e -> e.getDescricao() != null && e.getDescricao().contains("DEBITO EM CONTA"))
                 .map(e -> e.getTotalLancamento().abs())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            System.out.println("💳 Débito em conta: " + debitoEmConta);
             BigDecimal pagoAVista = totalRecebidoReserva.subtract(debitoEmConta);
             if (pagoAVista.compareTo(BigDecimal.ZERO) < 0) pagoAVista = BigDecimal.ZERO;
 
@@ -378,58 +418,6 @@ public class ContaAReceberService {
         }
         
         return dto;
-    }
-    
-    public List<Map<String, Object>> relatórioDetalhadoEmpresa(Long empresaId) {
-        Empresa empresa = new Empresa();
-        empresa.setId(empresaId);
-        List<ContaAReceber> contas = contaAReceberRepository.findByEmpresa(empresa);
-
-        List<Map<String, Object>> resultado = new ArrayList<>();
-
-        for (ContaAReceber conta : contas) {
-            Map<String, Object> item = new HashMap<>();
-            item.put("contaId", conta.getId());
-            item.put("reservaId", conta.getReserva().getId());
-            item.put("clienteNome", conta.getCliente().getNome());
-            item.put("numeroApartamento", conta.getReserva().getApartamento() != null
-                ? conta.getReserva().getApartamento().getNumeroApartamento() : "-");
-            item.put("dataCheckin", conta.getReserva().getDataCheckin());
-            item.put("dataCheckout", conta.getReserva().getDataCheckout());
-            item.put("quantidadeHospede", conta.getReserva().getQuantidadeHospede());
-            item.put("quantidadeDiaria", conta.getReserva().getQuantidadeDiaria());
-            item.put("totalHospedagem", conta.getReserva().getTotalHospedagem());
-            item.put("desconto", conta.getReserva().getDesconto());
-            item.put("totalRecebido", conta.getReserva().getTotalRecebido());
-            item.put("valor", conta.getValor());
-                       
-            item.put("valorPago", conta.getReserva().getTotalRecebido() != null
-            	    ? conta.getReserva().getTotalRecebido() : BigDecimal.ZERO);         
-            
-            
-            item.put("saldo", conta.getSaldo());
-            item.put("status", conta.getStatus());
-            item.put("dataVencimento", conta.getDataVencimento());
-           
-            // Extratos da reserva
-            List<ExtratoReserva> extratos = extratoReservaRepository
-                .findByReservaIdOrderByDataHoraLancamento(conta.getReserva().getId());
-
-            List<Map<String, Object>> extratosList = extratos.stream().map(e -> {
-                Map<String, Object> ext = new HashMap<>();
-                ext.put("descricao", e.getDescricao());
-                ext.put("status", e.getStatusLancamento());
-                ext.put("quantidade", e.getQuantidade());
-                ext.put("valorUnitario", e.getValorUnitario());
-                ext.put("total", e.getTotalLancamento());
-                ext.put("dataHora", e.getDataHoraLancamento());
-                return ext;
-            }).collect(Collectors.toList());
-
-            item.put("extratos", extratosList);
-            resultado.add(item);
-        }
-        return resultado;
     }
     
     @Transactional

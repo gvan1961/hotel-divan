@@ -1,5 +1,6 @@
 package com.divan.controller;
 
+import com.divan.dto.ValeDTO;
 import com.divan.entity.Cliente;
 import com.divan.entity.Vale;
 import com.divan.entity.Vale.StatusVale;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Comparator;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,32 +35,35 @@ public class ValeController {
 
     @Autowired
     private WhatsAppService whatsAppService;
-    
+
+    // ========== LISTAGENS (retornam ValeDTO - sem cliente completo, sem assinatura) ==========
+
     @GetMapping
-    public ResponseEntity<List<Vale>> listarTodos() {
-        return ResponseEntity.ok(valeRepository.findAll());
+    public ResponseEntity<List<ValeDTO>> listarTodos() {
+        return ResponseEntity.ok(converterLista(valeRepository.findAllComCliente()));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> buscarPorId(@PathVariable Long id) {
+        // Endpoint de detalhe/impressão: mantém a entidade completa (precisa da assinatura)
         return valeRepository.findById(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/cliente/{clienteId}")
-    public ResponseEntity<List<Vale>> listarPorCliente(@PathVariable Long clienteId) {
-        return ResponseEntity.ok(valeRepository.findByClienteId(clienteId));
+    public ResponseEntity<List<ValeDTO>> listarPorCliente(@PathVariable Long clienteId) {
+        return ResponseEntity.ok(converterLista(valeRepository.findByClienteIdComCliente(clienteId)));
     }
 
     @GetMapping("/pendentes")
-    public ResponseEntity<List<Vale>> listarPendentes() {
-        return ResponseEntity.ok(valeRepository.findByStatus(StatusVale.PENDENTE));
+    public ResponseEntity<List<ValeDTO>> listarPendentes() {
+        return ResponseEntity.ok(converterLista(valeRepository.findByStatusComCliente(StatusVale.PENDENTE)));
     }
 
     @GetMapping("/vencidos")
-    public ResponseEntity<List<Vale>> listarVencidos() {
-        return ResponseEntity.ok(valeRepository.findVencidos());
+    public ResponseEntity<List<ValeDTO>> listarVencidos() {
+        return ResponseEntity.ok(converterLista(valeRepository.findVencidos()));
     }
 
     @GetMapping("/cliente/{clienteId}/total-pendente")
@@ -67,6 +71,27 @@ public class ValeController {
         BigDecimal total = valeRepository.calcularTotalPendentePorCliente(clienteId);
         return ResponseEntity.ok(Map.of("totalPendente", total));
     }
+
+    // ========== RELATÓRIO: filtro agora é feito no banco, não em memória ==========
+
+    @GetMapping("/relatorio")
+    public ResponseEntity<List<ValeDTO>> relatorio(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long clienteId,
+            @RequestParam(required = false) String dataInicio,
+            @RequestParam(required = false) String dataFim) {
+
+        StatusVale statusEnum = (status != null && !status.isEmpty()) ? StatusVale.valueOf(status) : null;
+        LocalDateTime inicio = (dataInicio != null && !dataInicio.isEmpty())
+            ? LocalDate.parse(dataInicio).atStartOfDay() : null;
+        LocalDateTime fim = (dataFim != null && !dataFim.isEmpty())
+            ? LocalDate.parse(dataFim).atTime(LocalTime.MAX) : null;
+
+        List<Vale> vales = valeRepository.buscarRelatorio(statusEnum, clienteId, inicio, fim);
+        return ResponseEntity.ok(converterLista(vales));
+    }
+
+    // ========== CRIAR / ATUALIZAR / AÇÕES (mantidos como antes, sem alteração de comportamento) ==========
 
     @PostMapping
     public ResponseEntity<?> criar(@RequestBody Map<String, Object> body) {
@@ -141,6 +166,33 @@ public class ValeController {
             vencidos.size() + " vale(s) marcado(s) como vencido(s)"));
     }
 
+    // ========== CONVERSÃO PARA DTO ==========
+
+    private List<ValeDTO> converterLista(List<Vale> vales) {
+        return vales.stream().map(this::converterParaDTO).collect(Collectors.toList());
+    }
+
+    private ValeDTO converterParaDTO(Vale vale) {
+        ValeDTO dto = new ValeDTO();
+        dto.setId(vale.getId());
+        dto.setClienteId(vale.getCliente() != null ? vale.getCliente().getId() : null);
+        dto.setClienteNome(vale.getClienteNome());
+        dto.setClienteCpf(vale.getClienteCpf());
+        dto.setValor(vale.getValor());
+        dto.setDescricao(vale.getDescricao());
+        dto.setDataEmissao(vale.getDataEmissao());
+        dto.setDataVencimento(vale.getDataVencimento());
+        dto.setDataPagamento(vale.getDataPagamento());
+        dto.setDataConcessao(vale.getDataConcessao());
+        dto.setMotivoCancelamento(vale.getMotivoCancelamento());
+        dto.setObservacao(vale.getObservacao());
+        dto.setStatus(vale.getStatus());
+        dto.setTipoVale(vale.getTipoVale());
+        return dto;
+    }
+
+    // ========== NOTIFICAÇÕES WHATSAPP (sem alteração) ==========
+
     private void notificarValeCreado(Vale vale) {
         try {
             Cliente cliente = vale.getCliente();
@@ -172,7 +224,7 @@ public class ValeController {
             System.err.println("⚠️ Erro ao notificar vale: " + e.getMessage());
         }
     }
-    
+
     private void preencherVale(Vale vale, Map<String, Object> body) {
         Long clienteId = Long.parseLong(body.get("clienteId").toString());
         Cliente cliente = clienteRepository.findById(clienteId)
@@ -192,13 +244,13 @@ public class ValeController {
                 body.get("dataVencimento").toString().substring(0, 10)));
         if (body.get("dataConcessao") != null)
             vale.setDataConcessao(LocalDate.parse(
-                body.get("dataConcessao").toString().substring(0, 10)));        
+                body.get("dataConcessao").toString().substring(0, 10)));
         else
             vale.setDataConcessao(LocalDate.now());
         if (body.get("assinaturaBase64") != null)
             vale.setAssinaturaBase64(body.get("assinaturaBase64").toString());
     }
-    
+
     private void notificarValePago(Vale vale) {
         try {
             Cliente cliente = vale.getCliente();
@@ -226,39 +278,4 @@ public class ValeController {
             System.err.println("⚠️ Erro ao notificar pagamento de vale: " + e.getMessage());
         }
     }
-    
-    @GetMapping("/relatorio")
-    public ResponseEntity<List<Vale>> relatorio(
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) Long clienteId,
-            @RequestParam(required = false) String dataInicio,
-            @RequestParam(required = false) String dataFim) {
-
-        List<Vale> vales = valeRepository.findAll();
-
-        if (status != null && !status.isEmpty()) {
-            StatusVale s = StatusVale.valueOf(status);
-            vales = vales.stream().filter(v -> v.getStatus() == s).collect(Collectors.toList());
-        }
-        if (clienteId != null) {
-            vales = vales.stream().filter(v -> v.getCliente() != null && v.getCliente().getId().equals(clienteId)).collect(Collectors.toList());
-        }
-        if (dataInicio != null && !dataInicio.isEmpty()) {
-            LocalDate inicio = LocalDate.parse(dataInicio);
-            vales = vales.stream()
-                .filter(v -> v.getDataEmissao() != null && !v.getDataEmissao().toLocalDate().isBefore(inicio))
-                .collect(Collectors.toList());
-        }
-        if (dataFim != null && !dataFim.isEmpty()) {
-            LocalDate fim = LocalDate.parse(dataFim);
-            vales = vales.stream()
-                .filter(v -> v.getDataEmissao() != null && !v.getDataEmissao().toLocalDate().isAfter(fim))
-                .collect(Collectors.toList());
-        }
-
-        vales.sort(Comparator.comparing(v -> v.getClienteNome() != null ? v.getClienteNome() : ""));
-        return ResponseEntity.ok(vales);
-    }
-    
-    
 }
