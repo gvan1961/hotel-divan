@@ -135,6 +135,7 @@ public class ReservaController {
             reserva.setQuantidadeHospede(dto.getQuantidadeHospede());
             reserva.setDataCheckin(dto.getDataCheckin());
             reserva.setDataCheckout(dto.getDataCheckout());
+            reserva.setObservacoes(dto.getObservacoes());
             
             Reserva reservaCriada = reservaService.criarReserva(reserva);
             

@@ -190,6 +190,16 @@ import { HostListener } from '@angular/core';
             </div>
           </div>
 
+          <!-- OBSERVAÇÕES / GRUPO -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>📝 Observações / Grupo (opcional)</label>
+              <input type="text" [(ngModel)]="reserva.observacoes" name="observacoes"
+                placeholder="Ex: Equipe A - Contrato Prefeitura de Arapiraca" />
+              <small class="field-help">Use o mesmo texto em todos os apartamentos de um mesmo evento/equipe para facilitar a impressão de listas depois.</small>
+            </div>
+          </div>
+
           <!-- DATAS -->
           <div class="form-row">
             <div class="form-group">
@@ -1153,6 +1163,7 @@ private enviarReserva(fmt: Function): void {
     quantidadeHospede: Number(this.reserva.quantidadeHospede),
     dataCheckin: fmt(new Date(this.reserva.dataCheckin.replace('T', ' '))),
     dataCheckout: fmt(new Date(this.reserva.dataCheckout.replace('T', ' '))),
+    observacoes: this.reserva.observacoes || null,
     hospedes: this.hospedes,
     hospedesAdicionaisIds: this.hospedes.slice(1)
       .filter((h: any) => h.clienteId)

@@ -45,6 +45,8 @@ public class ReservaResponseDTO {
     private Boolean faturada;
     private String assinaturaBase64;
     
+    private String responsavelPagamentoNome;
+    
 	public Long getId() {
 		return id;
 	}
@@ -189,6 +191,12 @@ public class ReservaResponseDTO {
 	}
 	public void setAssinaturaBase64(String assinaturaBase64) {
 	    this.assinaturaBase64 = assinaturaBase64;
+	}
+	public String getResponsavelPagamentoNome() {
+	    return responsavelPagamentoNome;
+	}
+	public void setResponsavelPagamentoNome(String responsavelPagamentoNome) {
+	    this.responsavelPagamentoNome = responsavelPagamentoNome;
 	}
 	
 		        

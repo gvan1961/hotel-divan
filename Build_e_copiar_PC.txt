@@ -78,3 +78,5 @@ robocopy "C:\SpAngGit\frontend" "C:\newspanggit\frontend" /E /XD node_modules di
 
 Verificar a quantidade de conexões no PC usando o ssh div@10.5.50.2 : Até 10 conexões pode ser normal.
 mysql -u root -p -e "SHOW PROCESSLIST;" | grep bancodivan
+
+Verificar mémoria no servidor através do ssh :  free -h

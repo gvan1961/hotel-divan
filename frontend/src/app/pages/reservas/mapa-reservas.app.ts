@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { forkJoin } from 'rxjs';
 import { ReservaService } from '../../services/reserva.service';
 import { ReservaResponse } from '../../models/reserva.model';
 
@@ -12,6 +13,8 @@ interface ReservaMapa {
   apartamentoNumero: string;
   clienteNome: string;
   clienteCpf?: string;
+  responsavelPagamentoNome?: string;
+  observacoes?: string;
   dataCheckin: string;
   dataCheckout: string;
   status: string;
@@ -60,6 +63,7 @@ interface ApartamentoMapa {
 
         <button class="btn-hoje" (click)="voltarParaHoje()">📅 Hoje</button>
         <button class="btn-atualizar" (click)="carregarMapa()">🔄 Atualizar</button>    
+        <button class="btn-lista-equipe" (click)="abrirListaEquipe()">🖨️ Lista por Equipe</button>
         
       </div>
 
@@ -490,6 +494,63 @@ interface ApartamentoMapa {
   </div>
 </div>
 
+    <!-- MODAL LISTA POR EQUIPE -->
+    <div class="modal-overlay" *ngIf="modalListaEquipe" (click)="fecharListaEquipe()">
+      <div class="modal-content modal-lista-equipe" (click)="$event.stopPropagation()">
+        <h2>🖨️ Lista de Apartamentos por Equipe</h2>
+        <p class="subtitle">Marque os apartamentos de uma equipe e imprima. Depois desmarque e selecione a próxima.</p>
+
+        <div class="filtro-data-equipe">
+          <label>Data:</label>
+          <input type="date" [(ngModel)]="dataListaEquipe" (change)="montarListaPorData()">
+          <label>Nome da equipe (opcional, aparece no cabeçalho impresso):</label>
+          <input type="text" [(ngModel)]="nomeEquipeImpressao" placeholder="Ex: Equipe A, Ônibus 1...">
+        </div>
+
+        <div class="acoes-selecao">
+          <input type="text"
+                 class="busca-contratante"
+                 [(ngModel)]="buscaContratanteEquipe"
+                 placeholder="🔍 Buscar por texto em Observações/Grupo...">
+          <button class="btn-sel-todos" (click)="marcarFiltradosPorContratante()" [disabled]="!buscaContratanteEquipe">
+            ☑️ Marcar filtrados
+          </button>
+          <button class="btn-sel-todos" (click)="selecionarTodosImpressao()">☑️ Marcar todos</button>
+          <button class="btn-sel-nenhum" (click)="desmarcarTodosImpressao()">☐ Desmarcar todos</button>
+          <span class="contador-selecionados">{{ selecionadosImpressao.size }} de {{ reservasDataEscolhida.length }} selecionado(s)</span>
+        </div>
+
+        <div class="lista-apartamentos-equipe" *ngIf="reservasDataEscolhida.length > 0; else semReservasNaData">
+          <div class="apto-equipe-item" *ngFor="let r of reservasDataEscolhida">
+            <label>
+              <input type="checkbox"
+                     [checked]="selecionadosImpressao.has(r.id)"
+                     (change)="toggleSelecaoImpressao(r.id)">
+              <span class="apto-equipe-numero">Apt {{ r.apartamentoNumero }}</span>
+              <span class="apto-equipe-nome">{{ r.clienteNome }}</span>
+              <span class="apto-equipe-contratante" *ngIf="r.observacoes">📝 {{ r.observacoes }}</span>
+              <span class="apto-equipe-qtd">{{ r.quantidadeHospede }} hóspede(s)</span>
+              <span class="apto-equipe-status" [class.status-pre]="r.status === 'PRE_RESERVA'">
+                {{ r.status === 'PRE_RESERVA' ? 'Pré-reserva' : 'Ativa' }}
+              </span>
+            </label>
+          </div>
+        </div>
+        <ng-template #semReservasNaData>
+          <p class="sem-reservas-msg">Nenhuma reserva encontrada para essa data.</p>
+        </ng-template>
+
+        <div class="modal-footer">
+          <button class="btn-cancelar" (click)="fecharListaEquipe()">Fechar</button>
+          <button class="btn-confirmar"
+                  [disabled]="selecionadosImpressao.size === 0 || imprimindoLista"
+                  (click)="imprimirListaEquipe()">
+            {{ imprimindoLista ? '⏳ Preparando...' : '🖨️ Imprimir Selecionados' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     </div>
   `,
   styles: [`
@@ -533,7 +594,8 @@ h1 {
 .btn-voltar,
 .btn-imprimir,
 .btn-hoje,
-.btn-atualizar {
+.btn-atualizar,
+.btn-lista-equipe {
   padding: 10px 20px;
   border: none;
   border-radius: 6px;
@@ -567,6 +629,14 @@ h1 {
 
 .btn-atualizar:hover {
   background: #229954;
+}
+
+.btn-lista-equipe {
+  background: #8e44ad;
+}
+
+.btn-lista-equipe:hover {
+  background: #732d91;
 }
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -1451,6 +1521,161 @@ td.col-reserva.hoje {
   background: #1e8449;
 }
 
+/* ═══════════════════════════════════════════════════════════ */
+/* MODAL LISTA POR EQUIPE */
+/* ═══════════════════════════════════════════════════════════ */
+
+.modal-lista-equipe {
+  min-width: 600px;
+  max-width: 700px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal-lista-equipe .subtitle {
+  color: #7f8c8d;
+  margin: 5px 0 20px 0;
+  font-size: 0.9em;
+}
+
+.filtro-data-equipe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.filtro-data-equipe label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9em;
+}
+
+.filtro-data-equipe input {
+  padding: 8px 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 1em;
+}
+
+.acoes-selecao {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.busca-contratante {
+  padding: 6px 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.85em;
+  min-width: 180px;
+}
+
+.apto-equipe-contratante {
+  font-size: 0.78em;
+  color: #8e44ad;
+  background: #f4ecf7;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.btn-sel-todos,
+.btn-sel-nenhum {
+  padding: 6px 14px;
+  border: 1px solid #bdc3c7;
+  background: #f4f6f7;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.btn-sel-todos:hover,
+.btn-sel-nenhum:hover {
+  background: #e8eaec;
+}
+
+.contador-selecionados {
+  margin-left: auto;
+  font-size: 0.85em;
+  color: #7f8c8d;
+  font-weight: 600;
+}
+
+.lista-apartamentos-equipe {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  max-height: 350px;
+  overflow-y: auto;
+  margin-bottom: 15px;
+}
+
+.apto-equipe-item {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.apto-equipe-item:last-child {
+  border-bottom: none;
+}
+
+.apto-equipe-item label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.apto-equipe-item label:hover {
+  background: #f8f9fa;
+}
+
+.apto-equipe-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.apto-equipe-numero {
+  font-weight: 700;
+  color: #2c3e50;
+  min-width: 70px;
+}
+
+.apto-equipe-nome {
+  flex: 1;
+  color: #34495e;
+}
+
+.apto-equipe-qtd {
+  font-size: 0.85em;
+  color: #7f8c8d;
+}
+
+.apto-equipe-status {
+  font-size: 0.75em;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: #d4efdf;
+  color: #1e8449;
+  font-weight: 600;
+}
+
+.apto-equipe-status.status-pre {
+  background: #fdebd0;
+  color: #b9770e;
+}
+
+.sem-reservas-msg {
+  text-align: center;
+  color: #95a5a6;
+  padding: 30px;
+}
+
 `]
 })
 export class MapaReservasApp implements OnInit {
@@ -1470,6 +1695,15 @@ export class MapaReservasApp implements OnInit {
   reservaSelecionada: ReservaMapa | null = null;
   apartamentoSelecionado: ApartamentoMapa | null = null;
   dataSelecionada = '';
+
+  // Modal Lista por Equipe (impressão de apartamentos selecionados por data)
+  modalListaEquipe = false;
+  dataListaEquipe = '';
+  nomeEquipeImpressao = '';
+  reservasDataEscolhida: ReservaMapa[] = [];
+  selecionadosImpressao = new Set<number>();
+  imprimindoLista = false;
+  buscaContratanteEquipe = '';
 
   // Modal Pagamento
   modalPagamento = false;
@@ -1664,6 +1898,8 @@ for (let d = new Date(checkin); d <= checkoutEfetivo; d.setDate(d.getDate() + 1)
   apartamentoNumero: apartamentoNumero,
   clienteNome: clienteNome || 'Sem nome',
   clienteCpf: reserva.cliente?.cpf || '',
+  responsavelPagamentoNome: reserva.responsavelPagamentoNome || '',
+  observacoes: reserva.observacoes || '',
   dataCheckin: reserva.dataCheckin,
   dataCheckout: reserva.dataCheckout,
   status: reserva.status,
@@ -2047,6 +2283,12 @@ const queryParams = {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  formatarCPF(cpf: any): string {
+    if (!cpf) return '';
+    const apenasNumeros = cpf.replace(/\D/g, '');
+    return apenasNumeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
   }
 
   excluirPreReserva(): void {
@@ -2528,7 +2770,172 @@ limparBuscaHospede(): void {
   this.termoBuscaHospede = '';
   this.aptsFiltrados.clear();
 }
-  
+
+  // ═══════════════════════════════════════════════════════════
+  // LISTA POR EQUIPE (impressão de apartamentos selecionados)
+  // ═══════════════════════════════════════════════════════════
+
+  abrirListaEquipe(): void {
+    this.dataListaEquipe = this.dataSelecionada || this.dataInicio;
+    this.selecionadosImpressao.clear();
+    this.buscaContratanteEquipe = '';
+    this.montarListaPorData();
+    this.modalListaEquipe = true;
+  }
+
+  fecharListaEquipe(): void {
+    this.modalListaEquipe = false;
+  }
+
+  montarListaPorData(): void {
+    if (!this.dataListaEquipe) {
+      this.reservasDataEscolhida = [];
+      return;
+    }
+
+    const vistos = new Set<number>();
+    const lista: ReservaMapa[] = [];
+
+    this.mapaReservas.forEach((reserva, chave) => {
+      if (chave.endsWith(`-${this.dataListaEquipe}`) && !vistos.has(reserva.id)) {
+        vistos.add(reserva.id);
+        lista.push(reserva);
+      }
+    });
+
+    lista.sort((a, b) => a.apartamentoNumero.localeCompare(b.apartamentoNumero, 'pt-BR', { numeric: true }));
+    this.reservasDataEscolhida = lista;
+
+    // Mantém selecionados só os que ainda existem na nova lista/data
+    const idsValidos = new Set(lista.map(r => r.id));
+    this.selecionadosImpressao.forEach(id => {
+      if (!idsValidos.has(id)) this.selecionadosImpressao.delete(id);
+    });
+  }
+
+  toggleSelecaoImpressao(reservaId: number): void {
+    if (this.selecionadosImpressao.has(reservaId)) {
+      this.selecionadosImpressao.delete(reservaId);
+    } else {
+      this.selecionadosImpressao.add(reservaId);
+    }
+  }
+
+  selecionarTodosImpressao(): void {
+    this.reservasDataEscolhida.forEach(r => this.selecionadosImpressao.add(r.id));
+  }
+
+  marcarFiltradosPorContratante(): void {
+    const termo = this.buscaContratanteEquipe.trim().toLowerCase();
+    if (!termo) return;
+
+    this.reservasDataEscolhida
+      .filter(r =>
+        (r.observacoes || '').toLowerCase().includes(termo) ||
+        (r.responsavelPagamentoNome || '').toLowerCase().includes(termo)
+      )
+      .forEach(r => this.selecionadosImpressao.add(r.id));
+  }
+
+  desmarcarTodosImpressao(): void {
+    this.selecionadosImpressao.clear();
+  }
+
+  imprimirListaEquipe(): void {
+    const selecionados = this.reservasDataEscolhida.filter(r => this.selecionadosImpressao.has(r.id));
+    if (selecionados.length === 0) return;
+
+    this.imprimindoLista = true;
+
+    const chamadas = selecionados.map(r =>
+      this.http.get<any[]>(`/api/reservas/${r.id}/hospedes`)
+    );
+
+    forkJoin(chamadas).subscribe({
+      next: (resultados: any[][]) => {
+        this.imprimindoLista = false;
+        this.gerarImpressaoListaEquipe(selecionados, resultados);
+      },
+      error: (err) => {
+        this.imprimindoLista = false;
+        console.error('❌ Erro ao buscar hóspedes para impressão:', err);
+        alert('Erro ao carregar hóspedes para impressão. Tente novamente.');
+      }
+    });
+  }
+
+  private gerarImpressaoListaEquipe(reservas: ReservaMapa[], listasHospedes: any[][]): void {
+    const dataFormatada = this.dataListaEquipe
+      ? new Date(this.dataListaEquipe + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : '';
+    const tituloEquipe = this.nomeEquipeImpressao?.trim() || 'Lista de Hóspedes';
+
+    let blocosApartamentos = '';
+    reservas.forEach((r, idx) => {
+      const hospedes = listasHospedes[idx] || [];
+      const linhasHospedes = hospedes.map((h: any) => `
+        <tr>
+          <td>${h.cliente?.nome || h.nomeCompleto || '-'}</td>
+          <td>${this.formatarCPF(h.cliente?.cpf || h.cpf) || '-'}</td>
+        </tr>
+      `).join('');
+
+      blocosApartamentos += `
+        <div class="apto-bloco">
+          <div class="apto-titulo">Apartamento ${r.apartamentoNumero}</div>
+          <table>
+            <thead><tr><th>Hóspede</th><th>CPF</th></tr></thead>
+            <tbody>${linhasHospedes || '<tr><td colspan="2">Nenhum hóspede encontrado</td></tr>'}</tbody>
+          </table>
+        </div>
+      `;
+    });
+
+    const htmlImpressao = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>${tituloEquipe}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; color: #2c3e50; }
+          .cabecalho { text-align: center; margin-bottom: 25px; border-bottom: 2px solid #2c3e50; padding-bottom: 15px; }
+          .cabecalho h1 { margin: 0 0 5px 0; font-size: 1.4em; }
+          .cabecalho p { margin: 0; color: #7f8c8d; }
+          .apto-bloco { margin-bottom: 20px; page-break-inside: avoid; }
+          .apto-titulo { background: #2c3e50; color: white; padding: 6px 12px; font-weight: 700; border-radius: 4px 4px 0 0; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; font-size: 0.9em; }
+          th { background: #f4f6f7; }
+          .rodape { margin-top: 30px; text-align: center; color: #95a5a6; font-size: 0.8em; }
+        </style>
+      </head>
+      <body>
+        <div class="cabecalho">
+          <h1>🏨 Hotel Di Van — ${tituloEquipe}</h1>
+          <p>Data: ${dataFormatada} — ${reservas.length} apartamento(s)</p>
+        </div>
+        ${blocosApartamentos}
+        <div class="rodape">Impresso em ${new Date().toLocaleString('pt-BR')}</div>
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() { window.close(); };
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    const janelaImpressao = window.open('', '_blank', 'width=800,height=600');
+    if (janelaImpressao) {
+      janelaImpressao.document.write(htmlImpressao);
+      janelaImpressao.document.close();
+    } else {
+      alert('⚠️ Não foi possível abrir a janela de impressão. Verifique se o navegador está bloqueando pop-ups.');
+    }
+  }
+
   voltar(): void {    
     this.router.navigate(['/reservas']);
   }

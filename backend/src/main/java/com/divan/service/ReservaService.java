@@ -581,7 +581,7 @@ public class ReservaService {
     }
     
     public List<ReservaResponseDTO> listarPorStatusDTO(Reserva.StatusReservaEnum status) {
-        return reservaRepository.findByStatusComRelacionamentos(status).stream()
+        return reservaRepository.findByStatus(status).stream()
             .map(this::converterParaDTO)
             .collect(Collectors.toList());
     }
@@ -641,7 +641,7 @@ public class ReservaService {
         dto.setTotalRecebido(reserva.getTotalRecebido());
         dto.setTotalApagar(reserva.getTotalApagar());
         dto.setStatus(reserva.getStatus());
-        dto.setObservacoes("");
+        dto.setObservacoes(reserva.getObservacoes() != null ? reserva.getObservacoes() : "");
         
         dto.setExtratos(reserva.getExtratos());
         dto.setHistoricos(reserva.getHistoricos());
@@ -651,6 +651,11 @@ public class ReservaService {
         System.out.println("🖊️ assinaturaBase64 da reserva " + reserva.getId() + ": " + 
             (reserva.getAssinaturaBase64() != null ? "TEM ASSINATURA" : "NULL"));
         dto.setAssinaturaBase64(reserva.getAssinaturaBase64());
+        dto.setResponsavelPagamentoNome(
+            reserva.getResponsavelPagamento() != null
+                ? reserva.getResponsavelPagamento().getNome()
+                : (reserva.getCliente() != null ? reserva.getCliente().getNome() : null)
+        );
         return dto; 
         }
     

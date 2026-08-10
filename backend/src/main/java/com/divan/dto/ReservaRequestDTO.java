@@ -26,6 +26,7 @@ public class ReservaRequestDTO {
     private LocalDateTime dataCheckout;
     
     private List<Long> hospedesAdicionaisIds;
+    private String observacoes;
 
 	public Long getApartamentoId() {
 		return apartamentoId;
@@ -73,6 +74,14 @@ public class ReservaRequestDTO {
 
 	public void setHospedesAdicionaisIds(List<Long> hospedesAdicionaisIds) {
 		this.hospedesAdicionaisIds = hospedesAdicionaisIds;
+	}
+
+	public String getObservacoes() {
+		return observacoes;
+	}
+
+	public void setObservacoes(String observacoes) {
+		this.observacoes = observacoes;
 	}          
     
 }
