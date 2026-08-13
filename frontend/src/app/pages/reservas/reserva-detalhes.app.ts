@@ -3318,7 +3318,7 @@ gerarHtmlCheckin(empresaNomeCliente: string, assinatura: string | null): void {
           
           * {
             font-family: 'Courier New', monospace !important;
-            font-weight: 700 !important;  /* ✅ TUDO EM NEGRITO */
+            font-weight: 900 !important;  /* ✅ NEGRITO MÁXIMO EM TODA A IMPRESSÃO */
             color: #000 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -3406,6 +3406,21 @@ gerarHtmlCheckin(empresaNomeCliente: string, assinatura: string | null): void {
          .secao strong {
             font-weight: 900 !important;
           }
+          .secao-avisos {
+            border-top: 2px solid #000;
+            border-bottom: 2px solid #000;
+            padding: 4px 0;
+          }
+          .secao-avisos h3 {
+            text-align: center;
+          }
+          .secao-avisos p {
+            font-size: 10pt !important;
+            font-weight: 900 !important;
+          }
+          .secao-avisos strong {
+            font-weight: 900 !important;
+          }
           .assinatura {
             margin-top: 12px;
             text-align: left;
@@ -3477,9 +3492,20 @@ gerarHtmlCheckin(empresaNomeCliente: string, assinatura: string | null): void {
             <span>R$ ${this.formatarMoeda(this.reserva.totalDiaria)}</span>
           </div>
         </div>
+        <div class="separador">- - - - - - - - - - - - - - - -</div>
+        <div class="secao secao-avisos">
+          <h3>AVISOS IMPORTANTES</h3>
+          <p><strong>- Horario de check-out:</strong> ate as 11h00. Apos esse horario podera ser cobrada diaria adicional.</p>
+          <p><strong>- Proibido fumar</strong> dentro do apartamento. Multa de R$ 200,00 em caso de descumprimento.</p>
+          <p><strong>- Devolucao da chave:</strong> a chave do apartamento deve ser devolvida na recepcao no momento do check-out.</p>
+          <p><strong>- Acesso restrito:</strong> Apenas os hóspedes podem acessar o apartamento e ao apartamrnto que estiver hospedado.</p>
+          <div class="linha-assinatura"></div>
+          <p class="label-assinatura">Assinatura - Ciente dos avisos acima</p>
+        </div>
         <div class="assinatura">
   <p class="texto-assinatura">Declaro estar ciente das condicoes</p>
-  <p class="texto-assinatura">da reserva e dos valores cobrados.</p>
+  <p class="texto-assinatura">da reserva, dos valores cobrados</p>
+  <p class="texto-assinatura">e dos avisos acima.</p>
 
 
   ${(this.reserva as any).assinaturaBase64 ? `

@@ -861,37 +861,154 @@ public class ReservaService {
         return salva;
     }
     
+ 
+    
+    
+    
+    
     private void criarEstornosDiarias(Reserva reserva, LocalDateTime dataInicio, LocalDateTime dataFim) {
         long dias = ChronoUnit.DAYS.between(dataInicio.toLocalDate(), dataFim.toLocalDate());
         
         if (dias <= 0) {
             return;
         }
-        
-        BigDecimal valorDiaria = reserva.getDiaria().getValor();
-        
-        // Criar um ESTORNO (valor negativo) para cada dia removido
-        for (int i = 0; i < dias; i++) {
-            LocalDateTime dataDiaria = dataInicio.plusDays(i);
-            
-            ExtratoReserva extrato = new ExtratoReserva();
-            extrato.setReserva(reserva);
-            extrato.setDataHoraLancamento(LocalDateTime.now()); // Data atual do estorno
-            extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
-            extrato.setDescricao(String.format("Estorno - Diária dia %02d/%02d/%d removida", 
-                dataDiaria.getDayOfMonth(),
-                dataDiaria.getMonthValue(),
-                dataDiaria.getYear()));
-            extrato.setQuantidade(1);
-            extrato.setValorUnitario(valorDiaria.negate()); // ✅ VALOR NEGATIVO
-            extrato.setTotalLancamento(valorDiaria.negate()); // ✅ VALOR NEGATIVO (crédito)
-            extrato.setNotaVendaId(null);
-            
-            extratoReservaRepository.save(extrato);
-            
-            System.out.println("💳 Estorno criado para: " + dataDiaria.toLocalDate() + " - R$ " + valorDiaria.negate());
+
+        // ✅ CORREÇÃO 3: nunca estornar diárias de dias já concretizados (que já passaram).
+        // O hóspede já ficou naquela(s) noite(s) — o serviço já foi prestado, não faz
+        // sentido devolver esse valor. Isso protege inclusive contra chamadas futuras
+        // a este método que esqueçam de validar a data antes de chamar.
+        LocalDate hoje = LocalDate.now(ZoneId.of("America/Fortaleza"));
+        if (dataInicio.toLocalDate().isBefore(hoje)) {
+            throw new RuntimeException(String.format(
+                "Não é possível remover diária(s) de dia(s) que já passaram (já concretizados). " +
+                "A data mais antiga permitida para remoção é hoje (%s). Período solicitado: %s a %s.",
+                hoje, dataInicio.toLocalDate(), dataFim.toLocalDate()
+            ));
+        }
+
+        // ✅ CORREÇÃO 1: buscar as diárias REALMENTE lançadas nesse período e
+        // estornar o valorUnitario de cada uma — e não reserva.getDiaria().getValor(),
+        // que reflete a diária ATUAL da reserva e pode já ter mudado (ex: acréscimo
+        // de hóspede, troca de apartamento) desde que aquela diária foi criada.
+        List<ExtratoReserva> diariasLancadas = extratoReservaRepository
+            .findByReservaIdAndStatusLancamentoAndDataHoraLancamentoBetween(
+                reserva.getId(),
+                ExtratoReserva.StatusLancamentoEnum.DIARIA,
+                dataInicio,
+                dataFim)
+            .stream()
+            .filter(e -> e.getDescricao() != null && e.getDescricao().startsWith("Diária - Dia"))
+            .collect(Collectors.toList());
+
+        // ✅ CORREÇÃO 2: se a reserva está com mais de 1 hóspede, existe (ou pode existir)
+        // um lançamento fixo de "Acréscimo de hóspede" cobrindo vários dias de uma vez
+        // (ex: "2 hóspede(s) × 3 dia(s)"). Esse lançamento NÃO é reduzido automaticamente
+        // quando um desses dias é removido do checkout — então, sem este ajuste, o hotel
+        // continua cobrando o acréscimo do hóspede extra em um dia que ele não vai mais ficar.
+        BigDecimal acrescimoHospedePorDia = calcularAcrescimoHospedePorDia(reserva);
+
+        if (diariasLancadas.isEmpty()) {
+            // Rede de segurança: não deveria acontecer, mas evita silenciosamente
+            // deixar de estornar caso não haja lançamento correspondente encontrado.
+            System.out.println("⚠️ Nenhuma diária lançada encontrada entre " + dataInicio + " e " + dataFim
+                + " — usando valor atual da reserva como fallback (verificar manualmente).");
+            BigDecimal valorDiariaFallback = reserva.getDiaria().getValor();
+            for (int i = 0; i < dias; i++) {
+                LocalDateTime dataDiaria = dataInicio.plusDays(i);
+                criarLancamentoEstornoDiaria(reserva, dataDiaria, valorDiariaFallback);
+                if (acrescimoHospedePorDia.compareTo(BigDecimal.ZERO) > 0) {
+                    criarLancamentoEstornoAcrescimoHospede(reserva, dataDiaria, acrescimoHospedePorDia);
+                }
+            }
+            return;
+        }
+
+        // Criar um ESTORNO (valor negativo) para cada diária realmente lançada no período
+        for (ExtratoReserva original : diariasLancadas) {
+            BigDecimal valorReal = original.getValorUnitario() != null
+                ? original.getValorUnitario()
+                : original.getTotalLancamento();
+
+            criarLancamentoEstornoDiaria(reserva, original.getDataHoraLancamento(), valorReal);
+
+            System.out.println("💳 Estorno criado para: " + original.getDataHoraLancamento().toLocalDate()
+                + " - R$ " + valorReal.negate() + " (valor real da diária original #" + original.getId() + ")");
+
+            if (acrescimoHospedePorDia.compareTo(BigDecimal.ZERO) > 0) {
+                criarLancamentoEstornoAcrescimoHospede(reserva, original.getDataHoraLancamento(), acrescimoHospedePorDia);
+
+                System.out.println("💳 Estorno de acréscimo de hóspede criado para: "
+                    + original.getDataHoraLancamento().toLocalDate() + " - R$ " + acrescimoHospedePorDia.negate());
+            }
         }
     }
+
+    /**
+     * ✅ Calcula quanto vale, por dia, o acréscimo do(s) hóspede(s) extra(s) da reserva
+     * (diferença entre a diária para a quantidade ATUAL de hóspedes e a diária base
+     * para 1 hóspede). Retorna ZERO se a reserva só tem 1 hóspede ou se não houver
+     * diária cadastrada para alguma das quantidades.
+     *
+     * ⚠️ Limitação conhecida: assume uma única mudança de quantidade de hóspedes
+     * "vigente" no momento do estorno. Se a reserva teve VÁRIAS alterações de
+     * quantidade de hóspedes em momentos diferentes (ex: 1→2→3 hóspedes em datas
+     * distintas), o estorno proporcional pode não refletir exatamente o histórico
+     * dia a dia — nesse caso, revisar manualmente o extrato.
+     */
+    private BigDecimal calcularAcrescimoHospedePorDia(Reserva reserva) {
+        Integer quantidadeAtual = reserva.getQuantidadeHospede();
+        if (quantidadeAtual == null || quantidadeAtual <= 1) {
+            return BigDecimal.ZERO;
+        }
+
+        Apartamento apartamento = reserva.getApartamento();
+        java.util.Optional<Diaria> diariaBase = diariaService.buscarDiariaPara(apartamento, 1);
+        java.util.Optional<Diaria> diariaAtual = diariaService.buscarDiariaPara(apartamento, quantidadeAtual);
+
+        if (diariaBase.isEmpty() || diariaAtual.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal diferenca = diariaAtual.get().getValor().subtract(diariaBase.get().getValor());
+        return diferenca.compareTo(BigDecimal.ZERO) > 0 ? diferenca : BigDecimal.ZERO;
+    }
+
+    private void criarLancamentoEstornoDiaria(Reserva reserva, LocalDateTime dataDiaria, BigDecimal valorDiaria) {
+        ExtratoReserva extrato = new ExtratoReserva();
+        extrato.setReserva(reserva);
+        extrato.setDataHoraLancamento(LocalDateTime.now()); // Data atual do estorno
+        extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
+        extrato.setDescricao(String.format("Estorno - Diária dia %02d/%02d/%d removida",
+            dataDiaria.getDayOfMonth(),
+            dataDiaria.getMonthValue(),
+            dataDiaria.getYear()));
+        extrato.setQuantidade(1);
+        extrato.setValorUnitario(valorDiaria.negate()); // ✅ VALOR NEGATIVO
+        extrato.setTotalLancamento(valorDiaria.negate()); // ✅ VALOR NEGATIVO (crédito)
+        extrato.setNotaVendaId(null);
+
+        extratoReservaRepository.save(extrato);
+    }
+
+    private void criarLancamentoEstornoAcrescimoHospede(Reserva reserva, LocalDateTime dataDiaria, BigDecimal valorPorDia) {
+        ExtratoReserva extrato = new ExtratoReserva();
+        extrato.setReserva(reserva);
+        extrato.setDataHoraLancamento(LocalDateTime.now());
+        extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
+        extrato.setDescricao(String.format(
+            "Estorno - Acréscimo de hóspede referente ao dia %02d/%02d/%d removido",
+            dataDiaria.getDayOfMonth(),
+            dataDiaria.getMonthValue(),
+            dataDiaria.getYear()));
+        extrato.setQuantidade(1);
+        extrato.setValorUnitario(valorPorDia.negate());
+        extrato.setTotalLancamento(valorPorDia.negate());
+        extrato.setNotaVendaId(null);
+
+        extratoReservaRepository.save(extrato);
+    }
+    
+    
     
     // ============================================
     // ✅ CONSUMO (PRODUTOS)

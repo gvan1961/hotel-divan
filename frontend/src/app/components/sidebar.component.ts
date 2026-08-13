@@ -4,7 +4,7 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FechamentoCaixaService } from '../services/fechamento-caixa.service';
 import { AuthService } from '../services/auth.service';
 import { CaixaStateService } from '../services/caixa-state.service';
-import { AlertasService } from '../services/alertas.service';
+import { AlertasService, AlertaDTO } from '../services/alertas.service';
 import { AlertasStateService } from '../services/alertas-state.service'; // ✅ NOVO IMPORT
 import { Subscription } from 'rxjs';
 import { HasPermissionDirective } from '../directives/has-permission.directive';
@@ -194,8 +194,150 @@ import { HttpClient } from '@angular/common/http';
         </button>
       </div>
     </aside>
+
+    <!-- ✅ POP-UP DE CHECKOUT VENCIDO (som + destaque na tela) -->
+    <div *ngIf="popupCheckoutVencido"
+         class="popup-checkout-vencido-overlay"
+         (click)="fecharPopupCheckoutVencido()">
+      <div class="popup-checkout-vencido-card" (click)="$event.stopPropagation()">
+        <div class="popup-checkout-vencido-header">
+          <span class="popup-icone">⏰</span>
+          <strong>Checkout vencido!</strong>
+          <span *ngIf="filaPopupsCheckoutVencido.length > 0" class="popup-contador-fila">
+            +{{ filaPopupsCheckoutVencido.length }}
+          </span>
+        </div>
+        <div class="popup-checkout-vencido-body">
+          <p class="popup-apto">Apto {{ popupCheckoutVencido.numeroApartamento || '?' }}</p>
+          <p>{{ popupCheckoutVencido.clienteNome || 'Cliente não identificado' }}</p>
+          <p class="popup-detalhe">
+            Checkout previsto: {{ formatarDataHoraPopup(popupCheckoutVencido.dataCheckout) }}
+          </p>
+        </div>
+        <div class="popup-checkout-vencido-acoes">
+          <button class="popup-btn-ver" (click)="irParaReservaPopup(popupCheckoutVencido.reservaId)">
+            Ver reserva
+          </button>
+          <button class="popup-btn-fechar" (click)="fecharPopupCheckoutVencido()">
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
+    /* ✅ POP-UP DE CHECKOUT VENCIDO */
+    .popup-checkout-vencido-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding: 24px;
+      z-index: 9999;
+    }
+
+    .popup-checkout-vencido-card {
+      background: #fff;
+      border-left: 6px solid #dc3545;
+      border-radius: 10px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      width: 320px;
+      max-width: 90vw;
+      overflow: hidden;
+      animation: popup-entrar 0.25s ease-out;
+    }
+
+    @keyframes popup-entrar {
+      from { transform: translateY(-16px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .popup-checkout-vencido-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #dc3545;
+      color: #fff;
+      padding: 12px 16px;
+      font-size: 15px;
+    }
+
+    .popup-icone {
+      font-size: 18px;
+      animation: popup-balancar 1s ease-in-out infinite;
+    }
+
+    @keyframes popup-balancar {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-15deg); }
+      75% { transform: rotate(15deg); }
+    }
+
+    .popup-contador-fila {
+      margin-left: auto;
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 12px;
+    }
+
+    .popup-checkout-vencido-body {
+      padding: 14px 16px;
+    }
+
+    .popup-checkout-vencido-body p {
+      margin: 0 0 6px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .popup-apto {
+      font-weight: 700;
+      font-size: 16px !important;
+      color: #dc3545 !important;
+    }
+
+    .popup-detalhe {
+      color: #777 !important;
+      font-size: 12px !important;
+    }
+
+    .popup-checkout-vencido-acoes {
+      display: flex;
+      gap: 8px;
+      padding: 0 16px 14px;
+    }
+
+    .popup-checkout-vencido-acoes button {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .popup-btn-ver {
+      background: #dc3545;
+      color: #fff;
+    }
+
+    .popup-btn-ver:hover {
+      background: #b02a37;
+    }
+
+    .popup-btn-fechar {
+      background: #f1f1f1;
+      color: #333;
+    }
+
+    .popup-btn-fechar:hover {
+      background: #e2e2e2;
+    }
+
     .sidebar {
       position: fixed;
       left: 0;
@@ -514,6 +656,11 @@ export class SidebarComponent implements OnInit, OnDestroy {
   totalAlertas = 0;
   avisoOutrosCaixas = '';
   adminAberto = false;
+
+  // ✅ POP-UP DE CHECKOUT VENCIDO (som + destaque)
+  popupCheckoutVencido: AlertaDTO | null = null;
+  filaPopupsCheckoutVencido: AlertaDTO[] = [];
+  private checkoutVencidoNotificados = new Set<number>(); // reservaIds já avisados nesta sessão
    
   private verificandoCaixa = false;
   private subscription?: Subscription;
@@ -524,6 +671,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
     console.log('🔄 Sidebar inicializado - COM EVENTOS');
     
     this.usuarioId = this.authService.getUsuarioId();
+
+    // ✅ Prepara o desbloqueio de áudio no primeiro clique/tecla do usuário
+    this.prepararDesbloqueioDeAudio();
     
     // ✅ BUSCAR ALERTAS IMEDIATAMENTE
     this.buscarTotalAlertas();
@@ -585,12 +735,130 @@ export class SidebarComponent implements OnInit, OnDestroy {
         const total = this.alertasService.calcularTotalAlertas(alertas);
         console.log('✅ Total de alertas:', total);
         this.totalAlertas = total;
+
+        // ✅ NOVO: detecta checkouts vencidos ainda não avisados nesta sessão
+        // e enfileira um pop-up + som pra cada um.
+        this.detectarNovosCheckoutsVencidos(alertas.checkoutsVencidos || []);
       },
       error: (err) => {
         console.error('❌ Erro ao buscar alertas:', err);
         this.totalAlertas = 0;
       }
     });
+  }
+
+  // ✅ POP-UP DE CHECKOUT VENCIDO ─────────────────────────────
+
+  private detectarNovosCheckoutsVencidos(checkoutsVencidos: AlertaDTO[]): void {
+    const novos = checkoutsVencidos.filter(
+      a => a.reservaId != null && !this.checkoutVencidoNotificados.has(a.reservaId)
+    );
+
+    if (novos.length === 0) {
+      return;
+    }
+
+    novos.forEach(a => {
+      if (a.reservaId != null) {
+        this.checkoutVencidoNotificados.add(a.reservaId);
+      }
+    });
+
+    this.filaPopupsCheckoutVencido.push(...novos);
+    this.tocarSomAlerta();
+
+    if (!this.popupCheckoutVencido) {
+      this.mostrarProximoPopupCheckoutVencido();
+    }
+  }
+
+  private mostrarProximoPopupCheckoutVencido(): void {
+    this.popupCheckoutVencido = this.filaPopupsCheckoutVencido.shift() || null;
+  }
+
+  fecharPopupCheckoutVencido(): void {
+    this.mostrarProximoPopupCheckoutVencido();
+  }
+
+  irParaReservaPopup(reservaId?: number): void {
+    if (reservaId == null) return;
+    this.fecharPopupCheckoutVencido();
+    this.router.navigate(['/reservas', reservaId]);
+  }
+
+  formatarDataHoraPopup(data?: string): string {
+    if (!data) return '-';
+    const d = new Date(data);
+    return d.toLocaleString('pt-BR', {
+      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  private tocarSomAlerta(): void {
+    try {
+      const ctx = this.obterAudioContext();
+      if (!ctx) return;
+
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+
+      const tocarBeep = (frequencia: number, atraso: number) => {
+        setTimeout(() => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = frequencia;
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.3);
+        }, atraso);
+      };
+
+      tocarBeep(880, 0);
+      tocarBeep(660, 350);
+    } catch (e) {
+      console.warn('⚠️ Não foi possível tocar o som de alerta:', e);
+    }
+  }
+
+  // ✅ Reaproveita um único AudioContext (em vez de criar um novo a cada
+  // alerta) e prepara o "destravamento" dele: navegadores só permitem tocar
+  // áudio automaticamente depois que o usuário interagiu com a página
+  // (clique, tecla, toque). Assim que a primeira interação acontecer em
+  // QUALQUER lugar da tela, o áudio fica liberado para os próximos alertas.
+  private audioCtx?: AudioContext;
+
+  private obterAudioContext(): AudioContext | null {
+    try {
+      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return null;
+      if (!this.audioCtx) {
+        this.audioCtx = new AudioContextClass();
+      }
+      return this.audioCtx ?? null;
+    } catch (e) {
+      console.warn('⚠️ AudioContext indisponível:', e);
+      return null;
+    }
+  }
+
+  private prepararDesbloqueioDeAudio(): void {
+    const desbloquear = () => {
+      const ctx = this.obterAudioContext();
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      document.removeEventListener('click', desbloquear);
+      document.removeEventListener('keydown', desbloquear);
+      document.removeEventListener('touchstart', desbloquear);
+    };
+
+    document.addEventListener('click', desbloquear);
+    document.addEventListener('keydown', desbloquear);
+    document.addEventListener('touchstart', desbloquear);
   }
 
   verificarCaixaAberto(): void {

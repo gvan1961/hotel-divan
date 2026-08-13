@@ -78,11 +78,13 @@ interface ApartamentoMapa {
   <button *ngIf="termoBuscaHospede" (click)="limparBuscaHospede()" class="btn-limpar-busca">✕</button>
 </div>
 
-      <div class="filtro-busca-reserva">
+     <div class="filtro-busca-reserva">
   <label>🔢 Nº Reserva:</label>
   <input type="number" 
          [(ngModel)]="buscaNumeroReserva" 
-         (input)="buscarPorNumeroReserva()"
+         (ngModelChange)="buscarPorNumeroReserva()"
+         (keyup.enter)="confirmarBuscaReserva()"
+         (blur)="confirmarBuscaReserva()"
          placeholder="Ex: 1024"
          class="input-busca-reserva">
   <button *ngIf="buscaNumeroReserva" class="btn-limpar-busca" (click)="limparBuscaReserva()">✕</button>
@@ -2678,20 +2680,38 @@ private buscaTimeout: any = null;
 buscarPorNumeroReserva(): void {
   clearTimeout(this.buscaTimeout);
   this.reservaDestacadaId = null;
-  
+
   if (!this.buscaNumeroReserva) return;
-  
+
   this.buscaTimeout = setTimeout(() => {
     this.reservaDestacadaId = this.buscaNumeroReserva;
     setTimeout(() => {
       const el = document.querySelector('.reserva-destacada');
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
-        alert(`❌ Reserva #${this.buscaNumeroReserva} não encontrada no período atual.`);
       }
+      // ❌ Sem alert aqui de propósito — usuário pode ainda estar digitando.
     }, 150);
-  }, 600); // ← aguarda 600ms após parar de digitar
+  }, 600);
+}
+
+// ✅ Só roda quando o usuário CONFIRMA a busca (Enter ou saiu do campo).
+// Aqui sim, se não achou, mostra o alerta — porque a essa altura o número
+// já está completo.
+confirmarBuscaReserva(): void {
+  clearTimeout(this.buscaTimeout);
+
+  if (!this.buscaNumeroReserva) return;
+
+  this.reservaDestacadaId = this.buscaNumeroReserva;
+  setTimeout(() => {
+    const el = document.querySelector('.reserva-destacada');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      alert(`❌ Reserva #${this.buscaNumeroReserva} não encontrada no período atual.`);
+    }
+  }, 150);
 }
 
 limparBuscaReserva(): void {
