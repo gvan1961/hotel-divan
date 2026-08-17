@@ -55,16 +55,14 @@ import { Vale, TIPO_VALE_LABELS } from '../../models/vale.model';
           
           <!-- CANVAS -->
           <div class="canvas-container" [class.assinado]="assinado">
-            <canvas 
-              #canvasAssinatura
-              (touchstart)="iniciarDesenho($event)"
-              (touchmove)="desenhar($event)"
-              (touchend)="finalizarDesenho()"
-              (mousedown)="iniciarDesenhoMouse($event)"
-              (mousemove)="desenharMouse($event)"
-              (mouseup)="finalizarDesenho()"
-              (mouseleave)="finalizarDesenho()">
-            </canvas>
+          <canvas 
+  #canvasAssinatura
+  (pointerdown)="iniciarDesenho($event)"
+  (pointermove)="desenhar($event)"
+  (pointerup)="finalizarDesenho($event)"
+  (pointercancel)="finalizarDesenho($event)"
+  (pointerleave)="finalizarDesenho($event)">
+</canvas>
             
             <div class="linha-guia"></div>
           </div>
@@ -434,7 +432,21 @@ import { Vale, TIPO_VALE_LABELS } from '../../models/vale.model';
   `]
 })
 export class ValeAssinaturaComponent implements OnInit {
-  @ViewChild('canvasAssinatura', { static: false }) canvasRef!: ElementRef<HTMLCanvasElement>;
+
+  private canvasRef?: ElementRef<HTMLCanvasElement>;
+ 
+  @ViewChild('canvasAssinatura')
+  set canvasElement(el: ElementRef<HTMLCanvasElement> | undefined) {
+    // Esse setter é chamado pelo Angular toda vez que o elemento com essa
+    // referência local aparece ou desaparece no DOM (ex: por causa do
+    // *ngIf="!loading && vale" no template). Como o canvas só existe DEPOIS
+    // que os dados do vale chegam da API, é aqui — e não no ngAfterViewInit
+    // — que devemos inicializar o canvas.
+    if (el) {
+      this.canvasRef = el;
+      this.inicializarCanvas();
+    }
+  }
 
   private valeService = inject(ValeService);
   private route = inject(ActivatedRoute);
@@ -457,10 +469,7 @@ export class ValeAssinaturaComponent implements OnInit {
     }
   }
 
-  ngAfterViewInit(): void {
-    this.inicializarCanvas();
-  }
-
+ 
   carregarVale(id: number): void {
     this.loading = true;
     this.valeService.buscarPorId(id).subscribe({
@@ -476,95 +485,91 @@ export class ValeAssinaturaComponent implements OnInit {
     });
   }
 
+  // ===== POINTER EVENTS (mouse, trackpad, touch e caneta stylus — tudo unificado) =====
+
   inicializarCanvas(): void {
+    if (!this.canvasRef) return; // ⭐ guarda de segurança
+ 
     const canvas = this.canvasRef.nativeElement;
     const container = canvas.parentElement!;
-    
-    // Ajustar tamanho do canvas
-    canvas.width = container.clientWidth;
-    canvas.height = 300;
-
+ 
+    const dpr = window.devicePixelRatio || 1;
+    const larguraExibida = container.clientWidth;
+    const alturaExibida = 300;
+ 
+    canvas.width = larguraExibida * dpr;
+    canvas.height = alturaExibida * dpr;
+ 
+    canvas.style.width = larguraExibida + 'px';
+    canvas.style.height = alturaExibida + 'px';
+ 
     this.ctx = canvas.getContext('2d')!;
-    
-    // Configurar estilo do desenho
+    this.ctx.scale(dpr, dpr);
+ 
     this.ctx.lineWidth = 3;
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
     this.ctx.strokeStyle = '#2c3e50';
   }
-
-  // ===== TOUCH (TABLET/MOBILE) =====
-  
-  iniciarDesenho(event: TouchEvent): void {
+ 
+  private calcularPosicao(event: PointerEvent): { x: number; y: number } {
+    if (!this.canvasRef) return { x: 0, y: 0 }; // ⭐ guarda de segurança
+ 
+    const canvas = this.canvasRef.nativeElement;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+ 
+    const escalaX = canvas.width / rect.width;
+    const escalaY = canvas.height / rect.height;
+ 
+    const x = (event.clientX - rect.left) * escalaX / dpr;
+    const y = (event.clientY - rect.top) * escalaY / dpr;
+ 
+    return { x, y };
+  }
+ 
+  iniciarDesenho(event: PointerEvent): void {
+    if (!this.canvasRef) return; // ⭐ guarda de segurança
     event.preventDefault();
+    (event.target as HTMLElement).setPointerCapture(event.pointerId);
+ 
     this.desenhando = true;
-    
-    const touch = event.touches[0];
-    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
-    
-    this.ultimaX = touch.clientX - rect.left;
-    this.ultimaY = touch.clientY - rect.top;
-    
+ 
+    const pos = this.calcularPosicao(event);
+    this.ultimaX = pos.x;
+    this.ultimaY = pos.y;
+ 
     this.assinado = true;
   }
-
-  desenhar(event: TouchEvent): void {
-    if (!this.desenhando) return;
-    
+ 
+  desenhar(event: PointerEvent): void {
+    if (!this.desenhando || !this.canvasRef) return; // ⭐ guarda de segurança
     event.preventDefault();
-    
-    const touch = event.touches[0];
-    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
-    
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-    
+ 
+    const pos = this.calcularPosicao(event);
+ 
     this.ctx.beginPath();
     this.ctx.moveTo(this.ultimaX, this.ultimaY);
-    this.ctx.lineTo(x, y);
+    this.ctx.lineTo(pos.x, pos.y);
     this.ctx.stroke();
-    
-    this.ultimaX = x;
-    this.ultimaY = y;
+ 
+    this.ultimaX = pos.x;
+    this.ultimaY = pos.y;
   }
-
-  // ===== MOUSE (DESKTOP) =====
-  
-  iniciarDesenhoMouse(event: MouseEvent): void {
-    this.desenhando = true;
-    
-    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
-    
-    this.ultimaX = event.clientX - rect.left;
-    this.ultimaY = event.clientY - rect.top;
-    
-    this.assinado = true;
-  }
-
-  desenharMouse(event: MouseEvent): void {
-    if (!this.desenhando) return;
-    
-    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
-    
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    
-    this.ctx.beginPath();
-    this.ctx.moveTo(this.ultimaX, this.ultimaY);
-    this.ctx.lineTo(x, y);
-    this.ctx.stroke();
-    
-    this.ultimaX = x;
-    this.ultimaY = y;
-  }
-
-  finalizarDesenho(): void {
+ 
+  finalizarDesenho(event?: PointerEvent): void {
+    if (event) {
+      try {
+        (event.target as HTMLElement).releasePointerCapture(event.pointerId);
+      } catch {
+        // ignora se já tiver sido liberado
+      }
+    }
     this.desenhando = false;
   }
-
-  // ===== AÇÕES =====
-
+ 
   limparAssinatura(): void {
+    if (!this.canvasRef) return; // ⭐ guarda de segurança
     const canvas = this.canvasRef.nativeElement;
     this.ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.assinado = false;
@@ -585,20 +590,20 @@ export class ValeAssinaturaComponent implements OnInit {
     if (!confirmacao) return;
 
     // Capturar assinatura em base64
-    const canvas = this.canvasRef.nativeElement;
+    const canvas = this.canvasRef!.nativeElement;
     const assinaturaBase64 = canvas.toDataURL('image/png');
 
     // Enviar para o backend
     this.valeService.assinarVale(this.vale!.id!, assinaturaBase64).subscribe({
       next: () => {
         this.assinaturaConfirmada = true;
-        
+
         setTimeout(() => {
           const imprimir = confirm(
             '✅ Assinatura registrada com sucesso!\n\n' +
             'Deseja imprimir o vale agora?'
           );
-          
+
           if (imprimir) {
             this.router.navigate(['/vales/imprimir', this.vale!.id]);
           } else {

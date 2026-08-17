@@ -3123,36 +3123,33 @@ ngOnDestroy(): void {
   }
 }
 
-  carregarReserva(id: number): void {
+  carregarReserva(id: number, aoCarregar?: () => void): void {
   this.loading = true;
   this.erro = '';
   this.http.get<ReservaDetalhes>(`/api/reservas/${id}`).subscribe({
     next: (data) => {
-      this.reserva = data;      
-         this.loading = false;
-
-         // ✅ Calcula pago à vista para recibo formal
-  const extratos = data.extratos || [];
-  const debitoEmConta = extratos
-    .filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
-    .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
-  this.pagoAVistaParaRecibo = Math.max(0, (data.totalRecebido || 0) - debitoEmConta);
-
-  this.pagoAVistaParaRecibo = Math.max(0, (data.totalRecebido || 0) - debitoEmConta);
-
-// ← ADICIONAR: verificar assinatura se tem débito em conta
-if (debitoEmConta > 0) {
-  this.http.get<any>(`/api/reservas/${data.id}/assinatura`).subscribe({
-    next: (res) => {
-      this.assinaturaCapturada = res?.assinatura || null;
-    },
-    error: () => {
-      this.assinaturaCapturada = null;
-    }
-  });
-}
-      
-      // ✅ DEBUG AUDITORIA
+      this.reserva = data;
+      this.loading = false;
+ 
+      // ✅ Calcula pago à vista para recibo formal
+      const extratos = data.extratos || [];
+      const debitoEmConta = extratos
+        .filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
+        .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
+      this.pagoAVistaParaRecibo = Math.max(0, (data.totalRecebido || 0) - debitoEmConta);
+ 
+      // ← ADICIONAR: verificar assinatura se tem débito em conta
+      if (debitoEmConta > 0) {
+        this.http.get<any>(`/api/reservas/${data.id}/assinatura`).subscribe({
+          next: (res) => {
+            this.assinaturaCapturada = res?.assinatura || null;
+          },
+          error: () => {
+            this.assinaturaCapturada = null;
+          }
+        });
+      }
+ 
       console.log('🔍 AUDITORIA:', {
         criadoPor: data.criadoPor,
         dataCriacao: data.dataCriacao,
@@ -3162,54 +3159,23 @@ if (debitoEmConta > 0) {
         dataCancelamento: data.dataCancelamento,
         motivoCancelamento: data.motivoCancelamento
       });
-      
-      console.log('═══════════════════════════════════════');
-      console.log('📋 TODOS OS EXTRATOS:');
-      console.table(data.extratos);
-      
-      console.log('💰 EXTRATOS COM DESCONTO:');
-      const extratosDesconto = (data.extratos || []).filter((e: any) => 
-        e.descricao && e.descricao.includes('Desconto')
-      );
-      console.table(extratosDesconto);
-      
-      console.log('🔍 VERIFICANDO CONDIÇÕES DOS BOTÕES:');
-      extratosDesconto.forEach((ext: any, i: number) => {
-        console.log(`Extrato ${i + 1}:`, {
-          id: ext.id,
-          descricao: ext.descricao,
-          statusLancamento: ext.statusLancamento,
-          estornado: ext.estornado,
-          'Começa com "Desconto aplicado"?': ext.descricao?.startsWith('Desconto aplicado'),
-          'Status é ESTORNO?': ext.statusLancamento === 'ESTORNO',
-          'NÃO está estornado?': !ext.estornado,
-          'DEVE MOSTRAR BOTÃO?': 
-            ext.statusLancamento === 'ESTORNO' && 
-            ext.descricao?.startsWith('Desconto aplicado') &&
-            !ext.estornado
-        });
-      });
-      console.log('═══════════════════════════════════════');
-      console.log('✅ Reserva carregada:', data);
-      
-      // ✅ CARREGAR HÓSPEDES
-      this.carregarHospedes();
-
-      // ✅ VERIFICAR BILHETES SE FINALIZADA
-      if (data.status === 'FINALIZADA') {
-        this.http.get<any[]>(`/api/reservas/${data.id}/bilhetes-sorteio`).subscribe({
-          next: (bilhetes) => this.temBilhetes = bilhetes.length > 0,
-          error: () => this.temBilhetes = false
-        });
+ 
+      // ⭐ Executa o callback (se houver) só depois que this.reserva
+      // já está totalmente populado — é aqui que ativarPreReserva()
+      // vai checar se a reserva é faturada.
+      if (aoCarregar) {
+        aoCarregar();
       }
     },
-    error: (err: any) => {
-      console.error('❌ Erro:', err);
-      this.erro = err.error?.message || 'Erro ao carregar reserva';
+    error: (erro) => {
       this.loading = false;
+      this.erro = 'Erro ao carregar reserva';
+      console.error('❌ Erro ao carregar reserva:', erro);
     }
   });
 }
+ 
+
 
     /**
      * ✅ MÉTODO PARA RECARREGAR RESERVA APÓS ALTERAÇÃO DE HÓSPEDES
@@ -3495,10 +3461,10 @@ gerarHtmlCheckin(empresaNomeCliente: string, assinatura: string | null): void {
         <div class="separador">- - - - - - - - - - - - - - - -</div>
         <div class="secao secao-avisos">
           <h3>AVISOS IMPORTANTES</h3>
-          <p><strong>- Horario de check-out:</strong> ate as 11h00. Apos esse horario podera ser cobrada diaria adicional.</p>
+          <p><strong>- Horario de check-out:</strong> ate   as 11h00. Apos esse horario podera ser cobrada diaria adicional.</p>
           <p><strong>- Proibido fumar</strong> dentro do apartamento. Multa de R$ 200,00 em caso de descumprimento.</p>
           <p><strong>- Devolucao da chave:</strong> a chave do apartamento deve ser devolvida na recepcao no momento do check-out.</p>
-          <p><strong>- Acesso restrito:</strong> Apenas os hóspedes podem acessar o apartamento e ao apartamrnto que estiver hospedado.</p>
+          <p><strong>- Acesso restrito:</strong> Apenas os hóspedes podem acessar o apartamento e ao apartamento que estiver hospedado.</p>
           <div class="linha-assinatura"></div>
           <p class="label-assinatura">Assinatura - Ciente dos avisos acima</p>
         </div>
@@ -3523,6 +3489,7 @@ gerarHtmlCheckin(empresaNomeCliente: string, assinatura: string | null): void {
   ` : `
     <div class="linha-assinatura"></div>
     <p class="label-assinatura">Assinatura do Hospede</p>
+    <p></p>
     <div class="linha-assinatura"></div>
     <p class="label-assinatura">Data: ____/____/________</p>
   `}
@@ -4535,13 +4502,36 @@ salvarAdiantamento(): void {
     }
 
     // ============= FINALIZAR / CANCELAR =============
- finalizarCheckout(): void {
+ // ============================================================
+// SUBSTITUIR o início de finalizarCheckout() em reserva-detalhes.app.ts
+// Adiciona a checagem ⭐ logo depois do "if (!this.reserva) return;"
+// — o resto do método continua exatamente igual ao que você já tem.
+// ============================================================
+
+finalizarCheckout(): void {
   if (!this.reserva) return;
+
+  // ⭐ Se existe débito em conta (Contas a Receber) sem assinatura do
+  // hóspede, bloqueia — mesmo que o saldo atual (totalApagar) já
+  // esteja zerado, porque o valor pode ter sido apenas TRANSFERIDO
+  // para Contas a Receber (reserva continua faturada de verdade).
+  // temDebitoSemAssinatura() soma os extratos "DEBITO EM CONTA"
+  // diretamente, então não é enganado pelo saldo zerado.
+  if (this.temDebitoSemAssinatura()) {
+    alert(
+      '⚠️ Esta reserva possui débito em conta (Contas a Receber) e ' +
+      'ainda não foi assinada pelo hóspede.\n\n' +
+      'Colete a assinatura antes de concluir o checkout.'
+    );
+    this.modalAssinatura = true;
+    this.assinaturaCapturada = null;
+    return;
+  }
 
   const saldo = this.reserva.totalApagar || 0;
   const temSaldoDevedor = saldo > 0.01;
   const temCredito = saldo < -0.01;
-  const podeCredito = this.reserva.cliente?.creditoAprovado || 
+  const podeCredito = this.reserva.cliente?.creditoAprovado ||
                     (this.reserva as any).cliente?.empresa?.id;
 
   // ✅ BLOQUEAR SE TEM SALDO DEVEDOR E NÃO TEM CRÉDITO
@@ -4736,7 +4726,21 @@ error: () => {
     });
   }
 
-    realizarCheckOut(): void {
+  realizarCheckOut(): void {
+      // ⭐ Reserva faturada (débito em conta) sem assinatura do hóspede:
+      // bloqueia o checkout e leva direto para a tela de assinatura,
+      // em vez de deixar o recepcionista finalizar sem essa etapa.
+      if (this.temDebitoSemAssinatura()) {
+        alert(
+          '⚠️ Esta reserva está FATURADA (débito em conta) e ainda não ' +
+          'foi assinada pelo hóspede.\n\n' +
+          'Colete a assinatura antes de concluir o checkout.'
+        );
+        this.modalAssinatura = true;
+        this.assinaturaCapturada = null;
+        return;
+      }
+
       if (!confirm('🚪 Confirma o CHECK-OUT desta reserva?\n\nTodos os hóspedes serão marcados como checkout realizado.')) {
         return;
       }
@@ -5950,37 +5954,48 @@ if (temDebito) {
   /**
    * 🔓 ATIVAR PRÉ-RESERVA (CHECK-IN MANUAL)
    */
-  ativarPreReserva(): void {
-    if (!confirm('🔓 Confirma o CHECK-IN desta pré-reserva?\n\nEla será ativada e a data/hora de check-in será atualizada para agora.')) {
-      return;
-    }
-
-    console.log('═══════════════════════════════════════════');
-    console.log('🔓 ATIVANDO PRÉ-RESERVA #' + this.reserva?.id);
-    console.log('═══════════════════════════════════════════');
-
-    this.http.post(
-      `/api/reservas/${this.reserva?.id}/ativar-pre-reserva`,
-      {}
-    ).subscribe({
-      next: (response: any) => {
-  console.log('✅ Pré-reserva ativada:', response);
   
-  alert('✅ Check-in realizado com sucesso!\n\nReserva agora está ATIVA.');
-  
-  // ✅ RECARREGAR COM O ID
-  this.carregarReserva(this.reservaId);
-  this.verificarAvisoCheckinManha();
-},
-      error: (erro) => {
-        console.error('❌ Erro ao ativar pré-reserva:', erro);
-        
-        const mensagemErro = erro.error?.erro || erro.error?.message || erro.message || 'Erro desconhecido';
-        
-        alert(`❌ Erro ao ativar reserva:\n\n${mensagemErro}`);
-      }
-    });
+ativarPreReserva(): void {
+  if (!confirm('🔓 Confirma o CHECK-IN desta pré-reserva?\n\nEla será ativada e a data/hora de check-in será atualizada para agora.')) {
+    return;
   }
+ 
+  console.log('═══════════════════════════════════════════');
+  console.log('🔓 ATIVANDO PRÉ-RESERVA #' + this.reserva?.id);
+  console.log('═══════════════════════════════════════════');
+ 
+  this.http.post(
+    `/api/reservas/${this.reserva?.id}/ativar-pre-reserva`,
+    {}
+  ).subscribe({
+    next: (response: any) => {
+      console.log('✅ Pré-reserva ativada:', response);
+ 
+      alert('✅ Check-in realizado com sucesso!\n\nReserva agora está ATIVA.');
+ 
+      // ✅ RECARREGAR COM O ID — e, assim que os dados atualizados
+      // chegarem (incluindo o campo "faturada"), decide se abre a
+      // tela de assinatura automaticamente.
+      this.carregarReserva(this.reservaId, () => {
+        this.verificarAvisoCheckinManha();
+ 
+        if (this.reserva?.faturada) {
+          setTimeout(() => {
+            this.modalAssinatura = true;
+            this.assinaturaCapturada = null;
+          }, 500);
+        }
+      });
+    },
+    error: (erro) => {
+      console.error('❌ Erro ao ativar pré-reserva:', erro);
+ 
+      const mensagemErro = erro.error?.erro || erro.error?.message || erro.message || 'Erro desconhecido';
+ 
+      alert(`❌ Erro ao ativar reserva:\n\n${mensagemErro}`);
+    }
+  });
+}
     /**
    * 🔍 VERIFICA SE PODE ATIVAR PRÉ-RESERVA
    * Só permite se estiver no dia do check-in ou 1 dia antes

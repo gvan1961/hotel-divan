@@ -1156,6 +1156,11 @@ private criarReserva(): void {
   }
 }
 
+// ============================================================
+// SUBSTITUIR o método enviarReserva() em reserva-form.app.ts
+// (só muda o bloco "next" do subscribe — o resto fica igual)
+// ============================================================
+
 private enviarReserva(fmt: Function): void {
   const reservaRequest: any = {
     clienteId: Number(this.reserva.clienteId),
@@ -1174,8 +1179,23 @@ private enviarReserva(fmt: Function): void {
     next: (response: any) => {
       this.loading = false;
       const reservaId = response?.id;
-      if (reservaId) this.router.navigate(['/reservas', reservaId]);
-      else this.router.navigate(['/reservas']);
+
+      if (!reservaId) {
+        this.router.navigate(['/reservas']);
+        return;
+      }
+
+      // ⭐ Reserva nova (não pré-reserva) já fica ATIVA imediatamente.
+      // Se for faturada, já leva direto pra assinatura da fatura —
+      // reaproveita o mesmo mecanismo (?abrirAssinatura=1) que o
+      // reserva-detalhes.app.ts já usa quando vem do Painel de Recepção.
+      if (response?.faturada === true) {
+        this.router.navigate(['/reservas', reservaId], {
+          queryParams: { abrirAssinatura: 1 }
+        });
+      } else {
+        this.router.navigate(['/reservas', reservaId]);
+      }
     },
     error: (err) => {
       this.loading = false;

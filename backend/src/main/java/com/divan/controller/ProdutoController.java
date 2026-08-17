@@ -149,4 +149,26 @@ public class ProdutoController {
         }
     }
     
+ // ============================================================
+ // ADICIONAR este método dentro da classe ProdutoController
+ // (mantém todos os endpoints existentes sem alteração)
+ // ============================================================
+  
+     /**
+      * Lista produtos para IMPRESSÃO DE CONTAGEM DE ESTOQUE.
+      * Por padrão (incluirEstoqueZero=false) omite produtos com quantidade zero.
+      * Passe ?incluirEstoqueZero=true para trazer todos, incluindo zerados.
+      *
+      * Exemplos:
+      *   GET /api/produtos/contagem-estoque                        -> sem zerados
+      *   GET /api/produtos/contagem-estoque?incluirEstoqueZero=true -> com zerados
+      */
+     @GetMapping("/contagem-estoque")
+     public ResponseEntity<List<Produto>> listarParaContagemEstoque(
+             @RequestParam(name = "incluirEstoqueZero", defaultValue = "false") boolean incluirEstoqueZero) {
+         List<Produto> produtos = produtoService.listarParaContagemEstoque(incluirEstoqueZero);
+         return ResponseEntity.ok(produtos);
+     }
+  
+    
 }

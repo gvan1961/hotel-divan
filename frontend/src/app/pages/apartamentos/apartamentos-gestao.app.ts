@@ -111,6 +111,13 @@ import { Apartamento } from '../../models/apartamento.model';
 
             <button 
               *ngIf="estaDisponivel(apt)"
+              class="btn-action btn-limpeza-acao"
+              (click)="colocarEmLimpeza(apt)">
+              🧹 Em Limpeza
+            </button>
+
+            <button 
+              *ngIf="estaDisponivel(apt)"
               class="btn-action btn-warning"
               (click)="colocarEmManutencao(apt)">
               🔧 Manutenção
@@ -446,6 +453,15 @@ import { Apartamento } from '../../models/apartamento.model';
       background: #e67e22;
     }
 
+    .btn-limpeza-acao {
+      background: #16a085;
+      color: white;
+    }
+
+    .btn-limpeza-acao:hover {
+      background: #138a72;
+    }
+
     .btn-danger {
       background: #e74c3c;
       color: white;
@@ -635,6 +651,18 @@ export class ApartamentosGestaoApp implements OnInit {
     });
   }
 
+  // ✅ Extrai a mensagem de erro real do backend. O corpo de erro normalmente
+  // vem como objeto JSON (ex: { erro: "..." }), então concatenar err.error
+  // direto numa string vira "[object Object]" — aqui pegamos o texto de fato.
+  private extrairMensagemErro(err: any): string {
+    if (!err) return 'Erro desconhecido';
+    if (typeof err.error === 'string') return err.error;
+    if (err.error?.erro) return err.error.erro;
+    if (err.error?.message) return err.error.message;
+    if (err.message) return err.message;
+    return 'Erro desconhecido';
+  }
+
   liberarLimpeza(apartamento: Apartamento): void {
     const confirmacao = confirm(`✅ Confirmar limpeza do apartamento ${apartamento.numeroApartamento}?\n\nO apartamento ficará DISPONÍVEL para novas reservas.`);
     if (!confirmacao) return;
@@ -646,7 +674,23 @@ export class ApartamentosGestaoApp implements OnInit {
       },
       error: (err) => {
         console.error('❌ Erro ao liberar limpeza:', err);
-        alert('❌ Erro: ' + (err.error || err.message));
+        alert('❌ Erro: ' + this.extrairMensagemErro(err));
+      }
+    });
+  }
+
+  colocarEmLimpeza(apartamento: Apartamento): void {
+    const confirmacao = confirm(`🧹 Colocar o apartamento ${apartamento.numeroApartamento} em limpeza?\n\nEle deixará de aparecer como disponível até a limpeza ser confirmada.`);
+    if (!confirmacao) return;
+
+    this.apartamentoService.atualizarStatus(apartamento.id!, 'LIMPEZA').subscribe({
+      next: () => {
+        alert('✅ Apartamento colocado em limpeza!');
+        this.carregarApartamentos();
+      },
+      error: (err) => {
+        console.error('❌ Erro ao colocar em limpeza:', err);
+        alert('❌ Erro: ' + this.extrairMensagemErro(err));
       }
     });
   }
@@ -661,7 +705,7 @@ export class ApartamentosGestaoApp implements OnInit {
         this.carregarApartamentos();
       },
       error: (err) => {
-        alert('❌ Erro: ' + (err.error || err.message));
+        alert('❌ Erro: ' + this.extrairMensagemErro(err));
       }
     });
   }
@@ -676,7 +720,7 @@ export class ApartamentosGestaoApp implements OnInit {
         this.carregarApartamentos();
       },
       error: (err) => {
-        alert('❌ Erro: ' + (err.error || err.message));
+        alert('❌ Erro: ' + this.extrairMensagemErro(err));
       }
     });
   }
@@ -691,7 +735,7 @@ export class ApartamentosGestaoApp implements OnInit {
         this.carregarApartamentos();
       },
       error: (err) => {
-        alert('❌ Erro: ' + (err.error || err.message));
+        alert('❌ Erro: ' + this.extrairMensagemErro(err));
       }
     });
   }
@@ -706,7 +750,7 @@ export class ApartamentosGestaoApp implements OnInit {
         this.carregarApartamentos();
       },
       error: (err) => {
-        alert('❌ Erro: ' + (err.error || err.message));
+        alert('❌ Erro: ' + this.extrairMensagemErro(err));
       }
     });
   }

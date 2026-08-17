@@ -68,6 +68,16 @@ interface Produto {
         </div>
       </div>
 
+      <!-- OPÇÃO ESTOQUE ZERO -->
+      <div class="card-categorias" *ngIf="!carregando">
+        <label class="checkbox-estoque-zero">
+          <input
+            type="checkbox"
+            [(ngModel)]="incluirEstoqueZero">
+          <span class="checkbox-label">Incluir produtos com estoque zero na impressão</span>
+        </label>
+      </div>
+
       <!-- BOTÃO IMPRIMIR -->
       <div class="card-acoes" *ngIf="!carregando">
         <button 
@@ -212,6 +222,19 @@ interface Produto {
       cursor: pointer;
     }
 
+    .checkbox-estoque-zero {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .checkbox-estoque-zero input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
     .checkbox-label {
       font-size: 16px;
       font-weight: 600;
@@ -268,12 +291,17 @@ interface Produto {
     }
   `]
 })
+
 export class ContagemEstoqueComponent implements OnInit {
   
   categorias: Categoria[] = [];
   categoriasSelecioadas: Categoria[] = [];
   carregando = true;
   imprimindo = false;
+
+  // ⭐ NOVO: controla se produtos com estoque zero entram na impressão
+  incluirEstoqueZero = false;
+
 
   constructor(
     private produtoService: ProdutoService,
@@ -341,12 +369,18 @@ export class ContagemEstoqueComponent implements OnInit {
       console.log('📦 Primeiro produto (exemplo):', produtos[0]);
       
       // Filtrar por categorias selecionadas
-      const produtosFiltrados = produtos
+      let produtosFiltrados = produtos
         .filter(p => {
           console.log(`Produto: ${p.nomeProduto} | categoriaId: ${p.categoriaId} | categoria.id: ${p.categoria?.id}`);
           return idsCategoria.includes(p.categoriaId) || idsCategoria.includes(p.categoria?.id);
         })
         .sort((a, b) => a.nomeProduto.localeCompare(b.nomeProduto));
+
+      // ⭐ NOVO: se a opção estiver desmarcada, remove os produtos com estoque zero
+      // ANTES de gerar a impressão (não entram nem na contagem "Total de itens")
+      if (!this.incluirEstoqueZero) {
+        produtosFiltrados = produtosFiltrados.filter(p => Number(p.quantidade) > 0);
+      }
 
       console.log('📦 Produtos filtrados:', produtosFiltrados.length);
 
@@ -378,6 +412,9 @@ export class ContagemEstoqueComponent implements OnInit {
    let linhasProdutos = '';
 
 const comEstoque = produtos.filter(p => Number(p.quantidade) > 0);
+// ⭐ Como a lista já vem filtrada lá em imprimirContagem() quando
+// incluirEstoqueZero = false, "semEstoque" só terá itens quando o
+// usuário tiver marcado a opção de incluir estoque zero.
 const semEstoque = produtos.filter(p => Number(p.quantidade) <= 0);
 
 comEstoque.forEach((produto) => {
@@ -541,7 +578,7 @@ if (semEstoque.length > 0) {
           janelaImpressao.document.write(htmlImpressao);
           janelaImpressao.document.close();
         }
-      }
+      }      
 
       voltar(): void {
         window.history.back();

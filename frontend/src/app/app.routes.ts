@@ -67,6 +67,7 @@ import { PontoFotoApp } from './pages/ponto/ponto-foto.app';
 import { roleGuard } from './guards/role.guard';
 import { PontoAjusteApp } from './pages/ponto/ponto-ajuste.app';
 import { ValeRelatorioComponent } from './pages/vales/vale-relatorio.component';
+import { ValeRapidoComponent } from './pages/vales/vale-rapido.component';
 
 
 export const routes: Routes = [
@@ -178,8 +179,10 @@ export const routes: Routes = [
       { path: 'empresas', component: EmpresaListaApp },
 
       // ===== VALES =====
+      // ⭐ Bloco único (o antigo estava duplicado — removido o segundo bloco repetido)
       { path: 'vales', component: ValeListaComponent },
       { path: 'vales/novo', component: ValeFormComponent },
+      { path: 'vales/rapido', component: ValeRapidoComponent, canActivate: [roleGuard(['ADMIN', 'GERENTE', 'RECEPCIONISTA'])] },
       { path: 'vales/editar/:id', component: ValeFormComponent },
       { path: 'vales/imprimir/:id', component: ValeImpressaoComponent },
       { path: 'vales/assinar/:id', component: ValeAssinaturaComponent },

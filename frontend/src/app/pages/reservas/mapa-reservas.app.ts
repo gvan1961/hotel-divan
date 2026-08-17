@@ -78,7 +78,7 @@ interface ApartamentoMapa {
   <button *ngIf="termoBuscaHospede" (click)="limparBuscaHospede()" class="btn-limpar-busca">✕</button>
 </div>
 
-     <div class="filtro-busca-reserva">
+      <div class="filtro-busca-reserva">
   <label>🔢 Nº Reserva:</label>
   <input type="number" 
          [(ngModel)]="buscaNumeroReserva" 
@@ -88,6 +88,7 @@ interface ApartamentoMapa {
          placeholder="Ex: 1024"
          class="input-busca-reserva">
   <button *ngIf="buscaNumeroReserva" class="btn-limpar-busca" (click)="limparBuscaReserva()">✕</button>
+  <div *ngIf="erroBuscaReserva" class="aviso-busca-reserva">{{ erroBuscaReserva }}</div>
 </div>
 
       <!-- LEGENDA -->
@@ -1461,6 +1462,7 @@ td.col-reserva.hoje {
   display: flex;
   align-items: center;
   gap: 6px;
+  position: relative; /* ✅ para a mensagem de erro flutuar embaixo, sem empurrar layout */
 }
 .input-busca-reserva {
   width: 100px;
@@ -1481,6 +1483,26 @@ td.col-reserva.hoje {
   padding: 4px 8px;
   cursor: pointer;
   font-size: 12px;
+}
+/* ✅ Mensagem de "reserva não encontrada" — substitui o alert() nativo */
+.aviso-busca-reserva {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: #fdecea;
+  border: 1px solid #e74c3c;
+  color: #c0392b;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  z-index: 50;
+  animation: aviso-busca-entrar 0.15s ease-out;
+}
+@keyframes aviso-busca-entrar {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .reserva-destacada {
   outline: 3px solid #f39c12 !important;
@@ -1733,6 +1755,8 @@ apartamentoNumeroViaMapa: string = '';
 
 buscaNumeroReserva: number | null = null;
 reservaDestacadaId: number | null = null;
+erroBuscaReserva: string | null = null; // ✅ mensagem inline, substitui o alert()
+private erroBuscaTimeout: any = null;
 
 termoBuscaHospede = '';
 reservasOriginais: any[] = [];
@@ -2677,9 +2701,14 @@ confirmarTransferencia(): void {
 
 private buscaTimeout: any = null;
 
+// ✅ Enquanto o usuário digita: só tenta destacar/rolar até a reserva SE ela já
+// existir na tela. Nunca mostra erro aqui — evita interromper a digitação
+// por causa de uma pausa natural entre um dígito e outro.
 buscarPorNumeroReserva(): void {
   clearTimeout(this.buscaTimeout);
+  clearTimeout(this.erroBuscaTimeout);
   this.reservaDestacadaId = null;
+  this.erroBuscaReserva = null; // número mudou — some com o erro anterior
 
   if (!this.buscaNumeroReserva) return;
 
@@ -2690,33 +2719,95 @@ buscarPorNumeroReserva(): void {
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-      // ❌ Sem alert aqui de propósito — usuário pode ainda estar digitando.
+      // Sem mensagem de erro aqui de propósito — usuário pode ainda estar digitando.
     }, 150);
   }, 600);
 }
 
 // ✅ Só roda quando o usuário CONFIRMA a busca (Enter ou saiu do campo).
-// Aqui sim, se não achou, mostra o alerta — porque a essa altura o número
+// Aqui sim, se não achou, mostra o aviso — porque a essa altura o número
 // já está completo.
+//
+// ⚠️ Usamos uma mensagem inline (erroBuscaReserva) em vez de alert() de
+// propósito: o alert() é uma janela nativa que BLOQUEIA o teclado da página
+// inteira. Isso causa efeitos colaterais estranhos quando o usuário aperta
+// Enter várias vezes em sequência (o navegador chega a "piscar" a janela).
+// Uma mensagem normal na tela não tem esse problema — pode disparar quantas
+// vezes for chamada, sem travar nada e sem piscar.
 confirmarBuscaReserva(): void {
   clearTimeout(this.buscaTimeout);
+  clearTimeout(this.erroBuscaTimeout);
 
   if (!this.buscaNumeroReserva) return;
 
   this.reservaDestacadaId = this.buscaNumeroReserva;
+
   setTimeout(() => {
-    const el = document.querySelector('.reserva-destacada');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } else {
-      alert(`❌ Reserva #${this.buscaNumeroReserva} não encontrada no período atual.`);
+    const elVisivel = document.querySelector('.reserva-destacada');
+
+    if (elVisivel) {
+      elVisivel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      this.erroBuscaReserva = null;
+      return;
     }
+
+    // ✅ Não achou nas colunas visíveis do período atual. Mas o mapa já
+    // carregou TODAS as reservas ATIVA/PRÉ-RESERVA do backend (o "período"
+    // só controla quais dias aparecem na grade) — então procuramos aqui
+    // dentro de tudo que já está em memória, sem precisar chamar o servidor
+    // de novo.
+    const encontrada = this.buscarReservaEmQualquerPeriodo(this.buscaNumeroReserva!);
+
+    if (!encontrada) {
+      this.exibirErroBuscaReserva('não encontrada (verifique se ela está ATIVA ou é uma pré-reserva)');
+      return;
+    }
+
+    // ✅ Achou em outro período — muda a data inicial do mapa pra data de
+    // check-in da reserva encontrada e recalcula as colunas (sem precisar
+    // recarregar do backend, os dados já estão todos carregados).
+    this.dataInicio = encontrada.dataCheckin.substring(0, 10);
+    this.gerarDatas();
+
+    setTimeout(() => {
+      const el = document.querySelector('.reserva-destacada');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        this.erroBuscaReserva = null;
+      } else {
+        // Não deveria acontecer (achamos a reserva, mudamos o período pra
+        // incluir a data dela), mas por segurança avisa em vez de falhar
+        // silenciosamente.
+        this.exibirErroBuscaReserva('encontrada, mas não foi possível exibir no mapa');
+      }
+    }, 150);
   }, 150);
+}
+
+// ✅ Procura a reserva pelo número em TODOS os dados já carregados no mapa
+// (não só nas colunas de data visíveis no período selecionado).
+private buscarReservaEmQualquerPeriodo(numeroReserva: number): ReservaMapa | null {
+  for (const reserva of this.mapaReservas.values()) {
+    if (reserva.id === numeroReserva) {
+      return reserva;
+    }
+  }
+  return null;
+}
+
+private exibirErroBuscaReserva(sufixo: string): void {
+  this.erroBuscaReserva = `❌ Reserva #${this.buscaNumeroReserva} ${sufixo}.`;
+  clearTimeout(this.erroBuscaTimeout);
+  this.erroBuscaTimeout = setTimeout(() => {
+    this.erroBuscaReserva = null;
+  }, 4000);
 }
 
 limparBuscaReserva(): void {
   this.buscaNumeroReserva = null;
   this.reservaDestacadaId = null;
+  this.erroBuscaReserva = null;
+  clearTimeout(this.erroBuscaTimeout);
 }
 
 isUltimoDiaReserva(apt: ApartamentoMapa, data: string): boolean {

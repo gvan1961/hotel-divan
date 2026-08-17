@@ -10,7 +10,6 @@ import { Subscription } from 'rxjs';
 import { HasPermissionDirective } from '../directives/has-permission.directive';
 import { HttpClient } from '@angular/common/http';
 
-
 @Component({
   selector: 'app-sidebar',
   standalone: true,
@@ -123,6 +122,16 @@ import { HttpClient } from '@angular/common/http';
            routerLink="/contagem-estoque" routerLinkActive="active" class="nav-item nav-item-destaque">
           <span class="icon">📋</span>
           <span class="label">Contagem Estoque</span>
+        </a>
+
+        <!-- ⭐ VALE RÁPIDO -->
+        <!-- Nova permissão granular (VALE_CRIAR) para não depender de ROLE_ADMIN.
+             Atribua essa permissão para ADMIN, GERENTE e RECEPCIONISTA na tela
+             de Cadastros/Permissões. -->
+        <a *hasPermission="'VALE_CRIAR'"
+           routerLink="/vales/rapido" routerLinkActive="active" class="nav-item nav-item-vale-rapido">
+          <span class="icon">⚡</span>
+          <span class="label">Vale Rápido</span>
         </a>
 
         <!-- PDV -->
@@ -557,6 +566,27 @@ import { HttpClient } from '@angular/common/http';
     .nav-item-destaque.active {
       background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
       border-left: 3px solid #fff;
+    }
+
+    /* ⭐ ESTILO PARA VALE RÁPIDO */
+    .nav-item-vale-rapido {
+      background: rgba(255, 193, 7, 0.15);
+      font-weight: 700;
+      margin: 5px 10px;
+      border-radius: 8px;
+      border-left: 3px solid #ffc107;
+    }
+
+    .nav-item-vale-rapido:hover {
+      background: rgba(255, 193, 7, 0.3);
+      color: #ffc107;
+      transform: translateX(5px);
+    }
+
+    .nav-item-vale-rapido.active {
+      background: rgba(255, 193, 7, 0.3);
+      color: #ffc107;
+      border-left: 3px solid #ffc107;
     }
 
     @media (max-width: 768px) {

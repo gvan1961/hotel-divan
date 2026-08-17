@@ -172,4 +172,22 @@ public class ProdutoService {
         
         produtoRepository.deleteById(id);
     }
+    
+    /**
+     * Lista produtos ordenados por nome, para fins de contagem/impressão de estoque.
+     * Se incluirEstoqueZero = false, produtos com quantidade nula ou igual a zero
+     * são omitidos da lista.
+     */
+    @Transactional(readOnly = true)
+    public List<Produto> listarParaContagemEstoque(boolean incluirEstoqueZero) {
+        List<Produto> produtos = produtoRepository.findAllOrderByNome();
+ 
+        if (incluirEstoqueZero) {
+            return produtos;
+        }
+ 
+        return produtos.stream()
+                .filter(p -> p.getQuantidade() != null && p.getQuantidade() > 0)
+                .toList();
+    }
 }
