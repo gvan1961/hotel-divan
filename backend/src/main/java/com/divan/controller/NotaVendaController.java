@@ -60,6 +60,7 @@ public class NotaVendaController {
             }
 
             nota.setStatus(NotaVenda.Status.FECHADA);
+            
             NotaVenda notaSalva = notaVendaRepository.save(nota);
 
             return ResponseEntity.ok(notaSalva);

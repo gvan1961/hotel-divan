@@ -65,7 +65,10 @@ public class ReservaService {
 	private DescontoRepository descontoRepository;
 	
 	@Autowired
-	private DiariaService diariaService;	
+	private DiariaService diariaService;
+	
+	@Autowired
+	private CaixaContextoService caixaContextoService;	
     
     @Autowired
     private ReservaRepository reservaRepository;
@@ -445,12 +448,14 @@ public class ReservaService {
 
         // ✅ CRIAR NOTA DE VENDA
         NotaVenda notaVenda = new NotaVenda();
+        
         notaVenda.setReserva(reserva);
         notaVenda.setDataHoraVenda(LocalDateTime.now());
         notaVenda.setTotal(BigDecimal.ZERO);
         notaVenda.setTipoVenda(NotaVenda.TipoVendaEnum.APARTAMENTO);
         notaVenda.setStatus(NotaVenda.Status.ABERTA);
         notaVenda.setItens(new ArrayList<>());
+        notaVenda.setCaixa(caixaContextoService.buscarCaixaAbertoDoUsuarioAtual());
 
         if (reserva.getNotasVenda() == null) {
             reserva.setNotasVenda(new ArrayList<>());

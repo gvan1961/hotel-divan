@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 
+import com.divan.entity.FechamentoCaixa;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -22,6 +24,10 @@ public class Pagamento {
     @JoinColumn(name = "reserva_id", nullable = false)
     @JsonIgnoreProperties({"extratos", "historicos", "notasVenda", "apartamento", "cliente", "diaria"})
     private Reserva reserva;
+    
+    @ManyToOne                          // ⭐ NOVO
+    @JoinColumn(name = "caixa_id")      // ⭐ NOVO
+    private FechamentoCaixa caixa;      // ⭐ NOVO
 
     @DecimalMin(value = "0.01", message = "Valor deve ser maior que zero")
     @Column(nullable = false, precision = 10, scale = 2)
@@ -69,8 +75,16 @@ public class Pagamento {
     public void setReserva(Reserva reserva) {
         this.reserva = reserva;
     }
+        
+    public FechamentoCaixa getCaixa() {
+		return caixa;
+	}
 
-    public BigDecimal getValor() {
+	public void setCaixa(FechamentoCaixa caixa) {
+		this.caixa = caixa;
+	}
+
+	public BigDecimal getValor() {
         return valor;
     }
 

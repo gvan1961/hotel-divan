@@ -26,4 +26,7 @@ public interface PagamentoRepository extends JpaRepository<Pagamento, Long> {
     List<Object[]> findTotalPorFormaPagamentoNoDia(LocalDateTime data);
     
     List<Pagamento> findByDataHoraPagamentoBetween(LocalDateTime inicio, LocalDateTime fim);
+    
+    List<Pagamento> findByCaixaId(Long caixaId);
+    
 }

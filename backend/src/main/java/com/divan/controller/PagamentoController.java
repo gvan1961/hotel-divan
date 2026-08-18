@@ -9,6 +9,7 @@ import com.divan.entity.Reserva;
 import com.divan.repository.ApartamentoRepository;
 import com.divan.repository.FechamentoCaixaRepository;
 import com.divan.repository.ReservaRepository;
+import com.divan.service.CaixaContextoService;
 import com.divan.service.PagamentoService;
 import com.divan.service.ReservaService;
 import jakarta.validation.Valid;
@@ -49,6 +50,9 @@ public class PagamentoController {
 
     @Autowired
     private ApartamentoRepository apartamentoRepository;
+    
+    @Autowired
+	private CaixaContextoService caixaContextoService;	
 
     @PostMapping
     public ResponseEntity<?> processarPagamento(@Valid @RequestBody PagamentoRequestDTO dto) {
@@ -78,6 +82,7 @@ public class PagamentoController {
 
             // Criar pagamento
             Pagamento pagamento = new Pagamento();
+            pagamento.setCaixa(caixaContextoService.buscarCaixaAbertoDoUsuarioAtual());
             pagamento.setReserva(reservaOpt.get());
             pagamento.setValor(dto.getValor());
             pagamento.setFormaPagamento(dto.getFormaPagamento());
@@ -119,6 +124,7 @@ public class PagamentoController {
 
             // Criar pagamento (será marcado como ADIANTAMENTO no service)
             Pagamento pagamento = new Pagamento();
+            pagamento.setCaixa(caixaContextoService.buscarCaixaAbertoDoUsuarioAtual());
             pagamento.setReserva(reservaOpt.get());
             pagamento.setValor(dto.getValor());
             pagamento.setFormaPagamento(dto.getFormaPagamento());
@@ -198,6 +204,7 @@ public class PagamentoController {
 
             // ✅ REGISTRAR PAGAMENTO
             Pagamento pagamento = new Pagamento();
+            pagamento.setCaixa(caixaContextoService.buscarCaixaAbertoDoUsuarioAtual());
             pagamento.setReserva(reserva);
             pagamento.setValor(valor);
             pagamento.setFormaPagamento(

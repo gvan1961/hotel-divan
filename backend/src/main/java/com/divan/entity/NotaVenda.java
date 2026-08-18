@@ -39,6 +39,11 @@ public class NotaVenda {
     @JsonIgnore
     private Reserva reserva;
     
+    @ManyToOne                          // ⭐ NOVO
+    @JoinColumn(name = "caixa_id")      // ⭐ NOVO
+    private FechamentoCaixa caixa;      // ⭐ NOVO
+    
+    
     // CORREÇÃO: Mudar de 0.01 para 0.0 para permitir zero temporariamente
     @DecimalMin(value = "0.0", message = "Total não pode ser negativo")
     @Column(nullable = false, precision = 10, scale = 2)
@@ -111,6 +116,14 @@ public class NotaVenda {
 
 	public void setReserva(Reserva reserva) {
 		this.reserva = reserva;
+	}
+		
+	public FechamentoCaixa getCaixa() {
+		return caixa;
+	}
+
+	public void setCaixa(FechamentoCaixa caixa) {
+		this.caixa = caixa;
 	}
 
 	public BigDecimal getTotal() {

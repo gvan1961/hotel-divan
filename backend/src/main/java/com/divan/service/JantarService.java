@@ -41,6 +41,9 @@ public class JantarService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+    
+    @Autowired
+	private CaixaContextoService caixaContextoService;	
 
     // ✅ LISTAR APARTAMENTOS COM HÓSPEDES AUTORIZADOS PARA JANTAR
     @Transactional(readOnly = true)
@@ -142,6 +145,7 @@ public class JantarService {
 
         // ✅ CRIAR NOTA DE VENDA
         NotaVenda nota = new NotaVenda();
+        nota.setCaixa(caixaContextoService.buscarCaixaAbertoDoUsuarioAtual());
         nota.setReserva(reserva);
         nota.setDataHoraVenda(LocalDateTime.now());
         nota.setTipoVenda(NotaVenda.TipoVendaEnum.APARTAMENTO);

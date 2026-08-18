@@ -93,14 +93,36 @@ public class FechamentoCaixaController {
     }
 
     // ─── LISTAR POR PERÍODO ────────────────────────────────
+    // ─── LISTAR POR PERÍODO ────────────────────────────────
     @GetMapping("/api/fechamento-caixa/periodo")
-    public ResponseEntity<?> listarPorPeriodo(@RequestParam String dataInicio,
-                                               @RequestParam String dataFim) {
+    public ResponseEntity<?> listarPorPeriodo(
+            @RequestParam String dataInicio,
+            @RequestParam String dataFim,
+            @RequestParam(required = false) Long usuarioId, // ⭐ NOVO
+            @RequestParam(required = false) String status   // ⭐ NOVO (já que a tela também filtra por status)
+    ) {
         try {
             LocalDateTime dtInicio = LocalDateTime.parse(dataInicio);
             LocalDateTime dtFim = LocalDateTime.parse(dataFim);
+ 
             List<FechamentoCaixa> caixas = caixaRepository
                 .findByDataHoraAberturaBetween(dtInicio, dtFim);
+ 
+            // ⭐ NOVO: filtra por usuário, se informado
+            if (usuarioId != null) {
+                caixas = caixas.stream()
+                    .filter(c -> c.getUsuario() != null && c.getUsuario().getId().equals(usuarioId))
+                    .collect(Collectors.toList());
+            }
+ 
+            // ⭐ NOVO: filtra por status, se informado (ex: "ABERTO")
+            if (status != null && !status.isBlank()) {
+                StatusCaixa statusEnum = StatusCaixa.valueOf(status);
+                caixas = caixas.stream()
+                    .filter(c -> c.getStatus() == statusEnum)
+                    .collect(Collectors.toList());
+            }
+ 
             return ResponseEntity.ok(caixas.stream()
                 .map(this::montarDTO)
                 .collect(Collectors.toList()));
@@ -114,12 +136,9 @@ public class FechamentoCaixaController {
     public ResponseEntity<?> relatorioDetalhado(@PathVariable Long id) {
         return caixaRepository.findById(id).map(caixa -> {
 
-            LocalDateTime fim = caixa.getDataHoraFechamento() != null
-                ? caixa.getDataHoraFechamento() : LocalDateTime.now();
-
+           
             // === PAGAMENTOS DE RESERVAS ===
-            List<Pagamento> pagamentos = pagamentoRepository
-                .findByDataHoraPagamentoBetween(caixa.getDataHoraAbertura(), fim);
+            List<Pagamento> pagamentos = pagamentoRepository.findByCaixaId(caixa.getId());
 
             // Agrupar por reserva
             Map<Long, Map<String, Object>> porReserva = new LinkedHashMap<>();
@@ -205,11 +224,10 @@ public class FechamentoCaixaController {
             subtotalReservas.put("total",         srTotal);
 
             // === VENDAS AVULSAS PDV ===
-            List<NotaVenda> vendasAvulsas = notaVendaRepository.findByTipoVendaInAndPeriodo(
-                List.of(NotaVenda.TipoVendaEnum.VISTA, NotaVenda.TipoVendaEnum.FATURADO),
-                caixa.getDataHoraAbertura(), fim
-            );
-
+            List<NotaVenda> vendasAvulsas = notaVendaRepository.findByTipoVendaInAndCaixaId(
+            	    List.of(NotaVenda.TipoVendaEnum.VISTA, NotaVenda.TipoVendaEnum.FATURADO),
+            	    caixa.getId()
+            	);
             BigDecimal avDinheiro = BigDecimal.ZERO, avPix = BigDecimal.ZERO,
                        avDebito   = BigDecimal.ZERO, avCredito = BigDecimal.ZERO,
                        avTransf   = BigDecimal.ZERO, avFaturado = BigDecimal.ZERO;
@@ -311,16 +329,14 @@ public class FechamentoCaixaController {
     public ResponseEntity<?> vendasDetalhadas(@PathVariable Long id) {
         return caixaRepository.findById(id).map(caixa -> {
 
-            LocalDateTime fim = caixa.getDataHoraFechamento() != null
-                ? caixa.getDataHoraFechamento() : LocalDateTime.now();
-
+           
             // Buscar todas as notas de venda do período (VISTA, FATURADO, APARTAMENTO)
-            List<NotaVenda> todasVendas = notaVendaRepository.findByTipoVendaInAndPeriodo(
-                List.of(NotaVenda.TipoVendaEnum.VISTA,
-                        NotaVenda.TipoVendaEnum.FATURADO,
-                        NotaVenda.TipoVendaEnum.APARTAMENTO),
-                caixa.getDataHoraAbertura(), fim
-            );
+            List<NotaVenda> todasVendas = notaVendaRepository.findByTipoVendaInAndCaixaId(
+                    List.of(NotaVenda.TipoVendaEnum.VISTA,
+                            NotaVenda.TipoVendaEnum.FATURADO,
+                            NotaVenda.TipoVendaEnum.APARTAMENTO),
+                    caixa.getId()
+                );
 
             // Agrupar por forma de pagamento
             Map<String, List<Map<String, Object>>> vendasPorForma = new LinkedHashMap<>();
@@ -409,12 +425,10 @@ public class FechamentoCaixaController {
 
     // ─── MONTAR DTO COM TOTAIS (reservas + avulsas PDV) ────
     private Map<String, Object> montarDTO(FechamentoCaixa caixa) {
-        LocalDateTime fim = caixa.getDataHoraFechamento() != null
-            ? caixa.getDataHoraFechamento() : LocalDateTime.now();
+       
 
         // === PAGAMENTOS DE RESERVAS ===
-        List<Pagamento> pagamentos = pagamentoRepository
-            .findByDataHoraPagamentoBetween(caixa.getDataHoraAbertura(), fim);
+        List<Pagamento> pagamentos = pagamentoRepository.findByCaixaId(caixa.getId());
 
         BigDecimal totalDinheiro = somarPorForma(pagamentos, Pagamento.FormaPagamentoEnum.DINHEIRO);
         BigDecimal totalPix      = somarPorForma(pagamentos, Pagamento.FormaPagamentoEnum.PIX);
@@ -424,12 +438,13 @@ public class FechamentoCaixaController {
         BigDecimal totalFaturado = somarPorForma(pagamentos, Pagamento.FormaPagamentoEnum.FATURADO);
         BigDecimal totalLinkPix    = somarPorForma(pagamentos, Pagamento.FormaPagamentoEnum.LINK_PIX);
         BigDecimal totalLinkCartao = somarPorForma(pagamentos, Pagamento.FormaPagamentoEnum.LINK_CARTAO);
+        
         // === VENDAS AVULSAS DO PDV (VISTA + FATURADO) ===
-        List<NotaVenda> vendasAvulsas = notaVendaRepository.findByTipoVendaInAndPeriodo(
-            List.of(NotaVenda.TipoVendaEnum.VISTA, NotaVenda.TipoVendaEnum.FATURADO),
-            caixa.getDataHoraAbertura(), fim
-        );
-
+        List<NotaVenda> vendasAvulsas = notaVendaRepository.findByTipoVendaInAndCaixaId(
+        	    List.of(NotaVenda.TipoVendaEnum.VISTA, NotaVenda.TipoVendaEnum.FATURADO),
+        	    caixa.getId()
+        	);
+        
         BigDecimal avDinheiro      = BigDecimal.ZERO;
         BigDecimal avPix           = BigDecimal.ZERO;
         BigDecimal avDebito        = BigDecimal.ZERO;

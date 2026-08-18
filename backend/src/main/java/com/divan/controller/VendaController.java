@@ -2,6 +2,7 @@ package com.divan.controller;
 
 import com.divan.entity.*;
 import com.divan.repository.*;
+import com.divan.service.CaixaContextoService;
 import com.divan.service.VendaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,8 @@ public class VendaController {
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private FechamentoCaixaRepository caixaRepository;
     @Autowired private ValeRepository valeRepository;
+    @Autowired
+	private CaixaContextoService caixaContextoService;	
 
     @GetMapping("/teste")
     public ResponseEntity<String> teste() {
@@ -56,6 +59,7 @@ public class VendaController {
             BigDecimal totalNota = BigDecimal.ZERO;
 
             NotaVenda nota = new NotaVenda();
+            nota.setCaixa(caixaContextoService.buscarCaixaAbertoDoUsuarioAtual());
             nota.setReserva(reserva);
             nota.setDataHoraVenda(LocalDateTime.now());
             nota.setTipoVenda(NotaVenda.TipoVendaEnum.APARTAMENTO);
@@ -155,6 +159,7 @@ public class VendaController {
             BigDecimal totalNota = BigDecimal.ZERO;
 
             NotaVenda nota = new NotaVenda();
+            nota.setCaixa(caixaContextoService.buscarCaixaAbertoDoUsuarioAtual());
             nota.setDataHoraVenda(LocalDateTime.now());
             nota.setTipoVenda(NotaVenda.TipoVendaEnum.VISTA);
             nota.setFormaPagamento(formaPagamento);
@@ -239,6 +244,7 @@ public class VendaController {
 
             // ✅ CRIAR NOTA DE VENDA
             NotaVenda nota = new NotaVenda();
+            nota.setCaixa(caixaContextoService.buscarCaixaAbertoDoUsuarioAtual());
             nota.setDataHoraVenda(LocalDateTime.now());
             nota.setTipoVenda(NotaVenda.TipoVendaEnum.FATURADO);
             nota.setFormaPagamento(NotaVenda.FormaPagamentoEnum.FATURADO);
@@ -339,6 +345,7 @@ public class VendaController {
             BigDecimal totalNota = BigDecimal.ZERO;
 
             NotaVenda nota = new NotaVenda();
+            nota.setCaixa(caixaContextoService.buscarCaixaAbertoDoUsuarioAtual());
             nota.setDataHoraVenda(LocalDateTime.now());
             nota.setTipoVenda(NotaVenda.TipoVendaEnum.FATURADO);
             nota.setFormaPagamento(NotaVenda.FormaPagamentoEnum.FATURADO);

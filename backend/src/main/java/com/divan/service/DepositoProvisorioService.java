@@ -7,6 +7,8 @@ import com.divan.entity.NotaVenda.Status;
 import com.divan.repository.*;
 import com.divan.dto.*;
 import jakarta.transaction.Transactional;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +18,9 @@ import java.util.List;
 
 @Service
 public class DepositoProvisorioService {
+	
+	@Autowired
+	private CaixaContextoService caixaContextoService;	
 
 	private final DepositoProvisorioRepository depositoRepository;
     private final DepositoProvisorioItemRepository itemRepository;
@@ -105,6 +110,7 @@ public class DepositoProvisorioService {
 
         // Cria NotaVenda do tipo APARTAMENTO
         NotaVenda nota = new NotaVenda();
+        nota.setCaixa(caixaContextoService.buscarCaixaAbertoDoUsuarioAtual());
         nota.setDataHoraVenda(LocalDateTime.now());
         nota.setTipoVenda(TipoVendaEnum.APARTAMENTO);
         nota.setReserva(reserva);
@@ -192,6 +198,7 @@ public class DepositoProvisorioService {
 
         // Cria NotaVenda do tipo PDV (venda avulsa)
         NotaVenda nota = new NotaVenda();
+        nota.setCaixa(caixaContextoService.buscarCaixaAbertoDoUsuarioAtual());
         nota.setDataHoraVenda(LocalDateTime.now());
         nota.setTipoVenda(TipoVendaEnum.VISTA);
         nota.setFormaPagamento(NotaVenda.FormaPagamentoEnum.valueOf(request.getFormaPagamento()));
