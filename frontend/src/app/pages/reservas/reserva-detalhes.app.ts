@@ -2983,6 +2983,7 @@ import { environment } from '../../../environments/environment';
   { codigo: 'LINK_PIX',              nome: 'Link Pix' },
   { codigo: 'LINK_CARTAO',           nome: 'Link Cartão' },
   { codigo: 'DEBITO_EM_CONTA',       nome: 'Débito em Conta' }, // ← ADICIONAR
+  { codigo: 'PENDENCIA_EXTRA',       nome: '⚠️ Pendência Extra' },
 ];
 
     modalAdiantamento = false;
@@ -3130,6 +3131,7 @@ ngOnDestroy(): void {
     next: (data) => {
       this.reserva = data;
       this.loading = false;
+      this.carregarHospedes(); 
  
       // ✅ Calcula pago à vista para recibo formal
       const extratos = data.extratos || [];
@@ -3258,6 +3260,8 @@ formatarDataHora(data: any): string {
   imprimirCheckin(): void {
   if (!this.reserva) return;
   const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
+
+  
   this.http.get<any>(`/api/reservas/${this.reserva.id}/assinatura`).subscribe({
     next: (res) => this.gerarHtmlCheckin(empresaNomeCliente, res?.assinatura || null),
     error: () => this.gerarHtmlCheckin(empresaNomeCliente, null)
@@ -3541,7 +3545,7 @@ const debitoEmConta = extratos
   .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
 const totalPagoAVista = Math.max(0, (this.reserva.totalRecebido || 0) - debitoEmConta);
  const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
-
+ 
     const htmlImpressao = `
       <!DOCTYPE html>
       <html>
@@ -3850,6 +3854,7 @@ gerarHtmlFatura(valorTotal: number, pagoAVista: number, valorFaturado: number, s
 
   if (!this.reserva) return;
   const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
+  const jaLancadoAnteriormente = valorTotal - saldo - pagoAVista;
   const htmlImpressao = `
     <!DOCTYPE html>
     <html>
@@ -3930,13 +3935,21 @@ gerarHtmlFatura(valorTotal: number, pagoAVista: number, valorFaturado: number, s
             <td style="font-size:10pt; font-weight:900; padding:3px 0; border-top:1px dashed #000;">Total Hospedagem:</td>
             <td style="font-size:10pt; font-weight:900; text-align:right; white-space:nowrap; padding:3px 0; border-top:1px dashed #000;">R$ ${this.formatarMoeda(valorTotal)}</td>
           </tr>
-         ${pagoAVista > 0 ? `
+        
+        
+        
+          ${pagoAVista > 0 ? `
 <tr>
   <td style="font-size:10pt; font-weight:700; padding:3px 0;">Pago à Vista:</td>
   <td style="font-size:10pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">- R$ ${this.formatarMoeda(pagoAVista)}</td>
 </tr>` : ''}
+          ${jaLancadoAnteriormente > 0.01 ? `
 <tr>
-  <td style="font-size:12pt; font-weight:900; padding:5px 0; border-top:2px solid #000;">A PAGAR FATURADO:</td>
+  <td style="font-size:10pt; font-weight:700; padding:3px 0;">Valor já lançado/faturado anteriormente:</td>
+  <td style="font-size:10pt; font-weight:700; text-align:right; white-space:nowrap; padding:3px 0;">- R$ ${this.formatarMoeda(jaLancadoAnteriormente)}</td>
+</tr>` : ''}
+<tr>
+  <td style="font-size:12pt; font-weight:900; padding:5px 0; border-top:2px solid #000;">SALDO A FATURAR NESTA COBRANÇA:</td>
   <td style="font-size:12pt; font-weight:900; text-align:right; white-space:nowrap; padding:5px 0; border-top:2px solid #000;">R$ ${this.formatarMoeda(saldo)}</td>
 </tr>
         </table>
@@ -4535,8 +4548,21 @@ finalizarCheckout(): void {
                     (this.reserva as any).cliente?.empresa?.id;
 
   // ✅ BLOQUEAR SE TEM SALDO DEVEDOR E NÃO TEM CRÉDITO
+ // ⭐ Sem crédito aprovado e com saldo devedor: em vez de só bloquear,
+  // oferece a opção de registrar como dívida pendente do hóspede (pra
+  // cobrar na próxima visita), de forma rastreada — em vez da recepção
+  // ter que burlar a trava manualmente.
+
   if (temSaldoDevedor && !podeCredito) {
-    alert(`❌ Não é possível finalizar!\n\nSaldo devedor: R$ ${this.formatarMoeda(saldo)}\n\nRegistre o pagamento antes de finalizar.`);
+    const registrar = confirm(
+      `⚠️ Cliente sem crédito aprovado!\n\n` +
+      `Saldo devedor: R$ ${this.formatarMoeda(saldo)}\n\n` +
+      `Deseja registrar este valor como PENDÊNCIA EXTRA (cobrar na próxima ` +
+      `visita) e liberar o checkout?`
+    );
+    if (registrar) {
+      this.abrirPendenciaExtra();
+    }
     return;
   }
 
@@ -4553,6 +4579,32 @@ finalizarCheckout(): void {
     this.finalizarReservaPaga(); // Pago à vista
   }
 }
+
+  registrarDividaEFinalizar(saldo: number): void {
+    const motivo = prompt(
+      '📝 Motivo/observação (opcional):',
+      'Saldo devedor no checkout — cobrar na próxima visita'
+    );
+    if (motivo === null) return; // cancelou o prompt
+ 
+    this.loading = true;
+ 
+    this.http.patch(
+      `/api/reservas/${this.reserva!.id}/finalizar-com-divida`,
+      {},
+      { params: { motivo: motivo || '' } }
+    ).subscribe({
+      next: () => {
+        alert(`✅ Checkout liberado!\n\nDívida de R$ ${this.formatarMoeda(saldo)} registrada para ${this.reserva!.cliente?.nome}.\n\nEla aparecerá no Painel de Recepção até ser quitada.`);
+        this.loading = false;
+        this.carregarReserva(this.reserva!.id);
+      },
+      error: (err) => {
+        this.loading = false;
+        alert('❌ Erro ao registrar dívida: ' + (err.error?.erro || err.message));
+      }
+    });
+  }
 
   finalizarReservaFaturada(): void {
     if (!this.reserva) return;
@@ -6521,6 +6573,13 @@ abrirDebitoEmConta(): void {
   this.modalPagamento = true;
 }
 
+abrirPendenciaExtra(): void {
+  this.pagValor = Number(this.reserva?.totalApagar) || 0;
+  this.pagValorTexto = this.pagValor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  this.pagFormaPagamento = 'PENDENCIA_EXTRA';
+  this.pagObs = 'Hóspede sem crédito aprovado — cobrar na próxima visita';
+  this.modalPagamento = true;
+}
 
 toggleExtrato(): void {
   this.extratoExpandido = !this.extratoExpandido;

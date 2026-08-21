@@ -124,6 +124,17 @@ import { SignaturePadComponent } from '../../components/signature-pad/signature-
             </div>
           </div>
 
+          <!-- MÊS DE REFERÊNCIA (SALÁRIO) -->
+          <div class="campo">
+            <label>Mês de Referência (salário)</label>
+            <input
+              type="month"
+              [(ngModel)]="form.mesReferencia"
+              name="mesReferencia">
+          </div>
+
+          
+
           <!-- OBSERVAÇÃO -->
           <div class="campo">
             <label>Observação</label>
@@ -572,10 +583,11 @@ export class ValeFormComponent implements OnInit {
   valeId?: number;
   loading = false;
 
-  form: ValeRequest = {
+   form: ValeRequest = {
     clienteId: 0,
     dataConcessao: this.obterDataHoje(),
     dataVencimento: this.obterDataDaqui30Dias(),
+    mesReferencia: this.obterMesAtual(),
     tipoVale: null as any,
     valor: 0,
     observacao: ''
@@ -728,10 +740,11 @@ fecharListaComDelay(): void {
       next: (vale: Vale) => {
         const clienteId = vale.clienteId || (vale as any).cliente?.id;
 
-        this.form = {
+       this.form = {
           clienteId: clienteId,
           dataConcessao: vale.dataConcessao,
           dataVencimento: vale.dataVencimento,
+          mesReferencia: vale.mesReferencia ? vale.mesReferencia.substring(0, 7) : '',
           tipoVale: vale.tipoVale,
           valor: vale.valor,
           observacao: vale.observacao || ''
@@ -829,9 +842,17 @@ fecharListaComDelay(): void {
     return new Date().toISOString().split('T')[0];
   }
 
-  obterDataDaqui30Dias(): string {
+   obterDataDaqui30Dias(): string {
     const data = new Date();
     data.setDate(data.getDate() + 30);
     return data.toISOString().split('T')[0];
   }
+
+  obterMesAtual(): string {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    return `${ano}-${mes}`;
+  }
 }
+

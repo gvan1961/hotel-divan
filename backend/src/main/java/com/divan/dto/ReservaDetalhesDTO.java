@@ -34,7 +34,7 @@ public class ReservaDetalhesDTO {
     
     // STATUS
     private Reserva.StatusReservaEnum status;
-    
+        
     // HISTÓRICO E EXTRATOS
 //    private List<ExtratoDTO> extratos;
 //    private List<HistoricoDTO> historicos;
@@ -52,6 +52,8 @@ public class ReservaDetalhesDTO {
     
     private BigDecimal totalReciboEmitido = BigDecimal.ZERO;
     private String assinaturaBase64;
+    
+    private Boolean pendenciaExtra = false;
    
     // CLASSES INTERNAS PARA DADOS SIMPLIFICADOS
     
@@ -281,6 +283,18 @@ public class ReservaDetalhesDTO {
 	public void setAssinaturaBase64(String assinaturaBase64) {
 		this.assinaturaBase64 = assinaturaBase64;
 	}
+	
+
+	public Boolean getPendenciaExtra() {
+		return pendenciaExtra;
+	}
+
+
+	public void setPendenciaExtra(Boolean pendenciaExtra) {
+		this.pendenciaExtra = pendenciaExtra;
+	}
+
+
 
 
 	public static class ClienteSimples {
@@ -486,6 +500,7 @@ public class ReservaDetalhesDTO {
 			this.notaVendaId = notaVendaId;
 		}
         
+		
         
     }
 
@@ -568,6 +583,8 @@ public class ReservaDetalhesDTO {
 		public void setQuantidadeNova(Integer quantidadeNova) {
 			this.quantidadeNova = quantidadeNova;
 		}
+		
+		
         
         
     }

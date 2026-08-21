@@ -48,10 +48,14 @@ public class Pagamento {
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo", length = 20)
     private TipoPagamentoEnum tipo = TipoPagamentoEnum.PAGAMENTO;
+    
+    @Column(name = "registrado_por", length = 100)
+    private String registradoPor;
 
     public enum FormaPagamentoEnum {
         ESCOLHA, DINHEIRO, PIX, CARTAO_DEBITO, CARTAO_CREDITO, ESTORNO,
-        TRANSFERENCIA_BANCARIA, FATURADO, LINK_PIX, LINK_CARTAO, DEBITO_EM_CONTA  
+        TRANSFERENCIA_BANCARIA, FATURADO, LINK_PIX, LINK_CARTAO, DEBITO_EM_CONTA,
+        PENDENCIA_EXTRA 
     }
 
     // ✅ NOVO ENUM
@@ -123,9 +127,17 @@ public class Pagamento {
 
     public void setTipo(TipoPagamentoEnum tipo) {
         this.tipo = tipo;
-    }
+    }    
+    
+    public String getRegistradoPor() {
+		return registradoPor;
+	}
 
-    @Override
+	public void setRegistradoPor(String registradoPor) {
+		this.registradoPor = registradoPor;
+	}
+
+	@Override
     public int hashCode() {
         return Objects.hash(id);
     }

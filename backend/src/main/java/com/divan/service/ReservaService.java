@@ -116,6 +116,9 @@ public class ReservaService {
     private SorteioService sorteioService;    
     
     @Autowired
+    private com.divan.repository.DividaClienteRepository dividaClienteRepository;
+    
+    @Autowired
     private MikrotikService mikrotikService;
     
     private static final DateTimeFormatter FMT_DATA =
@@ -653,6 +656,7 @@ public class ReservaService {
         dto.setTotalReciboEmitido(reserva.getTotalReciboEmitido() != null ? reserva.getTotalReciboEmitido() : BigDecimal.ZERO);
         dto.setSaldoAdiantamento(reserva.getSaldoAdiantamento() != null ? reserva.getSaldoAdiantamento() : BigDecimal.ZERO);
         dto.setFaturada(reserva.getFaturada() != null ? reserva.getFaturada() : false);
+       
         System.out.println("🖊️ assinaturaBase64 da reserva " + reserva.getId() + ": " + 
             (reserva.getAssinaturaBase64() != null ? "TEM ASSINATURA" : "NULL"));
         dto.setAssinaturaBase64(reserva.getAssinaturaBase64());
@@ -873,15 +877,12 @@ public class ReservaService {
     
     private void criarEstornosDiarias(Reserva reserva, LocalDateTime dataInicio, LocalDateTime dataFim) {
         long dias = ChronoUnit.DAYS.between(dataInicio.toLocalDate(), dataFim.toLocalDate());
-        
+ 
         if (dias <= 0) {
             return;
         }
-
+ 
         // ✅ CORREÇÃO 3: nunca estornar diárias de dias já concretizados (que já passaram).
-        // O hóspede já ficou naquela(s) noite(s) — o serviço já foi prestado, não faz
-        // sentido devolver esse valor. Isso protege inclusive contra chamadas futuras
-        // a este método que esqueçam de validar a data antes de chamar.
         LocalDate hoje = LocalDate.now(ZoneId.of("America/Fortaleza"));
         if (dataInicio.toLocalDate().isBefore(hoje)) {
             throw new RuntimeException(String.format(
@@ -890,11 +891,7 @@ public class ReservaService {
                 hoje, dataInicio.toLocalDate(), dataFim.toLocalDate()
             ));
         }
-
-        // ✅ CORREÇÃO 1: buscar as diárias REALMENTE lançadas nesse período e
-        // estornar o valorUnitario de cada uma — e não reserva.getDiaria().getValor(),
-        // que reflete a diária ATUAL da reserva e pode já ter mudado (ex: acréscimo
-        // de hóspede, troca de apartamento) desde que aquela diária foi criada.
+ 
         List<ExtratoReserva> diariasLancadas = extratoReservaRepository
             .findByReservaIdAndStatusLancamentoAndDataHoraLancamentoBetween(
                 reserva.getId(),
@@ -904,49 +901,68 @@ public class ReservaService {
             .stream()
             .filter(e -> e.getDescricao() != null && e.getDescricao().startsWith("Diária - Dia"))
             .collect(Collectors.toList());
-
-        // ✅ CORREÇÃO 2: se a reserva está com mais de 1 hóspede, existe (ou pode existir)
-        // um lançamento fixo de "Acréscimo de hóspede" cobrindo vários dias de uma vez
-        // (ex: "2 hóspede(s) × 3 dia(s)"). Esse lançamento NÃO é reduzido automaticamente
-        // quando um desses dias é removido do checkout — então, sem este ajuste, o hotel
-        // continua cobrando o acréscimo do hóspede extra em um dia que ele não vai mais ficar.
+ 
         BigDecimal acrescimoHospedePorDia = calcularAcrescimoHospedePorDia(reserva);
-
+ 
+        // ⭐ NOVO: valor da diária BASE (1 hóspede), pra saber se o acréscimo do
+        // hóspede extra já está embutido no valor de uma diária específica ou não.
+        BigDecimal valorDiariaBase = diariaService
+            .buscarDiariaPara(reserva.getApartamento(), 1)
+            .map(Diaria::getValor)
+            .orElse(null);
+ 
         if (diariasLancadas.isEmpty()) {
-            // Rede de segurança: não deveria acontecer, mas evita silenciosamente
-            // deixar de estornar caso não haja lançamento correspondente encontrado.
             System.out.println("⚠️ Nenhuma diária lançada encontrada entre " + dataInicio + " e " + dataFim
                 + " — usando valor atual da reserva como fallback (verificar manualmente).");
             BigDecimal valorDiariaFallback = reserva.getDiaria().getValor();
             for (int i = 0; i < dias; i++) {
                 LocalDateTime dataDiaria = dataInicio.plusDays(i);
                 criarLancamentoEstornoDiaria(reserva, dataDiaria, valorDiariaFallback);
+                // ⭐ No fallback não temos como saber se o acréscimo já está embutido
+                // ou não (não há lançamento original pra comparar) — mantém o
+                // comportamento anterior aqui, mas registra um aviso pra conferência manual.
                 if (acrescimoHospedePorDia.compareTo(BigDecimal.ZERO) > 0) {
+                    System.out.println("⚠️ ATENÇÃO: estorno de acréscimo no fallback pode estar incorreto "
+                        + "se o valor da diária já incluía o acréscimo — conferir manualmente.");
                     criarLancamentoEstornoAcrescimoHospede(reserva, dataDiaria, acrescimoHospedePorDia);
                 }
             }
             return;
         }
-
+ 
         // Criar um ESTORNO (valor negativo) para cada diária realmente lançada no período
         for (ExtratoReserva original : diariasLancadas) {
             BigDecimal valorReal = original.getValorUnitario() != null
                 ? original.getValorUnitario()
                 : original.getTotalLancamento();
-
+ 
             criarLancamentoEstornoDiaria(reserva, original.getDataHoraLancamento(), valorReal);
-
+ 
             System.out.println("💳 Estorno criado para: " + original.getDataHoraLancamento().toLocalDate()
                 + " - R$ " + valorReal.negate() + " (valor real da diária original #" + original.getId() + ")");
-
-            if (acrescimoHospedePorDia.compareTo(BigDecimal.ZERO) > 0) {
+ 
+            // ⭐ CORREÇÃO PRINCIPAL: só estorna o acréscimo separadamente se essa
+            // diária específica foi lançada pelo valor BASE (1 hóspede) — ou seja,
+            // se o acréscimo do(s) hóspede(s) extra(s) NÃO está embutido no valor
+            // dela. Se o valor já é maior que a base, o acréscimo já está dentro
+            // do valorReal, e o estorno da diária (linha acima) já reverte tudo —
+            // criar um estorno extra aqui duplicaria a reversão do acréscimo.
+            boolean acrescimoJaEmbutidoNaDiaria = valorDiariaBase != null
+                && valorReal.compareTo(valorDiariaBase) > 0;
+ 
+            if (acrescimoHospedePorDia.compareTo(BigDecimal.ZERO) > 0 && !acrescimoJaEmbutidoNaDiaria) {
                 criarLancamentoEstornoAcrescimoHospede(reserva, original.getDataHoraLancamento(), acrescimoHospedePorDia);
-
+ 
                 System.out.println("💳 Estorno de acréscimo de hóspede criado para: "
                     + original.getDataHoraLancamento().toLocalDate() + " - R$ " + acrescimoHospedePorDia.negate());
+            } else if (acrescimoJaEmbutidoNaDiaria) {
+                System.out.println("ℹ️ Acréscimo de hóspede já estava embutido no valor da diária de "
+                    + original.getDataHoraLancamento().toLocalDate()
+                    + " (R$ " + valorReal + ") — não criado estorno separado, para evitar duplicidade.");
             }
         }
     }
+    
 
     /**
      * ✅ Calcula quanto vale, por dia, o acréscimo do(s) hóspede(s) extra(s) da reserva
@@ -1662,6 +1678,7 @@ public class ReservaService {
         dto.setTotalRecebido(reserva.getTotalRecebido());
         dto.setTotalApagar(reserva.getTotalApagar());
         dto.setDesconto(reserva.getDesconto() != null ? reserva.getDesconto() : BigDecimal.ZERO);
+        dto.setPendenciaExtra(reserva.getPendenciaExtra() != null ? reserva.getPendenciaExtra() : false);
         dto.setTotalReciboEmitido(reserva.getTotalReciboEmitido() != null 
         	    ? reserva.getTotalReciboEmitido() : BigDecimal.ZERO);
         
@@ -2497,6 +2514,97 @@ public class ReservaService {
     public void validarConflitosAtivacaoPreReserva(Reserva reserva) {
         validarApartamentoDisponivelParaReserva(reserva, reserva.getId());
         validarClienteNaoEstaEmOutraReserva(reserva, reserva.getId());
+    }
+    
+    @Transactional
+    public Reserva finalizarReservaComDivida(Long reservaId, String motivo) {
+        System.out.println("═══════════════════════════════════════════");
+        System.out.println("💳 FINALIZANDO COM DÍVIDA PENDENTE #" + reservaId);
+        System.out.println("═══════════════════════════════════════════");
+ 
+        Reserva reserva = reservaRepository.findById(reservaId)
+            .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+ 
+        if (reserva.getStatus() != Reserva.StatusReservaEnum.ATIVA) {
+            throw new RuntimeException("Apenas reservas ATIVAS podem ser finalizadas");
+        }
+ 
+        BigDecimal saldoDevedor = reserva.getTotalApagar();
+        if (saldoDevedor == null || saldoDevedor.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Esta reserva não possui saldo devedor — use o checkout normal.");
+        }
+ 
+        // ✅ REGISTRAR A DÍVIDA PENDENTE, vinculada ao CLIENTE (não à reserva
+        // nem ao titular do pagamento) — assim, mesmo que ele volte
+        // acompanhado de outras pessoas diferentes, o sistema reconhece a
+        // pendência dele especificamente.
+        com.divan.entity.DividaCliente divida = new com.divan.entity.DividaCliente();
+        divida.setCliente(reserva.getCliente());
+        divida.setValor(saldoDevedor);
+        divida.setMotivo(motivo != null && !motivo.isBlank()
+            ? motivo
+            : "Saldo devedor no checkout — sem crédito aprovado, cobrar na próxima visita");
+        divida.setReservaOrigemId(reservaId);
+        divida.setDataRegistro(LocalDateTime.now());
+        divida.setStatus(com.divan.entity.DividaCliente.StatusDivida.PENDENTE);
+ 
+        try {
+            String usuario = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication().getName();
+            divida.setRegistradoPor(usuario);
+        } catch (Exception ignored) {}
+ 
+        dividaClienteRepository.save(divida);
+        System.out.println("💰 Dívida registrada: R$ " + saldoDevedor + " — Cliente: " + reserva.getCliente().getNome());
+ 
+        // ✅ GERAR BILHETES DO SORTEIO PARA TODOS OS HÓSPEDES ATIVOS
+        try {
+            List<HospedagemHospede> hospedes = hospedagemHospedeRepository.findByReservaId(reservaId);
+            for (HospedagemHospede hospede : hospedes) {
+                if (hospede.getStatus() == HospedagemHospede.StatusEnum.HOSPEDADO) {
+                    hospede.setStatus(HospedagemHospede.StatusEnum.CHECKOUT_REALIZADO);
+                    hospede.setDataHoraSaida(LocalDateTime.now());
+                    hospedagemHospedeRepository.save(hospede);
+ 
+                    List<BilheteSorteio> bilhetes = sorteioService.gerarBilhetesCheckout(hospede);
+                    System.out.println("🎟️ Bilhetes gerados para " +
+                        hospede.getCliente().getNome() + ": " + bilhetes.size());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Erro ao gerar bilhetes: " + e.getMessage());
+        }
+ 
+        // Finalizar reserva
+        reserva.setStatus(Reserva.StatusReservaEnum.FINALIZADA);
+        reserva.setRenovacaoAutomatica(false);
+        reserva.setPendenciaExtra(true); // ⭐ NOVO — marca o "modo de pagamento" como PENDÊNCIA EXTRA
+ 
+        // Liberar apartamento para limpeza
+        Apartamento apartamento = reserva.getApartamento();
+        apartamento.setStatus(Apartamento.StatusEnum.LIMPEZA);
+        apartamentoRepository.save(apartamento);
+ 
+        Reserva salva = reservaRepository.save(reserva);
+ 
+        logAuditoriaService.registrar("CHECKOUT_COM_DIVIDA_PENDENTE",
+            "Checkout liberado com dívida pendente — Apt " + apartamento.getNumeroApartamento() +
+            " — Cliente: " + reserva.getCliente().getNome() +
+            " — Valor: R$ " + saldoDevedor,
+            salva);
+ 
+        // ✅ CANCELAR VOUCHERS WI-FI DO MIKROTIK
+        try {
+            mikrotikService.cancelarVouchersDaReserva(reservaId);
+        } catch (Exception e) {
+            System.err.println("⚠️ Erro ao cancelar vouchers Wi-Fi: " + e.getMessage());
+        }
+ 
+        System.out.println("═══════════════════════════════════════════");
+        System.out.println("✅ CHECKOUT COM DÍVIDA CONCLUÍDO — Apt " + apartamento.getNumeroApartamento() + " → LIMPEZA");
+        System.out.println("═══════════════════════════════════════════");
+ 
+        return salva;
     }
 
     

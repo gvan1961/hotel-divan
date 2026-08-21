@@ -22,6 +22,7 @@ public class ValeDTO {
     private String observacao;
     private StatusVale status;
     private String tipoVale;
+    private LocalDate mesReferencia;
 
     public Long getId() {
         return id;
@@ -107,4 +108,11 @@ public class ValeDTO {
     public void setTipoVale(String tipoVale) {
         this.tipoVale = tipoVale;
     }
+	public LocalDate getMesReferencia() {
+		return mesReferencia;
+	}
+	public void setMesReferencia(LocalDate mesReferencia) {
+		this.mesReferencia = mesReferencia;
+	}    
+    
 }

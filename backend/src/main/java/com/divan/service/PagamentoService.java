@@ -123,6 +123,41 @@ public class PagamentoService {
             }
                         
         }
+        
+        if (pagamento.getFormaPagamento() == Pagamento.FormaPagamentoEnum.PENDENCIA_EXTRA) {
+            Cliente cliente = reserva.getCliente();
+ 
+            String usuarioLogado;
+            try {
+                usuarioLogado = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication().getName();
+            } catch (Exception e) {
+                usuarioLogado = "desconhecido";
+            }
+ 
+            ContaAReceber conta = new ContaAReceber();
+            conta.setDescricao("Pendência extra (sem crédito aprovado) — Reserva #" + reserva.getId()
+                + " — " + cliente.getNome()
+                + " — Apt " + reserva.getApartamento().getNumeroApartamento());
+            BigDecimal valorPendencia = pagamento.getValor();
+            conta.setValor(valorPendencia);
+            conta.setSaldo(valorPendencia);
+            conta.setValorPago(BigDecimal.ZERO);
+            conta.setDataVencimento(LocalDate.now().plusDays(30));
+            conta.setDataCriacao(LocalDateTime.now());
+            conta.setStatus(ContaAReceber.StatusContaEnum.EM_ABERTO);
+            conta.setCliente(cliente);
+            conta.setEmpresa(null); // ⭐ sem empresa — dívida pessoal do hóspede, não da empresa
+            conta.setReserva(reserva);
+            conta.setObservacao("Registrado por: " + usuarioLogado
+                + " — hóspede sem crédito aprovado, cobrar na próxima visita");
+            contaAReceberRepository.save(conta);
+ 
+            pagamento.setRegistradoPor(usuarioLogado);
+ 
+            System.out.println("⚠️ Pendência extra registrada: R$ " + valorPendencia
+                + " — Cliente: " + cliente.getNome() + " — Por: " + usuarioLogado);
+        }
 
         pagamento.setTipo(Pagamento.TipoPagamentoEnum.PAGAMENTO);
         pagamento.setDataHoraPagamento(LocalDateTime.now());

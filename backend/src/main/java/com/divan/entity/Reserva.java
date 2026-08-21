@@ -141,6 +141,9 @@ public class Reserva {
     @Column(name = "faturada", nullable = false)
     private Boolean faturada = false;
     
+    @Column(name = "pendencia_extra")
+    private Boolean pendenciaExtra = false;
+    
     public Long getId() {
 		return id;
 	}
@@ -447,6 +450,14 @@ public class Reserva {
 	public void setFaturada(Boolean faturada) {
 		this.faturada = faturada;
 	}
+	
+	 public Boolean getPendenciaExtra() {
+	        return pendenciaExtra;
+	    }
+	 
+	    public void setPendenciaExtra(Boolean pendenciaExtra) {
+	        this.pendenciaExtra = pendenciaExtra;
+	    }
 
 	@Override
 	public int hashCode() {

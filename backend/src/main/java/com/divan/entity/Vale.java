@@ -21,6 +21,9 @@ public class Vale {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Cliente cliente;
     
+    @Column(name = "mes_referencia")
+    private LocalDate mesReferencia;
+    
     @Transient
     public String getClienteNome() {
         return cliente != null ? cliente.getNome() : null;
@@ -171,8 +174,15 @@ public class Vale {
 		this.tipoVale = tipoVale;
 	}
 	
-	
-	
+		
+	public LocalDate getMesReferencia() {
+		return mesReferencia;
+	}
+
+	public void setMesReferencia(LocalDate mesReferencia) {
+		this.mesReferencia = mesReferencia;
+	}
+
 	@Override
 	public int hashCode() {
 		return Objects.hash(id);

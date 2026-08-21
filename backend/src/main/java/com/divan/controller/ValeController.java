@@ -188,8 +188,9 @@ public class ValeController {
         dto.setObservacao(vale.getObservacao());
         dto.setStatus(vale.getStatus());
         dto.setTipoVale(vale.getTipoVale());
+        dto.setMesReferencia(vale.getMesReferencia());
         return dto;
-    }
+    } 
 
     // ========== NOTIFICAÇÕES WHATSAPP (sem alteração) ==========
 
@@ -249,6 +250,16 @@ public class ValeController {
             vale.setDataConcessao(LocalDate.now());
         if (body.get("assinaturaBase64") != null)
             vale.setAssinaturaBase64(body.get("assinaturaBase64").toString());
+        
+        
+        if (body.get("mesReferencia") != null) {
+            String raw = body.get("mesReferencia").toString();
+            vale.setMesReferencia(raw.length() == 7
+                ? LocalDate.parse(raw + "-01")
+                : LocalDate.parse(raw.substring(0, 10)));
+        }
+        
+        
     }
 
     private void notificarValePago(Vale vale) {

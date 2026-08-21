@@ -198,6 +198,5 @@ public class ReservaResponseDTO {
 	public void setResponsavelPagamentoNome(String responsavelPagamentoNome) {
 	    this.responsavelPagamentoNome = responsavelPagamentoNome;
 	}
-	
-		        
+			        
 }

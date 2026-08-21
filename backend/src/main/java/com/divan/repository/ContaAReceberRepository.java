@@ -38,4 +38,13 @@ public interface ContaAReceberRepository extends JpaRepository<ContaAReceber, Lo
     List<ContaAReceber> findByEmpresaAndStatus(Empresa empresa, ContaAReceber.StatusContaEnum status);
     
     Optional<ContaAReceber> findByReserva(Reserva reserva);
+    
+    @Query("SELECT c FROM ContaAReceber c JOIN FETCH c.cliente " +
+            "WHERE c.empresa IS NULL AND c.status = 'EM_ABERTO' " +
+            "ORDER BY c.dataCriacao")
+     List<ContaAReceber> findPendenciasPessoais();
+  
+     @Query("SELECT c FROM ContaAReceber c WHERE c.cliente.id = :clienteId " +
+            "AND c.empresa IS NULL AND c.status = 'EM_ABERTO'")
+     List<ContaAReceber> findPendenciasPessoaisPorCliente(@org.springframework.data.repository.query.Param("clienteId") Long clienteId);
 }

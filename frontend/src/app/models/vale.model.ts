@@ -18,6 +18,7 @@ export interface Vale {
   motivoCancelamento?: string;
   dataCriacao?: string;
   criadoPor?: string;
+  mesReferencia?: string;
 }
 
 export interface ValeRequest {
@@ -28,6 +29,7 @@ export interface ValeRequest {
   valor: number;
   observacao?: string;
   assinaturaBase64?: string;
+  mesReferencia?: string;
 }
 
 export enum TipoVale {

@@ -672,22 +672,32 @@ public class ReservaController {
                 Long clienteId = Long.parseLong(body.get("clienteId").toString());
                 Cliente cliente = clienteRepository.findById(clienteId)
                     .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
-                hospede.setCliente(cliente);
-                
+                hospede.setCliente(cliente);               
+                               
+                                
              // ✅ VERIFICAR SE CLIENTE JÁ ESTÁ HOSPEDADO OU TEM PRÉ-RESERVA NO MESMO PERÍODO
                 List<HospedagemHospede> conflitos = hospedagemHospedeRepository
-                    .findByClienteId(cliente.getId())
-                    .stream()
-                    .filter(h -> {
-                        Reserva r = h.getReserva();
-                        if (r == null) return false;
-                        if (r.getId().equals(reserva.getId())) return false;
-                        if (r.getStatus() == Reserva.StatusReservaEnum.CANCELADA ||
-                            r.getStatus() == Reserva.StatusReservaEnum.FINALIZADA) return false;
-                        return reserva.getDataCheckin().toLocalDate().isBefore(r.getDataCheckout().toLocalDate()) &&
-                        	       reserva.getDataCheckout().toLocalDate().isAfter(r.getDataCheckin().toLocalDate());
-                    })
-                    .collect(java.util.stream.Collectors.toList());
+                        .findByClienteId(cliente.getId())
+                        .stream()
+                        .filter(h -> {
+                            Reserva r = h.getReserva();
+                            if (r == null) return false;
+                            if (r.getId().equals(reserva.getId())) return false;
+                            if (r.getStatus() == Reserva.StatusReservaEnum.CANCELADA ||
+                                r.getStatus() == Reserva.StatusReservaEnum.FINALIZADA) return false;
+     
+                            // ⭐ NOVO: ignora vínculos de hóspede que já foram encerrados
+                            // (checkout parcial ou remoção) NAQUELA reserva específica —
+                            // mesmo que a reserva continue ATIVA para outros hóspedes,
+                            // esse hóspede em particular já não está mais lá, então não
+                            // deve ser tratado como conflito de agenda.
+                            if (h.getStatus() != HospedagemHospede.StatusEnum.HOSPEDADO) return false;
+     
+                            return reserva.getDataCheckin().toLocalDate().isBefore(r.getDataCheckout().toLocalDate()) &&
+                                           reserva.getDataCheckout().toLocalDate().isAfter(r.getDataCheckin().toLocalDate());
+                        })
+                        .collect(java.util.stream.Collectors.toList());                 
+                                
 
                 if (!conflitos.isEmpty()) {
                     HospedagemHospede conflito = conflitos.get(0);
@@ -746,10 +756,8 @@ public class ReservaController {
          // ✅ NOVA QUANTIDADE DE HÓSPEDES
             int novaQuantidade = reserva.getQuantidadeHospede() + 1;
 
-            // ✅ CALCULAR INÍCIO DA DIFERENÇA
-          
-            
-            
+            // ✅ CALCULAR INÍCIO DA DIFERENÇA         
+                        
             LocalDateTime agora = LocalDateTime.now(ZoneId.of("America/Fortaleza"));
             LocalDate hoje = agora.toLocalDate();
 
@@ -771,7 +779,6 @@ public class ReservaController {
 
                 inicioDiferenca = (ehDiaCheckin || temDiariaHoje) ? hoje : hoje.plusDays(1);
             }
-
 
             // ✅ AJUSTAR DIÁRIAS CENTRALIZADAMENTE
             reservaService.ajustarDiariasPorQuantidadeHospedes(
@@ -923,6 +930,9 @@ public class ReservaController {
                         "clienteNome", b.getHospedagemHospede().getCliente().getNome()
                     ))
                     .collect(java.util.stream.Collectors.toList());
+                
+                
+                
 
                 LocalDateTime agora = LocalDateTime.now();
                 int horaAtual = agora.getHour();
@@ -1480,6 +1490,23 @@ public class ReservaController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+ // ============================================================
+ // ADICIONAR em ReservaController.java, perto do endpoint
+ // /{id}/finalizar-paga
+ // ============================================================
+  
+     @PatchMapping("/{id}/finalizar-com-divida")
+     public ResponseEntity<?> finalizarComDivida(
+             @PathVariable Long id,
+             @RequestParam(required = false) String motivo) {
+         try {
+             Reserva reserva = reservaService.finalizarReservaComDivida(id, motivo);
+             return ResponseEntity.ok(reserva);
+         } catch (Exception e) {
+             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+         }
+     }
 
         
 }

@@ -69,9 +69,18 @@ import { Vale, TipoVale, StatusVale, TIPO_VALE_LABELS, STATUS_VALE_LABELS } from
           />
         </div>
 
+        <div class="filtro-grupo">
+          <label>Mês de Referência:</label>
+          <input
+            type="month"
+            [(ngModel)]="filtroMesReferencia"
+            (change)="aplicarFiltros()"
+          />
+        </div>
+
         <button 
           class="btn-limpar" 
-          *ngIf="filtroStatus || termoBusca"
+          *ngIf="filtroStatus || termoBusca || filtroMesReferencia"
           (click)="limparFiltros()">
           🗑️ Limpar Filtros
         </button>
@@ -760,6 +769,8 @@ export class ValeListaComponent implements OnInit {
   filtroStatus = '';
   termoBusca = '';
 
+  filtroMesReferencia = ''; // formato "AAAA-MM", do <input type="month">
+
   ngOnInit(): void {
     this.carregarVales();
     this.atualizarValesVencidos();
@@ -847,6 +858,12 @@ export class ValeListaComponent implements OnInit {
     resultado = resultado.filter(v => v.status === this.filtroStatus);
   }
 
+  if (this.filtroMesReferencia) {
+    resultado = resultado.filter(v =>
+      v.mesReferencia && v.mesReferencia.substring(0, 7) === this.filtroMesReferencia
+    );
+  }
+
   // Filtro por busca
  if (this.termoBusca) {
   const termo = this.termoBusca.toLowerCase();
@@ -867,6 +884,7 @@ export class ValeListaComponent implements OnInit {
  limparFiltros(): void {
   this.filtroStatus = '';
   this.termoBusca = '';
+  this.filtroMesReferencia = '';
   this.valesFiltrados = this.vales;
   
   // ⭐ RECALCULAR ESTATÍSTICAS GERAIS (TODOS)

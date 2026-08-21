@@ -75,6 +75,16 @@ template: `
   <button class="aviso-fechar" (click)="mostrarAvisoDiaria = false">✕</button>
 </div>
 
+        <!-- AVISO DÍVIDA PENDENTE -->
+<div class="aviso-divida" *ngIf="mostrarAvisoDivida && dividasPendentes.length > 0">
+  <span class="aviso-icone">💰</span>
+  <div class="aviso-texto">
+    <strong>Pendências Extras!</strong> Cobrar destes hóspedes na próxima vinda:
+    <span class="aviso-clientes">{{ textoDividasPendentes() }}</span>
+  </div>
+  <button class="aviso-fechar" (click)="mostrarAvisoDivida = false">✕</button>
+</div>
+
       <!-- CONTADORES -->
       <div class="contadores-bar" *ngIf="contadores">
         <div class="contador-grupo">
@@ -1142,6 +1152,28 @@ template: `
   color: #856404;
 }
 
+.aviso-divida {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #d1ecf1;
+  border: 2px solid #0c5460;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+.aviso-divida .aviso-icone { font-size: 24px; }
+.aviso-divida .aviso-texto { flex: 1; color: #0c5460; }
+.aviso-divida .aviso-clientes { font-weight: bold; color: #0c5460; }
+.aviso-divida .aviso-fechar {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #0c5460;
+}
+
 .btn-limpeza-diaria { background: #8e44ad; color: #fff; }
 .btn-limpeza-diaria:hover { background: #6c3483; }
 
@@ -1408,7 +1440,11 @@ mostrarResultadosEmpresa = false;
 fotosHospedes: {nome: string, foto: string | null}[] = [];
 aptFotoSelecionado = '';
 carregandoFotos = false;
-  
+
+  dividasPendentes: any[] = [];
+  mostrarAvisoDivida = true;
+     
+
   mostrarPopupWhatsapp = false;
 solicitacoesPendentes: any[] = [];
 private intervaloWhatsapp: any;
@@ -1432,7 +1468,7 @@ private ultimoTotalSolicitacoes = 0;
     this.faceMonitor.resultado$.subscribe(r => this.faceResultado = r);
     this.faceMonitor.statusMsg$.subscribe(s => this.faceStatus = s);
     this.faceMonitor.ativo$.subscribe(a => this.faceAtivo = a);
-    
+    this.carregarDividasPendentes();
   }
 
   // Polling de solicitações WhatsApp
@@ -2231,6 +2267,28 @@ abrirFotosHospedes(apt: ApartamentoCard): void {
       this.carregandoFotos = false;
     }
   });
+}
+
+  carregarDividasPendentes(): void {
+    this.http.get<any[]>('/api/dividas-cliente/pendentes').subscribe({
+      next: (data) => {
+        this.dividasPendentes = data;
+      },
+      error: (err) => {
+        console.error('Erro ao carregar dívidas pendentes:', err);
+        this.dividasPendentes = [];
+      }
+    });
+  }
+ 
+  formatarMoedaSimples(valor: number): string {
+    return (valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  textoDividasPendentes(): string {
+  return this.dividasPendentes
+    .map(d => d.clienteNome + ' (R$ ' + this.formatarMoedaSimples(d.valor) + ')')
+    .join(', ');
 }
 
 }

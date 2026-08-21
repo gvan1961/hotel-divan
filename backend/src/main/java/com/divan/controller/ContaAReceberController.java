@@ -112,4 +112,22 @@ public class ContaAReceberController {
         }
     }
     
+    @GetMapping("/pendencias-pessoais")
+    public ResponseEntity<List<Map<String, Object>>> listarPendenciasPessoais() {
+        List<Map<String, Object>> resultado = contaAReceberRepository.findPendenciasPessoais().stream()
+            .map(c -> {
+                Map<String, Object> map = new java.util.LinkedHashMap<>();
+                map.put("id", c.getId());
+                map.put("clienteId", c.getCliente().getId());
+                map.put("clienteNome", c.getCliente().getNome());
+                map.put("clienteCpf", c.getCliente().getCpf());
+                map.put("valor", c.getSaldo());
+                map.put("descricao", c.getDescricao());
+                map.put("observacao", c.getObservacao());
+                map.put("dataCriacao", c.getDataCriacao());
+                return map;
+            })
+            .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(resultado);
+    }
 }
