@@ -4,9 +4,12 @@ import com.divan.dto.ContaAReceberDTO;
 import com.divan.dto.ContaAReceberRequestDTO;
 import com.divan.dto.PagamentoContaReceberDTO;
 import com.divan.entity.ContaAReceber.StatusContaEnum;
+import com.divan.repository.ContaAReceberRepository;
 import com.divan.service.ContaAReceberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +24,9 @@ import java.util.Map;
 public class ContaAReceberController {
 
     private final ContaAReceberService contaAReceberService;
+     
+    @Autowired
+    private ContaAReceberRepository contaAReceberRepository;
 
     // ========== LISTAR ==========
     
@@ -130,4 +136,21 @@ public class ContaAReceberController {
             .collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(resultado);
     }
+    
+    @GetMapping("/pendencias-pessoais/cliente/{clienteId}")
+    public ResponseEntity<List<Map<String, Object>>> listarPendenciasPessoaisPorCliente(@PathVariable Long clienteId) {
+        List<Map<String, Object>> resultado = contaAReceberRepository
+            .findPendenciasPessoaisPorCliente(clienteId).stream()
+            .map(c -> {
+                Map<String, Object> map = new java.util.LinkedHashMap<>();
+                map.put("id", c.getId());
+                map.put("valor", c.getSaldo());
+                map.put("descricao", c.getDescricao());
+                map.put("dataCriacao", c.getDataCriacao());
+                return map;
+            })
+            .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(resultado);
+    }
+    
 }

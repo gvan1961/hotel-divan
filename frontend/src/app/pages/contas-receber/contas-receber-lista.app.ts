@@ -15,6 +15,7 @@ interface FiltrosAvancados {
   empresaId?: number;
   clienteId?: number;
   clienteNome?: string;
+  apenasPendenciaExtra?: boolean;
   dataCheckInInicio?: string;
   dataCheckInFim?: string;
   dataCheckOutInicio?: string;
@@ -67,6 +68,12 @@ interface FiltrosAvancados {
           🏢 Empresa: {{ obterNomeEmpresa(filtrosAplicados.empresaId) }}
           <button (click)="removerFiltro('empresaId')">✕</button>
         </div>
+
+        <div class="filtro-tag" *ngIf="filtrosAplicados.apenasPendenciaExtra">
+          ⚠️ Somente Pendência Extra
+          <button (click)="removerFiltro('apenasPendenciaExtra')">✕</button>
+        </div>
+
         <div class="filtro-tag" *ngIf="filtrosAplicados.clienteNome">
   👤 Cliente: {{ filtrosAplicados.clienteNome }}
   <button (click)="removerFiltro('clienteId')">✕</button>
@@ -262,6 +269,15 @@ interface FiltrosAvancados {
                   {{ empresa.nomeEmpresa }}
                 </option>
               </select>
+            </div>
+
+             <!-- PENDÊNCIA EXTRA -->
+            <div class="campo">
+              <label>
+                <input type="checkbox" [(ngModel)]="filtrosTemp.apenasPendenciaExtra">
+                ⚠️ Somente Pendência Extra (sem empresa)
+              </label>
+              <small>Mostra só as contas registradas via checkout sem crédito aprovado</small>
             </div>
 
             <!-- CLIENTE -->
@@ -1314,6 +1330,10 @@ aplicarFiltrosAvancados(): void {
       resultado = resultado.filter(c => c.empresaNome === empresaSelecionada?.nomeEmpresa);
     }
 
+     if (this.filtrosAplicados.apenasPendenciaExtra) {
+      resultado = resultado.filter(c => !c.empresaNome);
+    }
+
    if (this.filtrosAplicados.clienteNome) {
   const termo = this.filtrosAplicados.clienteNome.toLowerCase();
   resultado = resultado.filter(c =>
@@ -1374,6 +1394,9 @@ aplicarFiltrosAvancados(): void {
   delete this.filtrosAplicados.clienteId;
   delete this.filtrosAplicados.clienteNome;
 }
+    
+    if (tipo === 'apenasPendenciaExtra') delete this.filtrosAplicados.apenasPendenciaExtra;
+
     if (tipo === 'status') delete this.filtrosAplicados.status;
     if (tipo === 'checkin') {
       delete this.filtrosAplicados.dataCheckInInicio;

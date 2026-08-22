@@ -228,9 +228,12 @@ import { FaceCaptureComponent } from '../../face-capture/face-capture.component'
   <label>🏅 Classificação</label>
   <select [(ngModel)]="cliente.classificacao" name="classificacao">
     <option [ngValue]="null">Sem classificação</option>
-    <option value="BRONZE">🥉 Bronze</option>
-    <option value="PRATA">🥈 Prata</option>
-    <option value="OURO">🥇 Ouro</option>
+    <option value="1">⭐ 1 estrela</option>
+    <option value="2">⭐⭐ 2 estrelas</option>
+    <option value="3">⭐⭐⭐ 3 estrelas</option>
+    <option value="4">⭐⭐⭐⭐ 4 estrelas</option>
+    <option value="5">⭐⭐⭐⭐⭐ 5 estrelas</option>
+    <option value="PROBLEMATICO">🔴 Atenção (cliente problemático)</option>
   </select>
 </div>
 

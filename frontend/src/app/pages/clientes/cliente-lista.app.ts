@@ -53,6 +53,7 @@ import { Cliente } from '../../models/cliente.model';
               <th>Celular</th>
               <th>Celular 2</th>
               <th>Empresa</th>
+              <th>Classificação</th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -85,6 +86,11 @@ import { Cliente } from '../../models/cliente.model';
     <td *ngIf="cliente.celular2">{{ cliente.ddi2 || '55' }} {{ cliente.celular2 }}</td>
     <td *ngIf="!cliente.celular2">-</td>
     <td>{{ cliente.empresaNome || cliente.empresa?.nomeEmpresa || '-' }}</td>
+
+     <td [class.classificacao-atencao]="cliente.classificacao === 'PROBLEMATICO'">
+      {{ formatarClassificacao(cliente.classificacao) }}
+    </td>
+
     <td>
       <button class="btn-historico" (click)="verHistorico(cliente.id!)">📋 Histórico</button>
       <button class="btn-edit" (click)="editar(cliente.id!)">Editar</button>      
@@ -193,6 +199,15 @@ import { Cliente } from '../../models/cliente.model';
 
     .btn-ranking { background: #f39c12; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-right: 10px; }
     .btn-ranking:hover { background: #e67e22; }
+
+     .classificacao-atencao {
+      background: #fdecea;
+      color: #c0392b;
+      font-weight: 700;
+      border-radius: 4px;
+    }
+
+
   `]
 })
 export class ClienteListaApp implements OnInit {
@@ -342,6 +357,14 @@ export class ClienteListaApp implements OnInit {
       },
       error: () => console.error('Erro ao carregar foto')
     });
+  }
+
+   formatarClassificacao(classificacao: string | null | undefined): string {
+    if (!classificacao) return '-';
+    if (classificacao === 'PROBLEMATICO') return '🔴 Atenção';
+    const n = parseInt(classificacao, 10);
+    if (isNaN(n) || n < 1 || n > 5) return '-';
+    return '⭐'.repeat(n);
   }
 
   verRanking(): void {

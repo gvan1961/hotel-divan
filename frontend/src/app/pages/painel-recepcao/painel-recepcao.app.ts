@@ -1846,13 +1846,24 @@ error: (err) => alert('Erro: ' + (err.error?.erro || err.message))
     });
   }
 
-  ativarPreReserva(apt: ApartamentoCard): void {
+   ativarPreReserva(apt: ApartamentoCard): void {
     if (!apt.reserva?.id) return;
     if (!confirm(`Ativar pré-reserva #${apt.reserva.id} do apartamento ${apt.numero}?`)) return;
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+
+    // ⭐ Mesma flag que já decide se mostra o botão manual "✍️" — reaproveita
+    // aqui pra já ir direto pra assinatura, sem precisar do clique extra.
+    const jaPrecisaAssinar = apt.reserva.mostrarBotaoAssinaturaCredito === true;
+
     this.http.post(`/api/reservas/${apt.reserva.id}/ativar-pre-reserva`, {}, { headers })
       .subscribe({
-        next: () => this.carregarDados(),
+        next: () => {
+          if (jaPrecisaAssinar) {
+            this.irParaAssinaturaCredito(apt);
+          } else {
+            this.carregarDados();
+          }
+        },
         error: (err) => alert('Erro: ' + (err.error?.erro || err.message))
       });
   }

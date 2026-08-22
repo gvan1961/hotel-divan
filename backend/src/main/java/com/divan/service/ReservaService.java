@@ -1679,6 +1679,7 @@ public class ReservaService {
         dto.setTotalApagar(reserva.getTotalApagar());
         dto.setDesconto(reserva.getDesconto() != null ? reserva.getDesconto() : BigDecimal.ZERO);
         dto.setPendenciaExtra(reserva.getPendenciaExtra() != null ? reserva.getPendenciaExtra() : false);
+        dto.setAssinaturaBase64(reserva.getAssinaturaBase64());
         dto.setTotalReciboEmitido(reserva.getTotalReciboEmitido() != null 
         	    ? reserva.getTotalReciboEmitido() : BigDecimal.ZERO);
         
@@ -1703,6 +1704,7 @@ public class ReservaService {
         	clienteDTO.setCpf(reserva.getCliente().getCpf());
         	clienteDTO.setTelefone(reserva.getCliente().getCelular());
         	clienteDTO.setCreditoAprovado(reserva.getCliente().getCreditoAprovado());
+        	clienteDTO.setClassificacao(reserva.getCliente().getClassificacao());
         	if (reserva.getCliente().getEmpresa() != null) {
         	    clienteDTO.setEmpresaId(reserva.getCliente().getEmpresa().getId());
         	    clienteDTO.setEmpresaNome(reserva.getCliente().getEmpresa().getNomeEmpresa());
@@ -2017,11 +2019,26 @@ public class ReservaService {
         System.out.println("🧹 Apartamento " + apartamento.getNumeroApartamento() + " → LIMPEZA");
         System.out.println("═══════════════════════════════════════════");
         
-        logAuditoriaService.registrar("CHECKOUT_PAGO",
-        	    "Checkout pago — Apt " + apartamento.getNumeroApartamento() +
-        	    " — Cliente: " + reserva.getCliente().getNome() +
-        	    " — Total: R$ " + reserva.getTotalHospedagem(),
-        	    reserva);
+     // ✅ Diferencia no log de auditoria se foi um pagamento de verdade
+        // ou uma Pendência Extra (saldo zerado sem receber, cobrar depois)
+        boolean temPendenciaExtraAberta = contaAReceberRepository
+            .findByReserva(reserva)
+            .map(c -> c.getEmpresa() == null && c.getStatus() == ContaAReceber.StatusContaEnum.EM_ABERTO)
+            .orElse(false);
+
+        if (temPendenciaExtraAberta) {
+            logAuditoriaService.registrar("CHECKOUT_PENDENCIA_EXTRA",
+                        "Checkout com PENDÊNCIA EXTRA (sem crédito aprovado) — Apt " + apartamento.getNumeroApartamento() +
+                        " — Cliente: " + reserva.getCliente().getNome() +
+                        " — Total: R$ " + reserva.getTotalHospedagem(),
+                        reserva);
+        } else {
+            logAuditoriaService.registrar("CHECKOUT_PAGO",
+                        "Checkout pago — Apt " + apartamento.getNumeroApartamento() +
+                        " — Cliente: " + reserva.getCliente().getNome() +
+                        " — Total: R$ " + reserva.getTotalHospedagem(),
+                        reserva);
+        }
         
      // ✅ CANCELAR VOUCHERS WI-FI DO MIKROTIK
         try {

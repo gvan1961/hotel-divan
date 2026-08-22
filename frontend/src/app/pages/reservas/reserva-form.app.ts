@@ -102,14 +102,15 @@ import { HostListener } from '@angular/core';
                 <span class="value-empresa">{{ clienteSelecionado.empresa.nomeEmpresa }}</span>
               </div>
 
-              <div class="info-item info-classificacao" *ngIf="clienteSelecionado.classificacao">
+              <div class="info-item info-classificacao" *ngIf="clienteSelecionado.classificacao"
+                   [class.info-atencao]="clienteSelecionado.classificacao === 'PROBLEMATICO'">
   <span class="label">🏅 Classificação:</span>
   <span class="value-classificacao">
-    <span *ngIf="clienteSelecionado.classificacao === 'OURO'">🥇 Ouro</span>
-    <span *ngIf="clienteSelecionado.classificacao === 'PRATA'">🥈 Prata</span>
-    <span *ngIf="clienteSelecionado.classificacao === 'BRONZE'">🥉 Bronze</span>
+    {{ formatarClassificacao(clienteSelecionado.classificacao) }}
   </span>
 </div>
+
+
 <div class="info-item info-fumante" *ngIf="clienteSelecionado.fumante">
   <span class="label">🚬 Fumante:</span>
   <span class="value-fumante">Sim</span>
@@ -866,9 +867,27 @@ ngOnDestroy(): void {
   }
 
   selecionarCliente(cliente: any): void {
+    console.log('🔍 DEBUG cliente selecionado:', cliente);
     if (!this.reserva.dataCheckin || !this.reserva.dataCheckout) {
       this.mostrarBannerAviso('⚠️ Selecione as datas antes de escolher o cliente!'); return;
     }
+ 
+    // ⭐ NOVO: checa se esse cliente tem pendência extra em aberto
+    // (checkout anterior sem crédito aprovado, prometeu pagar na volta)
+    this.http.get<any[]>(`/api/contas-receber/pendencias-pessoais/cliente/${cliente.id}`).subscribe({
+      next: (pendencias) => {
+        if (pendencias && pendencias.length > 0) {
+          const total = pendencias.reduce((sum, p) => sum + (p.valor || 0), 0);
+          this.mostrarBannerAviso(
+            `⚠️ ATENÇÃO: ${cliente.nome} tem PENDÊNCIA EXTRA em aberto — ` +
+            `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ` +
+            `de vinda(s) anterior(es). Cobrar nesta reserva!`
+          );
+        }
+      },
+      error: () => {} // silencioso — não bloqueia o fluxo se a checagem falhar
+    });
+
     const payload = {
   clienteId: cliente.id,
   dataCheckin: new Date(this.reserva.dataCheckin.replace('T', ' ')).toISOString(),
@@ -1175,26 +1194,15 @@ private enviarReserva(fmt: Function): void {
       .map((h: any) => Number(h.clienteId))
   };
 
-  this.reservaService.create(reservaRequest).subscribe({
+ this.reservaService.create(reservaRequest).subscribe({
     next: (response: any) => {
       this.loading = false;
       const reservaId = response?.id;
 
-      if (!reservaId) {
-        this.router.navigate(['/reservas']);
-        return;
-      }
-
-      // ⭐ Reserva nova (não pré-reserva) já fica ATIVA imediatamente.
-      // Se for faturada, já leva direto pra assinatura da fatura —
-      // reaproveita o mesmo mecanismo (?abrirAssinatura=1) que o
-      // reserva-detalhes.app.ts já usa quando vem do Painel de Recepção.
-      if (response?.faturada === true) {
-        this.router.navigate(['/reservas', reservaId], {
-          queryParams: { abrirAssinatura: 1 }
-        });
-      } else {
+      if (reservaId) {
         this.router.navigate(['/reservas', reservaId]);
+      } else {
+        this.router.navigate(['/reservas']);
       }
     },
     error: (err) => {
@@ -1384,6 +1392,14 @@ avisarSaidaComDados(event: BeforeUnloadEvent): void {
     event.preventDefault();
   }
 }
+
+   formatarClassificacao(classificacao: string | null | undefined): string {
+    if (!classificacao) return '-';
+    if (classificacao === 'PROBLEMATICO') return '🔴 Atenção';
+    const n = parseInt(classificacao, 10);
+    if (isNaN(n) || n < 1 || n > 5) return '-';
+    return '⭐'.repeat(n);
+  }
   
   voltar(): void {
   if (this.temDadosNaoSalvos()) {

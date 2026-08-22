@@ -306,6 +306,7 @@ public class ReservaDetalhesDTO {
         private Boolean creditoAprovado;
         private Long empresaId;
         private String empresaNome;
+        private String classificacao;
 		
         public Long getId() {
 			return id;
@@ -349,7 +350,12 @@ public class ReservaDetalhesDTO {
 		public void setEmpresaNome(String empresaNome) {
 			this.empresaNome = empresaNome;
 		}
-		
+		public String getClassificacao() {
+			return classificacao;
+		}
+		public void setClassificacao(String classificacao) {
+			this.classificacao = classificacao;
+		}					
 				
     }   
     

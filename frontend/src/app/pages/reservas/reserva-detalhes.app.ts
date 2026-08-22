@@ -25,6 +25,7 @@ import { environment } from '../../../environments/environment';
     id: number;
     saldoAdiantamento?: number;  
     faturada?: boolean; 
+    assinaturaBase64?: string;
       cliente?: {
       id: number;
       nome: string;
@@ -32,7 +33,8 @@ import { environment } from '../../../environments/environment';
       telefone?: string;
       celular?: string;
       dataNascimento?: string;
-      creditoAprovado?: boolean;                     
+      creditoAprovado?: boolean;  
+      classificacao?: string;                   
     };
 
     responsavelPagamentoNome?: string;
@@ -159,6 +161,18 @@ import { environment } from '../../../environments/environment';
               <span class="value">{{ reserva.cliente?.celular || reserva.cliente?.telefone || 'N/A' }}</span>
             </div>
           </div>
+
+            <div class="info-item-mini" *ngIf="reserva.cliente?.classificacao">
+              <span class="label">Classificação:</span>
+              <span class="value" [class.texto-atencao]="reserva.cliente?.classificacao === 'PROBLEMATICO'">
+                {{ formatarClassificacao(reserva.cliente?.classificacao) }}
+              </span>
+            </div>
+
+          <div class="alerta-pendencia-extra" *ngIf="totalPendenciaExtraCliente > 0">
+          ⚠️ Este cliente possui <strong>R$ {{ totalPendenciaExtraCliente | number:'1.2-2' }}</strong>
+          em Pendência Extra de vinda(s) anterior(es) — cobrar nesta hospedagem!
+        </div>
 
           <!-- APARTAMENTO -->
           <div class="card card-mini">
@@ -2904,6 +2918,21 @@ import { environment } from '../../../environments/environment';
   flex-shrink: 0;
 } 
 
+.alerta-pendencia-extra {
+      margin-top: 10px;
+      padding: 10px 14px;
+      background: #fff3cd;
+      border-left: 4px solid #ff9800;
+      border-radius: 4px;
+      color: #856404;
+      font-size: 0.9em;
+    }
+
+     .texto-atencao {
+      color: #c0392b;
+      font-weight: 700;
+    }
+
     `]
   })
 
@@ -2980,10 +3009,10 @@ import { environment } from '../../../environments/environment';
   { codigo: 'CARTAO_DEBITO',         nome: 'Cartão Débito' },
   { codigo: 'CARTAO_CREDITO',        nome: 'Cartão Crédito' },
   { codigo: 'TRANSFERENCIA_BANCARIA', nome: 'Transferência' },
+  { codigo: 'PENDENCIA_EXTRA',       nome: '⚠️ Pendência Extra' },
   { codigo: 'LINK_PIX',              nome: 'Link Pix' },
   { codigo: 'LINK_CARTAO',           nome: 'Link Cartão' },
-  { codigo: 'DEBITO_EM_CONTA',       nome: 'Débito em Conta' }, // ← ADICIONAR
-  { codigo: 'PENDENCIA_EXTRA',       nome: '⚠️ Pendência Extra' },
+  { codigo: 'DEBITO_EM_CONTA',       nome: 'Débito em Conta' },   
 ];
 
     modalAdiantamento = false;
@@ -3045,6 +3074,9 @@ import { environment } from '../../../environments/environment';
   valorReciboTexto = '';
 
   pagValorTexto = '0,00';
+
+  pendenciasExtrasCliente: any[] = [];
+  totalPendenciaExtraCliente = 0;
 
   temBilhetes = false;
 
@@ -3131,7 +3163,20 @@ ngOnDestroy(): void {
     next: (data) => {
       this.reserva = data;
       this.loading = false;
-      this.carregarHospedes(); 
+     this.carregarHospedes(); 
+      this.carregarPendenciasExtrasCliente();
+
+      
+      const precisaAssinatura = data.status === 'ATIVA'
+        && data.cliente?.creditoAprovado === true
+        && !data.assinaturaBase64;
+
+      if (precisaAssinatura) {
+        setTimeout(() => {
+          this.modalAssinatura = true;
+          this.assinaturaCapturada = null;
+        }, 500);
+      }
  
       // ✅ Calcula pago à vista para recibo formal
       const extratos = data.extratos || [];
@@ -3162,9 +3207,6 @@ ngOnDestroy(): void {
         motivoCancelamento: data.motivoCancelamento
       });
  
-      // ⭐ Executa o callback (se houver) só depois que this.reserva
-      // já está totalmente populado — é aqui que ativarPreReserva()
-      // vai checar se a reserva é faturada.
       if (aoCarregar) {
         aoCarregar();
       }
@@ -3176,8 +3218,6 @@ ngOnDestroy(): void {
     }
   });
 }
- 
-
 
     /**
      * ✅ MÉTODO PARA RECARREGAR RESERVA APÓS ALTERAÇÃO DE HÓSPEDES
@@ -3540,8 +3580,12 @@ gerarHtmlCheckin(empresaNomeCliente: string, assinatura: string | null): void {
     const totalComDesconto = (this.reserva.totalHospedagem || 0) - (this.reserva.desconto || 0);
     
     const extratos = this.reserva.extratos || [];
+
 const debitoEmConta = extratos
-  .filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
+  .filter((e: any) =>
+    e.descricao?.includes('DEBITO EM CONTA') ||
+    e.descricao?.includes('PENDENCIA EXTRA') // ⭐ NOVO
+  )
   .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
 const totalPagoAVista = Math.max(0, (this.reserva.totalRecebido || 0) - debitoEmConta);
  const empresaNomeCliente = (this.reserva.cliente as any)?.empresaNome || '';
@@ -3832,9 +3876,11 @@ const extratos = (this.reserva!.extratos || []) as any[];
 
 // Pagamentos à vista (excluindo débito em conta)
 const pagoAVista = extratos
-  .filter(e => e.statusLancamento === 'PAGAMENTO' && !e.descricao?.includes('DEBITO EM CONTA'))
+  .filter(e => e.statusLancamento === 'PAGAMENTO'
+    && !e.descricao?.includes('DEBITO EM CONTA')
+    && !e.descricao?.includes('PENDENCIA EXTRA')
+  )
   .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
-
 // Valor faturado (débito em conta)
 const valorFaturado = conta ? (conta.valor || 0) : extratos
   .filter(e => e.descricao?.includes('DEBITO EM CONTA'))
@@ -4210,19 +4256,31 @@ gerarHtmlFatura(valorTotal: number, pagoAVista: number, valorFaturado: number, s
 
       next: (response: any) => {
         this.salvandoPagamento = false;
+
   if (this.pagFormaPagamento === 'DEBITO_EM_CONTA') {
     this.pagouDebitoEmConta = true;
     this.valorDebitoEmConta = this.pagValor;
-    alert('✅ Pagamento registrado! O hóspede precisa assinar.');
     this.fecharModalPagamento();
+ 
     if (this.reserva) {
-      this.carregarReserva(this.reserva.id);
+      // ⭐ Só pede assinatura DEPOIS de recarregar dados frescos, e só
+      // se AINDA NÃO existir assinatura salva — a primeira assinatura
+      // da estadia cobre qualquer novo lançamento de débito em conta
+      // que vier depois, não precisa assinar de novo a cada vez.
+      this.carregarReserva(this.reserva.id, () => {
+        if (!this.reserva?.assinaturaBase64) {
+          alert('✅ Pagamento registrado! O hóspede precisa assinar.');
+          setTimeout(() => {
+            this.modalAssinatura = true;
+            this.assinaturaCapturada = null;
+          }, 500);
+        } else {
+          alert('✅ Pagamento registrado com sucesso! (A assinatura já registrada nesta estadia cobre este lançamento.)');
+        }
+      });
     }
-    setTimeout(() => {
-      this.modalAssinatura = true;
-      this.assinaturaCapturada = null;
-    }, 800);
   } else {
+
     alert('✅ Pagamento registrado com sucesso!');
     this.fecharModalPagamento();
     if (this.reserva) {
@@ -4659,26 +4717,35 @@ finalizarCheckout(): void {
     return;
   }
 
+
+
+
+
   this.modalAssinatura = false;
 const assinaturaParaImprimir = this.assinaturaCapturada; // ← guarda antes de qualquer coisa
-this.salvarAssinatura();
-this.alertasStateService.notificarAlertasAtualizados();
-alert('✅ Assinatura registrada! Valor enviado para Contas a Receber.');
-this.carregarReserva(this.reserva!.id);
-setTimeout(() => {
-  this.gerarFaturaComAssinatura(assinaturaParaImprimir);
-    // ✅ BUSCAR E IMPRIMIR BILHETES
-    this.http.get<any[]>(`/api/reservas/${this.reserva!.id}/bilhetes-sorteio`).subscribe({
-      next: (bilhetes) => {
-        if (bilhetes.length > 0) {
-          const imprimir = confirm(`🎟️ ${bilhetes.length} bilhete(s) de sorteio gerado(s)! Deseja imprimir?`);
-          if (imprimir) this.imprimirBilhetes(bilhetes);
-        }
-      },
-      error: () => {}
-    });
-  }, 800);
-}    
+ 
+// ⭐ Agora o carregarReserva() só roda DEPOIS que o POST da assinatura
+// realmente confirmar sucesso — elimina a corrida entre salvar e recarregar.
+this.salvarAssinatura(() => {
+  this.alertasStateService.notificarAlertasAtualizados();
+  alert('✅ Assinatura registrada! Valor enviado para Contas a Receber.');
+  this.carregarReserva(this.reserva!.id);
+ 
+  setTimeout(() => {
+    this.gerarFaturaComAssinatura(assinaturaParaImprimir);
+      // ✅ BUSCAR E IMPRIMIR BILHETES
+      this.http.get<any[]>(`/api/reservas/${this.reserva!.id}/bilhetes-sorteio`).subscribe({
+        next: (bilhetes) => {
+          if (bilhetes.length > 0) {
+            const imprimir = confirm(`🎟️ ${bilhetes.length} bilhete(s) de sorteio gerado(s)! Deseja imprimir?`);
+            if (imprimir) this.imprimirBilhetes(bilhetes);
+          }
+        },
+        error: () => {}
+      });
+    }, 800);
+});
+}
 
 gerarFaturaComAssinatura(assinatura: string | null): void {
   if (!this.reserva) return;
@@ -4691,9 +4758,14 @@ gerarFaturaComAssinatura(assinatura: string | null): void {
 
       const valorTotal = (this.reserva!.totalHospedagem || 0) - (this.reserva!.desconto || 0);
 const extratos = (this.reserva!.extratos || []) as any[];
+
 const pagoAVista = extratos
-  .filter((e: any) => e.statusLancamento === 'PAGAMENTO' && !e.descricao?.includes('DEBITO EM CONTA'))
+  .filter((e: any) => e.statusLancamento === 'PAGAMENTO'
+    && !e.descricao?.includes('PENDENCIA EXTRA')
+    && !e.descricao?.includes('DEBITO EM CONTA')
+  )
   .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
+
 const valorFaturado = conta ? (conta.valor || 0) : extratos
   .filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
   .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
@@ -4710,14 +4782,24 @@ error: () => {
   });
 }
   // ✅ SALVAR ASSINATURA NO BACKEND
-  private salvarAssinatura(): void {
+ private salvarAssinatura(aoSalvar?: () => void): void {
     if (!this.assinaturaCapturada || !this.reserva) return;
-
+ 
     this.http.post(`/api/reservas/${this.reserva.id}/assinatura`, {
       assinatura: this.assinaturaCapturada
     }).subscribe({
-      next: () => console.log('✅ Assinatura salva'),
-      error: (err) => console.error('❌ Erro ao salvar assinatura:', err)
+      next: () => {
+        console.log('✅ Assinatura salva');
+        // ⭐ Só executa o callback (ex: recarregar a reserva) DEPOIS que
+        // o POST realmente terminou — evita a corrida onde o GET de
+        // recarregar chegava antes do POST salvar, e via
+        // assinaturaBase64 ainda null.
+        if (aoSalvar) aoSalvar();
+      },
+      error: (err) => {
+        console.error('❌ Erro ao salvar assinatura:', err);
+        if (aoSalvar) aoSalvar(); // mantém o fluxo mesmo se der erro, igual já era antes
+      }
     });
   }
 
@@ -6342,6 +6424,7 @@ abrirModalReciboFormal(): void {
 
       // ✅ Apenas pagamentos à vista (exclui débito em conta)
       const extratos = reserva.extratos || [];
+
       const debitoEmConta = extratos
         .filter((e: any) => e.descricao?.includes('DEBITO EM CONTA'))
         .reduce((sum: number, e: any) => sum + Math.abs(e.totalLancamento), 0);
@@ -6717,6 +6800,7 @@ confirmarCheckoutAntecipado(): void {
   });
 }
 
+
 onPagValorInput(event: any): void {
   const digits = event.target.value.replace(/\D/g, '');
   const num = parseInt(digits || '0', 10);
@@ -6738,6 +6822,35 @@ temDebitoSemAssinatura(): boolean {
 onPagValorFocus(event: any): void {
   event.target.select();
 }
+
+carregarPendenciasExtrasCliente(): void {
+    const clienteId = this.reserva?.cliente?.id;
+    if (!clienteId) {
+      this.pendenciasExtrasCliente = [];
+      this.totalPendenciaExtraCliente = 0;
+      return;
+    }
+ 
+    this.http.get<any[]>(`/api/contas-receber/pendencias-pessoais/cliente/${clienteId}`).subscribe({
+      next: (data) => {
+        this.pendenciasExtrasCliente = data || [];
+        this.totalPendenciaExtraCliente = this.pendenciasExtrasCliente
+          .reduce((sum, p) => sum + (p.valor || 0), 0);
+      },
+      error: () => {
+        this.pendenciasExtrasCliente = [];
+        this.totalPendenciaExtraCliente = 0;
+      }
+    });
+  }
+
+  formatarClassificacao(classificacao: string | null | undefined): string {
+    if (!classificacao) return '-';
+    if (classificacao === 'PROBLEMATICO') return '🔴 Atenção';
+    const n = parseInt(classificacao, 10);
+    if (isNaN(n) || n < 1 || n > 5) return '-';
+    return '⭐'.repeat(n);
+  }
 
 voltarAoPainel(): void {
   this.router.navigate(['/painel-recepcao']);
