@@ -63,7 +63,7 @@ interface ApartamentoMapa {
 
         <button class="btn-hoje" (click)="voltarParaHoje()">📅 Hoje</button>
         <button class="btn-atualizar" (click)="carregarMapa()">🔄 Atualizar</button>    
-        <button class="btn-lista-equipe" (click)="abrirListaEquipe()">🖨️ Lista por Equipe</button>
+        <button class="btn-lista-equipe" (click)="abrirListaEquipe()">🖨️ Alterar por Selecionado</button>
         
       </div>
 
@@ -545,6 +545,17 @@ interface ApartamentoMapa {
 
         <div class="modal-footer">
           <button class="btn-cancelar" (click)="fecharListaEquipe()">Fechar</button>
+ 
+          <div class="alterar-checkin-lote">
+            <label>📅 Nova data de Check-in:</label>
+            <input type="date" [(ngModel)]="novaDataCheckinLote">
+            <button class="btn-mover"
+                    [disabled]="selecionadosImpressao.size === 0 || !novaDataCheckinLote || alterandoCheckinLote"
+                    (click)="alterarCheckinLote()">
+              {{ alterandoCheckinLote ? '⏳ Movendo...' : '📅 Mover Selecionados' }}
+            </button>
+          </div>
+ 
           <button class="btn-confirmar"
                   [disabled]="selecionadosImpressao.size === 0 || imprimindoLista"
                   (click)="imprimirListaEquipe()">
@@ -1700,6 +1711,24 @@ td.col-reserva.hoje {
   padding: 30px;
 }
 
+.alterar-checkin-lote {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9em;
+    }
+    .btn-mover {
+      background: #8e44ad;
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .btn-mover:hover { background: #732d91; }
+    .btn-mover:disabled { opacity: .5; cursor: not-allowed; }
+
 `]
 })
 export class MapaReservasApp implements OnInit {
@@ -1760,6 +1789,9 @@ private erroBuscaTimeout: any = null;
 
 termoBuscaHospede = '';
 reservasOriginais: any[] = [];
+
+ novaDataCheckinLote = '';
+  alterandoCheckinLote = false;
 
 aptsFiltrados: Set<number> = new Set();
 
@@ -3045,6 +3077,47 @@ limparBuscaHospede(): void {
     } else {
       alert('⚠️ Não foi possível abrir a janela de impressão. Verifique se o navegador está bloqueando pop-ups.');
     }
+  }
+
+  alterarCheckinLote(): void {
+    const selecionados = this.reservasDataEscolhida.filter(r => this.selecionadosImpressao.has(r.id));
+    if (selecionados.length === 0) return;
+ 
+    if (!this.novaDataCheckinLote) {
+      alert('⚠️ Escolha a nova data de check-in.');
+      return;
+    }
+ 
+    const dataFormatada = new Date(this.novaDataCheckinLote + 'T00:00:00')
+      .toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+ 
+    if (!confirm(
+      `Mover ${selecionados.length} reserva(s) selecionada(s) para check-in em ${dataFormatada}?\n\n` +
+      `O check-out de cada uma será ajustado automaticamente, mantendo a mesma quantidade de diárias.`
+    )) return;
+ 
+    this.alterandoCheckinLote = true;
+    const reservaIds = selecionados.map(r => r.id);
+ 
+    this.http.patch<any>('/api/reservas/alterar-checkin-lote', {
+      reservaIds,
+      novaDataCheckin: this.novaDataCheckinLote
+    }).subscribe({
+      next: (resultado) => {
+        this.alterandoCheckinLote = false;
+        let msg = `✅ ${resultado.sucesso.length} reserva(s) movida(s) com sucesso!`;
+        if (resultado.falhas && resultado.falhas.length > 0) {
+          msg += `\n\n⚠️ ${resultado.falhas.length} não puderam ser movidas:\n` + resultado.falhas.join('\n');
+        }
+        alert(msg);
+        this.fecharListaEquipe();
+        this.carregarMapa();
+      },
+      error: (err) => {
+        this.alterandoCheckinLote = false;
+        alert('❌ Erro: ' + (err.error?.erro || err.message));
+      }
+    });
   }
 
   voltar(): void {    

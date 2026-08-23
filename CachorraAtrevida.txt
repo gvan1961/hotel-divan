@@ -1,5 +1,3 @@
-Lyrics
-[Verse 1]
 
 O que foi , Miguel ?
 
@@ -15,7 +13,6 @@ ele tá todo cheio de mordida
 
 Um terror pra mim
 
-[Prechorus]
 
 Mas a mãe consertou
 
@@ -23,7 +20,6 @@ Tem uma partizinha abertinha aqui
 
 Só só que tá boa,  né
 
-[Chorus]
 
 Cachorra atrevida
 
@@ -53,13 +49,12 @@ Não achei mais ninguém
 
 Só só que tá boa,  né
 
-[Prechorus]
 
 Minha mãe brigou
 
 Mas ela nem aí
 
-[Chorus]
+
 
 Cachorra atrevida
 

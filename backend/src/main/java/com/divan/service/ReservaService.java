@@ -44,7 +44,10 @@ import com.divan.dto.ReservaDetalhesDTO;
 import com.divan.dto.ReservaResponseDTO;
 import com.divan.dto.TransferenciaApartamentoDTO;
 
+
+
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -2623,6 +2626,74 @@ public class ReservaService {
  
         return salva;
     }
+    
+ // ============================================================
+ // ADICIONAR em ReservaService.java
+ // ============================================================
+
+     @Transactional
+     public Map<String, Object> alterarCheckinLote(List<Long> reservaIds, LocalDate novaDataCheckin) {
+         List<String> sucesso = new ArrayList<>();
+         List<String> falhas = new ArrayList<>();
+
+         for (Long reservaId : reservaIds) {
+             try {
+                 Reserva reserva = reservaRepository.findById(reservaId)
+                     .orElseThrow(() -> new RuntimeException("Reserva #" + reservaId + " não encontrada"));
+
+                 // ✅ Só mexe em pré-reserva — mudar check-in de uma reserva
+                 // já ATIVA (hóspede já chegou) não faz sentido operacional.
+                 if (reserva.getStatus() != Reserva.StatusReservaEnum.PRE_RESERVA) {
+                     falhas.add("Apt " + reserva.getApartamento().getNumeroApartamento() +
+                         " (Reserva #" + reservaId + "): não é pré-reserva (status atual: " + reserva.getStatus() + ")");
+                     continue;
+                 }
+
+                 LocalDateTime checkinAntigo = reserva.getDataCheckin();
+                 LocalDateTime checkoutAntigo = reserva.getDataCheckout();
+
+                 // Preserva a duração exata da estadia (inclusive horários) —
+                 // só desloca as duas datas juntas pro novo dia.
+                 Duration duracaoEstadia = Duration.between(checkinAntigo, checkoutAntigo);
+                 LocalDateTime novoCheckin = LocalDateTime.of(novaDataCheckin, checkinAntigo.toLocalTime());
+                 LocalDateTime novoCheckout = novoCheckin.plus(duracaoEstadia);
+
+                 // ✅ Checa se o apartamento já está ocupado por OUTRA reserva
+                 // nas novas datas, pra não criar conflito sem perceber.
+                 boolean conflito = reservaRepository.findAll().stream()
+                     .filter(r -> !r.getId().equals(reservaId))
+                     .filter(r -> r.getApartamento().getId().equals(reserva.getApartamento().getId()))
+                     .filter(r -> r.getStatus() == Reserva.StatusReservaEnum.ATIVA
+                               || r.getStatus() == Reserva.StatusReservaEnum.PRE_RESERVA)
+                     .anyMatch(r -> novoCheckin.isBefore(r.getDataCheckout()) && novoCheckout.isAfter(r.getDataCheckin()));
+
+                 if (conflito) {
+                     falhas.add("Apt " + reserva.getApartamento().getNumeroApartamento() +
+                         " (Reserva #" + reservaId + "): já existe outra reserva nas novas datas — pulado, ajuste manualmente");
+                     continue;
+                 }
+
+                 reserva.setDataCheckin(novoCheckin);
+                 reserva.setDataCheckout(novoCheckout);
+                 reservaRepository.save(reserva);
+
+                 logAuditoriaService.registrar("ALTERACAO_CHECKIN_LOTE",
+                     "Check-in alterado em lote — Apt " + reserva.getApartamento().getNumeroApartamento() +
+                     " — De " + checkinAntigo.toLocalDate() + " para " + novaDataCheckin,
+                     reserva);
+
+                 sucesso.add("Apt " + reserva.getApartamento().getNumeroApartamento() + " (Reserva #" + reservaId + ")");
+
+             } catch (Exception e) {
+                 falhas.add("Reserva #" + reservaId + ": " + e.getMessage());
+             }
+         }
+
+         Map<String, Object> resultado = new HashMap<>();
+         resultado.put("sucesso", sucesso);
+         resultado.put("falhas", falhas);
+         return resultado;
+     }
 
     
 }

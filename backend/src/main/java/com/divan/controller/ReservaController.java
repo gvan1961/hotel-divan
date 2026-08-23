@@ -1507,6 +1507,27 @@ public class ReservaController {
              return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
          }
      }
+  // ============================================================
+  // ADICIONAR em ReservaController.java
+  // ============================================================
+
+      @PatchMapping("/alterar-checkin-lote")
+      public ResponseEntity<?> alterarCheckinLote(@RequestBody Map<String, Object> body) {
+          try {
+              @SuppressWarnings("unchecked")
+              List<Object> idsRaw = (List<Object>) body.get("reservaIds");
+              List<Long> reservaIds = idsRaw.stream()
+                  .map(id -> Long.parseLong(id.toString()))
+                  .collect(java.util.stream.Collectors.toList());
+
+              LocalDate novaDataCheckin = LocalDate.parse(body.get("novaDataCheckin").toString());
+
+              Map<String, Object> resultado = reservaService.alterarCheckinLote(reservaIds, novaDataCheckin);
+              return ResponseEntity.ok(resultado);
+          } catch (Exception e) {
+              return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+          }
+      }
 
         
 }
