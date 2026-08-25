@@ -821,6 +821,7 @@ public class ReservaController {
                     cliente.put("celular", h.getCliente().getCelular());
                     cliente.put("autorizadoJantar", h.getCliente().getAutorizadoJantar());
                     cliente.put("fotoBase64", h.getCliente().getFotoBase64());
+                    cliente.put("classificacao", h.getCliente().getClassificacao());
                     
                     // ✅ ADICIONAR EMPRESA
                     if (h.getCliente().getEmpresa() != null) {

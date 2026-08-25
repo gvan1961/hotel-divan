@@ -162,13 +162,6 @@ import { environment } from '../../../environments/environment';
             </div>
           </div>
 
-            <div class="info-item-mini" *ngIf="reserva.cliente?.classificacao">
-              <span class="label">Classificação:</span>
-              <span class="value" [class.texto-atencao]="reserva.cliente?.classificacao === 'PROBLEMATICO'">
-                {{ formatarClassificacao(reserva.cliente?.classificacao) }}
-              </span>
-            </div>
-
           <div class="alerta-pendencia-extra" *ngIf="totalPendenciaExtraCliente > 0">
           ⚠️ Este cliente possui <strong>R$ {{ totalPendenciaExtraCliente | number:'1.2-2' }}</strong>
           em Pendência Extra de vinda(s) anterior(es) — cobrar nesta hospedagem!
@@ -304,6 +297,7 @@ import { environment } from '../../../environments/environment';
           </div>
         </div>
 
+          
         <!-- ✅ RESPONSÁVEL PELO PAGAMENTO -->
         <div class="responsavel-pagamento" *ngIf="reserva.responsavelPagamentoNome">
           <span class="responsavel-label">💳 Pagamento por conta de:</span>
@@ -451,13 +445,17 @@ import { environment } from '../../../environments/environment';
                   [class.checkout]="hospede.status === 'CHECKOUT_REALIZADO'">
                 {{ i + 1 }}
               </div>
-              <div class="hospede-info">
+               <div class="hospede-info">
                 <div class="hospede-nome">
                   {{ hospede.cliente?.nome || hospede.nomeCompleto }}
-                  <span class="badge-titular" 
+                  <span class="classificacao-hospede" *ngIf="hospede.cliente?.classificacao">
+                    {{ formatarClassificacao(hospede.cliente?.classificacao) }}
+                  </span>
+                  <span class="badge-titular"
                         *ngIf="hospede.titular && hospede.status !== 'CHECKOUT_REALIZADO'">
                     ★ TITULAR
                   </span>
+
                   <span class="badge-checkout" 
                         *ngIf="hospede.status === 'CHECKOUT_REALIZADO'">
                     🚪 SAIU
@@ -2023,6 +2021,11 @@ import { environment } from '../../../environments/environment';
         border-radius: 12px;
         font-size: 0.75em;
         font-weight: 700;
+      }
+
+       .classificacao-hospede {
+        font-size: 0.85em;
+        letter-spacing: -1px;
       }
 
       .hospede-detalhes {

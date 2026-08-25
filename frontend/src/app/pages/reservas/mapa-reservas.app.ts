@@ -63,7 +63,7 @@ interface ApartamentoMapa {
 
         <button class="btn-hoje" (click)="voltarParaHoje()">📅 Hoje</button>
         <button class="btn-atualizar" (click)="carregarMapa()">🔄 Atualizar</button>    
-        <button class="btn-lista-equipe" (click)="abrirListaEquipe()">🖨️ Alterar por Selecionado</button>
+        <button class="btn-lista-equipe" (click)="abrirListaEquipe()">Alterar por Selecionado</button>
         
       </div>
 
@@ -510,7 +510,19 @@ interface ApartamentoMapa {
           <input type="text" [(ngModel)]="nomeEquipeImpressao" placeholder="Ex: Equipe A, Ônibus 1...">
         </div>
 
+
+
         <div class="acoes-selecao">
+
+          <input type="number"
+                 class="busca-codigo-reserva"
+                 [(ngModel)]="buscaCodigoReserva"
+                 placeholder="🔎 Código da reserva (#)"
+                 (keyup.enter)="buscarPorCodigoReserva()">
+          <button class="btn-sel-todos" (click)="buscarPorCodigoReserva()" [disabled]="!buscaCodigoReserva">
+            🔎 Buscar e Marcar
+          </button>
+
           <input type="text"
                  class="busca-contratante"
                  [(ngModel)]="buscaContratanteEquipe"
@@ -529,7 +541,10 @@ interface ApartamentoMapa {
               <input type="checkbox"
                      [checked]="selecionadosImpressao.has(r.id)"
                      (change)="toggleSelecaoImpressao(r.id)">
-              <span class="apto-equipe-numero">Apt {{ r.apartamentoNumero }}</span>
+           <span class="apto-equipe-numero">Apt {{ r.apartamentoNumero }}</span>
+              <span class="apto-equipe-checkin-atual">
+                📅 {{ r.dataCheckin | date:'dd/MM/yyyy' }} → {{ r.dataCheckout | date:'dd/MM/yyyy' }}
+              </span>
               <span class="apto-equipe-nome">{{ r.clienteNome }}</span>
               <span class="apto-equipe-contratante" *ngIf="r.observacoes">📝 {{ r.observacoes }}</span>
               <span class="apto-equipe-qtd">{{ r.quantidadeHospede }} hóspede(s)</span>
@@ -1729,6 +1744,23 @@ td.col-reserva.hoje {
     .btn-mover:hover { background: #732d91; }
     .btn-mover:disabled { opacity: .5; cursor: not-allowed; }
 
+    .busca-codigo-reserva {
+      width: 160px;
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    apto-equipe-checkin-atual {
+  font-size: 0.85em;
+  font-weight: 700;
+  color: #8e44ad;
+  background: #f4ecf7;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
 `]
 })
 export class MapaReservasApp implements OnInit {
@@ -1792,6 +1824,8 @@ reservasOriginais: any[] = [];
 
  novaDataCheckinLote = '';
   alterandoCheckinLote = false;
+
+  buscaCodigoReserva = '';
 
 aptsFiltrados: Set<number> = new Set();
 
@@ -2978,6 +3012,37 @@ limparBuscaHospede(): void {
         (r.responsavelPagamentoNome || '').toLowerCase().includes(termo)
       )
       .forEach(r => this.selecionadosImpressao.add(r.id));
+  }
+
+  buscarPorCodigoReserva(): void {
+    const codigo = Number(this.buscaCodigoReserva);
+     if (!this.buscaCodigoReserva || isNaN(codigo)) {
+      alert('⚠️ Digite um número de reserva válido.');
+      return;
+    }
+ 
+    // ⭐ Procura em TODAS as reservas do mapa — não só nas da data
+    // filtrada — já que a reserva pode ter check-in em outra data.
+    let encontrada: ReservaMapa | undefined;
+    this.mapaReservas.forEach((reserva) => {
+      if (reserva.id === codigo && !encontrada) {
+        encontrada = reserva;
+      }
+    });
+ 
+    if (!encontrada) {
+      alert(`⚠️ Reserva #${codigo} não encontrada.`);
+      return;
+    }
+ 
+    // Adiciona na lista visível do modal, se ainda não estiver lá
+    const jaEstaNaLista = this.reservasDataEscolhida.some(r => r.id === encontrada!.id);
+    if (!jaEstaNaLista) {
+      this.reservasDataEscolhida.push(encontrada);
+    }
+ 
+    this.selecionadosImpressao.add(encontrada.id);
+    this.buscaCodigoReserva = '';
   }
 
   desmarcarTodosImpressao(): void {

@@ -780,10 +780,19 @@ export class ValeListaComponent implements OnInit {
     this.loading = true;
     this.valeService.listarTodos().subscribe({
       next: (data) => {
-        this.vales = data;
-        this.valesFiltrados = data;
+        // ⭐ Ordena só por data de concessão crescente (geral, sem
+        // agrupar por funcionário)
+        const dadosOrdenados = [...data].sort((a: any, b: any) => {
+          const dataA = a.dataConcessao ? new Date(a.dataConcessao + 'T00:00:00').getTime() : 0;
+          const dataB = b.dataConcessao ? new Date(b.dataConcessao + 'T00:00:00').getTime() : 0;
+          return dataA - dataB;
+        });
+
+        this.vales = dadosOrdenados;
+        this.valesFiltrados = dadosOrdenados;
         this.calcularEstatisticas();
         this.loading = false;
+        
       },
       error: (err) => {
         console.error('Erro ao carregar vales:', err);

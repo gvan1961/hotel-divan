@@ -1380,6 +1380,13 @@ aplicarFiltrosAvancados(): void {
       });
     }
 
+      // ⭐ Ordena por data de check-in crescente
+    resultado.sort((a, b) => {
+      const dataA = (a as any).dataCheckin ? new Date((a as any).dataCheckin).getTime() : 0;
+      const dataB = (b as any).dataCheckin ? new Date((b as any).dataCheckin).getTime() : 0;
+      return dataA - dataB;
+    });
+ 
     this.contasFiltradas = resultado;
   }
 
@@ -1509,7 +1516,13 @@ limparClienteFiltro(): void {
 
   formatarData(data: any): string {
     if (!data) return '-';
-    return new Date(data).toLocaleDateString('pt-BR');
+    // ⭐ Se vier só a data (sem hora, ex: "2026-08-24"), o JavaScript
+    // interpreta como meia-noite EM UTC — que ao converter pro fuso do
+    // Brasil (UTC-3) "cai" pro dia anterior. Forçamos meia-noite LOCAL
+    // adicionando o horário explicitamente, só quando ele não vier.
+    const str = String(data);
+    const comHora = str.includes('T') ? str : str + 'T00:00:00';
+    return new Date(comHora).toLocaleDateString('pt-BR');
   }
 
   obterTextoStatus(status: string): string {
@@ -2260,7 +2273,10 @@ imprimirRelatorioDetalhado(): void {
   this.http.get<any[]>(`/api/contas-receber/empresa/${empresaId}/relatorio-detalhado`).subscribe({
     next: (dados) => {
       // Filtra apenas as reservas que estão nas contasFiltradas
-      const dadosFiltrados = dados.filter(d => reservaIds.includes(d.reservaId));
+      const dadosFiltrados = dados
+        .filter(d => reservaIds.includes(d.reservaId))
+        .sort((a, b) => new Date(a.dataCheckin).getTime() - new Date(b.dataCheckin).getTime());
+ 
       const html = this.montarHtmlRelatorioDetalhado(dadosFiltrados, nomeEmpresa);
       const janela = window.open('', '_blank');
       if (janela) {

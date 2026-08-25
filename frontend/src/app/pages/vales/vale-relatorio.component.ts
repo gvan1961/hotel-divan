@@ -455,8 +455,21 @@ export class ValeRelatorioComponent implements OnInit {
 
     this.valesAgrupados = Array.from(mapa.values())
       .sort((a, b) => a.funcionario.localeCompare(b.funcionario));
-
+ 
+    // ⭐ Ordena os vales de CADA funcionário por data de concessão
+    // crescente (mesmo padrão de "T00:00:00" usado no formatarData()
+    // deste arquivo, pra evitar o mesmo bug de fuso horário que já
+    // corrigimos em Contas a Receber)
+    this.valesAgrupados.forEach(grupo => {
+      grupo.vales.sort((a, b) => {
+        const dataA = a.dataConcessao ? new Date(a.dataConcessao + 'T00:00:00').getTime() : 0;
+        const dataB = b.dataConcessao ? new Date(b.dataConcessao + 'T00:00:00').getTime() : 0;
+        return dataA - dataB;
+      });
+    });
+ 
     this.totalGeral = this.vales.reduce((sum, v) => sum + (Number(v.valor) || 0), 0);
+
     this.totalVales = this.vales.length;
   }
 
