@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { ContaReceberService, ContaAReceber, PagamentoConta } from '../../services/conta-receber.service';
 import { HttpClient } from '@angular/common/http';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
+import { CurrencyInputDirective } from '../../directives/currency-input.directive';
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { ExportService } from '../../services/export.service';
 import { forkJoin, of } from 'rxjs';
@@ -26,7 +27,7 @@ interface FiltrosAvancados {
 @Component({
   selector: 'app-contas-receber-lista',
   standalone: true,
-  imports: [CommonModule, FormsModule, HasPermissionDirective],
+  imports: [CommonModule, FormsModule, HasPermissionDirective, CurrencyInputDirective],
   template: `
     <div class="container">
       <!-- HEADER -->
@@ -423,10 +424,9 @@ interface FiltrosAvancados {
             <p><strong>Saldo:</strong> R$ {{ contaSelecionada?.saldo | number:'1.2-2' }}</p>
           </div>
 
-          <div class="campo">
+           <div class="campo">
             <label>Valor a Pagar *</label>
-            <input type="number" [(ngModel)]="pagamento.valorPago" step="0.01" min="0.01" 
-                   [max]="contaSelecionada?.saldo || 0">
+            <input type="text" [(ngModel)]="pagamento.valorPago" appCurrencyInput placeholder="R$ 0,00">
             <small>Máximo: R$ {{ contaSelecionada?.saldo | number:'1.2-2' }}</small>
           </div>
 
@@ -498,10 +498,9 @@ interface FiltrosAvancados {
           <p><strong>Cliente:</strong> {{ contaDescontoSelecionada?.clienteNome }}</p>
           <p><strong>Saldo:</strong> R$ {{ contaDescontoSelecionada?.saldo | number:'1.2-2' }}</p>
         </div>
-        <div class="campo">
+         <div class="campo">
           <label>Valor do Desconto *</label>
-          <input type="number" [(ngModel)]="valorDesconto" step="0.01" min="0.01"
-                 [max]="contaDescontoSelecionada?.saldo || 0">
+          <input type="text" [(ngModel)]="valorDesconto" appCurrencyInput placeholder="R$ 0,00">
         </div>
         <div class="campo">
           <label>Motivo *</label>

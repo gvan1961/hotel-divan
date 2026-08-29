@@ -1484,32 +1484,66 @@ td.col-reserva.hoje {
 }
 }
 
+.filtro-busca,
 .filtro-busca-reserva {
   display: flex;
   align-items: center;
-  gap: 6px;
-  position: relative; /* ✅ para a mensagem de erro flutuar embaixo, sem empurrar layout */
+  gap: 8px;
+  background: #ffffff;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 6px 12px;
+  position: relative;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.filtro-busca:focus-within,
+.filtro-busca-reserva:focus-within {
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.12);
+}
+.filtro-busca label,
+.filtro-busca-reserva label {
+  font-size: 0.82em;
+  font-weight: 700;
+  color: #607080;
+  white-space: nowrap;
+}
+.input-busca-hospede,
+.input-busca-reserva {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #2c3e50;
+  padding: 4px 2px;
+}
+.input-busca-hospede {
+  min-width: 200px;
 }
 .input-busca-reserva {
-  width: 100px;
-  padding: 6px 8px;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 14px;
-}
-.input-busca-reserva:focus {
-  outline: none;
-  border-color: #3498db;
+  width: 80px;
 }
 .btn-limpar-busca {
-  background: #e74c3c;
-  color: white;
+  background: #f1f1f1;
+  color: #888;
   border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   font-size: 12px;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
 }
+.btn-limpar-busca:hover {
+  background: #e74c3c;
+  color: white;
+}
+
 /* ✅ Mensagem de "reserva não encontrada" — substitui o alert() nativo */
 .aviso-busca-reserva {
   position: absolute;

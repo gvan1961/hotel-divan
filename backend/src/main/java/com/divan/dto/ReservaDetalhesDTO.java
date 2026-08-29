@@ -53,6 +53,9 @@ public class ReservaDetalhesDTO {
     private BigDecimal totalReciboEmitido = BigDecimal.ZERO;
     private String assinaturaBase64;
     
+    private Boolean extratoTruncado = false;
+    private Integer totalExtratos = 0;
+    
     private Boolean pendenciaExtra = false;
    
     // CLASSES INTERNAS PARA DADOS SIMPLIFICADOS
@@ -271,8 +274,7 @@ public class ReservaDetalhesDTO {
 
 	public void setTotalReciboEmitido(BigDecimal totalReciboEmitido) {
 		this.totalReciboEmitido = totalReciboEmitido;
-	}
-	
+	}	
 	
 
 	public String getAssinaturaBase64() {
@@ -283,7 +285,27 @@ public class ReservaDetalhesDTO {
 	public void setAssinaturaBase64(String assinaturaBase64) {
 		this.assinaturaBase64 = assinaturaBase64;
 	}
-	
+			
+
+	public Boolean getExtratoTruncado() {
+		return extratoTruncado;
+	}
+
+
+	public void setExtratoTruncado(Boolean extratoTruncado) {
+		this.extratoTruncado = extratoTruncado;
+	}
+
+
+	public Integer getTotalExtratos() {
+		return totalExtratos;
+	}
+
+
+	public void setTotalExtratos(Integer totalExtratos) {
+		this.totalExtratos = totalExtratos;
+	}
+
 
 	public Boolean getPendenciaExtra() {
 		return pendenciaExtra;

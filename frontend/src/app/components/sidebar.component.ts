@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, NgZone, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, NgZone, ChangeDetectionStrategy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FechamentoCaixaService } from '../services/fechamento-caixa.service';
@@ -8,12 +8,71 @@ import { AlertasService, AlertaDTO } from '../services/alertas.service';
 import { AlertasStateService } from '../services/alertas-state.service'; // ✅ NOVO IMPORT
 import { Subscription } from 'rxjs';
 import { HasPermissionDirective } from '../directives/has-permission.directive';
+import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+
+
+interface TelaComando {
+  label: string;
+  rota: string;
+  icone: string;
+  aliases: string[];
+}
+
+const TELAS_DISPONIVEIS: TelaComando[] = [
+  { label: 'Painel de Recepção', rota: '/painel-recepcao', icone: '🏨', aliases: ['painel', 'recepção', 'inicio'] },
+  { label: 'Mapa de Reservas', rota: '/reservas/mapa', icone: '🗺️', aliases: ['mapa'] },
+  { label: 'Nova Reserva', rota: '/reservas/novo', icone: '➕', aliases: ['nova reserva', 'checkin', 'criar reserva'] },
+  { label: 'Lista de Reservas', rota: '/reservas', icone: '📋', aliases: ['reservas'] },
+  { label: 'Clientes', rota: '/clientes', icone: '👤', aliases: ['clientes', 'hóspedes', 'hospedes'] },
+  { label: 'Novo Cliente', rota: '/clientes/novo', icone: '➕', aliases: ['novo cliente', 'cadastrar cliente'] },
+  { label: 'Ranking de Hóspedes', rota: '/clientes/ranking', icone: '🏆', aliases: ['ranking'] },
+  { label: 'Produtos', rota: '/produtos', icone: '📦', aliases: ['produtos', 'estoque'] },
+  { label: 'Novo Produto', rota: '/produtos/novo', icone: '➕', aliases: ['novo produto'] },
+  { label: 'Apartamentos (Gestão)', rota: '/apartamentos/gestao', icone: '🏢', aliases: ['apartamentos', 'quartos'] },
+  { label: 'Apartamentos em Limpeza', rota: '/apartamentos/limpeza', icone: '🧹', aliases: ['limpeza'] },
+  { label: 'Novo Apartamento', rota: '/apartamentos/novo', icone: '➕', aliases: ['novo apartamento'] },
+  { label: 'Alertas', rota: '/alertas', icone: '🔔', aliases: ['alertas', 'avisos'] },
+  { label: 'Tipos de Apartamento', rota: '/tipos-apartamento', icone: '🏷️', aliases: ['tipos de apartamento'] },
+  { label: 'Diárias', rota: '/diarias', icone: '💰', aliases: ['diárias', 'diarias', 'preços'] },
+  { label: 'Categorias', rota: '/categorias', icone: '🗂️', aliases: ['categorias'] },
+  { label: 'PDV', rota: '/pdv', icone: '🛒', aliases: ['pdv', 'ponto de venda', 'vendas'] },
+  { label: 'Cadastros', rota: '/cadastros', icone: '📁', aliases: ['cadastros'] },
+  { label: 'Jantar', rota: '/jantar', icone: '🍽️', aliases: ['jantar'] },
+  { label: 'Comandas Rápidas', rota: '/comandas-rapidas', icone: '🧾', aliases: ['comandas'] },
+  { label: 'Relatório de Comandas', rota: '/relatorio-comandas', icone: '📊', aliases: ['relatório de comandas'] },
+  { label: 'Relatório de Faturamento', rota: '/relatorio-faturamento', icone: '📈', aliases: ['faturamento'] },
+  { label: 'Gestão de Comandas', rota: '/gestao-comandas', icone: '📋', aliases: ['gestão de comandas'] },
+  { label: 'Auditoria', rota: '/auditoria', icone: '🔍', aliases: ['auditoria', 'log'] },
+  { label: 'Contagem de Estoque', rota: '/contagem-estoque', icone: '🔢', aliases: ['contagem de estoque'] },
+  { label: 'Movimentações de Estoque', rota: '/estoque/movimentacoes', icone: '📦', aliases: ['movimentações'] },
+  { label: 'Contas a Receber', rota: '/contas-receber', icone: '💵', aliases: ['contas a receber', 'faturado', 'cobrança', 'receber'] },
+  { label: 'Contas a Pagar', rota: '/contas-pagar', icone: '💸', aliases: ['contas a pagar', 'pagar'] },
+  { label: 'Fornecedores', rota: '/fornecedores', icone: '🚚', aliases: ['fornecedores'] },
+  { label: 'Abertura de Caixa', rota: '/abertura-caixa', icone: '🔓', aliases: ['abrir caixa'] },
+  { label: 'Consulta de Caixas', rota: '/caixa/consulta', icone: '🔍', aliases: ['caixa', 'caixas', 'fechamento de caixa'] },
+  { label: 'Empresas', rota: '/empresas', icone: '🏢', aliases: ['empresas'] },
+  { label: 'Vales', rota: '/vales', icone: '📝', aliases: ['vales', 'adiantamentos'] },
+  { label: 'Vale Rápido', rota: '/vales/rapido', icone: '⚡', aliases: ['vale rápido', 'adiantamento rápido'] },
+  { label: 'Relatório de Vales', rota: '/vales/relatorio', icone: '📊', aliases: ['relatório de vales'] },
+  { label: 'Usuários', rota: '/usuarios', icone: '👥', aliases: ['usuários', 'usuarios'] },
+  { label: 'Perfis', rota: '/perfis', icone: '🔑', aliases: ['perfis', 'permissões'] },
+  { label: 'Relatório de Ocupação', rota: '/relatorios/ocupacao', icone: '📊', aliases: ['ocupação'] },
+  { label: 'Relatório de Checkouts', rota: '/relatorios/checkouts', icone: '📊', aliases: ['checkouts'] },
+  { label: 'Sorteios', rota: '/sorteios', icone: '🎟️', aliases: ['sorteios', 'bilhetes'] },
+  { label: 'Administrativo', rota: '/administrativo', icone: '⚙️', aliases: ['administrativo', 'admin'] },
+  { label: 'Gráficos de Ocupação', rota: '/graficos', icone: '📈', aliases: ['gráficos'] },
+  { label: 'Registrar Ponto', rota: '/ponto', icone: '🕐', aliases: ['ponto'] },
+  { label: 'Relatório de Ponto', rota: '/ponto/relatorio', icone: '📊', aliases: ['relatório de ponto'] },
+  { label: 'Ajuste de Ponto', rota: '/ponto/ajuste', icone: '✏️', aliases: ['ajuste de ponto'] },
+  { label: 'Manutenções', rota: '/manutencoes', icone: '🔧', aliases: ['manutenções', 'manutencoes'] },
+  { label: 'Nova Manutenção', rota: '/manutencoes/novo', icone: '➕', aliases: ['nova manutenção'] },
+];
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, HasPermissionDirective ],
+  imports: [CommonModule, RouterLink, RouterLinkActive, HasPermissionDirective, FormsModule ],
   
   template: `
     <aside class="sidebar">
@@ -223,7 +282,8 @@ import { HttpClient } from '@angular/common/http';
             Checkout previsto: {{ formatarDataHoraPopup(popupCheckoutVencido.dataCheckout) }}
           </p>
         </div>
-        <div class="popup-checkout-vencido-acoes">
+        
+         <div class="popup-checkout-vencido-acoes">
           <button class="popup-btn-ver" (click)="irParaReservaPopup(popupCheckoutVencido.reservaId)">
             Ver reserva
           </button>
@@ -233,9 +293,91 @@ import { HttpClient } from '@angular/common/http';
         </div>
       </div>
     </div>
+
+    <!-- COMMAND PALETTE (Ctrl+K) -->
+    <div class="command-overlay" *ngIf="commandPaletteAberto" (click)="fecharCommandPalette()">
+      <div class="command-box" (click)="$event.stopPropagation()">
+        <input
+          id="command-palette-input"
+          type="text"
+          class="command-input"
+          placeholder="🔎 Digite o nome da tela... (Esc para fechar)"
+          [(ngModel)]="buscaComando"
+          (ngModelChange)="filtrarComandos()">
+
+        <div class="command-lista" *ngIf="resultadosComando.length > 0">
+          <div class="command-item"
+               *ngFor="let tela of resultadosComando; let i = index"
+               [class.selecionado]="i === indiceSelecionado"
+               (mouseenter)="indiceSelecionado = i"
+               (click)="irParaTela(tela)">
+            <span class="command-icone">{{ tela.icone }}</span>
+            <span class="command-label">{{ tela.label }}</span>
+          </div>
+        </div>
+
+        <div class="command-vazio" *ngIf="resultadosComando.length === 0">
+          Nenhuma tela encontrada.
+        </div>
+      </div>
+    </div>
   `,
-  styles: [`
+
+   styles: [`
+    .command-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 12vh;
+      z-index: 9999;
+    }
+    .command-box {
+      width: 90%;
+      max-width: 560px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .command-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 16px 18px;
+      font-size: 1.05em;
+      border: none;
+      outline: none;
+      border-bottom: 1px solid #eee;
+    }
+    .command-lista {
+      max-height: 340px;
+      overflow-y: auto;
+    }
+    .command-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      cursor: pointer;
+      color: #2c3e50;
+    }
+    .command-item.selecionado,
+    .command-item:hover {
+      background: #eef4ff;
+    }
+    .command-icone {
+      font-size: 1.2em;
+    }
+    .command-vazio {
+      padding: 20px;
+      text-align: center;
+      color: #999;
+    }
+
     /* ✅ POP-UP DE CHECKOUT VENCIDO */
+
     .popup-checkout-vencido-overlay {
       position: fixed;
       inset: 0;
@@ -422,8 +564,7 @@ import { HttpClient } from '@angular/common/http';
     }
 
     .caixa-status:hover {
-      background: rgba(46, 204, 113, 0.2);
-      color: #2ecc71;
+      background: rgba(46, 204, 113, 0.3);
     }
 
     .nav-caixa {
@@ -530,7 +671,7 @@ import { HttpClient } from '@angular/common/http';
     }
 
     .logout-btn:hover {
-      background: rgba(231, 76, 60, 0.4);
+      background: rgba(231, 76, 60, 0.3);
     }
 
     .nav-item-cadastros {
@@ -584,7 +725,7 @@ import { HttpClient } from '@angular/common/http';
     }
 
     .nav-item-vale-rapido.active {
-      background: rgba(255, 193, 7, 0.3);
+      background: rgba(255, 193, 7, 0.35);
       color: #ffc107;
       border-left: 3px solid #ffc107;
     }
@@ -695,8 +836,77 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private verificandoCaixa = false;
   private subscription?: Subscription;
   private caixaAtualizadoSubscription?: Subscription;
-  private alertasAtualizadosSubscription?: Subscription; // ✅ NOVA SUBSCRIPTION
+ private alertasAtualizadosSubscription?: Subscription; // ✅ NOVA SUBSCRIPTION
 
+  // Command Palette
+  telas = TELAS_DISPONIVEIS;
+  commandPaletteAberto = false;
+  buscaComando = '';
+  resultadosComando: TelaComando[] = [];
+  indiceSelecionado = 0;
+
+  @HostListener('window:keydown', ['$event'])
+  aoTeclar(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      this.abrirCommandPalette();
+      return;
+    }
+
+    if (!this.commandPaletteAberto) return;
+
+    if (event.key === 'Escape') {
+      this.fecharCommandPalette();
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.indiceSelecionado = Math.min(this.indiceSelecionado + 1, this.resultadosComando.length - 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.indiceSelecionado = Math.max(this.indiceSelecionado - 1, 0);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const escolhida = this.resultadosComando[this.indiceSelecionado];
+      if (escolhida) this.irParaTela(escolhida);
+    }
+  }
+
+  abrirCommandPalette(): void {
+    this.commandPaletteAberto = true;
+    this.buscaComando = '';
+    this.indiceSelecionado = 0;
+    this.filtrarComandos();
+    setTimeout(() => {
+      const input = document.getElementById('command-palette-input');
+      if (input) input.focus();
+    }, 50);
+  }
+
+  fecharCommandPalette(): void {
+    this.commandPaletteAberto = false;
+  }
+
+  filtrarComandos(): void {
+    const termo = this.buscaComando.trim().toLowerCase();
+    this.indiceSelecionado = 0;
+
+    if (!termo) {
+      this.resultadosComando = this.telas.slice(0, 8);
+      return;
+    }
+
+    this.resultadosComando = this.telas
+      .filter(t =>
+        t.label.toLowerCase().includes(termo) ||
+        t.aliases.some(a => a.toLowerCase().includes(termo))
+      )
+      .slice(0, 10);
+  }
+
+  irParaTela(tela: TelaComando): void {
+    this.fecharCommandPalette();
+    this.router.navigate([tela.rota]);
+  }
+  
   ngOnInit(): void {
     console.log('🔄 Sidebar inicializado - COM EVENTOS');
     

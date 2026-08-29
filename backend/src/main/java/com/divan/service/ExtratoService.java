@@ -98,12 +98,26 @@ public class ExtratoService {
         return extrato;
     }
     
-    public List<ExtratoReserva> buscarExtratosPorReserva(Long reservaId) {
+    public List<com.divan.dto.ExtratoResumoDTO> buscarExtratosPorReserva(Long reservaId) {
         Optional<Reserva> reserva = reservaRepository.findById(reservaId);
         if (reserva.isEmpty()) {
             throw new RuntimeException("Reserva não encontrada");
         }
-        return extratoReservaRepository.findByReservaOrderByDataHoraLancamento(reserva.get());
+ 
+        List<ExtratoReserva> extratos = extratoReservaRepository.findByReservaOrderByDataHoraLancamento(reserva.get());
+ 
+        return extratos.stream().map(e -> {
+            com.divan.dto.ExtratoResumoDTO dto = new com.divan.dto.ExtratoResumoDTO();
+            dto.setId(e.getId());
+            dto.setDataHoraLancamento(e.getDataHoraLancamento());
+            dto.setDescricao(e.getDescricao());
+            dto.setStatusLancamento(e.getStatusLancamento());
+            dto.setQuantidade(e.getQuantidade());
+            dto.setValorUnitario(e.getValorUnitario());
+            dto.setTotalLancamento(e.getTotalLancamento());
+            dto.setNotaVendaId(e.getNotaVendaId());
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
     }
     
     public List<HistoricoHospede> buscarHistoricoPorReserva(Long reservaId) {
@@ -114,10 +128,35 @@ public class ExtratoService {
         return historicoHospedeRepository.findByReservaOrderByDataHora(reserva.get());
     }
     
-    public List<Reserva> buscarReservasPorApartamento(String numeroApartamento) {
-        return reservaRepository.findAll().stream()
-            .filter(r -> r.getApartamento().getNumeroApartamento().equals(numeroApartamento))
-            .collect(Collectors.toList());
+    public List<com.divan.dto.ReservaResumoDTO> buscarReservasPorApartamento(String numeroApartamento) {
+        // ✅ Consulta direta no banco (só traz as reservas desse
+        // apartamento) em vez de carregar TODA a tabela de reservas pra
+        // memória e filtrar depois.
+        List<Reserva> reservas = reservaRepository.findByApartamentoNumeroApartamento(numeroApartamento);
+ 
+        return reservas.stream().map(r -> {
+            com.divan.dto.ReservaResumoDTO dto = new com.divan.dto.ReservaResumoDTO();
+            dto.setId(r.getId());
+            dto.setStatus(r.getStatus());
+            dto.setDataCheckin(r.getDataCheckin());
+            dto.setDataCheckout(r.getDataCheckout());
+ 
+            if (r.getApartamento() != null) {
+                com.divan.dto.ReservaResumoDTO.ApartamentoSimples apto = new com.divan.dto.ReservaResumoDTO.ApartamentoSimples();
+                apto.setId(r.getApartamento().getId());
+                apto.setNumeroApartamento(r.getApartamento().getNumeroApartamento());
+                dto.setApartamento(apto);
+            }
+ 
+            if (r.getCliente() != null) {
+                com.divan.dto.ReservaResumoDTO.ClienteSimples cliente = new com.divan.dto.ReservaResumoDTO.ClienteSimples();
+                cliente.setId(r.getCliente().getId());
+                cliente.setNome(r.getCliente().getNome());
+                dto.setCliente(cliente);
+            }
+ 
+            return dto;
+        }).collect(Collectors.toList());
     }
     
     private HistoricoHospedeDTO converterHistorico(HistoricoHospede h) {

@@ -216,5 +216,6 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     			    @Param("status") Reserva.StatusReservaEnum status
     			);
 
+    			  List<Reserva> findByApartamentoNumeroApartamento(String numeroApartamento);
         
 }

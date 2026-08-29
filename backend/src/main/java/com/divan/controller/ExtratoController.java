@@ -30,9 +30,9 @@ public class ExtratoController {
     }
     
     @GetMapping("/reserva/{reservaId}")
-    public ResponseEntity<List<ExtratoReserva>> buscarExtratosPorReserva(@PathVariable Long reservaId) {
+    public ResponseEntity<List<com.divan.dto.ExtratoResumoDTO>> buscarExtratosPorReserva(@PathVariable Long reservaId) {
         try {
-            List<ExtratoReserva> extratos = extratoService.buscarExtratosPorReserva(reservaId);
+            List<com.divan.dto.ExtratoResumoDTO> extratos = extratoService.buscarExtratosPorReserva(reservaId);
             return ResponseEntity.ok(extratos);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
@@ -50,9 +50,9 @@ public class ExtratoController {
     }
     
     @GetMapping("/apartamento/{numeroApartamento}")
-    public ResponseEntity<List<Reserva>> buscarReservasPorApartamento(@PathVariable String numeroApartamento) {
+    public ResponseEntity<List<com.divan.dto.ReservaResumoDTO>> buscarReservasPorApartamento(@PathVariable String numeroApartamento) {
         try {
-            List<Reserva> reservas = extratoService.buscarReservasPorApartamento(numeroApartamento);
+            List<com.divan.dto.ReservaResumoDTO> reservas = extratoService.buscarReservasPorApartamento(numeroApartamento);
             return ResponseEntity.ok(reservas);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();

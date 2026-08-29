@@ -549,24 +549,123 @@ public class ReservaService {
         return reservaRepository.findAll();
     }
     
-    public List<Reserva> buscarAtivas() {
+    public List<Reserva> buscarAtivasEntidades() {
         return reservaRepository.findByStatus(Reserva.StatusReservaEnum.ATIVA);
     }
-    
-    public List<Reserva> buscarCheckinsDoDia(LocalDateTime data) {
-        LocalDateTime inicioDia = data.toLocalDate().atStartOfDay();
-        LocalDateTime fimDia = inicioDia.plusDays(1);
-        return reservaRepository.findByDataCheckinBetween(inicioDia, fimDia);
+ 
+    // ✅ Método PÚBLICO da API — devolve o DTO enxuto, usado pelo
+    // endpoint /api/reservas/ativas (o que estava vindo com 22MB+ de
+    // resposta e quebrando o PDV).
+    public List<com.divan.dto.ReservaAtivaDTO> buscarAtivas() {
+        List<Reserva> reservas = buscarAtivasEntidades();
+ 
+        return reservas.stream().map(r -> {
+            com.divan.dto.ReservaAtivaDTO dto = new com.divan.dto.ReservaAtivaDTO();
+            dto.setId(r.getId());
+ 
+            if (r.getApartamento() != null) {
+                com.divan.dto.ReservaAtivaDTO.ApartamentoSimples apto = new com.divan.dto.ReservaAtivaDTO.ApartamentoSimples();
+                apto.setId(r.getApartamento().getId());
+                apto.setNumeroApartamento(r.getApartamento().getNumeroApartamento());
+                dto.setApartamento(apto);
+            }
+ 
+            if (r.getCliente() != null) {
+                com.divan.dto.ReservaAtivaDTO.ClienteSimples cliente = new com.divan.dto.ReservaAtivaDTO.ClienteSimples();
+                cliente.setId(r.getCliente().getId());
+                cliente.setNome(r.getCliente().getNome());
+                dto.setCliente(cliente);
+            }
+ 
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
     }
     
-    public List<Reserva> buscarCheckoutsDoDia(LocalDateTime data) {
+    public List<com.divan.dto.ReservaResumoDTO> buscarCheckinsDoDia(LocalDateTime data) {
         LocalDateTime inicioDia = data.toLocalDate().atStartOfDay();
         LocalDateTime fimDia = inicioDia.plusDays(1);
-        return reservaRepository.findByDataCheckoutBetween(inicioDia, fimDia);
+        List<Reserva> reservas = reservaRepository.findByDataCheckinBetween(inicioDia, fimDia);
+        return converterParaResumoDTO(reservas);
     }
+ 
+    public List<com.divan.dto.ReservaResumoDTO> buscarCheckoutsDoDia(LocalDateTime data) {
+        LocalDateTime inicioDia = data.toLocalDate().atStartOfDay();
+        LocalDateTime fimDia = inicioDia.plusDays(1);
+        List<Reserva> reservas = reservaRepository.findByDataCheckoutBetween(inicioDia, fimDia);
+        return converterParaResumoDTO(reservas);
+    }
+ 
+    // ✅ Método auxiliar compartilhado — mesma conversão que já usamos em
+    // buscarPorPeriodo() e buscarReservasPorApartamento()
+    private List<com.divan.dto.ReservaResumoDTO> converterParaResumoDTO(List<Reserva> reservas) {
+        return reservas.stream().map(r -> {
+            com.divan.dto.ReservaResumoDTO dto = new com.divan.dto.ReservaResumoDTO();
+            dto.setId(r.getId());
+            dto.setStatus(r.getStatus());
+            dto.setDataCheckin(r.getDataCheckin());
+            dto.setDataCheckout(r.getDataCheckout());
+ 
+            if (r.getApartamento() != null) {
+                com.divan.dto.ReservaResumoDTO.ApartamentoSimples apto = new com.divan.dto.ReservaResumoDTO.ApartamentoSimples();
+                apto.setId(r.getApartamento().getId());
+                apto.setNumeroApartamento(r.getApartamento().getNumeroApartamento());
+                dto.setApartamento(apto);
+            }
+ 
+            if (r.getCliente() != null) {
+                com.divan.dto.ReservaResumoDTO.ClienteSimples cliente = new com.divan.dto.ReservaResumoDTO.ClienteSimples();
+                cliente.setId(r.getCliente().getId());
+                cliente.setNome(r.getCliente().getNome());
+                dto.setCliente(cliente);
+            }
+ 
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
+    }
+
+ 
+// ⚠️ NOTA: esse método auxiliar "converterParaResumoDTO" faz a MESMA
+// coisa que já escrevemos dentro de buscarPorPeriodo() e
+// buscarReservasPorApartamento() (código repetido em 3 lugares agora).
+// Se quiser, numa próxima passada dá pra voltar nesses dois métodos e
+// trocar pelo auxiliar novo, evitando duplicação — não é urgente, só
+// uma limpeza futura.
     
-    public List<Reserva> buscarPorPeriodo(LocalDateTime inicio, LocalDateTime fim) {
-        return reservaRepository.findByDataCheckinBetweenOrDataCheckoutBetween(inicio, fim, inicio, fim);
+    public List<com.divan.dto.ReservaResumoDTO> buscarPorPeriodo(LocalDateTime inicio, LocalDateTime fim) {
+        // ✅ Limite de segurança — evita consultas com período gigante
+        // (ex: alguém passando "todo o histórico") gerarem uma resposta
+        // enorme sem querer. 180 dias é generoso pra qualquer uso real
+        // desse endpoint (relatório por período, etc.)
+        long dias = java.time.temporal.ChronoUnit.DAYS.between(inicio, fim);
+        if (dias > 180) {
+            throw new RuntimeException("Período máximo permitido é de 180 dias. Período solicitado: " + dias + " dias.");
+        }
+ 
+        List<Reserva> reservas = reservaRepository.findByDataCheckinBetweenOrDataCheckoutBetween(inicio, fim, inicio, fim);
+ 
+        return reservas.stream().map(r -> {
+            com.divan.dto.ReservaResumoDTO dto = new com.divan.dto.ReservaResumoDTO();
+            dto.setId(r.getId());
+            dto.setStatus(r.getStatus());
+            dto.setDataCheckin(r.getDataCheckin());
+            dto.setDataCheckout(r.getDataCheckout());
+ 
+            if (r.getApartamento() != null) {
+                com.divan.dto.ReservaResumoDTO.ApartamentoSimples apto = new com.divan.dto.ReservaResumoDTO.ApartamentoSimples();
+                apto.setId(r.getApartamento().getId());
+                apto.setNumeroApartamento(r.getApartamento().getNumeroApartamento());
+                dto.setApartamento(apto);
+            }
+ 
+            if (r.getCliente() != null) {
+                com.divan.dto.ReservaResumoDTO.ClienteSimples cliente = new com.divan.dto.ReservaResumoDTO.ClienteSimples();
+                cliente.setId(r.getCliente().getId());
+                cliente.setNome(r.getCliente().getNome());
+                dto.setCliente(cliente);
+            }
+ 
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
     }
     
     // ============================================
@@ -654,8 +753,12 @@ public class ReservaService {
         dto.setStatus(reserva.getStatus());
         dto.setObservacoes(reserva.getObservacoes() != null ? reserva.getObservacoes() : "");
         
-        dto.setExtratos(reserva.getExtratos());
-        dto.setHistoricos(reserva.getHistoricos());
+        // ⚠️ REMOVIDO — ninguém no frontend usa "extratos"/"historicos"
+        // vindos de listarTodasDTO()/listarPorStatusDTO() (que alimentam
+        // /api/reservas e /api/reservas/mapa). Antes, isso trazia a
+        // entidade completa (List<ExtratoReserva>) pra CADA reserva da
+        // lista/mapa, sem necessidade — o mesmo padrão que causou o bug
+        // de produção corrigido ontem em /api/reservas/ativas.
         dto.setTotalReciboEmitido(reserva.getTotalReciboEmitido() != null ? reserva.getTotalReciboEmitido() : BigDecimal.ZERO);
         dto.setSaldoAdiantamento(reserva.getSaldoAdiantamento() != null ? reserva.getSaldoAdiantamento() : BigDecimal.ZERO);
         dto.setFaturada(reserva.getFaturada() != null ? reserva.getFaturada() : false);
@@ -1730,10 +1833,27 @@ public class ReservaService {
         }
 
         // ✅ EXTRATOS
-        List<ExtratoReserva> extratos = extratoReservaRepository.findByReservaOrderByDataHoraLancamento(reserva);
-        List<ReservaDetalhesDTO.ExtratoSimples> extratosDTO = new ArrayList<>();
         
-        for (ExtratoReserva extrato : extratos) {
+        
+        List<ExtratoReserva> todosExtratos = extratoReservaRepository.findByReservaOrderByDataHoraLancamento(reserva);
+        
+        // ✅ LIMITE DE SEGURANÇA — evita que reservas de longuíssima
+        // duração (moradores permanentes que ainda não passaram por um
+        // ciclo de checkout/checkin) gerem uma resposta gigante. Mostra
+        // só os lançamentos mais RECENTES; o histórico completo continua
+        // no banco e fica disponível sob demanda pelo botão "Ver Extrato
+        // Completo" na tela, se precisar.
+        final int LIMITE_EXTRATO = 200;
+        int totalExtratos = todosExtratos.size();
+        boolean extratoTruncado = totalExtratos > LIMITE_EXTRATO;
+ 
+        List<ExtratoReserva> extratosParaExibir = extratoTruncado
+            ? todosExtratos.subList(totalExtratos - LIMITE_EXTRATO, totalExtratos)
+            : todosExtratos;
+ 
+        List<ReservaDetalhesDTO.ExtratoSimples> extratosDTO = new ArrayList<>();
+ 
+        for (ExtratoReserva extrato : extratosParaExibir) {
             ReservaDetalhesDTO.ExtratoSimples extratoDTO = new ReservaDetalhesDTO.ExtratoSimples();
             extratoDTO.setId(extrato.getId());
             extratoDTO.setDataHoraLancamento(extrato.getDataHoraLancamento());
@@ -1746,9 +1866,14 @@ public class ReservaService {
             extratosDTO.add(extratoDTO);
         }
         dto.setExtratos(extratosDTO);
-        
-        System.out.println("📊 Total de extratos: " + extratosDTO.size());
+        dto.setExtratoTruncado(extratoTruncado);
+        dto.setTotalExtratos(totalExtratos);
+ 
+        System.out.println("📊 Total de extratos: " + totalExtratos
+            + (extratoTruncado ? " (mostrando os " + LIMITE_EXTRATO + " mais recentes)" : ""));
 
+        
+        
         // ✅ HISTÓRICO
         List<HistoricoHospede> historicos = historicoHospedeRepository.findByReserva(reserva);
         List<ReservaDetalhesDTO.HistoricoSimples> historicosDTO = new ArrayList<>();

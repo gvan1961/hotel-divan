@@ -320,19 +320,87 @@ public class PagamentoService {
     }
 
     @Transactional(readOnly = true)
-    public List<Pagamento> buscarPorReserva(Long reservaId) {
+    public List<com.divan.dto.PagamentoResumoDTO> buscarPorReserva(Long reservaId) {
         Optional<Reserva> reserva = reservaRepository.findById(reservaId);
-        return reserva.map(pagamentoRepository::findByReserva).orElse(List.of());
+        List<Pagamento> pagamentos = reserva.map(pagamentoRepository::findByReserva).orElse(List.of());
+ 
+        return pagamentos.stream().map(p -> {
+            com.divan.dto.PagamentoResumoDTO dto = new com.divan.dto.PagamentoResumoDTO();
+            dto.setId(p.getId());
+            dto.setValor(p.getValor());
+            dto.setFormaPagamento(p.getFormaPagamento());
+            dto.setTipo(p.getTipo());
+            dto.setDataHoraPagamento(p.getDataHoraPagamento());
+ 
+            if (p.getReserva() != null) {
+                dto.setReservaId(p.getReserva().getId());
+                if (p.getReserva().getApartamento() != null) {
+                    dto.setApartamentoNumero(p.getReserva().getApartamento().getNumeroApartamento());
+                }
+                if (p.getReserva().getCliente() != null) {
+                    dto.setClienteNome(p.getReserva().getCliente().getNome());
+                }
+            }
+ 
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public List<Pagamento> buscarPagamentosDoDia(LocalDateTime data) {
-        return pagamentoRepository.findPagamentosDoDia(data);
+    public List<com.divan.dto.PagamentoResumoDTO> buscarPagamentosDoDia(LocalDateTime data) {
+        List<Pagamento> pagamentos = pagamentoRepository.findPagamentosDoDia(data);
+ 
+        return pagamentos.stream().map(p -> {
+            com.divan.dto.PagamentoResumoDTO dto = new com.divan.dto.PagamentoResumoDTO();
+            dto.setId(p.getId());
+            dto.setValor(p.getValor());
+            dto.setFormaPagamento(p.getFormaPagamento());
+            dto.setTipo(p.getTipo());
+            dto.setDataHoraPagamento(p.getDataHoraPagamento());
+ 
+            if (p.getReserva() != null) {
+                dto.setReservaId(p.getReserva().getId());
+                if (p.getReserva().getApartamento() != null) {
+                    dto.setApartamentoNumero(p.getReserva().getApartamento().getNumeroApartamento());
+                }
+                if (p.getReserva().getCliente() != null) {
+                    dto.setClienteNome(p.getReserva().getCliente().getNome());
+                }
+            }
+ 
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
-    public List<Pagamento> buscarPagamentosPorPeriodo(LocalDateTime inicio, LocalDateTime fim) {
-        return pagamentoRepository.findPagamentosPorPeriodo(inicio, fim);
+    public List<com.divan.dto.PagamentoResumoDTO> buscarPagamentosPorPeriodo(LocalDateTime inicio, LocalDateTime fim) {
+        // ✅ Mesmo limite de segurança aplicado em ReservaService.buscarPorPeriodo()
+        long dias = java.time.temporal.ChronoUnit.DAYS.between(inicio, fim);
+        if (dias > 180) {
+            throw new RuntimeException("Período máximo permitido é de 180 dias. Período solicitado: " + dias + " dias.");
+        }
+ 
+        List<Pagamento> pagamentos = pagamentoRepository.findPagamentosPorPeriodo(inicio, fim);
+ 
+        return pagamentos.stream().map(p -> {
+            com.divan.dto.PagamentoResumoDTO dto = new com.divan.dto.PagamentoResumoDTO();
+            dto.setId(p.getId());
+            dto.setValor(p.getValor());
+            dto.setFormaPagamento(p.getFormaPagamento());
+            dto.setTipo(p.getTipo());
+            dto.setDataHoraPagamento(p.getDataHoraPagamento());
+ 
+            if (p.getReserva() != null) {
+                dto.setReservaId(p.getReserva().getId());
+                if (p.getReserva().getApartamento() != null) {
+                    dto.setApartamentoNumero(p.getReserva().getApartamento().getNumeroApartamento());
+                }
+                if (p.getReserva().getCliente() != null) {
+                    dto.setClienteNome(p.getReserva().getCliente().getNome());
+                }
+            }
+ 
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional(readOnly = true)

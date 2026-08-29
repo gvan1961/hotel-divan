@@ -359,31 +359,34 @@ public class ReservaController {
      
     
     @GetMapping("/ativas")
-    public ResponseEntity<List<Reserva>> buscarAtivas() {
-        List<Reserva> reservas = reservaService.buscarAtivas();
+    public ResponseEntity<List<com.divan.dto.ReservaAtivaDTO>> buscarAtivas() {
+        List<com.divan.dto.ReservaAtivaDTO> reservas = reservaService.buscarAtivas();
         return ResponseEntity.ok(reservas);
     }
     
     @GetMapping("/checkins-do-dia")
-    public ResponseEntity<List<Reserva>> buscarCheckinsDoDia(
+    public ResponseEntity<List<com.divan.dto.ReservaResumoDTO>> buscarCheckinsDoDia(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime data) {
-        List<Reserva> reservas = reservaService.buscarCheckinsDoDia(data);
+        List<com.divan.dto.ReservaResumoDTO> reservas = reservaService.buscarCheckinsDoDia(data);
         return ResponseEntity.ok(reservas);
     }
-    
+ 
     @GetMapping("/checkouts-do-dia")
-    public ResponseEntity<List<Reserva>> buscarCheckoutsDoDia(
+    public ResponseEntity<List<com.divan.dto.ReservaResumoDTO>> buscarCheckoutsDoDia(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime data) {
-        List<Reserva> reservas = reservaService.buscarCheckoutsDoDia(data);
+        List<com.divan.dto.ReservaResumoDTO> reservas = reservaService.buscarCheckoutsDoDia(data);
         return ResponseEntity.ok(reservas);
-    }
-    
+    }    
     @GetMapping("/periodo")
-    public ResponseEntity<List<Reserva>> buscarPorPeriodo(
+    public ResponseEntity<?> buscarPorPeriodo(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fim) {
-        List<Reserva> reservas = reservaService.buscarPorPeriodo(inicio, fim);
-        return ResponseEntity.ok(reservas);
+        try {
+            List<com.divan.dto.ReservaResumoDTO> reservas = reservaService.buscarPorPeriodo(inicio, fim);
+            return ResponseEntity.ok(reservas);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
     }
     
     /**
@@ -1198,11 +1201,31 @@ public class ReservaController {
     }
     
     @GetMapping("/ativas/buscar")
-    public ResponseEntity<List<Reserva>> buscarAtivasPorTermo(@RequestParam String termo) {
-        List<Reserva> reservas = reservaService.buscarAtivas().stream()
+    public ResponseEntity<List<com.divan.dto.ReservaAtivaDTO>> buscarAtivasPorTermo(@RequestParam String termo) {
+        List<com.divan.dto.ReservaAtivaDTO> reservas = reservaService.buscarAtivasEntidades().stream()
             .filter(r -> r.getStatus() == Reserva.StatusReservaEnum.ATIVA)
             .filter(r -> r.getCliente().getNome().toLowerCase().contains(termo.toLowerCase())
                     || r.getApartamento().getNumeroApartamento().toLowerCase().contains(termo.toLowerCase()))
+            .map(r -> {
+                com.divan.dto.ReservaAtivaDTO dto = new com.divan.dto.ReservaAtivaDTO();
+                dto.setId(r.getId());
+ 
+                if (r.getApartamento() != null) {
+                    com.divan.dto.ReservaAtivaDTO.ApartamentoSimples apto = new com.divan.dto.ReservaAtivaDTO.ApartamentoSimples();
+                    apto.setId(r.getApartamento().getId());
+                    apto.setNumeroApartamento(r.getApartamento().getNumeroApartamento());
+                    dto.setApartamento(apto);
+                }
+ 
+                if (r.getCliente() != null) {
+                    com.divan.dto.ReservaAtivaDTO.ClienteSimples cliente = new com.divan.dto.ReservaAtivaDTO.ClienteSimples();
+                    cliente.setId(r.getCliente().getId());
+                    cliente.setNome(r.getCliente().getNome());
+                    dto.setCliente(cliente);
+                }
+ 
+                return dto;
+            })
             .collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(reservas);
     }

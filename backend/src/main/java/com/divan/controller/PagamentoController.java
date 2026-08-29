@@ -139,24 +139,28 @@ public class PagamentoController {
     }
 
     @GetMapping("/reserva/{reservaId}")
-    public ResponseEntity<List<Pagamento>> buscarPorReserva(@PathVariable Long reservaId) {
-        List<Pagamento> pagamentos = pagamentoService.buscarPorReserva(reservaId);
+    public ResponseEntity<List<com.divan.dto.PagamentoResumoDTO>> buscarPorReserva(@PathVariable Long reservaId) {
+        List<com.divan.dto.PagamentoResumoDTO> pagamentos = pagamentoService.buscarPorReserva(reservaId);
         return ResponseEntity.ok(pagamentos);
     }
-
+    
     @GetMapping("/do-dia")
-    public ResponseEntity<List<Pagamento>> buscarPagamentosDoDia(
+    public ResponseEntity<List<com.divan.dto.PagamentoResumoDTO>> buscarPagamentosDoDia(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime data) {
-        List<Pagamento> pagamentos = pagamentoService.buscarPagamentosDoDia(data);
+        List<com.divan.dto.PagamentoResumoDTO> pagamentos = pagamentoService.buscarPagamentosDoDia(data);
         return ResponseEntity.ok(pagamentos);
     }
 
     @GetMapping("/periodo")
-    public ResponseEntity<List<Pagamento>> buscarPagamentosPorPeriodo(
+    public ResponseEntity<?> buscarPagamentosPorPeriodo(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fim) {
-        List<Pagamento> pagamentos = pagamentoService.buscarPagamentosPorPeriodo(inicio, fim);
-        return ResponseEntity.ok(pagamentos);
+        try {
+            List<com.divan.dto.PagamentoResumoDTO> pagamentos = pagamentoService.buscarPagamentosPorPeriodo(inicio, fim);
+            return ResponseEntity.ok(pagamentos);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
     }
 
     @GetMapping("/resumo-do-dia")

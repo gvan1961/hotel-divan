@@ -727,9 +727,9 @@ export class CaixaConsultaComponent implements OnInit {
     this.totalGeral = this.caixas.reduce((sum, c) => sum + (c.totalLiquido || 0), 0);
   }
 
-  visualizar(id: number): void {
-    this.router.navigate(['/caixa/detalhes', id]);
-  }
+ visualizar(id: number): void {
+  this.router.navigate(['/fechamento-caixa', id]);
+}
 
   imprimir(id: number): void {
     this.router.navigate(['/caixa/imprimir', id]);

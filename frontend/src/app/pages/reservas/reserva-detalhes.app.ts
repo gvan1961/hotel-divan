@@ -26,6 +26,9 @@ import { environment } from '../../../environments/environment';
     saldoAdiantamento?: number;  
     faturada?: boolean; 
     assinaturaBase64?: string;
+    extratoTruncado?: boolean;
+    totalExtratos?: number;
+
       cliente?: {
       id: number;
       nome: string;
@@ -364,8 +367,16 @@ import { environment } from '../../../environments/environment';
                 [title]="extratoExpandido ? 'Clique para ocultar' : 'Clique para mostrar'">
               <span class="seta-toggle">{{ extratoExpandido ? '▼' : '▶' }}</span>
               📊 Extrato — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong>
-              <span class="contador-extrato">({{ reserva.extratos.length }} lançamentos)</span>
+               <span class="contador-extrato">({{ reserva.totalExtratos || reserva.extratos.length }} lançamentos)</span>
             </h2>
+ 
+            <div class="aviso-extrato-truncado" *ngIf="reserva.extratoTruncado && extratoExpandido">
+              ⚠️ Mostrando os {{ reserva.extratos.length }} lançamentos mais recentes de {{ reserva.totalExtratos }} no total.
+              <button type="button" class="btn-ver-extrato-completo" (click)="carregarExtratoCompleto()" [disabled]="carregandoExtratoCompleto">
+                {{ carregandoExtratoCompleto ? '⏳ Carregando...' : '📜 Ver Extrato Completo' }}
+              </button>
+            </div>
+ 
             <table class="tabela-extrato" *ngIf="extratoExpandido">
               <thead>
                 <tr>
@@ -422,15 +433,14 @@ import { environment } from '../../../environments/environment';
         </div>
 
         <!-- HÓSPEDES -->
-        <div class="secao-hospedes" *ngIf="reserva && (reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA')">
+        <div class="secao-hospedes" *ngIf="reserva && (reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA' || reserva.status === 'FINALIZADA')">
           <div class="secao-header">
             <h3>👥 Hóspedes da Reserva — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong></h3>
-            <span class="badge-hospedes">{{ hospedes.length }}</span>
-
-    
-            <button 
+            <span class="badge-hospedes">{{ hospedes.length }}</span>    
+            
+   <button
   *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
-  type="button"
+   type="button"
   class="btn-adicionar-hospede"
   (click)="abrirModalAdicionarHospede()">
   ➕ Adicionar Hóspede
@@ -2936,6 +2946,31 @@ import { environment } from '../../../environments/environment';
       font-weight: 700;
     }
 
+    .aviso-extrato-truncado {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 8px 12px;
+      margin: 8px 0;
+      font-size: 0.85em;
+      color: #856404;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .btn-ver-extrato-completo {
+      background: #ffc107;
+      color: #212529;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-ver-extrato-completo:hover { background: #e0a800; }
+    .btn-ver-extrato-completo:disabled { opacity: .6; cursor: not-allowed; }
+
     `]
   })
 
@@ -2957,6 +2992,7 @@ import { environment } from '../../../environments/environment';
     reservaId: number = 0;
     loading = false;
     extratoExpandido = false;
+    carregandoExtratoCompleto = false;
     erro = '';
 
     pagouDebitoEmConta = false;
@@ -6853,6 +6889,26 @@ carregarPendenciasExtrasCliente(): void {
     const n = parseInt(classificacao, 10);
     if (isNaN(n) || n < 1 || n > 5) return '-';
     return '⭐'.repeat(n);
+  }
+
+  carregarExtratoCompleto(): void {
+    if (!this.reserva) return;
+    this.carregandoExtratoCompleto = true;
+ 
+    this.http.get<any[]>(`/api/extratos/reserva/${this.reserva.id}`).subscribe({
+      next: (extratosCompletos) => {
+        if (this.reserva) {
+          this.reserva.extratos = extratosCompletos;
+          this.reserva.extratoTruncado = false; // já carregou tudo, não precisa mais do aviso
+        }
+        this.carregandoExtratoCompleto = false;
+      },
+      error: (err) => {
+        console.error('❌ Erro ao carregar extrato completo:', err);
+        alert('Erro ao carregar o extrato completo. Tente novamente.');
+        this.carregandoExtratoCompleto = false;
+      }
+    });
   }
 
 voltarAoPainel(): void {
