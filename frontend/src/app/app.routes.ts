@@ -22,6 +22,8 @@ import { TipoApartamentoListaApp } from './pages/tipos-apartamento/tipo-apartame
 import { TipoApartamentoFormApp } from './pages/tipos-apartamento/tipo-apartamento-form.app';
 import { CategoriaListaApp } from './pages/categorias/categoria-lista.app';
 import { CategoriaFormApp } from './pages/categorias/categoria-form.app';
+import { FaixaConsumoAguaListaApp } from './pages/faixas-consumo-agua/faixa-consumo-agua-lista.app';
+import { FaixaConsumoAguaFormApp } from './pages/faixas-consumo-agua/faixa-consumo-agua-form.app';
 import { EmpresaListaApp } from './pages/empresas/empresa-lista.app';
 import { EmpresaFormApp } from './pages/empresas/empresa-form.app';
 import { DiariaListaApp } from './pages/diarias/diaria-lista.app';
@@ -139,6 +141,11 @@ export const routes: Routes = [
       { path: 'categorias/novo', component: CategoriaFormApp },
       { path: 'categorias/editar/:id', component: CategoriaFormApp },
       { path: 'categorias', component: CategoriaListaApp },
+
+      // ===== FAIXAS DE CONSUMO DE ÁGUA =====
+      { path: 'faixas-consumo-agua/novo', component: FaixaConsumoAguaFormApp },
+      { path: 'faixas-consumo-agua/editar/:id', component: FaixaConsumoAguaFormApp },
+      { path: 'faixas-consumo-agua', component: FaixaConsumoAguaListaApp },
 
       // ===== PDV =====
       { path: 'pdv', component: PDVComponent },

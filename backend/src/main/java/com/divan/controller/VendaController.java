@@ -3,7 +3,7 @@ package com.divan.controller;
 import com.divan.entity.*;
 import com.divan.repository.*;
 import com.divan.service.CaixaContextoService;
-import com.divan.service.VendaService;
+import com.divan.service.ControleConsumoAguaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,6 +33,9 @@ public class VendaController {
     @Autowired private ValeRepository valeRepository;
     @Autowired
 	private CaixaContextoService caixaContextoService;	
+    
+    @Autowired
+    private ControleConsumoAguaService controleConsumoAguaService;
 
     @GetMapping("/teste")
     public ResponseEntity<String> teste() {
@@ -69,18 +72,29 @@ public class VendaController {
             nota.setItens(new ArrayList<>());
             notaVendaRepository.save(nota);
 
+          
+            
+            
+            
+            
+            
             for (Map<String, Object> itemMap : itens) {
                 Long produtoId = Long.parseLong(itemMap.get("produtoId").toString());
                 int quantidade = Integer.parseInt(itemMap.get("quantidade").toString());
                 BigDecimal valorUnitario = new BigDecimal(itemMap.get("valorUnitario").toString());
-
                 Produto produto = produtoRepository.findById(produtoId)
                     .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + produtoId));
-
                 if (produto.getQuantidade() < quantidade)
                     throw new RuntimeException("Estoque insuficiente para: " + produto.getNomeProduto());
 
                 BigDecimal totalItem = valorUnitario.multiply(BigDecimal.valueOf(quantidade));
+
+                // ✅ Controle de consumo de água (convênio empresa)
+                boolean isAguaMineral = produto.getNomeProduto() != null
+                    && produto.getNomeProduto().toUpperCase().contains("AGUA");
+                if (isAguaMineral && !controleConsumoAguaService.validarLimite(reserva, totalItem)) {
+                    throw new RuntimeException("Limite diário de água do convênio já atingido para este apartamento.");
+                }
 
                 ItemVenda itemVenda = new ItemVenda();
                 itemVenda.setNotaVenda(nota);
@@ -92,8 +106,12 @@ public class VendaController {
 
                 produto.setQuantidade(produto.getQuantidade() - quantidade);
                 produtoRepository.save(produto);
-
                 totalNota = totalNota.add(totalItem);
+
+                // ✅ Registrar consumo de água (convênio empresa)
+                if (isAguaMineral) {
+                    controleConsumoAguaService.registrarConsumo(reserva, totalItem);
+                }
 
                 ExtratoReserva extrato = new ExtratoReserva();
                 extrato.setReserva(reserva);
@@ -107,6 +125,10 @@ public class VendaController {
                 extratoReservaRepository.save(extrato);
             }
 
+            
+            
+            
+            
             nota.setTotal(totalNota);
             notaVendaRepository.save(nota);
 

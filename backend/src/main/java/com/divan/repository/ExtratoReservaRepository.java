@@ -1,7 +1,6 @@
 package com.divan.repository;
 
 import com.divan.entity.ExtratoReserva;
-import com.divan.entity.HistoricoHospede;
 import com.divan.entity.Reserva;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { EmpresaService } from '../../services/empresa.service';
 import { EmpresaRequest } from '../../models/empresa.model';
+import { FaixaConsumoAguaService } from '../../services/faixa-consumo-agua.service';
+import { FaixaConsumoAgua, FaixaConsumoAguaRequest } from '../../models/faixa-consumo-agua.model';
 
 @Component({
   selector: 'app-empresa-form',
@@ -75,6 +77,56 @@ import { EmpresaRequest } from '../../models/empresa.model';
             </div>
           </fieldset>
           <!-- ===== FIM Contato Financeiro ===== -->
+
+          <!-- ===== NOVO: Controle de Consumo de Água ===== -->
+<fieldset class="controle-agua">
+  <legend>💧 Controle de Consumo de Água (Convênio)</legend>
+
+  <div *ngIf="!isEdit" class="hint">
+    Salve a empresa primeiro para habilitar o controle de consumo de água.
+  </div>
+
+  <div *ngIf="isEdit">
+    <p class="hint">
+      Defina o limite diário de água mineral por quantidade de hóspedes na reserva.
+      Se nenhuma faixa for cadastrada, não há controle de consumo para esta empresa.
+    </p>
+
+    <table class="tabela-faixas" *ngIf="faixas.length > 0">
+      <thead>
+        <tr>
+          <th>Qtd. Hóspedes</th>
+          <th>Valor Limite Diário</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let faixa of faixas">
+          <td>{{ faixa.qtdHospedes }}</td>
+          <td>{{ faixa.valorLimiteDiario | currency:'BRL' }}</td>
+          <td>
+            <button type="button" class="btn-remove-faixa" (click)="removerFaixa(faixa.id!)">Excluir</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="nova-faixa-row">
+      <div class="form-group qtd">
+        <label>Qtd. Hóspedes</label>
+        <input type="number" [(ngModel)]="novaFaixa.qtdHospedes" name="novaFaixaQtd" min="1" />
+      </div>
+      <div class="form-group valor">
+        <label>Valor Limite Diário (R$)</label>
+        <input type="number" [(ngModel)]="novaFaixa.valorLimiteDiario" name="novaFaixaValor" min="0.01" step="0.01" />
+      </div>
+      <button type="button" class="btn-add-faixa" (click)="adicionarFaixa()">+ Adicionar Faixa</button>
+    </div>
+
+    <div *ngIf="faixaErrorMessage" class="error-message">{{ faixaErrorMessage }}</div>
+  </div>
+</fieldset>
+<!-- ===== FIM Controle de Consumo de Água ===== -->
 
           <div *ngIf="errorMessage" class="error-message">
             {{ errorMessage }}
@@ -223,6 +275,16 @@ import { EmpresaRequest } from '../../models/empresa.model';
       line-height: 1.5;
     }
 
+    .controle-agua { margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 6px; }
+.controle-agua legend { font-weight: 600; padding: 0 8px; }
+.tabela-faixas { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+.tabela-faixas th { text-align: left; padding: 8px; background: #f5f5f5; font-size: 0.85rem; }
+.tabela-faixas td { padding: 8px; border-top: 1px solid #eee; font-size: 0.9rem; }
+.btn-remove-faixa { background: #dc3545; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+.nova-faixa-row { display: flex; gap: 10px; align-items: flex-end; }
+.nova-faixa-row .form-group { margin-bottom: 0; flex: 1; }
+.btn-add-faixa { background: #667eea; color: white; border: none; padding: 10px 16px; border-radius: 5px; cursor: pointer; white-space: nowrap; }
+
     .form-row {
       display: flex;
       gap: 15px;
@@ -257,6 +319,12 @@ export class EmpresaFormApp implements OnInit {
   isEdit = false;
   empresaId?: number;
 
+  private faixaService = inject(FaixaConsumoAguaService);
+
+faixas: FaixaConsumoAgua[] = [];
+novaFaixa: { qtdHospedes?: number; valorLimiteDiario?: number } = {};
+faixaErrorMessage = '';
+
   ngOnInit(): void {
     this.route.params.subscribe(params => {
       if (params['id']) {
@@ -268,24 +336,32 @@ export class EmpresaFormApp implements OnInit {
   }
 
   carregarEmpresa(id: number): void {
-    this.empresaService.getById(id).subscribe({
-      next: (data) => {
-        this.empresa = {
-          nomeEmpresa: data.nomeEmpresa,
-          cnpj: data.cnpj,
-          contato: data.contato,
-          celular: data.celular,
-          contatoFinanceiroNome: data.contatoFinanceiroNome || '',
-          contatoFinanceiroDdi: data.contatoFinanceiroDdi || '55',
-          contatoFinanceiroCelular: data.contatoFinanceiroCelular || ''
-        };
-      },
-      error: (err) => {
-        console.error('Erro ao carregar empresa', err);
-        this.errorMessage = 'Erro ao carregar empresa';
-      }
-    });
-  }
+  this.empresaService.getById(id).subscribe({
+    next: (data) => {
+      this.empresa = {
+        nomeEmpresa: data.nomeEmpresa,
+        cnpj: data.cnpj,
+        contato: data.contato,
+        celular: data.celular,
+        contatoFinanceiroNome: data.contatoFinanceiroNome || '',
+        contatoFinanceiroDdi: data.contatoFinanceiroDdi || '55',
+        contatoFinanceiroCelular: data.contatoFinanceiroCelular || ''
+      };
+    },
+    error: (err) => {
+      console.error('Erro ao carregar empresa', err);
+      this.errorMessage = 'Erro ao carregar empresa';
+    }
+  });
+  this.carregarFaixas(id);
+}
+
+carregarFaixas(empresaId: number): void {
+  this.faixaService.getByEmpresa(empresaId).subscribe({
+    next: (data) => this.faixas = data,
+    error: (err) => console.error('Erro ao carregar faixas', err)
+  });
+}
 
   salvar(): void {
   if (!this.validarFormulario()) {
@@ -397,6 +473,47 @@ export class EmpresaFormApp implements OnInit {
     
     this.empresa.contatoFinanceiroCelular = celular;
   }
+
+  adicionarFaixa(): void {
+  this.faixaErrorMessage = '';
+
+  if (!this.novaFaixa.qtdHospedes || this.novaFaixa.qtdHospedes < 1) {
+    this.faixaErrorMessage = 'Informe a quantidade de hóspedes';
+    return;
+  }
+  if (!this.novaFaixa.valorLimiteDiario || this.novaFaixa.valorLimiteDiario <= 0) {
+    this.faixaErrorMessage = 'Informe o valor limite';
+    return;
+  }
+
+  const request: FaixaConsumoAguaRequest = {
+    empresaId: this.empresaId!,
+    qtdHospedes: this.novaFaixa.qtdHospedes,
+    valorLimiteDiario: this.novaFaixa.valorLimiteDiario
+  };
+
+  this.faixaService.create(request).subscribe({
+    next: () => {
+      this.novaFaixa = {};
+      this.carregarFaixas(this.empresaId!);
+    },
+    error: (err) => {
+      this.faixaErrorMessage = err.error?.message || err.error || 'Erro ao adicionar faixa';
+    }
+  });
+}
+
+removerFaixa(id: number): void {
+  if (confirm('Deseja realmente excluir esta faixa?')) {
+    this.faixaService.delete(id).subscribe({
+      next: () => this.carregarFaixas(this.empresaId!),
+      error: (err) => {
+        console.error('Erro ao excluir faixa', err);
+        alert(err.error?.message || err.error || 'Erro ao excluir faixa');
+      }
+    });
+  }
+}
 
   voltar(): void {
     this.router.navigate(['/empresas']);

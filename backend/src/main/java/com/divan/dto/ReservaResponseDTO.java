@@ -47,6 +47,10 @@ public class ReservaResponseDTO {
     
     private String responsavelPagamentoNome;
     
+    private BigDecimal limiteAguaDiario;
+    private BigDecimal consumoAguaHoje;
+    private Boolean limiteAguaExcedido;
+    
 	public Long getId() {
 		return id;
 	}
@@ -198,5 +202,24 @@ public class ReservaResponseDTO {
 	public void setResponsavelPagamentoNome(String responsavelPagamentoNome) {
 	    this.responsavelPagamentoNome = responsavelPagamentoNome;
 	}
+	public BigDecimal getLimiteAguaDiario() {
+		return limiteAguaDiario;
+	}
+	public void setLimiteAguaDiario(BigDecimal limiteAguaDiario) {
+		this.limiteAguaDiario = limiteAguaDiario;
+	}
+	public BigDecimal getConsumoAguaHoje() {
+		return consumoAguaHoje;
+	}
+	public void setConsumoAguaHoje(BigDecimal consumoAguaHoje) {
+		this.consumoAguaHoje = consumoAguaHoje;
+	}
+	public Boolean getLimiteAguaExcedido() {
+		return limiteAguaExcedido;
+	}
+	public void setLimiteAguaExcedido(Boolean limiteAguaExcedido) {
+		this.limiteAguaExcedido = limiteAguaExcedido;
+	}	
+	
 			        
 }

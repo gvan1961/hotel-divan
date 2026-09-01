@@ -18,6 +18,7 @@ import com.divan.repository.LogAuditoriaRepository;
 import com.divan.repository.ReservaRepository;
 import com.divan.repository.UsuarioRepository;
 import com.divan.service.ApartamentoService;
+import com.divan.service.ControleConsumoAguaService;
 
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
+
 
 @RestController
 @RequestMapping("/api/apartamentos")
@@ -69,6 +70,9 @@ public class ApartamentoController {
     
     @Autowired
     private LogAuditoriaRepository logAuditoriaRepository;
+    
+    @Autowired
+    private ControleConsumoAguaService controleConsumoAguaService;
     
     // ✅ ATUALIZADO - Usar DTO
     @PostMapping
@@ -517,6 +521,15 @@ public class ApartamentoController {
                     res.put("atrasado",         atrasado);
                     res.put("renovacaoAutomatica", r.getRenovacaoAutomatica() != null && r.getRenovacaoAutomatica());
 
+                 // ✅ Controle de consumo de água (convênio empresa)
+                    controleConsumoAguaService.getLimiteDiario(r).ifPresent(limite -> {
+                        BigDecimal consumido = controleConsumoAguaService.getConsumidoHoje(r.getId());
+                        res.put("limiteAguaDiario", limite);
+                        res.put("consumoAguaHoje", consumido);
+                        res.put("limiteAguaExcedido", consumido.compareTo(limite) >= 0);
+                        res.put("itensAguaHoje", controleConsumoAguaService.getItensAguaHoje(r));
+                    });
+                    
                     // ✅ BOTÃO DE ASSINATURA - APROVAÇÃO DE CRÉDITO
                     // Mostra o botão só se: (1) algum hóspede da reserva tem crédito aprovado
                     // e (2) a reserva ainda não tem assinatura registrada.

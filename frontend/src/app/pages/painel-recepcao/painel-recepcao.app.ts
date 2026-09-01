@@ -16,7 +16,7 @@ interface Reserva {
   id: number;
   status: string;
   clienteNome: string;
-  empresaNome?: string; 
+  empresaNome?: string;
   dataCheckin: string;
   dataCheckout: string;
   quantidadeHospedes: number;
@@ -26,6 +26,10 @@ interface Reserva {
   renovacaoAutomatica: boolean;
   mostrarBotaoAssinaturaCredito?: boolean;
   proximaReserva?: ProximaReserva;
+  limiteAguaDiario?: number;
+  consumoAguaHoje?: number;
+  limiteAguaExcedido?: boolean;
+  itensAguaHoje?: { descricao: string; quantidade: number; horario: string }[];
 }
 
 interface ApartamentoCard {
@@ -443,6 +447,23 @@ template: `
                 <span class="info-icon">🧑‍🤝‍🧑</span>
                 <span class="info-texto">{{ apt.reserva.quantidadeHospedes }} hóspede(s)</span>
               </div>
+
+              <!-- Indicador de consumo de água (convênio) -->
+<div class="indicador-agua" *ngIf="apt.reserva.limiteAguaDiario" [class.excedido]="apt.reserva.limiteAguaExcedido">
+  <div class="indicador-agua-texto">
+    💧 {{ apt.reserva.consumoAguaHoje | currency:'BRL' }} / {{ apt.reserva.limiteAguaDiario | currency:'BRL' }}
+  </div>
+  <div class="barra-agua-fundo">
+    <div class="barra-agua-preenchida"
+         [style.width.%]="getPercentualAgua(apt.reserva)"></div>
+  </div>
+  <div class="itens-agua-lista" *ngIf="apt.reserva.itensAguaHoje && apt.reserva.itensAguaHoje.length > 0">
+    <div class="item-agua" *ngFor="let item of apt.reserva.itensAguaHoje">
+      {{ item.horario }} — {{ item.quantidade }}x {{ item.descricao }}
+    </div>
+  </div>
+</div>
+
             </ng-container>
 
             <!-- SEM RESERVA -->
@@ -800,10 +821,21 @@ template: `
     .info-texto { flex: 1; }
     .truncate   { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
     .cliente-nome { font-weight: 600; color: #2c3e50; font-size: 0.82rem; font-family: 'Roboto Mono', monospace; }
-
+     
+    /* ── ÁGUA (CONVÊNIO) ──────────────────────────── */
+.indicador-agua { margin-top: 2px; }
+.indicador-agua-texto { font-size: 0.72rem; color: #555; margin-bottom: 2px; }
+.barra-agua-fundo { height: 3px; width: 100%; background: #e0e0e0; border-radius: 2px; overflow: hidden; }
+.barra-agua-preenchida { height: 100%; background: #2196F3; transition: width .3s ease; }
+.indicador-agua.excedido .barra-agua-preenchida { background: #f44336; }
+.indicador-agua.excedido .indicador-agua-texto { color: #d32f2f; font-weight: 600; }
+.sem-reserva { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
     .sem-reserva { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
     .status-label { font-size: 0.8rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: .5px; }
     .capacidade-info { font-size: 0.75rem; color: #aaa; }
+
+    .itens-agua-lista { margin-top: 3px; }
+    .item-agua { font-size: 0.68rem; color: #777; line-height: 1.3; }
 
     /* ── AÇÕES ──────────────────────────────────── */
     .card-acoes {
@@ -1523,6 +1555,12 @@ atenderSolicitacao(id: number): void {
     if (this.intervalo) clearInterval(this.intervalo);
      if (this.intervaloWhatsapp) clearInterval(this.intervaloWhatsapp);
   }
+
+  getPercentualAgua(reserva: Reserva): number {
+  if (!reserva.limiteAguaDiario || reserva.limiteAguaDiario === 0) return 0;
+  const consumido = reserva.consumoAguaHoje ?? 0;
+  return Math.min((consumido / reserva.limiteAguaDiario) * 100, 100);
+}
 
   carregarDados(): void {
     

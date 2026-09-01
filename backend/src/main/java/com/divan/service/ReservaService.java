@@ -124,6 +124,9 @@ public class ReservaService {
     @Autowired
     private MikrotikService mikrotikService;
     
+    @Autowired
+    private ControleConsumoAguaService controleConsumoAguaService;
+    
     private static final DateTimeFormatter FMT_DATA =
     	    DateTimeFormatter.ofPattern("dd/MM/yyyy");
         
@@ -752,6 +755,15 @@ public class ReservaService {
         dto.setTotalApagar(reserva.getTotalApagar());
         dto.setStatus(reserva.getStatus());
         dto.setObservacoes(reserva.getObservacoes() != null ? reserva.getObservacoes() : "");
+     // Controle de consumo de água (convênio empresa)
+        if (reserva.getCliente() != null && reserva.getCliente().getEmpresa() != null) {
+            controleConsumoAguaService.getLimiteDiario(reserva).ifPresent(limite -> {
+                BigDecimal consumido = controleConsumoAguaService.getConsumidoHoje(reserva.getId());
+                dto.setLimiteAguaDiario(limite);
+                dto.setConsumoAguaHoje(consumido);
+                dto.setLimiteAguaExcedido(consumido.compareTo(limite) >= 0);
+            });
+        }
         
         // ⚠️ REMOVIDO — ninguém no frontend usa "extratos"/"historicos"
         // vindos de listarTodasDTO()/listarPorStatusDTO() (que alimentam
@@ -1153,6 +1165,17 @@ public class ReservaService {
             throw new RuntimeException("Estoque insuficiente. Disponível: " + produto.getQuantidade());
         }
         
+    
+
+        // ✅ Controle de consumo de água (convênio empresa)
+        boolean isAguaMineral = produto.getNomeProduto() != null 
+            && produto.getNomeProduto().toUpperCase().contains("AGUA");
+        BigDecimal valorTotalItemAgua = produto.getValorVenda().multiply(new BigDecimal(quantidade));
+        if (isAguaMineral && !controleConsumoAguaService.validarLimite(reserva, valorTotalItemAgua)) {
+            throw new RuntimeException("Limite diário de água do convênio já atingido para este apartamento.");
+        }
+
+        
         // Buscar nota de venda APARTAMENTO da reserva
         NotaVenda notaVenda = reserva.getNotasVenda().stream()
             .filter(nv -> nv.getTipoVenda().equals(NotaVenda.TipoVendaEnum.APARTAMENTO))
@@ -1231,6 +1254,11 @@ public class ReservaService {
         
         System.out.println("🛒 Produto adicionado ao consumo: " + produto.getNomeProduto() + " x" + quantidade);
         System.out.println("📝 Lançamento criado no extrato: R$ " + valorTotalItem);
+        
+     // ✅ Registrar consumo de água (convênio empresa)
+        if (isAguaMineral) {
+            controleConsumoAguaService.registrarConsumo(reserva, valorTotalItemAgua);
+        }
         
         return reservaSalva;
     }
