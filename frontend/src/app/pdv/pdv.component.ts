@@ -173,6 +173,24 @@ interface ItemCarrinho {
               </select>
             </div>
 
+            <!-- ===== NOVO: Gerar QR Code Pix ===== -->
+<div class="campo" *ngIf="formaPagamento === 'PIX'">
+  <button type="button" class="btn-gerar-pix" (click)="gerarPixPdv()" [disabled]="gerandoPixPdv">
+    {{ gerandoPixPdv ? '⏳ Gerando...' : '📱 Gerar QR Code Pix' }}
+  </button>
+
+  <div class="pix-resultado" *ngIf="pixQrCodeImagePdv">
+  <img [src]="pixQrCodeImagePdv" alt="QR Code Pix" class="pix-qrcode-img" />
+  <div class="pix-codigo">
+    <label>Código Pix (copia e cola):</label>
+    <textarea readonly rows="3">{{ pixBrCodePdv }}</textarea>
+    <button type="button" class="btn-copiar-pix" (click)="copiarCodigoPixPdv()">📋 Copiar Código</button>
+    <button type="button" class="btn-imprimir-pix" (click)="imprimirPixPdv()">🖨️ Imprimir</button>
+    <button type="button" class="btn-whatsapp-pix" (click)="enviarPixWhatsAppPdv()">📲 Enviar WhatsApp</button>
+  </div>
+</div>
+</div>
+
             <div class="campo" *ngIf="formaPagamento === 'DINHEIRO'">
               <label>Valor Pago</label>
               <input type="number" 
@@ -736,6 +754,17 @@ interface ItemCarrinho {
       @media (max-width: 1024px) {
         .grid-pdv { grid-template-columns: 1fr; }
       }
+
+      .btn-gerar-pix { background: #32bcad; color: white; border: none; padding: 10px 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 5px; }
+.btn-gerar-pix:disabled { background: #ccc; cursor: not-allowed; }
+.pix-resultado { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+.pix-qrcode-img { width: 220px; height: 220px; }
+.pix-codigo { width: 100%; }
+.pix-codigo textarea { width: 100%; font-size: 0.75rem; font-family: monospace; resize: none; }
+.btn-copiar-pix, .btn-imprimir-pix { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; margin-right: 6px; background: #667eea; color: white; }
+
+      .btn-whatsapp-pix { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; background: #25D366; color: white; }
+
     `]
   })
     export class PDVComponent implements OnInit, AfterViewInit {
@@ -788,6 +817,10 @@ interface ItemCarrinho {
     termoBuscaApartamento = '';
     reservasFiltradas: any[] = [];
     hospedesSelecionados: any[] = [];
+
+    gerandoPixPdv = false;
+    pixQrCodeImagePdv: string | null = null;
+    pixBrCodePdv: string | null = null;
 
     constructor(private route: ActivatedRoute) {}
 
@@ -983,29 +1016,33 @@ limparCarrinho(): void {
     }
 
      abrirModalFinalizacao(): void {
-      // ✅ Só reseta tipoVenda se NÃO veio do Painel Recepção
-      if (this.origem !== 'painel-recepcao') {
-        this.tipoVenda = 'VISTA';
-        this.clienteSelecionadoId = 0;
-      }
-      this.formaPagamento = '';
-      this.valorPago = this.totalCarrinho;
-      this.troco = 0;
-      this.observacao = '';
-      this.modalFinalizacao = true;
-    }
+  // ✅ Só reseta tipoVenda se NÃO veio do Painel Recepção
+  if (this.origem !== 'painel-recepcao') {
+    this.tipoVenda = 'VISTA';
+    this.clienteSelecionadoId = 0;
+  }
+  this.formaPagamento = '';
+  this.valorPago = this.totalCarrinho;
+  this.troco = 0;
+  this.observacao = '';
+  this.pixQrCodeImagePdv = null;
+  this.pixBrCodePdv = null;
+  this.modalFinalizacao = true;
+}
 
     fecharModalFinalizacao(): void {
       this.modalFinalizacao = false;
     }
 
     mudarTipoVenda(): void {
-      this.formaPagamento = '';
-      this.valorPago = this.totalCarrinho;
-      this.troco = 0;
-      this.clienteSelecionadoId = 0;
-      this.reservaSelecionadaId = 0;
-    }
+  this.formaPagamento = '';
+  this.valorPago = this.totalCarrinho;
+  this.troco = 0;
+  this.clienteSelecionadoId = 0;
+  this.reservaSelecionadaId = 0;
+  this.pixQrCodeImagePdv = null;
+  this.pixBrCodePdv = null;
+}
 
     calcularTroco(): void {
       this.troco = this.valorPago > this.totalCarrinho ? 
@@ -1025,6 +1062,12 @@ limparCarrinho(): void {
         alert('⚠️ Selecione a forma de pagamento');
         return;
       }
+
+       if (this.formaPagamento === 'PIX' && !this.pixQrCodeImagePdv) {
+    alert('⚠️ Gere o QR Code Pix antes de confirmar a venda, para que o cliente possa efetuar o pagamento.');
+    return;
+  }
+
       this.realizarVendaAVista();
     } else if (this.tipoVenda === 'FATURADO' || this.tipoVenda === 'FUNCIONARIO') {
       if (this.clienteSelecionadoId === 0) {
@@ -1487,4 +1530,75 @@ onKeyDown(event: KeyboardEvent): void {
     }, 50);
   }
 }
+
+   gerarPixPdv(): void {
+  if (this.totalCarrinho <= 0) {
+    alert('⚠️ Carrinho vazio');
+    return;
+  }
+
+  this.gerandoPixPdv = true;
+  this.pixQrCodeImagePdv = null;
+  this.pixBrCodePdv = null;
+
+  this.http.post<any>('/api/pix/gerar', {
+    valor: this.totalCarrinho,
+    comentario: `Venda PDV à vista`,
+    reservaId: null
+  }).subscribe({
+    next: (resp) => {
+      this.pixQrCodeImagePdv = resp.qrCodeImage;
+      this.pixBrCodePdv = resp.brCode;
+      this.gerandoPixPdv = false;
+    },
+    error: (err) => {
+      this.gerandoPixPdv = false;
+      alert('❌ Erro ao gerar Pix: ' + (err.error?.erro || err.message));
+    }
+  });
+}
+
+copiarCodigoPixPdv(): void {
+  if (!this.pixBrCodePdv) return;
+  navigator.clipboard.writeText(this.pixBrCodePdv).then(() => {
+    alert('✅ Código copiado!');
+  });
+}
+
+imprimirPixPdv(): void {
+  if (!this.pixQrCodeImagePdv) return;
+  const janela = window.open('', '_blank', 'width=400,height=500');
+  if (!janela) return;
+  janela.document.write(`
+    <html>
+      <head><title>QR Code Pix</title></head>
+      <body style="text-align:center; font-family: sans-serif; padding: 20px;">
+        <h3>Pagamento Pix</h3>
+        <img src="${this.pixQrCodeImagePdv}" style="width:250px;height:250px;" />
+        <p style="font-size:10px; word-break:break-all; margin-top:15px;">${this.pixBrCodePdv}</p>
+      </body>
+    </html>
+  `);
+  janela.document.close();
+  janela.focus();
+  setTimeout(() => janela.print(), 500);
+} 
+
+  enviarPixWhatsAppPdv(): void {
+  if (!this.pixQrCodeImagePdv || !this.pixBrCodePdv) return;
+
+  const numero = prompt('Número do WhatsApp (com DDD):');
+  if (!numero) return;
+
+  this.http.post('/api/pix/enviar-whatsapp', {
+    numero: numero,
+    qrCodeImage: this.pixQrCodeImagePdv,
+    brCode: this.pixBrCodePdv,
+    valor: this.totalCarrinho
+  }).subscribe({
+    next: () => alert('✅ Enviado por WhatsApp com sucesso!'),
+    error: (err) => alert('❌ Erro ao enviar: ' + (err.error?.erro || err.message))
+  });
+}
+
   }

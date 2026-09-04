@@ -61,6 +61,9 @@ public class ContaAReceber {
     @Column(nullable = false, length = 200)
     private String descricao;
     
+    @Enumerated(jakarta.persistence.EnumType.STRING)
+    private com.divan.entity.Pagamento.FormaPagamentoEnum formaPagamento;
+    
     public enum StatusContaEnum {
         EM_ABERTO, PAGA, VENCIDA, ATRASADA, PENDENTE, CANCELADA, PARCIAL
     }
@@ -167,6 +170,16 @@ public class ContaAReceber {
 
 	public void setDescricao(String descricao) {
 		this.descricao = descricao;
+	}
+	
+	
+
+	public com.divan.entity.Pagamento.FormaPagamentoEnum getFormaPagamento() {
+		return formaPagamento;
+	}
+
+	public void setFormaPagamento(com.divan.entity.Pagamento.FormaPagamentoEnum formaPagamento) {
+		this.formaPagamento = formaPagamento;
 	}
 
 	@Override

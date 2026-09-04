@@ -225,6 +225,24 @@ interface FiltrosAvancados {
                   title="Excluir">
                   🗑️
                 </button>
+
+                <button
+  *hasPermission="'CONTA_RECEBER_PAGAMENTO'"
+  [hidden]="conta.status !== 'PAGA'"
+  class="btn-acao btn-reabrir"
+  (click)="reabrirConta(conta)"
+  title="Reabrir conta (pagamento lançado por engano)">
+  ↩️
+</button>
+
+   <button
+  *hasPermission="'CONTA_RECEBER_PAGAMENTO'"
+  class="btn-acao btn-editar"
+  (click)="abrirModalEdicao(conta)"
+  title="Editar/corrigir conta">
+  ✏️
+</button>
+
                 <!-- ✅ IMPRIMIR FATURA INDIVIDUAL -->
                 <button 
                   *ngIf="temReserva(conta)"
@@ -512,6 +530,50 @@ interface FiltrosAvancados {
         </div>
       </div>
     </div>
+
+    <!-- MODAL EDITAR CONTA -->
+<div class="modal-overlay" *ngIf="modalEdicao">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <h2>✏️ Editar Conta</h2>
+    <div class="info-conta">
+      <p><strong>Cliente:</strong> {{ contaEdicaoSelecionada?.clienteNome }}</p>
+      <p><strong>Status atual:</strong> {{ contaEdicaoSelecionada?.status }}</p>
+    </div>
+    <div class="campo">
+      <label>Valor *</label>
+      <input type="text" [(ngModel)]="edicaoValor" appCurrencyInput placeholder="R$ 0,00">
+    </div>
+    <div class="campo">
+      <label>Descrição</label>
+      <input type="text" [(ngModel)]="edicaoDescricao" placeholder="Descrição da conta">
+    </div>
+    <div class="campo">
+      <label>Data de Vencimento</label>
+      <input type="date" [(ngModel)]="edicaoDataVencimento">
+    </div>
+    <div class="campo">
+      <label>Status</label>
+      <select [(ngModel)]="edicaoStatus">
+        <option value="EM_ABERTO">EM_ABERTO</option>
+        <option value="PENDENTE">PENDENTE</option>
+        <option value="PARCIAL">PARCIAL</option>
+        <option value="PAGA">PAGA</option>
+        <option value="VENCIDA">VENCIDA</option>
+        <option value="ATRASADA">ATRASADA</option>
+        <option value="CANCELADA">CANCELADA</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label>Motivo da correção *</label>
+      <input type="text" [(ngModel)]="edicaoMotivo" placeholder="Informe o motivo da alteração...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" (click)="modalEdicao = false">Cancelar</button>
+      <button class="btn-confirmar" (click)="confirmarEdicao()">✅ Confirmar</button>
+    </div>
+  </div>
+</div>
+
 
     <!-- ÁREA DE IMPRESSÃO (OCULTA NA TELA) -->
     <div class="print-only">
@@ -1255,6 +1317,14 @@ pagamentoLote = {
     formaPagamento: '',
     observacao: ''
   };
+  
+  modalEdicao = false;
+contaEdicaoSelecionada: ContaAReceber | null = null;
+edicaoValor = 0;
+edicaoDescricao = '';
+edicaoDataVencimento = '';
+edicaoStatus = '';
+edicaoMotivo = '';
 
 ngOnInit(): void {
   this.modalFiltros = true; // Abre direto no filtro, sem carregar nada ainda
@@ -2400,6 +2470,8 @@ formatarDataHora(dataHora: string): string {
   return new Date(dataHora).toLocaleString('pt-BR');
 }
 
+
+
 abrirModalDesconto(conta: ContaAReceber): void {
   this.contaDescontoSelecionada = conta;
   this.valorDesconto = 0;
@@ -2428,4 +2500,57 @@ confirmarDesconto(): void {
   });
 }
 
-} 
+reabrirConta(conta: ContaAReceber): void {
+  const motivo = window.prompt(
+    'Confirma reabertura desta conta? Descreva o motivo (ex: pagamento lançado por engano):'
+  );
+
+  if (motivo === null) {
+    return;
+  }
+
+  this.contaReceberService.reabrirConta(conta.id, motivo || undefined).subscribe({
+    next: () => {
+      alert('✅ Conta reaberta com sucesso!');
+      this.carregarDados(); // ajusta pro nome real, confirme com o excluir()
+    },
+    error: (err) => {
+      console.error('Erro ao reabrir conta', err);
+      alert(err.error?.erro || 'Erro ao reabrir conta');
+    }
+  });
+}
+
+ 
+
+  abrirModalEdicao(conta: ContaAReceber): void {
+  this.contaEdicaoSelecionada = conta;
+  this.edicaoValor = conta.valor;
+  this.edicaoDescricao = conta.descricao || '';
+  this.edicaoDataVencimento = conta.dataVencimento ? conta.dataVencimento.substring(0, 10) : '';
+  this.edicaoStatus = conta.status;
+  this.edicaoMotivo = '';
+  this.modalEdicao = true;
+}
+
+confirmarEdicao(): void {
+  if (this.edicaoValor <= 0) { alert('Informe um valor válido'); return; }
+  if (!this.edicaoMotivo.trim()) { alert('Informe o motivo da correção'); return; }
+
+  this.http.put(`/api/contas-receber/${this.contaEdicaoSelecionada!.id}/editar`, {
+    valor: this.edicaoValor,
+    descricao: this.edicaoDescricao,
+    dataVencimento: this.edicaoDataVencimento,
+    status: this.edicaoStatus,
+    motivo: this.edicaoMotivo
+  }).subscribe({
+    next: () => {
+      alert('✅ Conta editada com sucesso!');
+      this.modalEdicao = false;
+      this.carregarDados();
+    },
+    error: (err) => alert('❌ Erro: ' + (err.error?.erro || err.message))
+  });
+}
+    
+}    

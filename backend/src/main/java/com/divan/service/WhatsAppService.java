@@ -27,11 +27,8 @@ public class WhatsAppService {
     private String instancia;
 
     @Value("${evolution.api.timeout-segundos:10}")
-    private int timeoutSegundos;
-   
-    
-    
-    
+    private int timeoutSegundos;   
+        
     @Value("${evolution.api.instancia-funcionarios}")
     private String instanciaFuncionarios;
     
@@ -107,6 +104,43 @@ public class WhatsAppService {
 
         } catch (Exception e) {
             String erro = "Erro ao enviar WhatsApp para " + numero + ": " + e.getMessage();
+            log.error("❌ {}", erro, e);
+            return ResultadoEnvio.erro(erro);
+        }
+    }
+    
+    
+    /**
+     * Envia uma imagem (via URL) pelo WhatsApp, com legenda opcional.
+     *
+     * @param numero    número completo com DDI (ex: 5582996082903)
+     * @param imagemUrl URL pública da imagem a enviar
+     * @param legenda   texto que acompanha a imagem (pode ser vazio)
+     * @return resultado do envio
+     */
+    public ResultadoEnvio enviarImagem(String numero, String imagemUrl, String legenda) {
+        try {
+            String numeroLimpo = limparNumero(numero);
+            if (numeroLimpo == null) {
+                return ResultadoEnvio.erro("Número inválido: " + numero);
+            }
+            Map<String, Object> body = new HashMap<>();
+            body.put("number", numeroLimpo);
+            body.put("mediatype", "image");
+            body.put("media", imagemUrl);
+            if (legenda != null && !legenda.isBlank()) {
+                body.put("caption", legenda);
+            }
+            RestClient client = criarClienteComTimeout();
+            String response = client.post()
+                    .uri("/message/sendMedia/{instancia}", instancia)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+            log.info("✅ WhatsApp (imagem) enviado para {}: {}", numeroLimpo, response);
+            return ResultadoEnvio.sucesso(response);
+        } catch (Exception e) {
+            String erro = "Erro ao enviar imagem WhatsApp para " + numero + ": " + e.getMessage();
             log.error("❌ {}", erro, e);
             return ResultadoEnvio.erro(erro);
         }

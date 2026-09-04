@@ -1,6 +1,7 @@
 package com.divan.dto;
 
 import com.divan.entity.ContaAReceber.StatusContaEnum;
+import com.divan.entity.Pagamento;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -33,6 +34,8 @@ public class ContaAReceberDTO {
     
     private LocalDate dataCheckin;
     private LocalDate dataCheckout;
+    
+    private Pagamento.FormaPagamentoEnum formaPagamento;
     
     
 	public Long getId() {
@@ -186,6 +189,7 @@ public class ContaAReceberDTO {
 		this.dataCheckout = dataCheckout;
 	}
 	
-	
+	public Pagamento.FormaPagamentoEnum getFormaPagamento() { return formaPagamento; }
+	public void setFormaPagamento(Pagamento.FormaPagamentoEnum formaPagamento) { this.formaPagamento = formaPagamento; }
     	    
 }

@@ -1,17 +1,28 @@
 package com.divan.controller;
 
 import com.divan.dto.ContaAReceberDTO;
+import com.divan.dto.ContaAReceberEdicaoDTO;
+
 import com.divan.dto.ContaAReceberRequestDTO;
 import com.divan.dto.PagamentoContaReceberDTO;
 import com.divan.entity.ContaAReceber.StatusContaEnum;
 import com.divan.repository.ContaAReceberRepository;
+import com.divan.repository.FechamentoCaixaRepository;
 import com.divan.service.ContaAReceberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import com.divan.entity.FechamentoCaixa;
+import java.time.LocalDate;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import com.divan.entity.LogAuditoria;
+
+import java.time.LocalDateTime;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -23,11 +34,19 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class ContaAReceberController {
 
-    private final ContaAReceberService contaAReceberService;
-     
-    @Autowired
-    private ContaAReceberRepository contaAReceberRepository;
+	private final ContaAReceberService contaAReceberService;
 
+	@Autowired
+	private ContaAReceberRepository contaAReceberRepository;
+
+	@Autowired
+	private com.divan.repository.UsuarioRepository usuarioRepository;
+
+	@Autowired
+	private com.divan.repository.LogAuditoriaRepository logAuditoriaRepository;
+
+	@Autowired
+	private FechamentoCaixaRepository caixaRepository;
     // ========== LISTAR ==========
     
     @GetMapping
@@ -118,6 +137,63 @@ public class ContaAReceberController {
         }
     }
     
+    @PatchMapping("/{id}/reabrir")
+    public ResponseEntity<?> reabrirConta(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        try {
+            String motivo = body != null && body.get("motivo") != null ? body.get("motivo").toString() : null;
+            ContaAReceberDTO conta = contaAReceberService.reabrirConta(id, motivo);
+
+            // ✅ LOG AUDITORIA
+            try {
+                String username = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication().getName();
+                LogAuditoria log = new LogAuditoria();
+                log.setAcao("REABRIR_CONTA_RECEBER");
+                log.setDescricao("Conta a Receber reaberta — ID " + id
+                    + (motivo != null && !motivo.isBlank() ? " — Motivo: " + motivo : ""));
+                log.setDataHora(LocalDateTime.now());
+                usuarioRepository.findByUsername(username).ifPresent(log::setUsuario);
+                logAuditoriaRepository.save(log);
+            } catch (Exception logEx) {
+                System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+            }
+
+            return ResponseEntity.ok(conta);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+    
+    @PutMapping("/{id}/editar")
+    public ResponseEntity<?> editarConta(
+            @PathVariable Long id,
+            @RequestBody ContaAReceberEdicaoDTO dto) {
+        try {
+            ContaAReceberDTO conta = contaAReceberService.editarConta(id, dto);
+
+            // ✅ LOG AUDITORIA
+            try {
+                String username = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication().getName();
+                LogAuditoria log = new LogAuditoria();
+                log.setAcao("EDITAR_CONTA_RECEBER");
+                log.setDescricao("Conta a Receber editada — ID " + id
+                    + (dto.getMotivo() != null && !dto.getMotivo().isBlank() ? " — Motivo: " + dto.getMotivo() : ""));
+                log.setDataHora(LocalDateTime.now());
+                usuarioRepository.findByUsername(username).ifPresent(log::setUsuario);
+                logAuditoriaRepository.save(log);
+            } catch (Exception logEx) {
+                System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+            }
+
+            return ResponseEntity.ok(conta);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+        
     @GetMapping("/pendencias-pessoais")
     public ResponseEntity<List<Map<String, Object>>> listarPendenciasPessoais() {
         List<Map<String, Object>> resultado = contaAReceberRepository.findPendenciasPessoais().stream()
@@ -151,6 +227,53 @@ public class ContaAReceberController {
             })
             .collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(resultado);
+    }
+    
+    @PostMapping("/corrigir-para-faturado")
+    public ResponseEntity<?> corrigirParaFaturado(@RequestBody Map<String, Object> body) {
+        try {
+            Long reservaId = Long.parseLong(body.get("reservaId").toString());
+            BigDecimal valor = new BigDecimal(body.get("valor").toString());
+            Long empresaId = Long.parseLong(body.get("empresaId").toString());
+            LocalDate dataVencimento = LocalDate.parse(body.get("dataVencimento").toString());
+            String descricao = body.get("descricao") != null ? body.get("descricao").toString() : null;
+            String motivo = body.get("motivo") != null
+                ? body.get("motivo").toString()
+                : "Correção: forma de pagamento incorreta";
+
+            String login = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication().getName();
+            var usuarioOpt = usuarioRepository.findByUsername(login);
+            if (usuarioOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Usuário não encontrado"));
+            }
+            boolean caixaAberto = caixaRepository
+                .findByUsuarioIdAndStatus(usuarioOpt.get().getId(), FechamentoCaixa.StatusCaixa.ABERTO)
+                .isPresent();
+            if (!caixaAberto) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("erro", "Caixa não aberto. Abra o caixa antes de registrar essa correção."));
+            }
+
+            ContaAReceberDTO conta = contaAReceberService.corrigirParaFaturado(
+                reservaId, valor, empresaId, dataVencimento, descricao, motivo);
+
+            // ✅ LOG AUDITORIA
+            try {
+                LogAuditoria log = new LogAuditoria();
+                log.setAcao("CORRIGIR_PARA_FATURADO");
+                log.setDescricao("Reserva " + reservaId + " — pagamento revertido e conta a receber criada — Motivo: " + motivo);
+                log.setDataHora(LocalDateTime.now());
+                usuarioOpt.ifPresent(log::setUsuario);
+                logAuditoriaRepository.save(log);
+            } catch (Exception logEx) {
+                System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+            }
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(conta);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
     }
     
 }

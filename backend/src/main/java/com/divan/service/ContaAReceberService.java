@@ -19,7 +19,7 @@ import com.divan.repository.ReservaRepository;
 import com.divan.repository.VwExtratoCompletoRepository;
 
 import lombok.RequiredArgsConstructor;
-
+import com.divan.dto.ContaAReceberEdicaoDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +49,7 @@ public class ContaAReceberService {
     private final EmpresaRepository empresaRepository;
     private final HospedagemHospedeRepository hospedagemHospedeRepository;
     private final ExtratoReservaRepository extratoReservaRepository;
+    private final PagamentoService pagamentoService;
     // ========== LISTAR ==========
     
     public List<ContaAReceberDTO> listarTodas() {
@@ -144,6 +145,7 @@ public class ContaAReceberService {
         conta.setValorPago(novoValorPago);
         conta.setSaldo(novoSaldo);
         conta.setDataPagamento(dto.getDataPagamento());
+        conta.setFormaPagamento(dto.getFormaPagamento());
 
         if (novoSaldo.compareTo(BigDecimal.ZERO) == 0) {
             conta.setStatus(StatusContaEnum.PAGA);
@@ -369,6 +371,7 @@ public class ContaAReceberService {
         dto.setDataPagamento(conta.getDataPagamento());
         dto.setStatus(conta.getStatus());
         dto.setDescricao(conta.getDescricao());
+        dto.setFormaPagamento(conta.getFormaPagamento());
         
         // Calcular dias vencido
         if (conta.getStatus() == StatusContaEnum.VENCIDA || 
@@ -462,5 +465,114 @@ public class ContaAReceberService {
 
         return converterParaDTO(conta);
     }
+    
+    @Transactional
+    public ContaAReceberDTO reabrirConta(Long id, String motivo) {
+        ContaAReceber conta = contaAReceberRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Conta não encontrada"));
+
+        if (conta.getStatus() != StatusContaEnum.PAGA) {
+            throw new RuntimeException("Esta conta não está paga — só é possível reabrir contas com status PAGA");
+        }
+
+        BigDecimal valorPagoAnterior = conta.getValorPago() != null ? conta.getValorPago() : BigDecimal.ZERO;
+
+        // Reabre a conta
+        conta.setStatus(StatusContaEnum.EM_ABERTO);
+        conta.setValorPago(BigDecimal.ZERO);
+        conta.setSaldo(conta.getValor());
+        conta.setDataPagamento(null);
+        conta.setObservacao((conta.getObservacao() != null ? conta.getObservacao() + " | " : "") +
+            "CORRIGIDO em " + LocalDateTime.now() + ": conta reaberta — " +
+            (motivo != null && !motivo.isBlank() ? motivo : "pagamento lançado por engano"));
+        conta = contaAReceberRepository.save(conta);
+
+        // Lança o estorno no extrato e reflete na reserva
+        if (conta.getReserva() != null && valorPagoAnterior.compareTo(BigDecimal.ZERO) > 0) {
+            ExtratoReserva extrato = new ExtratoReserva();
+            extrato.setReserva(conta.getReserva());
+            extrato.setDataHoraLancamento(LocalDateTime.now());
+            extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.ESTORNO);
+            extrato.setDescricao("Reabertura de conta — " + (motivo != null && !motivo.isBlank() ? motivo : "pagamento lançado por engano"));
+            extrato.setQuantidade(1);
+            extrato.setValorUnitario(valorPagoAnterior.negate());
+            extrato.setTotalLancamento(valorPagoAnterior.negate());
+            extrato.setNotaVendaId(null);
+            extratoReservaRepository.save(extrato);
+
+            Reserva reserva = conta.getReserva();
+            BigDecimal totalRecebidoAtual = reserva.getTotalRecebido() != null ? reserva.getTotalRecebido() : BigDecimal.ZERO;
+            BigDecimal totalApagarAtual = reserva.getTotalApagar() != null ? reserva.getTotalApagar() : BigDecimal.ZERO;
+            reserva.setTotalRecebido(totalRecebidoAtual.subtract(valorPagoAnterior));
+            reserva.setTotalApagar(totalApagarAtual.add(valorPagoAnterior));
+            reservaRepository.save(reserva);
+        }
+
+        return converterParaDTO(conta);
+    }
+    
+    @Transactional
+    public ContaAReceberDTO editarConta(Long id, ContaAReceberEdicaoDTO dto) {
+        ContaAReceber conta = contaAReceberRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Conta não encontrada"));
+
+        BigDecimal valorAnterior = conta.getValor();
+        StringBuilder alteracoes = new StringBuilder();
+
+        if (dto.getValor() != null && dto.getValor().compareTo(valorAnterior) != 0) {
+            alteracoes.append("Valor: R$ ").append(valorAnterior).append(" → R$ ").append(dto.getValor()).append("; ");
+            conta.setValor(dto.getValor());
+            // Recalcula saldo mantendo o valor já pago
+            BigDecimal valorPago = conta.getValorPago() != null ? conta.getValorPago() : BigDecimal.ZERO;
+            conta.setSaldo(dto.getValor().subtract(valorPago));
+        }
+        if (dto.getDescricao() != null && !dto.getDescricao().equals(conta.getDescricao())) {
+            alteracoes.append("Descrição alterada; ");
+            conta.setDescricao(dto.getDescricao());
+        }
+        if (dto.getDataVencimento() != null && !dto.getDataVencimento().equals(conta.getDataVencimento())) {
+            alteracoes.append("Vencimento: ").append(conta.getDataVencimento()).append(" → ").append(dto.getDataVencimento()).append("; ");
+            conta.setDataVencimento(dto.getDataVencimento());
+        }
+        if (dto.getStatus() != null && dto.getStatus() != conta.getStatus()) {
+            alteracoes.append("Status: ").append(conta.getStatus()).append(" → ").append(dto.getStatus()).append("; ");
+            conta.setStatus(dto.getStatus());
+        }
+        
+        if (dto.getFormaPagamento() != null && dto.getFormaPagamento() != conta.getFormaPagamento()) {
+            alteracoes.append("Forma de pagamento: ").append(conta.getFormaPagamento()).append(" → ").append(dto.getFormaPagamento()).append("; ");
+            conta.setFormaPagamento(dto.getFormaPagamento());
+        }
+
+        if (alteracoes.length() > 0) {
+            String motivoTexto = dto.getMotivo() != null && !dto.getMotivo().isBlank() ? " — Motivo: " + dto.getMotivo() : "";
+            conta.setObservacao((conta.getObservacao() != null ? conta.getObservacao() + " | " : "") +
+                "EDITADO em " + LocalDateTime.now() + ": " + alteracoes + motivoTexto);
+        }
+
+        conta = contaAReceberRepository.save(conta);
+        return converterParaDTO(conta);
+    }
+    
+    @Transactional
+    public ContaAReceberDTO corrigirParaFaturado(Long reservaId, BigDecimal valor, Long empresaId,
+            LocalDate dataVencimento, String descricao, String motivo) {
+
+        // 1. Estorna o pagamento indevido (dinheiro/cartão)
+        pagamentoService.estornarPagamento(reservaId, valor, motivo);
+
+        // 2. Cria a conta a receber para a empresa
+        ContaAReceberRequestDTO dto = new ContaAReceberRequestDTO();
+        dto.setReservaId(reservaId);
+        dto.setEmpresaId(empresaId);
+        dto.setValor(valor);
+        dto.setDataVencimento(dataVencimento);
+        dto.setDescricao(descricao != null && !descricao.isBlank()
+            ? descricao
+            : "Faturado — correção: " + motivo);
+
+        return this.criar(dto);
+    }
+    
     
 }

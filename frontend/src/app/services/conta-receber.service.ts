@@ -13,7 +13,8 @@ export interface ContaAReceber {
   saldo: number;
   dataVencimento: string;
   dataPagamento?: string;
-  status: 'PENDENTE' | 'PARCIAL' | 'PAGA' | 'ATRASADA' | 'CANCELADA';
+  status: 'PENDENTE' | 'PARCIAL' | 'PAGA' | 'ATRASADA' | 'CANCELADA' | 'EM_ABERTO' | 'VENCIDA';
+  formaPagamento?: string;
   descricao: string;
   diasVencido: number;
   pagoAVista?: number;
@@ -43,6 +44,15 @@ export interface PagamentoConta {
   dataPagamento: string;
   formaPagamento: string;
   observacao?: string;
+}
+
+export interface ContaAReceberEdicao {
+  valor?: number;
+  descricao?: string;
+  dataVencimento?: string;
+  status?: 'PENDENTE' | 'PARCIAL' | 'PAGA' | 'ATRASADA' | 'CANCELADA' | 'EM_ABERTO' | 'VENCIDA';
+  formaPagamento?: string;
+  motivo?: string;
 }
 
 @Injectable({
@@ -95,4 +105,13 @@ export class ContaReceberService {
   excluir(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
+
+  reabrirConta(id: number, motivo?: string): Observable<ContaAReceber> {
+  return this.http.patch<ContaAReceber>(`${this.apiUrl}/${id}/reabrir`, { motivo });
+}
+
+editarConta(id: number, dados: ContaAReceberEdicao): Observable<ContaAReceber> {
+  return this.http.put<ContaAReceber>(`${this.apiUrl}/${id}/editar`, dados);
+}
+
 } 

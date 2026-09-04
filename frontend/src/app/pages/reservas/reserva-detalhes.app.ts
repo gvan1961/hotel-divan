@@ -208,6 +208,23 @@ import { environment } from '../../../environments/environment';
       title="Alterar checkout">
       ✏️
     </button>
+    <!-- ===== NOVO: Corrigir para Faturado ===== -->
+<ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
+  <button class="btn-acao"
+          *ngIf="getEmpresaIdCliente()"
+          (click)="corrigirParaFaturado()"
+          title="Corrigir forma de pagamento para Faturado (empresa)">
+    🔁 Corrigir para Faturado
+  </button>
+</ng-container>
+
+<ng-container *hasPermission="'RESERVA_EDITAR'">
+ <button class="btn-acao btn-transferir"
+    *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
+    (click)="abrirModalTransferencia()">
+        🔄 Transferir Apartamento
+      </button>
+    </ng-container>
   </div>
   <div class="info-item-mini">
     <span class="label">Hóspedes:</span>
@@ -1002,6 +1019,26 @@ import { environment } from '../../../environments/environment';
                 <option *ngFor="let forma of formasPagamento" [value]="forma.codigo">{{ forma.nome }}</option>
               </select>
             </div>
+         
+            <!-- ===== NOVO: Gerar QR Code Pix ===== -->
+<div class="campo" *ngIf="pagFormaPagamento === 'PIX'">
+  <button type="button" class="btn-gerar-pix" (click)="gerarPix()" [disabled]="gerandoPix">
+    {{ gerandoPix ? '⏳ Gerando...' : '📱 Gerar QR Code Pix' }}
+  </button>
+
+  <div class="pix-resultado" *ngIf="pixQrCodeImage">
+    <img [src]="pixQrCodeImage" alt="QR Code Pix" class="pix-qrcode-img" />
+    <div class="pix-codigo">
+      <label>Código Pix (copia e cola):</label>
+      <textarea readonly rows="3">{{ pixBrCode }}</textarea>
+      <button type="button" class="btn-copiar-pix" (click)="copiarCodigoPix()">📋 Copiar Código</button>
+      <button type="button" class="btn-imprimir-pix" (click)="imprimirPix()">🖨️ Imprimir</button>
+      <button type="button" class="btn-whatsapp-pix" (click)="enviarPixWhatsApp()">📲 Enviar WhatsApp</button>
+    </div>
+  </div>
+</div> 
+
+
             <div class="campo">
               <label>Observação</label>
               <textarea [(ngModel)]="pagObs" rows="3"></textarea>
@@ -2971,6 +3008,16 @@ import { environment } from '../../../environments/environment';
     .btn-ver-extrato-completo:hover { background: #e0a800; }
     .btn-ver-extrato-completo:disabled { opacity: .6; cursor: not-allowed; }
 
+    .btn-gerar-pix { background: #32bcad; color: white; border: none; padding: 10px 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 5px; }
+.btn-gerar-pix:disabled { background: #ccc; cursor: not-allowed; }
+.pix-resultado { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+.pix-qrcode-img { width: 220px; height: 220px; }
+.pix-codigo { width: 100%; }
+.pix-codigo textarea { width: 100%; font-size: 0.75rem; font-family: monospace; resize: none; }
+.btn-copiar-pix, .btn-imprimir-pix { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; margin-right: 6px; background: #667eea; color: white; }
+
+.btn-whatsapp-pix { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; background: #25D366; color: white; }
+
     `]
   })
 
@@ -3134,6 +3181,10 @@ salvandoAdiantamento = false;
 reservaTemAssinatura = false;
 
 adicionandoHospede = false;
+
+gerandoPix = false;
+pixQrCodeImage: string | null = null;
+pixBrCode: string | null = null;
   
 get podeCancelar(): boolean {
   const status = this.reserva?.status;
@@ -4247,6 +4298,8 @@ gerarHtmlFatura(valorTotal: number, pagoAVista: number, valorFaturado: number, s
 
     fecharModalPagamento(): void {
       this.modalPagamento = false;
+      this.pixQrCodeImage = null;
+      this.pixBrCode = null;
     }
 
     salvarPagamento(): void {
@@ -4271,6 +4324,12 @@ gerarHtmlFatura(valorTotal: number, pagoAVista: number, valorFaturado: number, s
         alert('Valor inválido');
         return;
       }  
+
+      if (this.pagFormaPagamento === 'PIX' && !this.pixQrCodeImage) {
+  alert('⚠️ Gere o QR Code Pix antes de confirmar o pagamento, para que o cliente possa efetuar o pagamento.');
+  return;
+}
+
       console.log('pagValor antes do DTO:', this.pagValor, typeof this.pagValor);
       const usuarioId = this.authService.getUsuarioId();
       console.log('👤 Usuario ID:', usuarioId);
@@ -5543,6 +5602,64 @@ this.http.post(`/api/reservas/${this.reserva.id}/hospedes`, request).subscribe({
       console.error('❌ Erro no checkout parcial:', err);
       const erro = err.error?.erro || err.error?.message || err.message || 'Erro desconhecido';
       alert('❌ Erro ao fazer checkout: ' + erro);
+    }
+  });
+}
+
+corrigirParaFaturado(): void {
+  if (!this.reserva) {
+    alert('❌ Reserva não carregada');
+    return;
+  }
+
+  const empresaId = (this.reserva.cliente as any)?.empresa?.id;
+  const empresaNome = (this.reserva.cliente as any)?.empresaNome || 'esta empresa';
+
+  if (!empresaId) {
+    alert('❌ Esta reserva não tem empresa vinculada. Vincule uma empresa ao cliente antes de corrigir.');
+    return;
+  }
+
+  const confirmar = confirm(
+    `Corrigir forma de pagamento para FATURADO?\n\n` +
+    `Isso vai:\n` +
+    `1. Estornar o pagamento indevido\n` +
+    `2. Criar uma Conta a Receber para ${empresaNome}\n\n` +
+    `Deseja continuar?`
+  );
+  if (!confirmar) return;
+
+  const valorDigitado = prompt('Valor a corrigir (R$):');
+  if (!valorDigitado) return;
+  const valor = parseFloat(valorDigitado.replace(',', '.'));
+  if (isNaN(valor) || valor <= 0) {
+    alert('⚠️ Valor inválido.');
+    return;
+  }
+
+  const dataVencimento = prompt('Data de vencimento (AAAA-MM-DD):', new Date().toISOString().substring(0, 10));
+  if (!dataVencimento) return;
+
+  const motivo = prompt('Motivo da correção:', 'Forma de pagamento lançada incorretamente pelo recepcionista');
+  if (!motivo || motivo.trim() === '') {
+    alert('⚠️ Informe o motivo.');
+    return;
+  }
+
+  this.http.post('/api/contas-receber/corrigir-para-faturado', {
+    reservaId: this.reserva.id,
+    valor: valor,
+    empresaId: empresaId,
+    dataVencimento: dataVencimento,
+    descricao: `Faturado — Reserva #${this.reserva.id}`,
+    motivo: motivo
+  }).subscribe({
+    next: () => {
+      alert('✅ Correção realizada! Pagamento estornado e conta a receber criada.');
+      this.carregarReserva(this.reserva!.id);
+    },
+    error: (err: any) => {
+      alert('❌ Erro ao corrigir: ' + (err.error?.erro || err.message));
     }
   });
 }
@@ -6891,6 +7008,10 @@ carregarPendenciasExtrasCliente(): void {
     return '⭐'.repeat(n);
   }
 
+  getEmpresaIdCliente(): number | null {
+  return (this.reserva?.cliente as any)?.empresa?.id ?? null;
+}
+
   carregarExtratoCompleto(): void {
     if (!this.reserva) return;
     this.carregandoExtratoCompleto = true;
@@ -6910,6 +7031,78 @@ carregarPendenciasExtrasCliente(): void {
       }
     });
   }
+
+  gerarPix(): void {
+  if (this.pagValor <= 0) {
+    alert('⚠️ Informe um valor válido antes de gerar o Pix');
+    return;
+  }
+  if (!this.reserva) return;
+
+  this.gerandoPix = true;
+  this.pixQrCodeImage = null;
+  this.pixBrCode = null;
+
+  this.http.post<any>('/api/pix/gerar', {
+    valor: this.pagValor,
+    comentario: `Reserva #${this.reserva.id} - ${this.reserva.cliente?.nome || ''}`,
+    reservaId: this.reserva.id
+  }).subscribe({
+    next: (resp) => {
+      this.pixQrCodeImage = resp.qrCodeImage;
+      this.pixBrCode = resp.brCode;
+      this.gerandoPix = false;
+    },
+    error: (err) => {
+      this.gerandoPix = false;
+      alert('❌ Erro ao gerar Pix: ' + (err.error?.erro || err.message));
+    }
+  });
+}
+
+copiarCodigoPix(): void {
+  if (!this.pixBrCode) return;
+  navigator.clipboard.writeText(this.pixBrCode).then(() => {
+    alert('✅ Código copiado!');
+  });
+}
+
+imprimirPix(): void {
+  if (!this.pixQrCodeImage) return;
+  const janela = window.open('', '_blank', 'width=400,height=500');
+  if (!janela) return;
+  janela.document.write(`
+    <html>
+      <head><title>QR Code Pix</title></head>
+      <body style="text-align:center; font-family: sans-serif; padding: 20px;">
+        <h3>Pagamento Pix</h3>
+        <img src="${this.pixQrCodeImage}" style="width:250px;height:250px;" />
+        <p style="font-size:10px; word-break:break-all; margin-top:15px;">${this.pixBrCode}</p>
+      </body>
+    </html>
+  `);
+  janela.document.close();
+  janela.focus();
+  setTimeout(() => janela.print(), 500);
+}
+
+enviarPixWhatsApp(): void {
+  if (!this.pixQrCodeImage || !this.pixBrCode) return;
+
+  const celularCliente = (this.reserva?.cliente as any)?.celular || '';
+  const numero = prompt('Número do WhatsApp (com DDD):', celularCliente);
+  if (!numero) return;
+
+  this.http.post('/api/pix/enviar-whatsapp', {
+    numero: numero,
+    qrCodeImage: this.pixQrCodeImage,
+    brCode: this.pixBrCode,
+    valor: this.pagValor
+  }).subscribe({
+    next: () => alert('✅ Enviado por WhatsApp com sucesso!'),
+    error: (err) => alert('❌ Erro ao enviar: ' + (err.error?.erro || err.message))
+  });
+}
 
 voltarAoPainel(): void {
   this.router.navigate(['/painel-recepcao']);
