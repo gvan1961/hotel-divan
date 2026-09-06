@@ -9,72 +9,109 @@ import { Router } from '@angular/router';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="container">
-      <div class="header">
-        <h1>🔍 Log de Auditoria</h1>
-        <button class="btn-voltar" (click)="voltar()">← Voltar</button>
-      </div>
+   
+  <div class="container">
+  <div class="header">
+    <h1>🔍 Log de Auditoria</h1>
+    <div class="header-botoes">
+      <button class="btn-filtros" (click)="abrirModalFiltros()">🔍 Filtros</button>
+      <button class="btn-voltar" (click)="voltar()">← Voltar</button>
+    </div>
+  </div>
 
-      <!-- FILTROS -->
-      <div class="filtros">
-        <input
-          type="text"
-          placeholder="Filtrar por funcionário..."
-          [(ngModel)]="filtroFuncionario"
-          (input)="filtrar()"
-          class="input-filtro" />
-        <input
-          type="text"
-          placeholder="Filtrar por ação..."
-          [(ngModel)]="filtroAcao"
-          (input)="filtrar()"
-          class="input-filtro" />
-        <input
-          type="date"
-          [(ngModel)]="filtroData"
-          (input)="filtrar()"
-          class="input-filtro" />
-        <button class="btn-limpar" (click)="limparFiltros()">✕ Limpar</button>
-      </div>
+  <!-- TABELA -->
+  <div class="tabela-wrapper" *ngIf="jaBuscou">
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Data/Hora</th>
+          <th>Funcionário</th>
+          <th>Ação</th>
+          <th>Descrição</th>
+          <th>Reserva</th>
+          <th>Apartamento</th>
+          <th>Hóspede</th>
+          <th>Empresa</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let log of logs" [class]="getClassAcao(log.acao)">
+          <td>{{ formatarDataHora(log.dataHora) }}</td>
+          <td>{{ log.usuario?.nome || log.usuario?.username || 'Sistema' }}</td>
+          <td>
+            <span [class]="'badge-acao badge-' + log.acao.toLowerCase()">
+              {{ getLabelAcao(log.acao) }}
+            </span>
+          </td>
+          <td>{{ log.descricao }}</td>
+          <td>
+            <span *ngIf="log.reserva?.id" class="link-reserva" (click)="irParaReserva(log.reserva.id)">
+              #{{ log.reserva.id }}
+            </span>
+          </td>
+          <td>{{ log.reserva?.apartamento || '-' }}</td>
+          <td>{{ log.reserva?.clienteNome || '-' }}</td>
+          <td>{{ log.reserva?.empresaNome || '-' }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="vazio" *ngIf="logs.length === 0">
+      Nenhum registro encontrado com os filtros aplicados.
+    </div>
+  </div>
 
-      <!-- TABELA -->
-      <div class="tabela-wrapper">
-        <table class="tabela">
-          <thead>
-            <tr>
-              <th>Data/Hora</th>
-              <th>Funcionário</th>
-              <th>Ação</th>
-              <th>Descrição</th>
-              <th>Reserva</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let log of logsFiltrados" [class]="getClassAcao(log.acao)">
-              <td>{{ formatarDataHora(log.dataHora) }}</td>
-              <td>{{ log.usuario?.nome || log.usuario?.username || 'Sistema' }}</td>
-              <td>
-                <span [class]="'badge-acao badge-' + log.acao.toLowerCase()">
-                  {{ getLabelAcao(log.acao) }}
-                </span>
-              </td>
-              <td>{{ log.descricao }}</td>
-              <td>
-                <span 
-                  *ngIf="log.reserva?.id"
-                  class="link-reserva"
-                  (click)="irParaReserva(log.reserva.id)">
-                  #{{ log.reserva.id }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="vazio" *ngIf="logsFiltrados.length === 0">
-          Nenhum registro encontrado.
+  <div class="vazio" *ngIf="!jaBuscou">
+    <p>🔍 Use os filtros acima para buscar registros de auditoria.</p>
+    <button class="btn" (click)="abrirModalFiltros()">Abrir Filtros</button>
+  </div>
+
+  <!-- MODAL FILTROS -->
+  <div class="modal-overlay" *ngIf="modalFiltros" (click)="fecharModalFiltros()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h2>🔍 Filtros de Auditoria</h2>
+
+      <div class="campo">
+        <label>Funcionário</label>
+        <input type="text" [(ngModel)]="filtros.funcionario" placeholder="Nome do funcionário..." />
+      </div>
+      <div class="campo">
+        <label>Ação</label>
+        <input type="text" [(ngModel)]="filtros.acao" placeholder="Ex: CHECKIN, PAGAMENTO..." />
+      </div>
+      <div class="campo-linha">
+        <div class="campo">
+          <label>Data Início</label>
+          <input type="date" [(ngModel)]="filtros.dataInicio" />
+        </div>
+        <div class="campo">
+          <label>Data Fim</label>
+          <input type="date" [(ngModel)]="filtros.dataFim" />
         </div>
       </div>
+      <div class="campo">
+        <label>Apartamento</label>
+        <input type="text" [(ngModel)]="filtros.apartamento" placeholder="Número do apartamento..." />
+      </div>
+      <div class="campo">
+        <label>Código da Reserva</label>
+        <input type="number" [(ngModel)]="filtros.reservaId" placeholder="Ex: 1890" />
+      </div>
+      <div class="campo">
+        <label>Nome do Hóspede</label>
+        <input type="text" [(ngModel)]="filtros.hospede" placeholder="Nome do hóspede..." />
+      </div>
+      <div class="campo">
+        <label>Empresa</label>
+        <input type="text" [(ngModel)]="filtros.empresa" placeholder="Nome da empresa..." />
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-voltar-admin" (click)="voltarAoAdministrativo()">← Administrativo</button>
+        <button class="btn-confirmar" (click)="aplicarFiltros()">🔍 Buscar</button>
+      </div>
     </div>
+  </div>
+</div>
   `,
   styles: [`
     .container { padding: 20px; max-width: 1200px; margin: 0 auto; }
@@ -134,47 +171,74 @@ import { Router } from '@angular/router';
     .vazio {
       text-align: center; padding: 40px; color: #aaa;
     }
+
+    .header-botoes { display: flex; gap: 10px; }
+.btn-filtros { background: #667eea; color: #fff; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-content { background: #fff; padding: 24px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+.campo { margin-bottom: 14px; }
+.campo label { display: block; margin-bottom: 4px; font-weight: 600; color: #555; font-size: 0.85rem; }
+.campo input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+.campo-linha { display: flex; gap: 10px; }
+.campo-linha .campo { flex: 1; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.btn-cancelar { background: #6c757d; color: #fff; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
+.btn-confirmar { background: #667eea; color: #fff; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
+
   `]
 })
 export class AuditoriaComponent implements OnInit {
 
   logs: any[] = [];
-  logsFiltrados: any[] = [];
-  filtroFuncionario = '';
-  filtroAcao = '';
-  filtroData = '';
+  jaBuscou = false;
+  modalFiltros = false;
+
+  filtros = {
+    funcionario: '',
+    acao: '',
+    dataInicio: '',
+    dataFim: '',
+    apartamento: '',
+    reservaId: null as number | null,
+    hospede: '',
+    empresa: ''
+  };
 
   constructor(private http: HttpClient, private router: Router) {}
 
   ngOnInit(): void {
-    this.http.get<any[]>('/api/auditoria').subscribe({
+    this.abrirModalFiltros();
+  }
+  abrirModalFiltros(): void {
+    this.modalFiltros = true;
+  }
+
+  fecharModalFiltros(): void {
+    this.modalFiltros = false;
+  }
+
+  aplicarFiltros(): void {
+    const params = new URLSearchParams();
+    if (this.filtros.funcionario) params.set('funcionario', this.filtros.funcionario);
+    if (this.filtros.acao) params.set('acao', this.filtros.acao);
+    if (this.filtros.dataInicio) params.set('dataInicio', this.filtros.dataInicio);
+    if (this.filtros.dataFim) params.set('dataFim', this.filtros.dataFim);
+    if (this.filtros.apartamento) params.set('apartamento', this.filtros.apartamento);
+    if (this.filtros.reservaId) params.set('reservaId', this.filtros.reservaId.toString());
+    if (this.filtros.hospede) params.set('hospede', this.filtros.hospede);
+    if (this.filtros.empresa) params.set('empresa', this.filtros.empresa);
+
+    this.http.get<any[]>(`/api/auditoria/filtrar?${params.toString()}`).subscribe({
       next: (data) => {
         this.logs = data;
-        this.logsFiltrados = data;
+        this.jaBuscou = true;
+        this.modalFiltros = false;
       },
-      error: (err) => console.error('Erro ao carregar auditoria:', err)
+      error: (err) => {
+        console.error('Erro ao buscar auditoria:', err);
+        alert('Erro ao buscar registros');
+      }
     });
-  }
-
-  filtrar(): void {
-    this.logsFiltrados = this.logs.filter(log => {
-      const okFuncionario = !this.filtroFuncionario ||
-        (log.usuario?.nome?.toLowerCase().includes(this.filtroFuncionario.toLowerCase()) ||
-         log.usuario?.username?.toLowerCase().includes(this.filtroFuncionario.toLowerCase()));
-      const okAcao = !this.filtroAcao ||
-        log.acao?.toLowerCase().includes(this.filtroAcao.toLowerCase()) ||
-        this.getLabelAcao(log.acao).toLowerCase().includes(this.filtroAcao.toLowerCase());
-      const okData = !this.filtroData ||
-        log.dataHora?.startsWith(this.filtroData);
-      return okFuncionario && okAcao && okData;
-    });
-  }
-
-  limparFiltros(): void {
-    this.filtroFuncionario = '';
-    this.filtroAcao = '';
-    this.filtroData = '';
-    this.logsFiltrados = [...this.logs];
   }
 
   getLabelAcao(acao: string): string {
@@ -208,6 +272,29 @@ export class AuditoriaComponent implements OnInit {
   }
 
   voltar(): void {
+  if (this.jaBuscou) {
+    // Já tem busca feita — reseta e já abre o modal de novo, pronto pra nova busca
+    this.jaBuscou = false;
+    this.logs = [];
+    this.filtros = {
+      funcionario: '',
+      acao: '',
+      dataInicio: '',
+      dataFim: '',
+      apartamento: '',
+      reservaId: null,
+      hospede: '',
+      empresa: ''
+    };
+    this.abrirModalFiltros();
+  } else {
+    // Ainda não buscou nada — sai pro Administrativo mesmo
     this.router.navigate(['/administrativo']);
   }
+}
+
+   voltarAoAdministrativo(): void {
+  this.router.navigate(['/administrativo']);
+}
+
 }

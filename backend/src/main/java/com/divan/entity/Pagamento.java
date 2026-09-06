@@ -29,7 +29,7 @@ public class Pagamento {
     @JoinColumn(name = "caixa_id")      // ⭐ NOVO
     private FechamentoCaixa caixa;      // ⭐ NOVO
 
-    @DecimalMin(value = "0.01", message = "Valor deve ser maior que zero")
+    //@DecimalMin(value = "0.01", message = "Valor deve ser maior que zero")
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal valor;
 

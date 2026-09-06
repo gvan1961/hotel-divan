@@ -22,6 +22,7 @@ interface FiltrosAvancados {
   dataCheckOutInicio?: string;
   dataCheckOutFim?: string;
   status?: string;
+  reservaId?: number;
 }
 
 @Component({
@@ -238,8 +239,8 @@ interface FiltrosAvancados {
    <button
   *hasPermission="'CONTA_RECEBER_PAGAMENTO'"
   class="btn-acao btn-editar"
-  (click)="abrirModalEdicao(conta)"
-  title="Editar/corrigir conta">
+  (click)="abrirReserva(conta)"
+  title="Ver/editar reserva completa">
   ✏️
 </button>
 
@@ -288,6 +289,12 @@ interface FiltrosAvancados {
                   {{ empresa.nomeEmpresa }}
                 </option>
               </select>
+            </div>
+
+            <!-- CÓDIGO DA RESERVA -->
+              <div class="campo">
+              <label>🔢 Código da Reserva</label>
+              <input type="number" [(ngModel)]="filtrosTemp.reservaId" placeholder="Ex: 1890" class="filtro-input">
             </div>
 
              <!-- PENDÊNCIA EXTRA -->
@@ -1429,6 +1436,10 @@ aplicarFiltrosAvancados(): void {
   }
 }
 
+   if (this.filtrosAplicados.reservaId) {
+     resultado = resultado.filter(c => c.reservaId === this.filtrosAplicados.reservaId);
+   }
+
    if (this.filtrosAplicados.dataCheckInInicio && this.filtrosAplicados.dataCheckInFim) {
   resultado = resultado.filter(c => {
     const dataCheckinRaw = (c as any).dataCheckin;
@@ -2523,14 +2534,12 @@ reabrirConta(conta: ContaAReceber): void {
 
  
 
-  abrirModalEdicao(conta: ContaAReceber): void {
-  this.contaEdicaoSelecionada = conta;
-  this.edicaoValor = conta.valor;
-  this.edicaoDescricao = conta.descricao || '';
-  this.edicaoDataVencimento = conta.dataVencimento ? conta.dataVencimento.substring(0, 10) : '';
-  this.edicaoStatus = conta.status;
-  this.edicaoMotivo = '';
-  this.modalEdicao = true;
+  abrirReserva(conta: ContaAReceber): void {
+  if (!conta.reservaId) {
+    alert('⚠️ Esta conta não possui reserva vinculada.');
+    return;
+  }
+  this.router.navigate(['/reservas', conta.reservaId]);
 }
 
 confirmarEdicao(): void {

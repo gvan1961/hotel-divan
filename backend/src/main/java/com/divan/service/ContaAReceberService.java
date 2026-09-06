@@ -561,18 +561,57 @@ public class ContaAReceberService {
         // 1. Estorna o pagamento indevido (dinheiro/cartão)
         pagamentoService.estornarPagamento(reservaId, valor, motivo);
 
-        // 2. Cria a conta a receber para a empresa
-        ContaAReceberRequestDTO dto = new ContaAReceberRequestDTO();
-        dto.setReservaId(reservaId);
-        dto.setEmpresaId(empresaId);
-        dto.setValor(valor);
-        dto.setDataVencimento(dataVencimento);
-        dto.setDescricao(descricao != null && !descricao.isBlank()
-            ? descricao
-            : "Faturado — correção: " + motivo);
+        Reserva reserva = reservaRepository.findById(reservaId)
+            .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+        Optional<ContaAReceber> contaExistente = contaAReceberRepository.findByReserva(reserva);
 
-        return this.criar(dto);
+        ContaAReceber conta;
+        if (contaExistente.isPresent()) {
+            conta = contaExistente.get();
+            if (conta.getStatus() == StatusContaEnum.PAGA) {
+                conta.setValor(valor);
+                conta.setSaldo(valor);
+                conta.setValorPago(BigDecimal.ZERO);
+                conta.setStatus(StatusContaEnum.EM_ABERTO);
+                conta.setObservacao("Corrigido em " + LocalDateTime.now() + ": forma de pagamento incorreta — " + motivo);
+            } else {
+                conta.setValor(conta.getValor().add(valor));
+                conta.setSaldo(conta.getSaldo().add(valor));
+                conta.setObservacao((conta.getObservacao() != null ? conta.getObservacao() + " | " : "") +
+                    "Corrigido em " + LocalDateTime.now() + ": +R$ " + valor + " — " + motivo);
+            }
+            conta = contaAReceberRepository.save(conta);
+        } else {
+            ContaAReceberRequestDTO dto = new ContaAReceberRequestDTO();
+            dto.setReservaId(reservaId);
+            dto.setEmpresaId(empresaId);
+            dto.setValor(valor);
+            dto.setDataVencimento(dataVencimento);
+            dto.setDescricao(descricao != null && !descricao.isBlank()
+                ? descricao
+                : "Faturado — correção: " + motivo);
+            ContaAReceberDTO novaDto = this.criar(dto);
+            conta = contaAReceberRepository.findById(novaDto.getId())
+                .orElseThrow(() -> new RuntimeException("Erro ao localizar conta recém-criada"));
+        }
+
+        // 3. Lança no extrato a transferência para a Conta a Receber — zera o saldo da reserva
+        ExtratoReserva extrato = new ExtratoReserva();
+        extrato.setReserva(reserva);
+        extrato.setDataHoraLancamento(LocalDateTime.now());
+        extrato.setStatusLancamento(ExtratoReserva.StatusLancamentoEnum.PAGAMENTO);
+        extrato.setDescricao("Pagamento DEBITO EM CONTA (corrigido)");
+        extrato.setQuantidade(1);
+        extrato.setValorUnitario(valor);
+        extrato.setTotalLancamento(valor.negate());
+        extrato.setNotaVendaId(null);
+        extratoReservaRepository.save(extrato);
+
+        BigDecimal totalRecebidoAtual = reserva.getTotalRecebido() != null ? reserva.getTotalRecebido() : BigDecimal.ZERO;
+        reserva.setTotalRecebido(totalRecebidoAtual.add(valor));
+        reservaRepository.save(reserva);
+
+        return converterParaDTO(conta);
     }
-    
     
 }

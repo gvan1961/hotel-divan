@@ -70,6 +70,7 @@ import { roleGuard } from './guards/role.guard';
 import { PontoAjusteApp } from './pages/ponto/ponto-ajuste.app';
 import { ValeRelatorioComponent } from './pages/vales/vale-relatorio.component';
 import { ValeRapidoComponent } from './pages/vales/vale-rapido.component';
+import { PixPendentesListaApp } from './pages/pix-pendentes/pix-pendentes-lista.app';
 
 
 export const routes: Routes = [
@@ -146,6 +147,8 @@ export const routes: Routes = [
       { path: 'faixas-consumo-agua/novo', component: FaixaConsumoAguaFormApp },
       { path: 'faixas-consumo-agua/editar/:id', component: FaixaConsumoAguaFormApp },
       { path: 'faixas-consumo-agua', component: FaixaConsumoAguaListaApp },
+
+      { path: 'pix-pendentes', component: PixPendentesListaApp },
 
       // ===== PDV =====
       { path: 'pdv', component: PDVComponent },

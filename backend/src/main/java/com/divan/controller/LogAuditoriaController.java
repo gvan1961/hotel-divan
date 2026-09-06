@@ -39,6 +39,15 @@ public class LogAuditoriaController {
         if (log.getReserva() != null) {
             Map<String, Object> reserva = new HashMap<>();
             reserva.put("id", log.getReserva().getId());
+            if (log.getReserva().getApartamento() != null) {
+                reserva.put("apartamento", log.getReserva().getApartamento().getNumeroApartamento());
+            }
+            if (log.getReserva().getCliente() != null) {
+                reserva.put("clienteNome", log.getReserva().getCliente().getNome());
+                if (log.getReserva().getCliente().getEmpresa() != null) {
+                    reserva.put("empresaNome", log.getReserva().getCliente().getEmpresa().getNomeEmpresa());
+                }
+            }
             map.put("reserva", reserva);
         }
 
@@ -62,6 +71,25 @@ public class LogAuditoriaController {
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> todos() {
         List<Map<String, Object>> resultado = service.buscarTodos()
+            .stream().map(this::toMap).collect(Collectors.toList());
+        return ResponseEntity.ok(resultado);
+    }
+    
+    @GetMapping("/filtrar")
+    public ResponseEntity<List<Map<String, Object>>> filtrar(
+            @RequestParam(required = false) String funcionario,
+            @RequestParam(required = false) String acao,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dataInicio,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dataFim,
+            @RequestParam(required = false) String apartamento,
+            @RequestParam(required = false) Long reservaId,
+            @RequestParam(required = false) String hospede,
+            @RequestParam(required = false) String empresa) {
+
+        java.time.LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
+        java.time.LocalDateTime fim = dataFim != null ? dataFim.atTime(23, 59, 59) : null;
+
+        List<Map<String, Object>> resultado = service.buscarComFiltros(funcionario, acao, inicio, fim, apartamento, reservaId, hospede, empresa)
             .stream().map(this::toMap).collect(Collectors.toList());
         return ResponseEntity.ok(resultado);
     }

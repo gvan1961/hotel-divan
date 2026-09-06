@@ -28,12 +28,18 @@ public class PixController {
             BigDecimal valor = new BigDecimal(body.get("valor").toString());
             String comentario = body.get("comentario") != null ? body.get("comentario").toString() : null;
             Long reservaId = body.get("reservaId") != null ? Long.parseLong(body.get("reservaId").toString()) : null;
+            Object itens = body.get("itens");
 
-            CobrancaPix cobranca = pixService.gerarCobranca(valor, comentario, reservaId);
+            CobrancaPix cobranca = pixService.gerarCobranca(valor, comentario, reservaId, itens);
             return ResponseEntity.ok(cobranca);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
+    }
+
+    @GetMapping("/pendentes")
+    public ResponseEntity<?> listarPendentes() {
+        return ResponseEntity.ok(pixService.listarAtivas());
     }
     
     @PostMapping("/enviar-whatsapp")
@@ -44,17 +50,51 @@ public class PixController {
             String brCode = body.get("brCode").toString();
             BigDecimal valor = new BigDecimal(body.get("valor").toString());
 
-            String legenda = "💰 Cobrança Pix — R$ " + valor.setScale(2, java.math.RoundingMode.HALF_UP) +
-                "\n\nSe preferir copiar o código Pix:\n" + brCode;
+            // 1ª mensagem: imagem do QR Code, com legenda simples
+            String legendaImagem = "💰 Cobrança Pix — R$ " + valor.setScale(2, java.math.RoundingMode.HALF_UP)
+                + "\n\nEscaneie o QR Code acima ou aguarde o código abaixo para copiar e colar.";
 
-            WhatsAppService.ResultadoEnvio resultado = whatsAppService.enviarImagem(numero, qrCodeImage, legenda);
-
-            if (!resultado.isSucesso()) {
-                return ResponseEntity.badRequest().body(Map.of("erro", resultado.getErro()));
+            WhatsAppService.ResultadoEnvio resultadoImagem = whatsAppService.enviarImagem(numero, qrCodeImage, legendaImagem);
+            if (!resultadoImagem.isSucesso()) {
+                return ResponseEntity.badRequest().body(Map.of("erro", resultadoImagem.getErro()));
             }
+
+            // 2ª mensagem: só o código Pix puro, sem nada mais junto
+            WhatsAppService.ResultadoEnvio resultadoTexto = whatsAppService.enviarTexto(numero, brCode);
+            if (!resultadoTexto.isSucesso()) {
+                return ResponseEntity.badRequest().body(Map.of("erro", resultadoTexto.getErro()));
+            }
+
             return ResponseEntity.ok(Map.of("mensagem", "Enviado com sucesso"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    @PatchMapping("/{id}/cancelar")
+    public ResponseEntity<?> cancelar(@PathVariable Long id) {
+        try {
+            pixService.cancelarCobranca(id);
+            return ResponseEntity.ok(Map.of("mensagem", "Cobrança cancelada"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/{id}/status")
+    public ResponseEntity<?> consultarStatus(@PathVariable Long id) {
+        return ResponseEntity.ok(pixService.buscarPorId(id));
+    }
+    
+    @PatchMapping("/{id}/confirmar")
+    public ResponseEntity<?> confirmar(@PathVariable Long id) {
+        try {
+            pixService.marcarConfirmado(id);
+            return ResponseEntity.ok(Map.of("mensagem", "Confirmado"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+    
+    
 }

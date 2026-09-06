@@ -51,7 +51,9 @@ public class ContaAReceber {
     private LocalDate dataPagamento;
     
     private LocalDateTime dataCriacao;
-    private String observacao; // Mais detalhes
+    
+    @Column(length = 1000)
+    private String observacao;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

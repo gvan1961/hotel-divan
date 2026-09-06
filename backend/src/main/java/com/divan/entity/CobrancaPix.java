@@ -39,7 +39,7 @@ public class CobrancaPix {
     @Column(name = "itens_json", columnDefinition = "TEXT")
     private String itensJson;
 
-    public enum StatusPixEnum { PENDENTE, PAGO, EXPIRADO, CANCELADO }
+    public enum StatusPixEnum { PENDENTE, PAGO, EXPIRADO, CANCELADO, CONFIRMADO }
 
     // getters/setters
     public Long getId() { return id; }

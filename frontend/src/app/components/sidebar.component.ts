@@ -200,6 +200,13 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
           <span class="label">PDV - Vendas</span>
         </a>
 
+         <!-- PIX PENDENTES -->
+        <a *hasPermission="'PRODUTO_VISUALIZAR'"
+           routerLink="/pix-pendentes" routerLinkActive="active" class="nav-item">
+          <span class="icon">🔔</span>
+          <span class="label">Pix Pendentes</span>
+        </a>
+
         <!-- JANTAR -->
         <a *hasPermission="'JANTAR_VISUALIZAR'"
            routerLink="/jantar" routerLinkActive="active" class="nav-item">

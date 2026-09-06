@@ -12,6 +12,7 @@ import { ViewChild } from '@angular/core';
 import { SignaturePadComponent } from '../../components/signature-pad/signature-pad.component';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 import { environment } from '../../../environments/environment';
+import { PixService } from '../../services/pix.service';
 
   console.log('🚗🚗🚗 ARQUIVO RESERVA-DETALHES CARREGADO! 🚗🚗🚗');
   interface DescontoSimples {
@@ -208,23 +209,7 @@ import { environment } from '../../../environments/environment';
       title="Alterar checkout">
       ✏️
     </button>
-    <!-- ===== NOVO: Corrigir para Faturado ===== -->
-<ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
-  <button class="btn-acao"
-          *ngIf="getEmpresaIdCliente()"
-          (click)="corrigirParaFaturado()"
-          title="Corrigir forma de pagamento para Faturado (empresa)">
-    🔁 Corrigir para Faturado
-  </button>
-</ng-container>
 
-<ng-container *hasPermission="'RESERVA_EDITAR'">
- <button class="btn-acao btn-transferir"
-    *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
-    (click)="abrirModalTransferencia()">
-        🔄 Transferir Apartamento
-      </button>
-    </ng-container>
   </div>
   <div class="info-item-mini">
     <span class="label">Hóspedes:</span>
@@ -599,6 +584,16 @@ import { environment } from '../../../environments/environment';
         (click)="abrirModalPagamento()">
   💳 Registrar Pagamento
 </button>
+</ng-container>
+
+            <!-- ===== Corrigir para Faturado ===== -->
+<ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
+  <button class="btn-acao"
+          *ngIf="getEmpresaIdCliente()"
+          (click)="corrigirParaFaturado()"
+          title="Corrigir forma de pagamento para Faturado (empresa)">
+    🔁 Corrigir para Faturado
+  </button>
 </ng-container>
 
             <ng-container *hasPermission="'RESERVA_EDITAR'">
@@ -1003,6 +998,12 @@ import { environment } from '../../../environments/environment';
         <div class="modal-overlay" *ngIf="modalPagamento" (click)="fecharModalPagamento()">
           <div class="modal-content" (click)="$event.stopPropagation()">
             <h2>💳 Registrar Pagamento</h2>
+
+            <div class="alerta-credito-aprovado" *ngIf="temCreditoAprovado()">
+             ⚠️ Este hóspede tem <strong>crédito aprovado para Débito em Conta</strong> ({{ getEmpresaNomeCliente() }}).
+             Confirme com o hóspede antes de escolher outra forma de pagamento.
+            </div>
+
             <div class="campo">
               <label>Valor a Pagar *</label>
              <input type="text" [value]="pagValorTexto" 
@@ -1043,6 +1044,11 @@ import { environment } from '../../../environments/environment';
               <label>Observação</label>
               <textarea [(ngModel)]="pagObs" rows="3"></textarea>
             </div>
+
+            <div class="pix-confirmado-aviso" *ngIf="pixPagamentoConfirmado">
+  ✅ Pagamento confirmado! Pode finalizar.
+</div>
+
             <div class="modal-footer">
               <button class="btn-cancelar-modal" (click)="fecharModalPagamento()">Cancelar</button>
               <button class="btn-confirmar" (click)="salvarPagamento()" [disabled]="salvandoPagamento">
@@ -3017,14 +3023,26 @@ import { environment } from '../../../environments/environment';
 .btn-copiar-pix, .btn-imprimir-pix { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; margin-right: 6px; background: #667eea; color: white; }
 
 .btn-whatsapp-pix { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; background: #25D366; color: white; }
+.pix-confirmado-aviso { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center; font-weight: 600; }
+  
+.alerta-credito-aprovado {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+}
 
-    `]
+`]
   })
 
   export class ReservaDetalhesApp implements OnInit, OnDestroy {  
     private route = inject(ActivatedRoute);
     private router = inject(Router);
     private http = inject(HttpClient);
+    private pixService = inject(PixService);
     private authService = inject(AuthService);  
     private cdr = inject(ChangeDetectorRef); 
     private reservaService = inject(ReservaService); 
@@ -3185,6 +3203,10 @@ adicionandoHospede = false;
 gerandoPix = false;
 pixQrCodeImage: string | null = null;
 pixBrCode: string | null = null;
+
+pixCobrancaIdAtual: number | null = null;
+pixIntervaloVerificacao: any = null;
+pixPagamentoConfirmado = false;
   
 get podeCancelar(): boolean {
   const status = this.reserva?.status;
@@ -5608,18 +5630,15 @@ this.http.post(`/api/reservas/${this.reserva.id}/hospedes`, request).subscribe({
 
 corrigirParaFaturado(): void {
   if (!this.reserva) {
-    alert('❌ Reserva não carregada');
-    return;
-  }
-
-  const empresaId = (this.reserva.cliente as any)?.empresa?.id;
-  const empresaNome = (this.reserva.cliente as any)?.empresaNome || 'esta empresa';
-
-  if (!empresaId) {
-    alert('❌ Esta reserva não tem empresa vinculada. Vincule uma empresa ao cliente antes de corrigir.');
-    return;
-  }
-
+  alert('❌ Reserva não carregada');
+  return;
+}
+const empresaId = (this.reserva.cliente as any)?.empresaId;
+const empresaNome = (this.reserva.cliente as any)?.empresaNome || 'esta empresa';
+if (!empresaId) {
+  alert('❌ Esta reserva não tem empresa vinculada. Vincule uma empresa ao cliente antes de corrigir.');
+  return;
+}
   const confirmar = confirm(
     `Corrigir forma de pagamento para FATURADO?\n\n` +
     `Isso vai:\n` +
@@ -5628,7 +5647,6 @@ corrigirParaFaturado(): void {
     `Deseja continuar?`
   );
   if (!confirmar) return;
-
   const valorDigitado = prompt('Valor a corrigir (R$):');
   if (!valorDigitado) return;
   const valor = parseFloat(valorDigitado.replace(',', '.'));
@@ -5636,10 +5654,7 @@ corrigirParaFaturado(): void {
     alert('⚠️ Valor inválido.');
     return;
   }
-
-  const dataVencimento = prompt('Data de vencimento (AAAA-MM-DD):', new Date().toISOString().substring(0, 10));
-  if (!dataVencimento) return;
-
+  const dataVencimento = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
   const motivo = prompt('Motivo da correção:', 'Forma de pagamento lançada incorretamente pelo recepcionista');
   if (!motivo || motivo.trim() === '') {
     alert('⚠️ Informe o motivo.');
@@ -5690,6 +5705,9 @@ tratarCreditoAposRemocao(valorCredito: number): void {
     alert('⚠️ Informe o motivo do estorno.');
     return;
   }
+
+
+
 
   this.http.post('/api/pagamentos/estornar', {
     reservaId: this.reserva!.id,
@@ -7007,9 +7025,18 @@ carregarPendenciasExtrasCliente(): void {
     if (isNaN(n) || n < 1 || n > 5) return '-';
     return '⭐'.repeat(n);
   }
+ 
 
-  getEmpresaIdCliente(): number | null {
-  return (this.reserva?.cliente as any)?.empresa?.id ?? null;
+getEmpresaIdCliente(): number | null {
+  return (this.reserva?.cliente as any)?.empresaId ?? null;
+}
+
+temCreditoAprovado(): boolean {
+  return (this.reserva?.cliente as any)?.creditoAprovado === true;
+}
+
+getEmpresaNomeCliente(): string {
+  return (this.reserva?.cliente as any)?.empresaNome || 'empresa vinculada';
 }
 
   carregarExtratoCompleto(): void {
@@ -7042,6 +7069,7 @@ carregarPendenciasExtrasCliente(): void {
   this.gerandoPix = true;
   this.pixQrCodeImage = null;
   this.pixBrCode = null;
+  this.pixPagamentoConfirmado = false;
 
   this.http.post<any>('/api/pix/gerar', {
     valor: this.pagValor,
@@ -7051,13 +7079,39 @@ carregarPendenciasExtrasCliente(): void {
     next: (resp) => {
       this.pixQrCodeImage = resp.qrCodeImage;
       this.pixBrCode = resp.brCode;
+      this.pixCobrancaIdAtual = resp.id;
       this.gerandoPix = false;
+      this.iniciarVerificacaoPix();
     },
     error: (err) => {
       this.gerandoPix = false;
       alert('❌ Erro ao gerar Pix: ' + (err.error?.erro || err.message));
     }
   });
+}
+
+iniciarVerificacaoPix(): void {
+  this.pararVerificacaoPix(); // garante que não fica duplicado
+  this.pixIntervaloVerificacao = setInterval(() => {
+    if (!this.pixCobrancaIdAtual) return;
+
+    this.pixService.consultarStatus(this.pixCobrancaIdAtual).subscribe({
+      next: (cobranca) => {
+        if (cobranca.status === 'PAGO') {
+          this.pixPagamentoConfirmado = true;
+          this.pararVerificacaoPix();
+        }
+      },
+      error: () => {} // silencioso — tenta de novo no próximo ciclo
+    });
+  }, 5000);
+}
+
+pararVerificacaoPix(): void {
+  if (this.pixIntervaloVerificacao) {
+    clearInterval(this.pixIntervaloVerificacao);
+    this.pixIntervaloVerificacao = null;
+  }
 }
 
 copiarCodigoPix(): void {

@@ -49,4 +49,9 @@ public class LogAuditoriaService {
     public List<LogAuditoria> buscarTodos() {
         return logRepository.findAllByOrderByDataHoraDesc();
     }
+    
+    public List<LogAuditoria> buscarComFiltros(String funcionario, String acao, LocalDateTime dataInicio, LocalDateTime dataFim,
+            String apartamento, Long reservaId, String hospede, String empresa) {
+        return logRepository.buscarComFiltros(funcionario, acao, dataInicio, dataFim, apartamento, reservaId, hospede, empresa);
+    }
 }

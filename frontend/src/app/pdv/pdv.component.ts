@@ -187,7 +187,8 @@ interface ItemCarrinho {
     <button type="button" class="btn-copiar-pix" (click)="copiarCodigoPixPdv()">📋 Copiar Código</button>
     <button type="button" class="btn-imprimir-pix" (click)="imprimirPixPdv()">🖨️ Imprimir</button>
     <button type="button" class="btn-whatsapp-pix" (click)="enviarPixWhatsAppPdv()">📲 Enviar WhatsApp</button>
-  </div>
+    <button type="button" class="btn-salvar-pendente" (click)="salvarPixPendente()">💾 Salvar como Pendente e Liberar PDV</button>
+    </div>
 </div>
 </div>
 
@@ -303,6 +304,11 @@ interface ItemCarrinho {
             <button class="btn-cancelar-modal" (click)="fecharModalFinalizacao()">
               Cancelar
             </button>
+
+            <div class="pix-confirmado-aviso" *ngIf="pixPagamentoConfirmadoPdv">
+              ✅ Pagamento confirmado! Pode finalizar a venda.
+            </div>
+
             <button class="btn-confirmar" (click)="confirmarVenda()" [disabled]="loadingVenda">
               {{ loadingVenda ? '⏳ Processando...' : '✅ Confirmar Venda' }}
             </button>
@@ -756,16 +762,17 @@ interface ItemCarrinho {
       }
 
       .btn-gerar-pix { background: #32bcad; color: white; border: none; padding: 10px 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 5px; }
-.btn-gerar-pix:disabled { background: #ccc; cursor: not-allowed; }
-.pix-resultado { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
-.pix-qrcode-img { width: 220px; height: 220px; }
-.pix-codigo { width: 100%; }
-.pix-codigo textarea { width: 100%; font-size: 0.75rem; font-family: monospace; resize: none; }
-.btn-copiar-pix, .btn-imprimir-pix { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; margin-right: 6px; background: #667eea; color: white; }
+      .btn-gerar-pix:disabled { background: #ccc; cursor: not-allowed; }
+      .pix-resultado { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+      .pix-qrcode-img { width: 220px; height: 220px; }
+      .pix-codigo { width: 100%; }
+      .pix-codigo textarea { width: 100%; font-size: 0.75rem; font-family: monospace; resize: none; }
+      .btn-copiar-pix, .btn-imprimir-pix { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; margin-right: 6px; background: #667eea; color: white; }
 
       .btn-whatsapp-pix { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; background: #25D366; color: white; }
-
-    `]
+      .btn-salvar-pendente { display: block; width: 100%; padding: 10px; margin-top: 10px; border: none; border-radius: 5px; cursor: pointer; background: #ff9800; color: white; font-weight: 600; }
+      .pix-confirmado-aviso { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center; font-weight: 600; }
+      `]
   })
     export class PDVComponent implements OnInit, AfterViewInit {
     private http = inject(HttpClient);
@@ -821,6 +828,10 @@ interface ItemCarrinho {
     gerandoPixPdv = false;
     pixQrCodeImagePdv: string | null = null;
     pixBrCodePdv: string | null = null;
+    pixCobrancaIdAtual: number | null = null;
+    
+    pixPagamentoConfirmadoPdv = false;
+    pixIntervaloVerificacaoPdv: any = null;
 
     constructor(private route: ActivatedRoute) {}
 
@@ -843,17 +854,56 @@ interface ItemCarrinho {
     }
 
     carregarProdutos(): void {
-      this.http.get<Produto[]>('/api/produtos').subscribe({
-        next: (data) => {
-          this.produtos = data.filter(p => p.quantidade > 0);
-          this.produtosFiltrados = this.produtos;
-        },
-        error: (err) => {
-          console.error('❌ Erro ao carregar produtos:', err);
-          alert('Erro ao carregar produtos');
-        }
-      });
+  this.http.get<Produto[]>('/api/produtos').subscribe({
+    next: (data) => {
+      this.produtos = data.filter(p => p.quantidade > 0);
+      this.produtosFiltrados = this.produtos;
+      this.verificarRetomarPixPendente();
+    },
+    error: (err) => {
+      console.error('❌ Erro ao carregar produtos:', err);
+      alert('Erro ao carregar produtos');
     }
+  });
+}
+
+verificarRetomarPixPendente(): void {
+  const dados = sessionStorage.getItem('pixPendenteRetomar');
+  if (!dados) return;
+
+  sessionStorage.removeItem('pixPendenteRetomar');
+
+  try {
+    const cobranca = JSON.parse(dados);
+    const itensSalvos = cobranca.itensJson ? JSON.parse(cobranca.itensJson) : [];
+
+    this.carrinho = itensSalvos.map((item: any) => {
+      const produto = this.produtos.find(p => p.id === item.produtoId);
+      if (!produto) return null;
+      return {
+        produto: produto,
+        quantidade: item.quantidade,
+        valorUnitario: item.valorUnitario,
+        total: item.quantidade * item.valorUnitario
+      };
+    }).filter((item: any) => item !== null);
+
+    this.calcularTotal();
+    this.formaPagamento = 'PIX';
+    this.pixQrCodeImagePdv = cobranca.qrCodeImage;
+    this.pixBrCodePdv = cobranca.brCode;
+    this.pixCobrancaIdAtual = cobranca.id;
+    this.tipoVenda = 'VISTA';
+    this.modalFinalizacao = true;
+
+    if (this.carrinho.length < itensSalvos.length) {
+      alert('⚠️ Alguns produtos dessa venda não foram encontrados no estoque atual (podem ter sido excluídos ou renomeados). Confira o carrinho antes de confirmar.');
+    }
+  } catch (e) {
+    console.error('Erro ao retomar venda Pix pendente', e);
+    alert('❌ Erro ao carregar a venda pendente.');
+  }
+}
 
     filtrarPorApartamento(): void {
   const termo = this.termoBuscaApartamento.trim();
@@ -1531,7 +1581,7 @@ onKeyDown(event: KeyboardEvent): void {
   }
 }
 
-   gerarPixPdv(): void {
+  gerarPixPdv(): void {
   if (this.totalCarrinho <= 0) {
     alert('⚠️ Carrinho vazio');
     return;
@@ -1544,18 +1594,65 @@ onKeyDown(event: KeyboardEvent): void {
   this.http.post<any>('/api/pix/gerar', {
     valor: this.totalCarrinho,
     comentario: `Venda PDV à vista`,
-    reservaId: null
+    reservaId: null,
+    itens: this.carrinho.map(item => ({
+      produtoId: item.produto.id,
+      nome: item.produto.nomeProduto,
+      quantidade: item.quantidade,
+      valorUnitario: item.valorUnitario
+    }))
   }).subscribe({
-    next: (resp) => {
-      this.pixQrCodeImagePdv = resp.qrCodeImage;
-      this.pixBrCodePdv = resp.brCode;
-      this.gerandoPixPdv = false;
-    },
+   next: (resp) => {
+  this.pixQrCodeImagePdv = resp.qrCodeImage;
+  this.pixBrCodePdv = resp.brCode;
+  this.pixCobrancaIdAtual = resp.id;
+  this.gerandoPixPdv = false;
+  this.pixPagamentoConfirmadoPdv = false;
+  this.iniciarVerificacaoPixPdv();
+},
     error: (err) => {
       this.gerandoPixPdv = false;
       alert('❌ Erro ao gerar Pix: ' + (err.error?.erro || err.message));
     }
   });
+}
+
+salvarPixPendente(): void {
+  if (!this.pixCobrancaIdAtual) {
+    alert('⚠️ Gere o Pix primeiro');
+    return;
+  }
+  this.pararVerificacaoPixPdv();
+  alert('✅ Venda salva como pendente! O PDV está liberado. Confirme depois em "Vendas Pix Pendentes".');
+  this.carrinho = [];
+  this.pixQrCodeImagePdv = null;
+  this.pixBrCodePdv = null;
+  this.pixCobrancaIdAtual = null;
+  this.formaPagamento = '';
+  this.modalFinalizacao = false;
+}
+
+iniciarVerificacaoPixPdv(): void {
+  this.pararVerificacaoPixPdv();
+  this.pixIntervaloVerificacaoPdv = setInterval(() => {
+    if (!this.pixCobrancaIdAtual) return;
+    this.http.get<any>(`/api/pix/${this.pixCobrancaIdAtual}/status`).subscribe({
+      next: (cobranca) => {
+        if (cobranca.status === 'PAGO') {
+          this.pixPagamentoConfirmadoPdv = true;
+          this.pararVerificacaoPixPdv();
+        }
+      },
+      error: () => {}
+    });
+  }, 5000);
+}
+
+pararVerificacaoPixPdv(): void {
+  if (this.pixIntervaloVerificacaoPdv) {
+    clearInterval(this.pixIntervaloVerificacaoPdv);
+    this.pixIntervaloVerificacaoPdv = null;
+  }
 }
 
 copiarCodigoPixPdv(): void {
