@@ -41,6 +41,8 @@ public class ClienteController {
             Cliente cliente = new Cliente();
             cliente.setNome(dto.getNome());
             cliente.setCpf(dto.getCpf());
+            cliente.setPassaporte(dto.getPassaporte() != null && !dto.getPassaporte().isBlank() 
+            	    ? dto.getPassaporte() : null);
             cliente.setCelular(dto.getCelular());
             cliente.setDdi(dto.getDdi() != null ? dto.getDdi() : "+55");
             cliente.setCelular2(dto.getCelular2());

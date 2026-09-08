@@ -240,19 +240,23 @@ public class ValeController {
             vale.setDescricao(body.get("descricao").toString());
         if (body.get("observacao") != null)
             vale.setObservacao(body.get("observacao").toString());
+      
         if (body.get("dataVencimento") != null)
             vale.setDataVencimento(LocalDate.parse(
                 body.get("dataVencimento").toString().substring(0, 10)));
-        if (body.get("dataConcessao") != null)
+      
+        if (body.get("dataConcessao") != null && !body.get("dataConcessao").toString().isBlank())
             vale.setDataConcessao(LocalDate.parse(
                 body.get("dataConcessao").toString().substring(0, 10)));
         else
             vale.setDataConcessao(LocalDate.now());
+        
+        
         if (body.get("assinaturaBase64") != null)
             vale.setAssinaturaBase64(body.get("assinaturaBase64").toString());
         
         
-        if (body.get("mesReferencia") != null) {
+        if (body.get("mesReferencia") != null && !body.get("mesReferencia").toString().isBlank()) {
             String raw = body.get("mesReferencia").toString();
             vale.setMesReferencia(raw.length() == 7
                 ? LocalDate.parse(raw + "-01")

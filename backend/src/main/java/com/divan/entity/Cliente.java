@@ -25,6 +25,9 @@ public class Cliente {
 
     @Column(unique = true, nullable = true)
     private String cpf;
+    
+    @Column(nullable = true, length = 20)
+    private String passaporte;
 
     @Column(nullable = true)
     private String celular;
@@ -96,7 +99,14 @@ public class Cliente {
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
     public String getCpf() { return cpf; }
-    public void setCpf(String cpf) { this.cpf = cpf; }
+    
+    public String getPassaporte() {
+		return passaporte;
+	}
+	public void setPassaporte(String passaporte) {
+		this.passaporte = passaporte;
+	}
+	public void setCpf(String cpf) { this.cpf = cpf; }
     public String getCelular() { return celular; }
     public void setCelular(String celular) { this.celular = celular; }
     

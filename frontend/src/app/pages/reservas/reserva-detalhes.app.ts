@@ -849,12 +849,19 @@ import { PixService } from '../../services/pix.service';
   </div>
 
   <!-- CPF -->
-  <div class="form-group" *ngIf="!novoHospede.menorDeIdade">
-    <label>CPF <small>(opcional)</small></label>
-    <input type="text" [(ngModel)]="novoHospede.cpf" 
-       (ngModelChange)="novoHospede.cpf = formatarCPFInput($event)"
-       placeholder="000.000.000-00" maxlength="14">
-  </div>
+ 
+<div class="form-group" *ngIf="!novoHospede.menorDeIdade">
+  <label>CPF <small>(opcional)</small></label>
+  <input type="text" [(ngModel)]="novoHospede.cpf"
+     (ngModelChange)="novoHospede.cpf = formatarCPFInput($event)"
+     placeholder="000.000.000-00" maxlength="14">
+</div>
+<!-- PASSAPORTE -->
+<div class="form-group" *ngIf="!novoHospede.menorDeIdade">
+  <label>Passaporte <small>(para hóspedes estrangeiros)</small></label>
+  <input type="text" [(ngModel)]="novoHospede.passaporte"
+     placeholder="Ex: AB123456" maxlength="20">
+</div>
 
 <div class="form-group">
   <label>Celular</label>

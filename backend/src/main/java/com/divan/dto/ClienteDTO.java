@@ -40,6 +40,7 @@ public class ClienteDTO {
     private String fotoBase64;
     private Boolean faceAtivo;
     private LocalDateTime faceCriadoEm;
+    private String passaporte;
     
    // @Pattern(regexp = "\\d{5}-\\d{3}", message = "CEP deve estar no formato XXXXX-XXX")
     @Pattern(regexp = "\\d{5}-?\\d{3}", message = "CEP deve ter 8 dígitos")
@@ -229,6 +230,11 @@ public class ClienteDTO {
 	public void setFaceCriadoEm(LocalDateTime faceCriadoEm) {
 		this.faceCriadoEm = faceCriadoEm;
 	}
-	
+	public String getPassaporte() {
+		return passaporte;
+	}
+	public void setPassaporte(String passaporte) {
+		this.passaporte = passaporte;
+	}			
 				        
 }

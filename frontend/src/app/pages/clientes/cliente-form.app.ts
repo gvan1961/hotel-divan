@@ -78,10 +78,9 @@ import { FaceCaptureComponent } from '../../face-capture/face-capture.component'
             </div>
 
             <!-- CPF — oculto para menores -->
-           <div class="form-group" *ngIf="!menorDeIdade">
-  <label>CPF *</label>
+          <div class="form-group" *ngIf="!menorDeIdade">
+  <label>CPF <small>(ou informe Passaporte)</small></label>
   <input type="text" [(ngModel)]="cliente.cpf" name="cpf"
-         [required]="!menorDeIdade"
          (input)="formatarCpf()" maxlength="14"
          placeholder="000.000.000-00"
          [class.input-erro]="cpfInvalido" />
@@ -91,8 +90,15 @@ import { FaceCaptureComponent } from '../../face-capture/face-capture.component'
   <small *ngIf="cpfDuplicado" style="color: red; margin-top: 4px; display: block;">
   ⚠️ Este CPF já está cadastrado para outro cliente
 </small>
-</div>  
-</div> 
+</div>
+<!-- PASSAPORTE — disponível para todos, inclusive menores -->
+<div class="form-group">
+  <label>Passaporte <small>(para hóspedes estrangeiros)</small></label>
+  <input type="text" [(ngModel)]="cliente.passaporte" name="passaporte"
+         maxlength="20"
+         placeholder="Ex: AB123456" />
+</div>
+</div>
 
          <!-- RESPONSÁVEL — aparece apenas para menores -->
           <div class="form-group responsavel-group" *ngIf="menorDeIdade">
@@ -397,6 +403,7 @@ export class ClienteFormApp implements OnInit {
   cliente: ClienteRequest = {
     nome: '',
     cpf: '',
+    passaporte: '',
     celular: '',
     dataNascimento: '',
     creditoAprovado: false,
@@ -445,6 +452,7 @@ export class ClienteFormApp implements OnInit {
       this.cliente = {
         nome: data.nome,
         cpf: data.cpf,
+        passaporte: data.passaporte,
         celular: data.celular,
         endereco: data.endereco,
         cep: data.cep,
@@ -555,6 +563,7 @@ export class ClienteFormApp implements OnInit {
     const clienteRequest: any = {
       nome: this.cliente.nome,
       cpf: this.menorDeIdade ? null : this.cliente.cpf,
+      passaporte: this.menorDeIdade ? null : (this.cliente.passaporte || null),
       celular: this.cliente.celular || null,
       ddi: this.ddi || '+55',
       celular2: this.celular2 || null,
@@ -594,9 +603,9 @@ export class ClienteFormApp implements OnInit {
       this.errorMessage = 'Nome é obrigatório';
       return false;
     }
-    if (!this.menorDeIdade && (!this.cliente.cpf || this.cliente.cpf.length < 14)) {
-      this.errorMessage = 'CPF é obrigatório';
-      return false;
+    if (!this.menorDeIdade && (!this.cliente.cpf || this.cliente.cpf.length < 14) && !this.cliente.passaporte) {
+       this.errorMessage = 'Informe CPF ou Passaporte';
+       return false;
     }
     if (this.menorDeIdade && !this.responsavelSelecionado) {
       this.errorMessage = 'Selecione o responsável pelo menor';

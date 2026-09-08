@@ -140,6 +140,7 @@ public class ClienteService {
         dto.setId(cliente.getId());
         dto.setNome(cliente.getNome());
         dto.setCpf(cliente.getCpf());
+        dto.setPassaporte(cliente.getPassaporte());
         dto.setCelular(cliente.getCelular());
         dto.setDdi(cliente.getDdi() != null ? cliente.getDdi() : "+55");
         dto.setCelular2(cliente.getCelular2());

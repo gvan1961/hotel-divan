@@ -11,9 +11,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "faixa_consumo_agua_empresa")
+@Table(name = "faixa_consumo_agua_empresa",
+       uniqueConstraints = @UniqueConstraint(columnNames = {"empresa_id", "qtd_hospedes"}))
 public class FaixaConsumoAguaEmpresa {
 
     @Id
@@ -29,6 +31,8 @@ public class FaixaConsumoAguaEmpresa {
 
     @Column(name = "valor_limite_diario", nullable = false)
     private BigDecimal valorLimiteDiario;
+    
+	
 
 	public Long getId() {
 		return id;

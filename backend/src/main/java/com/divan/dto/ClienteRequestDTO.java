@@ -5,7 +5,8 @@ import java.time.LocalDate;
 public class ClienteRequestDTO {
 
     private String nome;
-    private String cpf;
+    private String cpf;   
+    private String passaporte;
     private String celular;
     private String ddi = "55";
     private String celular2;
@@ -72,4 +73,11 @@ public class ClienteRequestDTO {
     public void setClassificacao(String classificacao) { this.classificacao = classificacao; }
     public Boolean getFumante() { return fumante; }
     public void setFumante(Boolean fumante) { this.fumante = fumante; }
+	public String getPassaporte() {
+		return passaporte;
+	}
+	public void setPassaporte(String passaporte) {
+		this.passaporte = passaporte;
+	}
+    
 }

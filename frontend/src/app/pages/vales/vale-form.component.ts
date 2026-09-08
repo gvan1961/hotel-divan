@@ -148,14 +148,21 @@ import { SignaturePadComponent } from '../../components/signature-pad/signature-
 
           <!-- BOTÕES -->
           <div class="form-footer">
-            <button type="button" class="btn-cancelar" (click)="voltar()">Cancelar</button>
-            <button type="button" class="btn-remoto" (click)="solicitarRemoto()" [disabled]="!formValido()">
-              📱 Solicitar Remotamente
-            </button>
-            <button type="button" class="btn-salvar" (click)="abrirAssinatura()" [disabled]="!formValido()">
-              ✅ Criar Vale
-            </button>
-          </div>
+  <button type="button" class="btn-cancelar" (click)="voltar()">Cancelar</button>
+
+  <ng-container *ngIf="!modoEdicao">
+    <button type="button" class="btn-remoto" (click)="solicitarRemoto()" [disabled]="!formValido()">
+      📱 Solicitar Remotamente
+    </button>
+    <button type="button" class="btn-salvar" (click)="abrirAssinatura()" [disabled]="!formValido()">
+      ✅ Criar Vale
+    </button>
+  </ng-container>
+
+  <button type="button" class="btn-salvar" *ngIf="modoEdicao" (click)="salvar()" [disabled]="!formValido()">
+    💾 Salvar Alterações
+  </button>
+</div>
         </form>
       </div>
 

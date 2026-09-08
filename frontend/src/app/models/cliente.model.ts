@@ -2,6 +2,7 @@ export interface Cliente {
   id?: number;
   nome: string;
   cpf: string;
+  passaporte?: string;
   celular: string;
   ddi?: string;
   celular2?: string;
@@ -30,6 +31,7 @@ export interface Cliente {
 export interface ClienteRequest {
   nome: string;
   cpf: string;
+  passaporte?: string;
   celular: string;
   ddi?: string;
  celular2?: string;

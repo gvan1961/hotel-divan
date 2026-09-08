@@ -751,9 +751,22 @@ public class ReservaController {
                         )
                     ));
                 }
-            }                      
+            }  
             
+         // ✅ IMPEDE DUPLICAR O MESMO CLIENTE NA MESMA RESERVA
+            boolean jaEstaNestaReserva = hospedagemHospedeRepository
+                .findByReservaId(reserva.getId())
+                .stream()
+                .anyMatch(h -> h.getCliente() != null 
+                    && h.getCliente().getId().equals(hospede.getCliente().getId())
+                    && h.getStatus() == HospedagemHospede.StatusEnum.HOSPEDADO);
 
+            if (jaEstaNestaReserva) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "erro", hospede.getCliente().getNome() + " já está cadastrado nesta reserva."
+                ));
+            }
+            
             hospedagemHospedeRepository.save(hospede);
 
          // ✅ NOVA QUANTIDADE DE HÓSPEDES
