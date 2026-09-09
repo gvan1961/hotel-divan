@@ -319,7 +319,7 @@ template: `
       </div>
 
       <!-- POR APARTAMENTO -->
-      <div *ngFor="let apto of getApartamentosDaEmpresa()" class="empresa-apto">
+      <div *ngFor="let apto of getApartamentosDaEmpresa(); trackBy: trackByApartamentoEmpresa" class="empresa-apto">
         <div class="empresa-apto-header">
           🏠 Apartamento {{ apto.apartamento }}
           <span class="empresa-apto-total">{{ apto.hospedes.length }} hóspede(s)</span>
@@ -379,8 +379,8 @@ template: `
       <div class="apt-grid" *ngIf="!carregando && apartamentosFiltrados().length > 0">
         <div
           class="apt-card"
-          *ngFor="let apt of apartamentosFiltrados()"
-          [class.card-ocupado]="getStatusFinal(apt) === 'ATIVA' && !apt.reserva?.atrasado"
+          *ngFor="let apt of apartamentosFiltrados(); trackBy: trackByApartamentoId"
+          [class.card-ocupado]="getStatusFinal(apt) === 'ATIVA' && !apt.reserva?.atrasado"          
           [class.card-prereserva]="getStatusFinal(apt) === 'PRE_RESERVA'"
           [class.card-limpeza]="getStatusFinal(apt) === 'LIMPEZA'"
           [class.card-disponivel]="getStatusFinal(apt) === 'DISPONIVEL'"
@@ -1503,6 +1503,10 @@ private ultimoTotalSolicitacoes = 0;
     this.carregarDividasPendentes();
   }
 
+  trackByApartamentoId(index: number, apt: any): number {
+  return apt.id;
+}
+
   // Polling de solicitações WhatsApp
 private iniciarPollingWhatsapp(): void {
   this.verificarSolicitacoesWhatsapp();
@@ -2338,6 +2342,10 @@ abrirFotosHospedes(apt: ApartamentoCard): void {
   return this.dividasPendentes
     .map(d => d.clienteNome + ' (R$ ' + this.formatarMoedaSimples(d.valor) + ')')
     .join(', ');
+}
+
+trackByApartamentoEmpresa(index: number, apto: any): any {
+  return apto.apartamento;
 }
 
 }

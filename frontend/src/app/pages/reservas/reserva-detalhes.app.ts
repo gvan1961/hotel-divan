@@ -7016,7 +7016,7 @@ carregarPendenciasExtrasCliente(): void {
       next: (data) => {
         this.pendenciasExtrasCliente = data || [];
         this.totalPendenciaExtraCliente = this.pendenciasExtrasCliente
-          .reduce((sum, p) => sum + (p.valor || 0), 0);
+          .reduce((sum, p) => sum + (p.saldo || 0), 0);
       },
       error: () => {
         this.pendenciasExtrasCliente = [];

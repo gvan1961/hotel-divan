@@ -1340,6 +1340,20 @@ ngOnInit(): void {
   this.http.get<any[]>('/api/empresas').subscribe({
     next: (data) => this.empresas = data
   });
+
+  // ✅ Carrega a lista de clientes já de cara, pro autocomplete funcionar na primeira tentativa
+  this.contaReceberService.listarTodas().subscribe({
+    next: (contas: any[]) => {
+      const clientesMap = new Map<string, any>();
+      contas.forEach((conta: any) => {
+        if (conta.clienteNome && !clientesMap.has(conta.clienteNome)) {
+          clientesMap.set(conta.clienteNome, { id: conta.reservaId, nome: conta.clienteNome });
+        }
+      });
+      this.clientes = Array.from(clientesMap.values())
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    }
+  });
 }
 
   carregarDados(): void {
@@ -1378,8 +1392,8 @@ this.contaReceberService.listarTodas().subscribe({
   // ========== FILTROS ==========
 
   abrirModalFiltros(): void {
-  this.filtrosTemp = { ...this.filtrosAplicados };
-  this.filtroClienteTexto = this.filtrosAplicados.clienteNome || '';
+  this.filtrosTemp = {};
+  this.filtroClienteTexto = '';
   this.clientesFiltrados = [];
   this.modalFiltros = true;
 }
@@ -1393,6 +1407,10 @@ this.contaReceberService.listarTodas().subscribe({
 }
 
 aplicarFiltrosAvancados(): void {
+  // ✅ Se digitou um nome mas não clicou numa sugestão da lista, usa o texto digitado mesmo assim
+  if (!this.filtrosTemp.clienteId && this.filtroClienteTexto && this.filtroClienteTexto.trim() !== '') {
+    this.filtrosTemp.clienteNome = this.filtroClienteTexto.trim();
+  }
   this.filtrosAplicados = { ...this.filtrosTemp };
   this.fecharModalFiltros();
   this.carregarDados(); // agora só carrega quando o filtro é aplicado
