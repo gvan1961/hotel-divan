@@ -1,6 +1,8 @@
 package com.divan.controller;
 
 import com.divan.entity.CobrancaPix;
+
+import com.divan.repository.ReservaRepository;
 import com.divan.service.PixService;
 import com.divan.service.WhatsAppService;
 
@@ -9,7 +11,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/pix")
@@ -21,6 +26,9 @@ public class PixController {
     
     @Autowired
     private WhatsAppService whatsAppService;
+    
+    @Autowired
+    private ReservaRepository reservaRepository;
 
     @PostMapping("/gerar")
     public ResponseEntity<?> gerar(@RequestBody Map<String, Object> body) {
@@ -39,7 +47,33 @@ public class PixController {
 
     @GetMapping("/pendentes")
     public ResponseEntity<?> listarPendentes() {
-        return ResponseEntity.ok(pixService.listarAtivas());
+        List<CobrancaPix> cobrancas = pixService.listarAtivas();
+
+        List<Map<String, Object>> resultado = cobrancas.stream().map(c -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", c.getId());
+            map.put("correlationId", c.getCorrelationId());
+            map.put("valor", c.getValor());
+            map.put("comentario", c.getComentario());
+            map.put("reservaId", c.getReservaId());
+            map.put("brCode", c.getBrCode());
+            map.put("qrCodeImage", c.getQrCodeImage());
+            map.put("status", c.getStatus());
+            map.put("dataCriacao", c.getDataCriacao());
+            map.put("itensJson", c.getItensJson());
+
+            if (c.getReservaId() != null) {
+                reservaRepository.findById(c.getReservaId()).ifPresent(reserva -> {
+                    if (reserva.getApartamento() != null) {
+                        map.put("numeroApartamento", reserva.getApartamento().getNumeroApartamento());
+                    }
+                });
+            }
+
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(resultado);
     }
     
     @PostMapping("/enviar-whatsapp")

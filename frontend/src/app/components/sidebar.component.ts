@@ -95,14 +95,7 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
           <span class="label">Alertas</span>
           <span *ngIf="totalAlertas > 0" class="badge-alertas">{{ totalAlertas }}</span>
         </a>
-
-        <!-- PIX PAGOS AGUARDANDO CONFIRMAÇÃO -->
-         <a routerLink="/pix-pendentes" routerLinkActive="active" class="nav-item nav-item-alertas">
-         <span class="icon">💰</span>
-         <span class="label">Pix Pagos</span>
-         <span *ngIf="totalPixPagos > 0" class="badge-alertas">{{ totalPixPagos }}</span>
-        </a>
-
+    
         <!-- RESERVAS -->
         <a *hasPermission="'RESERVA_VISUALIZAR'"
            routerLink="/reservas" routerLinkActive="active" class="nav-item">
@@ -209,10 +202,11 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
 
          <!-- PIX PENDENTES -->
         <a *hasPermission="'PRODUTO_VISUALIZAR'"
-           routerLink="/pix-pendentes" routerLinkActive="active" class="nav-item">
-          <span class="icon">🔔</span>
-          <span class="label">Pix Pendentes</span>
-        </a>
+   routerLink="/pix-pendentes" routerLinkActive="active" class="nav-item nav-item-alertas">
+  <span class="icon">🔔</span>
+  <span class="label">Pix Pendentes</span>
+  <span *ngIf="totalPixPagos > 0" class="badge-alertas">{{ totalPixPagos }}</span>
+</a>
 
         <!-- JANTAR -->
         <a *hasPermission="'JANTAR_VISUALIZAR'"

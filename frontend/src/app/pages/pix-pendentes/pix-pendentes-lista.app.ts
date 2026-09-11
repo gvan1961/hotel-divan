@@ -31,7 +31,7 @@ import { CobrancaPix, ItemPixPendente } from '../../models/cobranca-pix.model';
   </div>
   <div class="card-sub">
     <span class="data">{{ cobranca.dataCriacao | date:'dd/MM/yyyy HH:mm' }}</span>
-    <span class="tipo" *ngIf="cobranca.reservaId">🏨 Reserva #{{ cobranca.reservaId }}</span>
+    <span class="tipo" *ngIf="cobranca.reservaId">🏨 Reserva #{{ cobranca.reservaId }} — Apt {{ cobranca.numeroApartamento }}</span>
     <span class="tipo" *ngIf="!cobranca.reservaId">💳 Venda PDV</span>
   </div>
   <div class="itens" *ngIf="getItens(cobranca) as itens">
@@ -83,19 +83,17 @@ export class PixPendentesListaApp implements OnInit {
 
   carregarPendentes(): void {
   this.pixService.listarPendentes().subscribe({
-    next: (data) => {
-      this.cobrancas = data.sort((a, b) => {
-        if (a.status === 'PAGO' && b.status !== 'PAGO') return -1;
-        if (a.status !== 'PAGO' && b.status === 'PAGO') return 1;
-        return new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime();
-      });
-      this.loading = false;
-    },
-    error: (err) => {
-      console.error('Erro ao carregar pendentes', err);
-      this.loading = false;
-    }
-  });
+  next: (data) => {
+    this.cobrancas = data.sort((a, b) =>
+      new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime()
+    );
+    this.loading = false;
+  },
+  error: (err) => {
+    console.error('Erro ao carregar pendentes', err);
+    this.loading = false;
+  }
+});
 }
 
   getItens(cobranca: CobrancaPix): ItemPixPendente[] {

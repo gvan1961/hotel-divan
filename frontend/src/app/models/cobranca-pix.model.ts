@@ -13,7 +13,8 @@ export interface CobrancaPix {
   qrCodeImage: string;
   comentario?: string;
   reservaId?: number;
-  status: 'PENDENTE' | 'PAGO' | 'EXPIRADO' | 'CANCELADO';
+  numeroApartamento?: string;
+  status: 'PENDENTE' | 'PAGO' | 'EXPIRADO' | 'CANCELADO' | 'CONFIRMADO';
   dataCriacao: string;
   itensJson?: string;
 }
