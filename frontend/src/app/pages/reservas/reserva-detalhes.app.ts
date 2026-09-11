@@ -1035,6 +1035,12 @@ import { PixService } from '../../services/pix.service';
   </button>
 
   <div class="pix-resultado" *ngIf="pixQrCodeImage">
+  <div class="pix-confirmado-destaque" *ngIf="pixPagamentoConfirmado">
+    ✅ PAGAMENTO CONFIRMADO!
+    <p>Pode clicar em "Confirmar Pagamento" para finalizar.</p>
+  </div>
+
+  <ng-container *ngIf="!pixPagamentoConfirmado">
     <img [src]="pixQrCodeImage" alt="QR Code Pix" class="pix-qrcode-img" />
     <div class="pix-codigo">
       <label>Código Pix (copia e cola):</label>
@@ -1042,8 +1048,10 @@ import { PixService } from '../../services/pix.service';
       <button type="button" class="btn-copiar-pix" (click)="copiarCodigoPix()">📋 Copiar Código</button>
       <button type="button" class="btn-imprimir-pix" (click)="imprimirPix()">🖨️ Imprimir</button>
       <button type="button" class="btn-whatsapp-pix" (click)="enviarPixWhatsApp()">📲 Enviar WhatsApp</button>
-    </div>
-  </div>
+      <button type="button" class="btn-salvar-pendente-reserva" (click)="salvarPixPendenteReserva()">💾 Deixar Pendente e Fechar</button>
+      </div>
+  </ng-container>
+</div>
 </div> 
 
 
@@ -1051,10 +1059,7 @@ import { PixService } from '../../services/pix.service';
               <label>Observação</label>
               <textarea [(ngModel)]="pagObs" rows="3"></textarea>
             </div>
-
-            <div class="pix-confirmado-aviso" *ngIf="pixPagamentoConfirmado">
-  ✅ Pagamento confirmado! Pode finalizar.
-</div>
+           
 
             <div class="modal-footer">
               <button class="btn-cancelar-modal" (click)="fecharModalPagamento()">Cancelar</button>
@@ -3030,7 +3035,22 @@ import { PixService } from '../../services/pix.service';
 .btn-copiar-pix, .btn-imprimir-pix { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; margin-right: 6px; background: #667eea; color: white; }
 
 .btn-whatsapp-pix { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; background: #25D366; color: white; }
-.pix-confirmado-aviso { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center; font-weight: 600; }
+
+.pix-confirmado-destaque {
+  background: #d4edda;
+  color: #155724;
+  padding: 30px 20px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  border: 3px solid #28a745;
+}
+.pix-confirmado-destaque p {
+  font-size: 0.9rem;
+  font-weight: 400;
+  margin-top: 10px;
+}
   
 .alerta-credito-aprovado {
   background: #fff3cd;
@@ -3041,6 +3061,8 @@ import { PixService } from '../../services/pix.service';
   margin-bottom: 15px;
   font-size: 0.9rem;
 }
+
+.btn-salvar-pendente-reserva { display: block; width: 100%; padding: 10px; margin-top: 5px; border: none; border-radius: 5px; cursor: pointer; background: #ff9800; color: white; font-weight: 600; }
 
 `]
   })
@@ -4323,6 +4345,25 @@ gerarHtmlFatura(valorTotal: number, pagoAVista: number, valorFaturado: number, s
   this.pagFormaPagamento = '';
   this.pagObs = '';
   this.modalPagamento = true;
+
+  // ✅ Verifica se já existe uma cobrança Pix ativa (paga ou pendente) pra essa reserva
+  this.http.get<any>(`/api/pix/reserva/${this.reserva.id}/ativa`).subscribe({
+    next: (cobranca) => {
+      if (cobranca) {
+        this.pagFormaPagamento = 'PIX';
+        this.pixQrCodeImage = cobranca.qrCodeImage;
+        this.pixBrCode = cobranca.brCode;
+        this.pixCobrancaIdAtual = cobranca.id;
+        if (cobranca.status === 'PAGO') {
+          this.pixPagamentoConfirmado = true;
+        } else {
+          this.pixPagamentoConfirmado = false;
+          this.iniciarVerificacaoPix();
+        }
+      }
+    },
+    error: () => {} // 204 (sem cobrança) cai aqui também — segue fluxo normal
+  });
 }
 
     fecharModalPagamento(): void {
@@ -4407,6 +4448,13 @@ gerarHtmlFatura(valorTotal: number, pagoAVista: number, valorFaturado: number, s
       });
     }
   } else {
+
+    if (this.pagFormaPagamento === 'PIX' && this.pixCobrancaIdAtual) {
+      this.http.patch(`/api/pix/${this.pixCobrancaIdAtual}/confirmar`, {}).subscribe({
+        next: () => {},
+        error: () => {} // não bloqueia o fluxo se falhar
+      });
+    }
 
     alert('✅ Pagamento registrado com sucesso!');
     this.fecharModalPagamento();
@@ -7119,6 +7167,12 @@ pararVerificacaoPix(): void {
     clearInterval(this.pixIntervaloVerificacao);
     this.pixIntervaloVerificacao = null;
   }
+}
+
+salvarPixPendenteReserva(): void {
+  this.pararVerificacaoPix();
+  alert('✅ Pix salvo! Assim que o cliente pagar, você pode confirmar depois na tela "Pix Pendentes" ou reabrindo esta reserva.');
+  this.fecharModalPagamento();
 }
 
 copiarCodigoPix(): void {

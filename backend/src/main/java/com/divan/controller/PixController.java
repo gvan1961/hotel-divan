@@ -96,5 +96,14 @@ public class PixController {
         }
     }
     
+    @GetMapping("/reserva/{reservaId}/ativa")
+    public ResponseEntity<?> buscarAtivaPorReserva(@PathVariable Long reservaId) {
+        CobrancaPix cobranca = pixService.buscarAtivaPorReserva(reservaId);
+        if (cobranca == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(cobranca);
+    }
+    
     
 }

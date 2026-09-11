@@ -180,15 +180,22 @@ interface ItemCarrinho {
   </button>
 
   <div class="pix-resultado" *ngIf="pixQrCodeImagePdv">
-  <img [src]="pixQrCodeImagePdv" alt="QR Code Pix" class="pix-qrcode-img" />
-  <div class="pix-codigo">
-    <label>Código Pix (copia e cola):</label>
-    <textarea readonly rows="3">{{ pixBrCodePdv }}</textarea>
-    <button type="button" class="btn-copiar-pix" (click)="copiarCodigoPixPdv()">📋 Copiar Código</button>
-    <button type="button" class="btn-imprimir-pix" (click)="imprimirPixPdv()">🖨️ Imprimir</button>
-    <button type="button" class="btn-whatsapp-pix" (click)="enviarPixWhatsAppPdv()">📲 Enviar WhatsApp</button>
-    <button type="button" class="btn-salvar-pendente" (click)="salvarPixPendente()">💾 Salvar como Pendente e Liberar PDV</button>
+  <div class="pix-confirmado-destaque" *ngIf="pixPagamentoConfirmadoPdv">
+    ✅ PAGAMENTO CONFIRMADO!
+    <p>Pode clicar em "Confirmar Venda" para finalizar.</p>
+  </div>
+
+  <ng-container *ngIf="!pixPagamentoConfirmadoPdv">
+    <img [src]="pixQrCodeImagePdv" alt="QR Code Pix" class="pix-qrcode-img" />
+    <div class="pix-codigo">
+      <label>Código Pix (copia e cola):</label>
+      <textarea readonly rows="3">{{ pixBrCodePdv }}</textarea>
+      <button type="button" class="btn-copiar-pix" (click)="copiarCodigoPixPdv()">📋 Copiar Código</button>
+      <button type="button" class="btn-imprimir-pix" (click)="imprimirPixPdv()">🖨️ Imprimir</button>
+      <button type="button" class="btn-whatsapp-pix" (click)="enviarPixWhatsAppPdv()">📲 Enviar WhatsApp</button>
+      <button type="button" class="btn-salvar-pendente" (click)="salvarPixPendente()">💾 Salvar como Pendente e Liberar PDV</button>
     </div>
+  </ng-container>
 </div>
 </div>
 
@@ -304,11 +311,7 @@ interface ItemCarrinho {
             <button class="btn-cancelar-modal" (click)="fecharModalFinalizacao()">
               Cancelar
             </button>
-
-            <div class="pix-confirmado-aviso" *ngIf="pixPagamentoConfirmadoPdv">
-              ✅ Pagamento confirmado! Pode finalizar a venda.
-            </div>
-
+           
             <button class="btn-confirmar" (click)="confirmarVenda()" [disabled]="loadingVenda">
               {{ loadingVenda ? '⏳ Processando...' : '✅ Confirmar Venda' }}
             </button>
@@ -771,7 +774,24 @@ interface ItemCarrinho {
 
       .btn-whatsapp-pix { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; background: #25D366; color: white; }
       .btn-salvar-pendente { display: block; width: 100%; padding: 10px; margin-top: 10px; border: none; border-radius: 5px; cursor: pointer; background: #ff9800; color: white; font-weight: 600; }
+    
       .pix-confirmado-aviso { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center; font-weight: 600; }
+.pix-confirmado-destaque {
+  background: #d4edda;
+  color: #155724;
+  padding: 30px 20px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  border: 3px solid #28a745;
+}
+.pix-confirmado-destaque p {
+  font-size: 0.9rem;
+  font-weight: 400;
+  margin-top: 10px;
+}
+
       `]
   })
     export class PDVComponent implements OnInit, AfterViewInit {

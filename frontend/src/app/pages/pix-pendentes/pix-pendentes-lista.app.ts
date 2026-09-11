@@ -39,7 +39,9 @@ import { CobrancaPix, ItemPixPendente } from '../../models/cobranca-pix.model';
       {{ item.quantidade }}x {{ item.nome }} — R$ {{ item.valorUnitario | number:'1.2-2' }}
     </div>
   </div>
+  
   <button class="btn-retomar" *ngIf="!cobranca.reservaId" (click)="retomar(cobranca)">🔄 Retomar Venda</button>
+<button class="btn-ir-reserva" *ngIf="cobranca.reservaId" (click)="irParaReserva(cobranca)">✅ Ir para Reserva</button>
   <button class="btn-cancelar-pix" (click)="cancelar(cobranca)">❌ Cancelar</button>
 </div>
     </div>
@@ -65,6 +67,7 @@ import { CobrancaPix, ItemPixPendente } from '../../models/cobranca-pix.model';
 .badge-pendente { background: #fff3cd; color: #856404; }
 .badge-pago { background: #d4edda; color: #155724; }
 .card-sub { display: flex; gap: 10px; margin-bottom: 8px; font-size: 0.8rem; color: #888; }
+.btn-ir-reserva { display: block; width: 100%; padding: 8px; margin-top: 8px; border: none; border-radius: 5px; cursor: pointer; background: #667eea; color: white; font-weight: 600; }
     `]
 })
 export class PixPendentesListaApp implements OnInit {
@@ -109,6 +112,10 @@ export class PixPendentesListaApp implements OnInit {
     sessionStorage.setItem('pixPendenteRetomar', JSON.stringify(cobranca));
     this.router.navigate(['/pdv']);
   }
+
+  irParaReserva(cobranca: CobrancaPix): void {
+  this.router.navigate(['/reservas', cobranca.reservaId]);
+}
 
   cancelar(cobranca: CobrancaPix): void {
   if (!confirm('Deseja realmente cancelar esta cobrança Pix pendente?')) return;

@@ -116,5 +116,11 @@ public class PixService {
             .orElseThrow(() -> new RuntimeException("Cobrança não encontrada"));
     }
     
+    public CobrancaPix buscarAtivaPorReserva(Long reservaId) {
+        return cobrancaPixRepository.findFirstByReservaIdAndStatusInOrderByDataCriacaoDesc(
+            reservaId, List.of(CobrancaPix.StatusPixEnum.PENDENTE, CobrancaPix.StatusPixEnum.PAGO))
+            .orElse(null);
+    }
+    
     
 }

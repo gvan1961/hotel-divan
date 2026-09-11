@@ -96,6 +96,13 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
           <span *ngIf="totalAlertas > 0" class="badge-alertas">{{ totalAlertas }}</span>
         </a>
 
+        <!-- PIX PAGOS AGUARDANDO CONFIRMAÇÃO -->
+         <a routerLink="/pix-pendentes" routerLinkActive="active" class="nav-item nav-item-alertas">
+         <span class="icon">💰</span>
+         <span class="label">Pix Pagos</span>
+         <span *ngIf="totalPixPagos > 0" class="badge-alertas">{{ totalPixPagos }}</span>
+        </a>
+
         <!-- RESERVAS -->
         <a *hasPermission="'RESERVA_VISUALIZAR'"
            routerLink="/reservas" routerLinkActive="active" class="nav-item">
@@ -834,6 +841,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   totalAlertas = 0;
   avisoOutrosCaixas = '';
   adminAberto = false;
+  totalPixPagos = 0;
 
   // ✅ POP-UP DE CHECKOUT VENCIDO (som + destaque)
   popupCheckoutVencido: AlertaDTO | null = null;
@@ -923,12 +931,15 @@ export class SidebarComponent implements OnInit, OnDestroy {
     this.prepararDesbloqueioDeAudio();
     
     // ✅ BUSCAR ALERTAS IMEDIATAMENTE
-    this.buscarTotalAlertas();
+   // ✅ BUSCAR ALERTAS IMEDIATAMENTE
+this.buscarTotalAlertas();
+this.buscarTotalPixPagos();
 
-    // ✅ ATUALIZAR ALERTAS A CADA 30 SEGUNDOS (BACKUP)
-    setInterval(() => {
-      this.buscarTotalAlertas();
-    }, 30000); // 30 segundos (era 5 minutos)
+// ✅ ATUALIZAR ALERTAS A CADA 30 SEGUNDOS (BACKUP)
+setInterval(() => {
+  this.buscarTotalAlertas();
+  this.buscarTotalPixPagos();
+}, 30000); // 30 segundos (era 5 minutos)
     
     // ✅ VERIFICAR CAIXA APENAS UMA VEZ
     setTimeout(() => {
@@ -993,6 +1004,17 @@ export class SidebarComponent implements OnInit, OnDestroy {
       }
     });
   }
+
+  buscarTotalPixPagos(): void {
+  this.http.get<any[]>('/api/pix/pendentes').subscribe({
+    next: (cobrancas) => {
+      this.totalPixPagos = cobrancas.filter(c => c.status === 'PAGO' && c.reservaId != null).length;
+    },
+    error: () => {
+      this.totalPixPagos = 0;
+    }
+  });
+}
 
   // ✅ POP-UP DE CHECKOUT VENCIDO ─────────────────────────────
 

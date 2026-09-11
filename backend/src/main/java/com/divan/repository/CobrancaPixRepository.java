@@ -10,8 +10,11 @@ import java.util.Optional;
 @Repository
 public interface CobrancaPixRepository extends JpaRepository<CobrancaPix, Long> {
     Optional<CobrancaPix> findByCorrelationId(String correlationId);
-    
+
     List<CobrancaPix> findByStatusAndReservaIdIsNullOrderByDataCriacaoDesc(CobrancaPix.StatusPixEnum status);
 
     List<CobrancaPix> findByStatusInOrderByDataCriacaoDesc(List<CobrancaPix.StatusPixEnum> status);
+
+    Optional<CobrancaPix> findFirstByReservaIdAndStatusInOrderByDataCriacaoDesc(
+        Long reservaId, List<CobrancaPix.StatusPixEnum> status);
 }
