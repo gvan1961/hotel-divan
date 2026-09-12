@@ -199,6 +199,25 @@ interface ItemCarrinho {
 </div>
 </div>
 
+            <!-- ===== NOVO: Cobrar na Maquininha (Cartão) ===== -->
+<div class="campo" *ngIf="formaPagamento === 'CARTAO_CREDITO' || formaPagamento === 'CARTAO_DEBITO'">
+  <button type="button" class="btn-gerar-pix" (click)="gerarCobrancaCartaoPdv()" [disabled]="gerandoCartaoPdv">
+    {{ gerandoCartaoPdv ? '⏳ Acionando maquininha...' : '💳 Cobrar na Maquininha' }}
+  </button>
+
+  <div class="pix-resultado" *ngIf="cartaoCobrancaIdAtualPdv">
+    <div class="pix-confirmado-destaque" *ngIf="cartaoPagamentoConfirmadoPdv">
+      ✅ PAGAMENTO CONFIRMADO!
+      <p>Pode clicar em "Confirmar Venda" para finalizar.</p>
+    </div>
+
+    <div class="cartao-aguardando" *ngIf="!cartaoPagamentoConfirmadoPdv">
+      ⏳ Aguardando o cliente inserir/aproximar o cartão na maquininha...
+      <button type="button" class="btn-cancelar-modal" (click)="cancelarCobrancaCartaoPdv()">❌ Cliente desistiu — Cancelar</button>
+    </div>
+  </div>
+</div>           
+
             <div class="campo" *ngIf="formaPagamento === 'DINHEIRO'">
               <label>Valor Pago</label>
               <input type="number" 
@@ -308,7 +327,7 @@ interface ItemCarrinho {
           </div>
 
           <div class="modal-footer">
-            <button class="btn-cancelar-modal" (click)="fecharModalFinalizacao()">
+            <button class="btn-cancelar-modal" *ngIf="!cartaoPagamentoConfirmadoPdv" (click)="fecharModalFinalizacao()">
               Cancelar
             </button>
            
@@ -852,6 +871,12 @@ interface ItemCarrinho {
     
     pixPagamentoConfirmadoPdv = false;
     pixIntervaloVerificacaoPdv: any = null;
+
+    // ✅ CARTÃO (Mercado Pago via maquininha) — PDV
+     gerandoCartaoPdv = false;
+     cartaoCobrancaIdAtualPdv: number | null = null;
+     cartaoPagamentoConfirmadoPdv = false;
+     cartaoIntervaloVerificacaoPdv: any = null;
 
     constructor(private route: ActivatedRoute) {}
 
@@ -1673,6 +1698,69 @@ pararVerificacaoPixPdv(): void {
     clearInterval(this.pixIntervaloVerificacaoPdv);
     this.pixIntervaloVerificacaoPdv = null;
   }
+}
+
+// ✅ CARTÃO (Mercado Pago via maquininha) — PDV
+gerarCobrancaCartaoPdv(): void {
+  this.gerandoCartaoPdv = true;
+  this.cartaoPagamentoConfirmadoPdv = false;
+
+  this.http.post<any>('/api/cartao/gerar', {
+    valor: this.totalCarrinho,
+    formaPagamento: this.formaPagamento === 'CARTAO_CREDITO' ? 'credit_card' : 'debit_card',
+    reservaId: null
+  }).subscribe({
+    next: (resp) => {
+      this.cartaoCobrancaIdAtualPdv = resp.id;
+      this.gerandoCartaoPdv = false;
+      this.iniciarVerificacaoCartaoPdv();
+    },
+    error: (err) => {
+      this.gerandoCartaoPdv = false;
+      alert('❌ Erro ao acionar a maquininha: ' + (err.error?.erro || err.message));
+    }
+  });
+}
+
+iniciarVerificacaoCartaoPdv(): void {
+  this.pararVerificacaoCartaoPdv();
+  this.cartaoIntervaloVerificacaoPdv = setInterval(() => {
+    if (!this.cartaoCobrancaIdAtualPdv) return;
+
+    this.http.get<any>(`/api/cartao/${this.cartaoCobrancaIdAtualPdv}/status`).subscribe({
+      next: (cobranca) => {
+        if (cobranca.status?.toUpperCase() === 'PAGO') {
+          this.cartaoPagamentoConfirmadoPdv = true;
+          this.pararVerificacaoCartaoPdv();
+        }
+      },
+      error: () => {}
+    });
+  }, 5000);
+}
+
+pararVerificacaoCartaoPdv(): void {
+  if (this.cartaoIntervaloVerificacaoPdv) {
+    clearInterval(this.cartaoIntervaloVerificacaoPdv);
+    this.cartaoIntervaloVerificacaoPdv = null;
+  }
+}
+
+cancelarCobrancaCartaoPdv(): void {
+  if (!this.cartaoCobrancaIdAtualPdv) return;
+  if (!confirm('Confirma que o cliente desistiu do pagamento no cartão?')) return;
+
+  this.http.patch(`/api/cartao/${this.cartaoCobrancaIdAtualPdv}/cancelar`, {}).subscribe({
+    next: () => {
+      this.pararVerificacaoCartaoPdv();
+      this.cartaoCobrancaIdAtualPdv = null;
+      this.cartaoPagamentoConfirmadoPdv = false;
+      alert('✅ Cobrança cancelada no sistema.\n\n⚠️ IMPORTANTE: Cancele também manualmente na maquininha física, pois o cancelamento automático nela ainda está em teste.');
+    },
+    error: (err) => {
+      alert('❌ Erro ao cancelar: ' + (err.error?.erro || err.message));
+    }
+  });
 }
 
 copiarCodigoPixPdv(): void {

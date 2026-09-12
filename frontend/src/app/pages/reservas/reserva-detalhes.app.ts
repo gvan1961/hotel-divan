@@ -1053,7 +1053,24 @@ import { PixService } from '../../services/pix.service';
   </ng-container>
 </div>
 </div> 
+            
+             <div class="campo" *ngIf="pagFormaPagamento === 'CARTAO_CREDITO' || pagFormaPagamento === 'CARTAO_DEBITO'">
+  <button type="button" class="btn-gerar-pix" (click)="gerarCobrancaCartao()" [disabled]="gerandoCartao">
+    {{ gerandoCartao ? '⏳ Acionando maquininha...' : '💳 Cobrar na Maquininha' }}
+  </button>
 
+  <div class="pix-resultado" *ngIf="cartaoCobrancaIdAtual">
+    <div class="pix-confirmado-destaque" *ngIf="cartaoPagamentoConfirmado">
+      ✅ PAGAMENTO CONFIRMADO!
+      <p>Pode clicar em "Confirmar Pagamento" para finalizar.</p>
+    </div>
+
+    <div class="cartao-aguardando" *ngIf="!cartaoPagamentoConfirmado">
+      ⏳ Aguardando o cliente inserir/aproximar o cartão na maquininha...
+      <button type="button" class="btn-cancelar-modal" (click)="cancelarCobrancaCartao()">❌ Cliente desistiu — Cancelar</button>
+    </div>
+  </div>
+</div>
 
             <div class="campo">
               <label>Observação</label>
@@ -1061,11 +1078,11 @@ import { PixService } from '../../services/pix.service';
             </div>
            
 
-            <div class="modal-footer">
-              <button class="btn-cancelar-modal" (click)="fecharModalPagamento()">Cancelar</button>
-              <button class="btn-confirmar" (click)="salvarPagamento()" [disabled]="salvandoPagamento">
-                 {{ salvandoPagamento ? '⏳ Processando...' : 'Confirmar Pagamento' }}
-              </button>
+           <div class="modal-footer">
+             <button class="btn-cancelar-modal" *ngIf="!cartaoPagamentoConfirmado" (click)="fecharModalPagamento()">Cancelar</button>
+             <button class="btn-confirmar" (click)="salvarPagamento()" [disabled]="salvandoPagamento">
+               {{ salvandoPagamento ? '⏳ Processando...' : 'Confirmar Pagamento' }}
+             </button>
             </div>
           </div>
         </div>
@@ -3236,6 +3253,12 @@ pixBrCode: string | null = null;
 pixCobrancaIdAtual: number | null = null;
 pixIntervaloVerificacao: any = null;
 pixPagamentoConfirmado = false;
+
+// ✅ CARTÃO (Mercado Pago via maquininha)
+gerandoCartao = false;
+cartaoCobrancaIdAtual: number | null = null;
+cartaoPagamentoConfirmado = false;
+cartaoIntervaloVerificacao: any = null;
   
 get podeCancelar(): boolean {
   const status = this.reserva?.status;
@@ -4395,12 +4418,41 @@ gerarHtmlFatura(valorTotal: number, pagoAVista: number, valorFaturado: number, s
         return;
       }  
 
-      if (this.pagFormaPagamento === 'PIX' && !this.pixQrCodeImage) {
+     if (this.pagFormaPagamento === 'PIX' && !this.pixQrCodeImage) {
   alert('⚠️ Gere o QR Code Pix antes de confirmar o pagamento, para que o cliente possa efetuar o pagamento.');
   return;
 }
 
-      console.log('pagValor antes do DTO:', this.pagValor, typeof this.pagValor);
+if (this.pagFormaPagamento === 'PIX' && this.pixCobrancaIdAtual) {
+  // ✅ Nunca confia só no campo digitado — confirma o valor REAL da cobrança direto no backend
+  this.http.get<any>(`/api/pix/${this.pixCobrancaIdAtual}/status`).subscribe({
+    next: (cobranca) => {
+      if (cobranca.status !== 'PAGO') {
+        alert('⚠️ Este Pix ainda não foi confirmado como pago. Verifique em "Pix Pendentes" antes de continuar.');
+        return;
+      }
+      const valorConfirmado = Number(cobranca.valor);
+      if (Math.abs(valorConfirmado - Number(this.pagValor)) > 0.01) {
+        alert(`⚠️ ATENÇÃO: o Pix confirmado foi de R$ ${valorConfirmado.toFixed(2)}, mas o valor a registrar aqui é R$ ${Number(this.pagValor).toFixed(2)}.\n\nProvavelmente foi gerado um novo QR Code depois deste ter sido pago. Ajuste o valor para R$ ${valorConfirmado.toFixed(2)} e registre a diferença separadamente, se houver.`);
+        return;
+      }
+      this.finalizarSalvamentoPagamento();
+    },
+    error: () => {
+      alert('⚠️ Não foi possível confirmar o status do Pix no servidor. Tente novamente.');
+    }
+  });
+  return;
+}
+
+this.finalizarSalvamentoPagamento();
+}
+
+finalizarSalvamentoPagamento(): void {
+  if (!this.reserva) return;
+
+  console.log('pagValor antes do DTO:', this.pagValor, typeof this.pagValor);
+
       const usuarioId = this.authService.getUsuarioId();
       console.log('👤 Usuario ID:', usuarioId);
 
@@ -7167,6 +7219,74 @@ pararVerificacaoPix(): void {
     clearInterval(this.pixIntervaloVerificacao);
     this.pixIntervaloVerificacao = null;
   }
+}
+
+
+// ✅ CARTÃO (Mercado Pago via maquininha)
+gerarCobrancaCartao(): void {
+  if (!this.reserva) return;
+
+  this.gerandoCartao = true;
+  this.cartaoPagamentoConfirmado = false;
+
+  const formaPagamentoMP = this.pagFormaPagamento === 'CARTAO_CREDITO' ? 'credit_card' : 'debit_card';
+
+  this.http.post<any>('/api/cartao/gerar', {
+    valor: this.pagValor,
+    formaPagamento: formaPagamentoMP,
+    reservaId: this.reserva.id
+  }).subscribe({
+    next: (resp) => {
+      this.cartaoCobrancaIdAtual = resp.id;
+      this.gerandoCartao = false;
+      this.iniciarVerificacaoCartao();
+    },
+    error: (err) => {
+      this.gerandoCartao = false;
+      alert('❌ Erro ao acionar a maquininha: ' + (err.error?.erro || err.message));
+    }
+  });
+}
+
+iniciarVerificacaoCartao(): void {
+  this.pararVerificacaoCartao();
+  this.cartaoIntervaloVerificacao = setInterval(() => {
+    if (!this.cartaoCobrancaIdAtual) return;
+
+    this.http.get<any>(`/api/cartao/${this.cartaoCobrancaIdAtual}/status`).subscribe({
+      next: (cobranca) => {
+        if (cobranca.status?.toUpperCase() === 'PAGO') {
+          this.cartaoPagamentoConfirmado = true;
+          this.pararVerificacaoCartao();
+        }
+      },
+      error: () => {} // silencioso — tenta de novo no próximo ciclo
+    });
+  }, 5000);
+}
+
+pararVerificacaoCartao(): void {
+  if (this.cartaoIntervaloVerificacao) {
+    clearInterval(this.cartaoIntervaloVerificacao);
+    this.cartaoIntervaloVerificacao = null;
+  }
+}
+
+cancelarCobrancaCartao(): void {
+  if (!this.cartaoCobrancaIdAtual) return;
+  if (!confirm('Confirma que o cliente desistiu do pagamento no cartão?')) return;
+
+  this.http.patch(`/api/cartao/${this.cartaoCobrancaIdAtual}/cancelar`, {}).subscribe({
+    next: () => {
+      this.pararVerificacaoCartao();
+      this.cartaoCobrancaIdAtual = null;
+      this.cartaoPagamentoConfirmado = false;
+      alert('✅ Cobrança cancelada no sistema.\n\n⚠️ IMPORTANTE: Cancele também manualmente na maquininha física, pois o cancelamento automático nela ainda está em teste.');
+    },
+    error: (err) => {
+      alert('❌ Erro ao cancelar: ' + (err.error?.erro || err.message));
+    }
+  });
 }
 
 salvarPixPendenteReserva(): void {

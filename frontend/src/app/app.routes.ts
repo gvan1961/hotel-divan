@@ -71,7 +71,7 @@ import { PontoAjusteApp } from './pages/ponto/ponto-ajuste.app';
 import { ValeRelatorioComponent } from './pages/vales/vale-relatorio.component';
 import { ValeRapidoComponent } from './pages/vales/vale-rapido.component';
 import { PixPendentesListaApp } from './pages/pix-pendentes/pix-pendentes-lista.app';
-
+import { CartaoPendentesListaApp } from './pages/cartao-pendentes/cartao-pendentes-lista.app';
 
 export const routes: Routes = [
   // LOGIN (sem layout)
@@ -229,6 +229,9 @@ export const routes: Routes = [
   loadComponent: () => import('./pages/clientes/cliente-historico.app')
     .then(m => m.ClienteHistoricoApp) 
 },
+
+{ path: 'pix-pendentes', component: PixPendentesListaApp },
+{ path: 'cartao-pendentes', component: CartaoPendentesListaApp },
 
 
       // ===== CONTAS A PAGAR =====

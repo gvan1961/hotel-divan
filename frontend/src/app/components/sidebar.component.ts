@@ -207,6 +207,14 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
   <span class="label">Pix Pendentes</span>
   <span *ngIf="totalPixPagos > 0" class="badge-alertas">{{ totalPixPagos }}</span>
 </a>
+         
+        <!-- CARTÃO PENDENTES -->
+<a *hasPermission="'PRODUTO_VISUALIZAR'"
+   routerLink="/cartao-pendentes" routerLinkActive="active" class="nav-item nav-item-alertas">
+  <span class="icon">💳</span>
+  <span class="label">Cartão Pendentes</span>
+  <span *ngIf="totalCartaoPagos > 0" class="badge-alertas">{{ totalCartaoPagos }}</span>
+</a>
 
         <!-- JANTAR -->
         <a *hasPermission="'JANTAR_VISUALIZAR'"
@@ -836,6 +844,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   avisoOutrosCaixas = '';
   adminAberto = false;
   totalPixPagos = 0;
+  totalCartaoPagos = 0;
 
   // ✅ POP-UP DE CHECKOUT VENCIDO (som + destaque)
   popupCheckoutVencido: AlertaDTO | null = null;
@@ -928,11 +937,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
    // ✅ BUSCAR ALERTAS IMEDIATAMENTE
 this.buscarTotalAlertas();
 this.buscarTotalPixPagos();
+this.buscarTotalCartaoPagos();
 
 // ✅ ATUALIZAR ALERTAS A CADA 30 SEGUNDOS (BACKUP)
 setInterval(() => {
   this.buscarTotalAlertas();
   this.buscarTotalPixPagos();
+  this.buscarTotalCartaoPagos();
 }, 30000); // 30 segundos (era 5 minutos)
     
     // ✅ VERIFICAR CAIXA APENAS UMA VEZ
@@ -1163,6 +1174,16 @@ setInterval(() => {
       console.log('📭 Nenhum caixa aberto (erro)');
     }
   });
+}
+  buscarTotalCartaoPagos(): void {
+  this.http.get<any[]>('/api/cartao/pendentes').subscribe({
+  next: (cobrancas) => {
+    this.totalCartaoPagos = cobrancas.filter(c => c.status?.toUpperCase() === 'PAGO' && c.reservaId != null).length;
+  },
+  error: () => {
+    this.totalCartaoPagos = 0;
+  }
+});
 }
 
   logout(): void {
