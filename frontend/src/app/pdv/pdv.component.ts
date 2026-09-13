@@ -327,8 +327,7 @@ interface ItemCarrinho {
           </div>
 
           <div class="modal-footer">
-            <button class="btn-cancelar-modal" *ngIf="!cartaoPagamentoConfirmadoPdv" (click)="fecharModalFinalizacao()">
-              Cancelar
+           <button class="btn-cancelar-modal" *ngIf="!cartaoPagamentoConfirmadoPdv && !pixPagamentoConfirmadoPdv" (click)="fecharModalFinalizacao()">Cancelar</button>
             </button>
            
             <button class="btn-confirmar" (click)="confirmarVenda()" [disabled]="loadingVenda">

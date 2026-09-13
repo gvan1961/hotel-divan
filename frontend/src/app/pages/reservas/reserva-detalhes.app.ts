@@ -1079,7 +1079,7 @@ import { PixService } from '../../services/pix.service';
            
 
            <div class="modal-footer">
-             <button class="btn-cancelar-modal" *ngIf="!cartaoPagamentoConfirmado" (click)="fecharModalPagamento()">Cancelar</button>
+             <button class="btn-cancelar-modal" *ngIf="!cartaoPagamentoConfirmado && !pixPagamentoConfirmado" (click)="fecharModalPagamento()">Cancelar</button>
              <button class="btn-confirmar" (click)="salvarPagamento()" [disabled]="salvandoPagamento">
                {{ salvandoPagamento ? '⏳ Processando...' : 'Confirmar Pagamento' }}
              </button>
