@@ -75,14 +75,13 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
   imports: [CommonModule, RouterLink, RouterLinkActive, HasPermissionDirective, FormsModule ],
   
   template: `
-    <aside class="sidebar" [class.mobile-aberto]="menuMobileAberto">
+   <aside class="sidebar" [class.mobile-aberto]="menuMobileAberto">
   <div class="sidebar-header">
     <h2>🏨 Di Van</h2>
+    <button class="btn-menu-mobile" (click)="menuMobileAberto = !menuMobileAberto" [attr.aria-label]="menuMobileAberto ? 'Fechar menu' : 'Abrir menu'">
+      {{ menuMobileAberto ? '✕' : '☰' }}
+    </button>
   </div>
-
-  <button class="btn-menu-mobile" (click)="menuMobileAberto = !menuMobileAberto" [attr.aria-label]="menuMobileAberto ? 'Fechar menu' : 'Abrir menu'">
-    {{ menuMobileAberto ? '✕' : '☰' }}
-  </button>
 
   <nav class="sidebar-nav" (click)="menuMobileAberto = false">
 
@@ -760,15 +759,27 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
       border-left: 3px solid #ffc107;
     }
 
-    @media (max-width: 768px) {
+   .btn-menu-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
   .sidebar {
     width: 70px;
     transition: width 0.3s ease;
     z-index: 999;
+    overflow-x: hidden;
   }
 
   .label {
     display: none;
+  }
+
+  .sidebar-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
   }
 
   .sidebar-header h2 {
@@ -776,18 +787,15 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
   }
 
   .btn-menu-mobile {
-    position: absolute;
-    top: 12px;
-    right: -40px;
-    background: #333;
+    display: block;
+    background: rgba(255,255,255,0.15);
     color: white;
     border: none;
     width: 36px;
     height: 36px;
-    border-radius: 0 6px 6px 0;
+    border-radius: 6px;
     font-size: 1.2em;
     cursor: pointer;
-    z-index: 1000;
   }
 
   .sidebar.mobile-aberto {
@@ -796,11 +804,6 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
 
   .sidebar.mobile-aberto .label {
     display: inline-block;
-  }
-
-  .sidebar.mobile-aberto .btn-menu-mobile {
-    right: 12px;
-    background: rgba(255,255,255,0.15);
   }
 
   .overlay-menu-mobile {

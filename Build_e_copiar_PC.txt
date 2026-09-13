@@ -47,10 +47,9 @@ sudo systemctl status hotel-divan
 
 Novo sistema de deploy :
 Fazer no GIT bash
-
 cd /c/SpAngGit
 ./deploy.sh
-
+Senha (hT@divan) no deploy.sh
 usar muitas vezes a senha : hT@divan
 
 
