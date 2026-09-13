@@ -122,5 +122,9 @@ public class PixService {
             .orElse(null);
     }
     
+    public List<CobrancaPix> buscarHistorico(LocalDateTime dataInicio, LocalDateTime dataFim, Long reservaId, CobrancaPix.StatusPixEnum status) {
+        return cobrancaPixRepository.buscarHistorico(dataInicio, dataFim, reservaId, status);
+    }
+    
     
 }

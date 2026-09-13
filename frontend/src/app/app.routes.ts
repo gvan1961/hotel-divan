@@ -72,6 +72,7 @@ import { ValeRelatorioComponent } from './pages/vales/vale-relatorio.component';
 import { ValeRapidoComponent } from './pages/vales/vale-rapido.component';
 import { PixPendentesListaApp } from './pages/pix-pendentes/pix-pendentes-lista.app';
 import { CartaoPendentesListaApp } from './pages/cartao-pendentes/cartao-pendentes-lista.app';
+import { HistoricoPagamentosListaApp } from './pages/historico-pagamentos/historico-pagamentos-lista.app';
 
 export const routes: Routes = [
   // LOGIN (sem layout)
@@ -233,6 +234,7 @@ export const routes: Routes = [
 { path: 'pix-pendentes', component: PixPendentesListaApp },
 { path: 'cartao-pendentes', component: CartaoPendentesListaApp },
 
+{ path: 'historico-pagamentos', component: HistoricoPagamentosListaApp },
 
       // ===== CONTAS A PAGAR =====
 { path: 'contas-pagar', component: ContasPagarListaApp },

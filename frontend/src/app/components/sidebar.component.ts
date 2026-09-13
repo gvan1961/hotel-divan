@@ -75,12 +75,16 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
   imports: [CommonModule, RouterLink, RouterLinkActive, HasPermissionDirective, FormsModule ],
   
   template: `
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <h2>🏨 Di Van</h2>
-      </div>
+    <aside class="sidebar" [class.mobile-aberto]="menuMobileAberto">
+  <div class="sidebar-header">
+    <h2>🏨 Di Van</h2>
+  </div>
 
-      <nav class="sidebar-nav">
+  <button class="btn-menu-mobile" (click)="menuMobileAberto = !menuMobileAberto" [attr.aria-label]="menuMobileAberto ? 'Fechar menu' : 'Abrir menu'">
+    {{ menuMobileAberto ? '✕' : '☰' }}
+  </button>
+
+  <nav class="sidebar-nav" (click)="menuMobileAberto = false">
 
         <!-- PAINEL DE RECEPÇÃO  -->
           <a *hasPermission="'RESERVA_VISUALIZAR'"
@@ -216,6 +220,13 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
   <span *ngIf="totalCartaoPagos > 0" class="badge-alertas">{{ totalCartaoPagos }}</span>
 </a>
 
+        <!-- HISTÓRICO DE PAGAMENTOS -->
+         <a *hasPermission="'PRODUTO_VISUALIZAR'"
+         routerLink="/historico-pagamentos" routerLinkActive="active" class="nav-item">
+         <span class="icon">📜</span>
+         <span class="label">Histórico Pagamentos</span>
+        </a>
+
         <!-- JANTAR -->
         <a *hasPermission="'JANTAR_VISUALIZAR'"
            routerLink="/jantar" routerLinkActive="active" class="nav-item">
@@ -278,6 +289,9 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
         </button>
       </div>
     </aside>
+
+    <!-- OVERLAY MOBILE — fecha o menu ao tocar fora dele -->
+    <div class="overlay-menu-mobile" *ngIf="menuMobileAberto" (click)="menuMobileAberto = false"></div>
 
     <!-- ✅ POP-UP DE CHECKOUT VENCIDO (som + destaque na tela) -->
     <div *ngIf="popupCheckoutVencido"
@@ -747,18 +761,58 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
     }
 
     @media (max-width: 768px) {
-      .sidebar {
-        width: 70px;
-      }
+  .sidebar {
+    width: 70px;
+    transition: width 0.3s ease;
+    z-index: 999;
+  }
 
-      .label {
-        display: none;
-      }
+  .label {
+    display: none;
+  }
 
-      .sidebar-header h2 {
-        font-size: 1.2em;
-      }
-    }
+  .sidebar-header h2 {
+    font-size: 1.2em;
+  }
+
+  .btn-menu-mobile {
+    position: absolute;
+    top: 12px;
+    right: -40px;
+    background: #333;
+    color: white;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 0 6px 6px 0;
+    font-size: 1.2em;
+    cursor: pointer;
+    z-index: 1000;
+  }
+
+  .sidebar.mobile-aberto {
+    width: 250px;
+  }
+
+  .sidebar.mobile-aberto .label {
+    display: inline-block;
+  }
+
+  .sidebar.mobile-aberto .btn-menu-mobile {
+    right: 12px;
+    background: rgba(255,255,255,0.15);
+  }
+
+  .overlay-menu-mobile {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 998;
+  }
+}
 
     @media print {
       .sidebar {
@@ -845,6 +899,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   adminAberto = false;
   totalPixPagos = 0;
   totalCartaoPagos = 0;
+  menuMobileAberto = false;
 
   // ✅ POP-UP DE CHECKOUT VENCIDO (som + destaque)
   popupCheckoutVencido: AlertaDTO | null = null;

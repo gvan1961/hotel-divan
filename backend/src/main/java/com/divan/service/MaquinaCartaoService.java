@@ -140,4 +140,8 @@ public class MaquinaCartaoService {
     public List<CobrancaCartao> listarAtivas() {
         return cobrancaCartaoRepository.findByStatusInOrderByDataCriacaoDesc(List.of("PENDENTE", "PAGO"));
     }
+    
+    public List<CobrancaCartao> buscarHistorico(LocalDateTime dataInicio, LocalDateTime dataFim, Long reservaId, String status) {
+        return cobrancaCartaoRepository.buscarHistorico(dataInicio, dataFim, reservaId, status);
+    }
 }

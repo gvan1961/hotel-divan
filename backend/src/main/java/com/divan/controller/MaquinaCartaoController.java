@@ -83,4 +83,41 @@ public class MaquinaCartaoController {
 
         return ResponseEntity.ok(resultado);
     }
+    
+    @GetMapping("/historico")
+    public ResponseEntity<?> buscarHistorico(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dataInicio,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dataFim,
+            @RequestParam(required = false) Long reservaId,
+            @RequestParam(required = false) String status) {
+
+        java.time.LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
+        java.time.LocalDateTime fim = dataFim != null ? dataFim.atTime(23, 59, 59) : null;
+
+        List<CobrancaCartao> cobrancas = maquinaCartaoService.buscarHistorico(inicio, fim, reservaId, status);
+
+        List<Map<String, Object>> resultado = cobrancas.stream().map(c -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", c.getId());
+            map.put("correlationId", c.getCorrelationId());
+            map.put("valor", c.getValor());
+            map.put("formaPagamento", c.getFormaPagamento());
+            map.put("ordemMercadoPago", c.getOrdemMercadoPago());
+            map.put("reservaId", c.getReservaId());
+            map.put("status", c.getStatus());
+            map.put("dataCriacao", c.getDataCriacao());
+
+            if (c.getReservaId() != null) {
+                reservaRepository.findById(c.getReservaId()).ifPresent(reserva -> {
+                    if (reserva.getApartamento() != null) {
+                        map.put("numeroApartamento", reserva.getApartamento().getNumeroApartamento());
+                    }
+                });
+            }
+
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(resultado);
+    }
 }

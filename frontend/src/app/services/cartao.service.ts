@@ -19,4 +19,14 @@ export class CartaoService {
   cancelar(id: number): Observable<any> {
     return this.http.patch(`${this.apiUrl}/${id}/cancelar`, {});
   }
+
+  buscarHistorico(params: { dataInicio?: string; dataFim?: string; reservaId?: number; status?: string }): Observable<CobrancaCartao[]> {
+  const query = new URLSearchParams();
+  if (params.dataInicio) query.set('dataInicio', params.dataInicio);
+  if (params.dataFim) query.set('dataFim', params.dataFim);
+  if (params.reservaId) query.set('reservaId', params.reservaId.toString());
+  if (params.status) query.set('status', params.status);
+  return this.http.get<CobrancaCartao[]>(`${this.apiUrl}/historico?${query.toString()}`);
+}
+
 }
