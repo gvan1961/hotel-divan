@@ -147,18 +147,19 @@ public class PixController {
             @RequestParam(required = false) Long reservaId,
             @RequestParam(required = false) String status) {
 
-        java.time.LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
-        java.time.LocalDateTime fim = dataFim != null ? dataFim.atTime(23, 59, 59) : null;
+    	java.time.LocalDateTime inicio = dataInicio != null ? dataInicio.atStartOfDay() : null;
+    	java.time.LocalDateTime fim = dataFim != null ? dataFim.atTime(23, 59, 59) : null;
+    	CobrancaPix.StatusPixEnum statusEnum = status != null && !status.isBlank()
+    	    ? CobrancaPix.StatusPixEnum.valueOf(status) : null;
 
-        List<CobrancaCartao> cobrancas = maquinaCartaoService.buscarHistorico(inicio, fim, reservaId, status);
+    	List<CobrancaPix> cobrancas = pixService.buscarHistorico(inicio, fim, reservaId, statusEnum);
 
-        List<Map<String, Object>> resultado = cobrancas.stream().map(c -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("id", c.getId());
-            map.put("correlationId", c.getCorrelationId());
-            map.put("valor", c.getValor());
-            map.put("formaPagamento", c.getFormaPagamento());
-            map.put("ordemMercadoPago", c.getOrdemMercadoPago());
+    	List<Map<String, Object>> resultado = cobrancas.stream().map(c -> {
+    	    Map<String, Object> map = new HashMap<>();
+    	    map.put("id", c.getId());
+    	    map.put("correlationId", c.getCorrelationId());
+    	    map.put("valor", c.getValor());         
+        
             map.put("reservaId", c.getReservaId());
             map.put("status", c.getStatus());
             map.put("dataCriacao", c.getDataCriacao());
