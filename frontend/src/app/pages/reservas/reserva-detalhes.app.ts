@@ -1001,9 +1001,9 @@ import { PixService } from '../../services/pix.service';
           </div>
         </div>
 
-        <!-- MODAL PAGAMENTO -->
-        <div class="modal-overlay" *ngIf="modalPagamento" (click)="fecharModalPagamento()">
-          <div class="modal-content" (click)="$event.stopPropagation()">
+               <!-- MODAL PAGAMENTO -->
+        <div class="modal-overlay" *ngIf="modalPagamento" (click)="!cartaoPagamentoConfirmado && !pixPagamentoConfirmado && fecharModalPagamento()">
+          <div class="modal-content modal-pagamento" (click)="$event.stopPropagation()">
             <h2>💳 Registrar Pagamento</h2>
 
             <div class="alerta-credito-aprovado" *ngIf="temCreditoAprovado()">
@@ -1054,8 +1054,8 @@ import { PixService } from '../../services/pix.service';
 </div>
 </div> 
             
-             <div class="campo" *ngIf="pagFormaPagamento === 'CARTAO_CREDITO' || pagFormaPagamento === 'CARTAO_DEBITO'">
-  <button type="button" class="btn-gerar-pix" (click)="gerarCobrancaCartao()" [disabled]="gerandoCartao">
+   <div class="campo" *ngIf="pagFormaPagamento === 'CARTAO_CREDITO' || pagFormaPagamento === 'CARTAO_DEBITO'">
+  <button type="button" class="btn-gerar-pix" *ngIf="!cartaoCobrancaIdAtual" (click)="gerarCobrancaCartao()" [disabled]="gerandoCartao">
     {{ gerandoCartao ? '⏳ Acionando maquininha...' : '💳 Cobrar na Maquininha' }}
   </button>
 
@@ -1065,22 +1065,25 @@ import { PixService } from '../../services/pix.service';
       <p>Pode clicar em "Confirmar Pagamento" para finalizar.</p>
     </div>
 
-    <div class="cartao-aguardando" *ngIf="!cartaoPagamentoConfirmado">
+    <div class="cartao-aguardando" *ngIf="!cartaoPagamentoConfirmado && !mostrarAvisoCancelarCartao">
       ⏳ Aguardando o cliente inserir/aproximar o cartão na maquininha...
-      <button type="button" class="btn-cancelar-modal" (click)="cancelarCobrancaCartao()">❌ Cliente desistiu — Cancelar</button>
+    </div>
+
+    <div class="cartao-aguardando" *ngIf="mostrarAvisoCancelarCartao" style="background: #fff3cd; color: #856404;">
+      ⚠️ Cancele esta cobrança diretamente na maquininha antes de sair.
+      <button type="button" class="btn-cancelar-modal" (click)="confirmarSairAposCancelarCartao()">Sair da Tela</button>
     </div>
   </div>
 </div>
-
             <div class="campo">
               <label>Observação</label>
+
               <textarea [(ngModel)]="pagObs" rows="3"></textarea>
             </div>
-           
 
            <div class="modal-footer">
-             <button class="btn-cancelar-modal" *ngIf="!cartaoPagamentoConfirmado && !pixPagamentoConfirmado" (click)="fecharModalPagamento()">Cancelar</button>
-             <button class="btn-confirmar" (click)="salvarPagamento()" [disabled]="salvandoPagamento">
+             <button class="btn-cancelar-modal" *ngIf="!cartaoPagamentoConfirmado && !pixPagamentoConfirmado" (click)="cancelarPagamentoReserva()">Cancelar</button>
+             <button class="btn-confirmar" *ngIf="podeConfirmarPagamento()" (click)="salvarPagamento()" [disabled]="salvandoPagamento">
                {{ salvandoPagamento ? '⏳ Processando...' : 'Confirmar Pagamento' }}
              </button>
             </div>
@@ -2198,6 +2201,61 @@ import { PixService } from '../../services/pix.service';
         max-width: 700px;
       }
 
+      /* ===== VISUAL MELHORADO — MODAL DE PAGAMENTO ===== */
+.modal-content.modal-pagamento {
+  animation: modalFadeIn 0.25s ease-out;
+  border-top: 4px solid #667eea;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: translateY(-15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-pagamento h2 {
+  font-size: 1.4rem;
+  color: #2c3e50;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f0f2f5;
+}
+
+.modal-pagamento .campo {
+  margin-bottom: 18px;
+}
+
+.modal-pagamento .campo label {
+  display: block;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.modal-pagamento .campo input[type="text"],
+.modal-pagamento .campo select,
+.modal-pagamento .campo textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+.modal-pagamento .campo input[type="text"]:focus,
+.modal-pagamento .campo select:focus,
+.modal-pagamento .campo textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.modal-pagamento .pix-confirmado-destaque {
+  animation: modalFadeIn 0.3s ease-out;
+}
+
       .modal-content.modal-assinatura {
   max-width: 98vw;
   width: 98vw;
@@ -3253,12 +3311,16 @@ pixBrCode: string | null = null;
 pixCobrancaIdAtual: number | null = null;
 pixIntervaloVerificacao: any = null;
 pixPagamentoConfirmado = false;
+pixAtivoDisponivel: any = null;
+
 
 // ✅ CARTÃO (Mercado Pago via maquininha)
 gerandoCartao = false;
 cartaoCobrancaIdAtual: number | null = null;
 cartaoPagamentoConfirmado = false;
 cartaoIntervaloVerificacao: any = null;
+
+mostrarAvisoCancelarCartao = false;
   
 get podeCancelar(): boolean {
   const status = this.reserva?.status;
@@ -3684,8 +3746,8 @@ gerarHtmlCheckin(empresaNomeCliente: string, assinatura: string | null): void {
 
   ${(this.reserva as any).assinaturaBase64 ? `
     <div style="text-align:center; margin: 8px 0;">
-      <img src="${(this.reserva as any).assinaturaBase64}" 
-           style="max-width:100%; height:80px; border:1px solid #000;" />
+      <img src="${(this.reserva as any).assinaturaBase64}"
+     style="max-width:100%; height:80px; border:1px solid #000; filter: contrast(1.8) brightness(0.7);" />
       <p style="font-weight:900 !important; font-size:10pt !important; margin:2px 0;">
         <strong>ASSINADO DIGITALMENTE</strong>
       </p>
@@ -4362,31 +4424,44 @@ gerarHtmlFatura(valorTotal: number, pagoAVista: number, valorFaturado: number, s
 
     // ============= PAGAMENTO =============
    abrirModalPagamento(): void {
+
   if (!this.reserva) return;
   this.pagValor = Number(this.reserva.totalApagar);
   this.pagValorTexto = this.pagValor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   this.pagFormaPagamento = '';
   this.pagObs = '';
+  this.pixAtivoDisponivel = null;
   this.modalPagamento = true;
 
   // ✅ Verifica se já existe uma cobrança Pix ativa (paga ou pendente) pra essa reserva
+  // — só guarda a informação, sem trocar de tela sozinho
   this.http.get<any>(`/api/pix/reserva/${this.reserva.id}/ativa`).subscribe({
     next: (cobranca) => {
       if (cobranca) {
-        this.pagFormaPagamento = 'PIX';
-        this.pixQrCodeImage = cobranca.qrCodeImage;
-        this.pixBrCode = cobranca.brCode;
-        this.pixCobrancaIdAtual = cobranca.id;
-        if (cobranca.status === 'PAGO') {
-          this.pixPagamentoConfirmado = true;
-        } else {
-          this.pixPagamentoConfirmado = false;
-          this.iniciarVerificacaoPix();
-        }
+        this.pixAtivoDisponivel = cobranca;
       }
     },
     error: () => {} // 204 (sem cobrança) cai aqui também — segue fluxo normal
   });
+}
+
+retomarPixAtivo(): void {
+  if (!this.pixAtivoDisponivel) return;
+  const cobranca = this.pixAtivoDisponivel;
+
+  this.pagFormaPagamento = 'PIX';
+  this.pixQrCodeImage = cobranca.qrCodeImage;
+  this.pixBrCode = cobranca.brCode;
+  this.pixCobrancaIdAtual = cobranca.id;
+
+  if (cobranca.status === 'PAGO') {
+    this.pixPagamentoConfirmado = true;
+  } else {
+    this.pixPagamentoConfirmado = false;
+    this.iniciarVerificacaoPix();
+  }
+
+  this.pixAtivoDisponivel = null; // esconde o aviso, já que foi retomado
 }
 
     fecharModalPagamento(): void {
@@ -7289,6 +7364,28 @@ cancelarCobrancaCartao(): void {
   });
 }
 
+cancelarPagamentoReserva(): void {
+  if (this.cartaoCobrancaIdAtual && !this.cartaoPagamentoConfirmado) {
+    this.mostrarAvisoCancelarCartao = true;
+  } else {
+    this.fecharModalPagamento();
+  }
+}
+
+confirmarSairAposCancelarCartao(): void {
+  if (this.cartaoCobrancaIdAtual) {
+    this.http.patch(`/api/cartao/${this.cartaoCobrancaIdAtual}/cancelar`, {}).subscribe({
+      next: () => {},
+      error: () => {}
+    });
+  }
+  this.pararVerificacaoCartao();
+  this.cartaoCobrancaIdAtual = null;
+  this.cartaoPagamentoConfirmado = false;
+  this.mostrarAvisoCancelarCartao = false;
+  this.fecharModalPagamento();
+}
+
 salvarPixPendenteReserva(): void {
   this.pararVerificacaoPix();
   alert('✅ Pix salvo! Assim que o cliente pagar, você pode confirmar depois na tela "Pix Pendentes" ou reabrindo esta reserva.');
@@ -7319,6 +7416,19 @@ imprimirPix(): void {
   janela.document.close();
   janela.focus();
   setTimeout(() => janela.print(), 500);
+}
+
+podeConfirmarPagamento(): boolean {
+ if (!this.pagFormaPagamento) {
+    return false; // nenhuma forma selecionada ainda — botão não aparece
+  }
+  if (this.pagFormaPagamento === 'CARTAO_CREDITO' || this.pagFormaPagamento === 'CARTAO_DEBITO') {
+    return this.cartaoPagamentoConfirmado;
+  }
+  if (this.pagFormaPagamento === 'PIX') {
+    return this.pixPagamentoConfirmado;
+  }
+  return true; // outras formas (Dinheiro, Faturado, Débito em Conta, etc.) não precisam dessa trava
 }
 
 enviarPixWhatsApp(): void {

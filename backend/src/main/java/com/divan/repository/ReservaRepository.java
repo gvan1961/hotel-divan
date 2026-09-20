@@ -218,4 +218,24 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
 
     			  List<Reserva> findByApartamentoNumeroApartamento(String numeroApartamento);
         
+    			  @Query("""
+                          SELECT DISTINCT r FROM Reserva r
+                          LEFT JOIN FETCH r.cliente c
+                          LEFT JOIN FETCH c.empresa
+                          LEFT JOIN FETCH r.apartamento a
+                          LEFT JOIN FETCH a.tipoApartamento
+                          WHERE r.status IN ('ATIVA', 'PRE_RESERVA')
+                            AND (
+                                  r.status = 'ATIVA'
+                                  OR :dataCheckin IS NOT NULL
+                                  OR DATE(r.dataCheckin) = CURRENT_DATE
+                                )
+                            AND (:dataCheckin IS NULL OR DATE(r.dataCheckin) = DATE(:dataCheckin))
+                            AND (:empresaId IS NULL OR c.empresa.id = :empresaId)
+                          ORDER BY a.numeroApartamento ASC
+                          """)
+                      List<Reserva> buscarRelatorioApartamentosHospedes(
+                          @Param("dataCheckin") LocalDateTime dataCheckin,
+                          @Param("empresaId") Long empresaId
+                      );
 }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { PixService } from '../../services/pix.service';
 import { CobrancaPix, ItemPixPendente } from '../../models/cobranca-pix.model';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-pix-pendentes-lista',
@@ -41,7 +42,8 @@ import { CobrancaPix, ItemPixPendente } from '../../models/cobranca-pix.model';
   </div>
   
   <button class="btn-retomar" *ngIf="!cobranca.reservaId" (click)="retomar(cobranca)">🔄 Retomar Venda</button>
-<button class="btn-ir-reserva" *ngIf="cobranca.reservaId" (click)="irParaReserva(cobranca)">✅ Ir para Reserva</button>
+<button class="btn-confirmar-direto" *ngIf="cobranca.reservaId && cobranca.status === 'PAGO'" (click)="confirmarPagamentoDireto(cobranca)">✅ Pagamento Confirmado — Lançar na Reserva</button>
+<button class="btn-ir-reserva" *ngIf="cobranca.reservaId && cobranca.status !== 'PAGO'" (click)="irParaReserva(cobranca)">Ir para Reserva</button>
   <button class="btn-cancelar-pix" (click)="cancelar(cobranca)">❌ Cancelar</button>
 </div>
     </div>
@@ -68,11 +70,13 @@ import { CobrancaPix, ItemPixPendente } from '../../models/cobranca-pix.model';
 .badge-pago { background: #d4edda; color: #155724; }
 .card-sub { display: flex; gap: 10px; margin-bottom: 8px; font-size: 0.8rem; color: #888; }
 .btn-ir-reserva { display: block; width: 100%; padding: 8px; margin-top: 8px; border: none; border-radius: 5px; cursor: pointer; background: #667eea; color: white; font-weight: 600; }
+.btn-confirmar-direto { display: block; width: 100%; padding: 10px; margin-top: 8px; border: none; border-radius: 5px; cursor: pointer; background: #28a745; color: white; font-weight: 700; }
     `]
 })
 export class PixPendentesListaApp implements OnInit {
   private pixService = inject(PixService);
   private router = inject(Router);
+  private http = inject(HttpClient);
 
   cobrancas: CobrancaPix[] = [];
   loading = true;
@@ -126,6 +130,34 @@ export class PixPendentesListaApp implements OnInit {
     error: (err) => {
       console.error('Erro ao cancelar', err);
       alert('❌ Erro ao cancelar cobrança');
+    }
+  });
+}
+ 
+  confirmarPagamentoDireto(cobranca: CobrancaPix): void {
+  if (!cobranca.reservaId) return;
+  if (!confirm(`Confirma o lançamento de R$ ${cobranca.valor.toFixed(2)} na reserva #${cobranca.reservaId}?`)) return;
+
+  this.http.post('/api/pagamentos', {
+    reservaId: cobranca.reservaId,
+    valor: cobranca.valor,
+    formaPagamento: 'PIX',
+    observacao: 'Confirmado via tela Pix Pendentes'
+  }).subscribe({
+    next: () => {
+      this.pixService.confirmarCobranca(cobranca.id).subscribe({
+        next: () => {
+          alert('✅ Pagamento lançado na reserva com sucesso!');
+          this.carregarPendentes();
+        },
+        error: () => {
+          alert('⚠️ O pagamento JÁ FOI lançado na reserva com sucesso, mas houve uma falha ao atualizar esta tela. Não clique em lançar novamente — o crédito já foi feito. Atualize a página se o card continuar aparecendo.');
+          this.carregarPendentes();
+        }
+      });
+    },
+    error: (err: any) => {
+      alert('❌ Erro ao lançar pagamento: ' + (err.error?.erro || err.message));
     }
   });
 }

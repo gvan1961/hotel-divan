@@ -201,6 +201,12 @@ public class ApartamentoController {
                               && r.getDataCheckoutReal() == null)
                     .collect(Collectors.toList());
 
+                
+                
+                
+                
+                
+                
                 if (!reservasComCheckinRealizado.isEmpty()) {
                     Reserva reservaAtiva = reservasComCheckinRealizado.get(0);
                     BigDecimal saldo = reservaAtiva.getTotalApagar() != null
@@ -218,6 +224,21 @@ public class ApartamentoController {
                         ));
                     }
 
+                    // ✅ NUNCA finaliza silenciosamente — exige confirmação explícita
+                    boolean confirmado = body != null && Boolean.TRUE.equals(body.get("confirmarCheckoutAutomatico"));
+
+                    if (!confirmado) {
+                        return ResponseEntity.badRequest().body(Map.of(
+                            "requerConfirmacao", true,
+                            "erro", String.format(
+                                "Apartamento %s possui hóspede ativo #%d (%s), sem saldo devedor. Confirma o check-out desse hóspede para liberar o apartamento?",
+                                apartamento.getNumeroApartamento(),
+                                reservaAtiva.getId(),
+                                reservaAtiva.getCliente().getNome()
+                            )
+                        ));
+                    }
+
                     reservaAtiva.setStatus(Reserva.StatusReservaEnum.FINALIZADA);
                     reservaAtiva.setDataCheckoutReal(LocalDateTime.now());
                     reservaRepository.save(reservaAtiva);
@@ -227,13 +248,18 @@ public class ApartamentoController {
                     historicoHospede.setDataHora(LocalDateTime.now());
                     historicoHospede.setQuantidadeAnterior(reservaAtiva.getQuantidadeHospede());
                     historicoHospede.setQuantidadeNova(reservaAtiva.getQuantidadeHospede());
-                    historicoHospede.setMotivo("CHECKOUT AUTOMÁTICO — Liberação de UH via Painel de Recepção. Reserva quitada.");
+                    historicoHospede.setMotivo("CHECKOUT AUTOMÁTICO — Liberação de UH via Painel de Recepção. Reserva quitada. Confirmado pelo recepcionista.");
                     historicoHospedeRepository.save(historicoHospede);
 
                     checkoutAutomatico = true;
                     reservaId = reservaAtiva.getId();
                     clienteNome = reservaAtiva.getCliente().getNome();
                 }
+                
+                
+                
+                
+                
             }
 
             

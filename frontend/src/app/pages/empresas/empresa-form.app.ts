@@ -6,6 +6,8 @@ import { EmpresaService } from '../../services/empresa.service';
 import { EmpresaRequest } from '../../models/empresa.model';
 import { FaixaConsumoAguaService } from '../../services/faixa-consumo-agua.service';
 import { FaixaConsumoAgua, FaixaConsumoAguaRequest } from '../../models/faixa-consumo-agua.model';
+import { HttpClient } from '@angular/common/http';
+
 
 @Component({
   selector: 'app-empresa-form',
@@ -24,15 +26,21 @@ import { FaixaConsumoAgua, FaixaConsumoAguaRequest } from '../../models/faixa-co
             <label>Nome da Empresa *</label>
             <input type="text" [(ngModel)]="empresa.nomeEmpresa" name="nomeEmpresa" required />
           </div>
+<div class="form-group">
+  <label>CNPJ *</label>
+  <input type="text" [(ngModel)]="empresa.cnpj" name="cnpj" required 
+         (input)="formatarCnpj()" maxlength="18" 
+         placeholder="00.000.000/0000-00"
+         [class.input-erro]="cnpjInvalido" />
+  <small *ngIf="cnpjInvalido" style="color: red; margin-top: 4px; display: block;">
+    ⚠️ CNPJ inválido — verifique os dígitos
+  </small>
+  <small *ngIf="cnpjDuplicado" style="color: red; margin-top: 4px; display: block;">
+  ⚠️ Este CNPJ já está cadastrado para outra empresa
+</small>
+</div>
 
-          <div class="form-group">
-            <label>CNPJ *</label>
-            <input type="text" [(ngModel)]="empresa.cnpj" name="cnpj" required 
-                   (input)="formatarCnpj()" maxlength="18" 
-                   placeholder="00.000.000/0000-00" />
-          </div>
-
-          <div class="form-group">
+<div class="form-group">
             <label>Contato *</label>
             <input type="text" [(ngModel)]="empresa.contato" name="contato" required />
           </div>
@@ -302,7 +310,9 @@ import { FaixaConsumoAgua, FaixaConsumoAguaRequest } from '../../models/faixa-co
 export class EmpresaFormApp implements OnInit {
   private empresaService = inject(EmpresaService);
   private router = inject(Router);
-  private route = inject(ActivatedRoute);
+  private route = inject(ActivatedRoute);  
+  private http = inject(HttpClient);
+
 
   empresa: EmpresaRequest = {
     nomeEmpresa: '',
@@ -318,6 +328,9 @@ export class EmpresaFormApp implements OnInit {
   errorMessage = '';
   isEdit = false;
   empresaId?: number;
+
+  cnpjInvalido = false;
+  cnpjDuplicado = false;
 
   private faixaService = inject(FaixaConsumoAguaService);
 
@@ -405,7 +418,7 @@ carregarFaixas(empresaId: number): void {
       if (err.status === 401 || err.status === 403) {
         this.errorMessage = 'Acesso não autorizado. Verifique suas permissões.';
       } else {
-        this.errorMessage = err.error?.message || 'Erro ao salvar empresa';
+        this.errorMessage = err.error?.erro || 'Erro ao salvar empresa';
       }
     }
   });
@@ -440,6 +453,15 @@ carregarFaixas(empresaId: number): void {
     if (cnpj.length > 15) cnpj = cnpj.substring(0, 15) + '-' + cnpj.substring(15, 17);
 
     this.empresa.cnpj = cnpj;
+
+    const limpo = cnpj.replace(/[^A-Z0-9]/g, '');
+    this.cnpjInvalido = limpo.length === 14 && !this.isCnpjValido(limpo);
+
+    if (!this.cnpjInvalido && limpo.length === 14) {
+      this.verificarCnpjDuplicado(limpo);
+    } else {
+      this.cnpjDuplicado = false;
+    }
   }
 
   formatarCelular(): void {
@@ -513,6 +535,50 @@ removerFaixa(id: number): void {
       }
     });
   }
+}
+
+isCnpjValido(cnpj: string): boolean {
+  const limpo = cnpj.replace(/[^A-Z0-9]/g, '');
+  if (limpo.length !== 14) return false;
+  if (/^(.)\1+$/.test(limpo)) return false; // todos os caracteres iguais
+
+  const calcularDigito = (base: string): number => {
+    let peso = base.length - 7;
+    let soma = 0;
+    for (let i = 0; i < base.length; i++) {
+      const valor = base.charCodeAt(i) - 48;
+      soma += valor * peso;
+      peso--;
+      if (peso < 2) peso = 9;
+    }
+    const resto = soma % 11;
+    return resto < 2 ? 0 : 11 - resto;
+  };
+
+  const doze = limpo.substring(0, 12);
+  const dv1 = calcularDigito(doze);
+  const treze = doze + dv1;
+  const dv2 = calcularDigito(treze);
+
+  const digitosInformados = limpo.substring(12);
+  return digitosInformados === `${dv1}${dv2}`;
+}
+
+verificarCnpjDuplicado(cnpj: string): void {
+  const limpo = cnpj.replace(/[^A-Z0-9]/g, '');
+  if (limpo.length !== 14) {
+    this.cnpjDuplicado = false;
+    return;
+  }
+  this.http.get<any>(`/api/empresas/cnpj/${limpo}`).subscribe({
+    next: (res) => {
+      // Se estiver editando a MESMA empresa, não conta como duplicado
+      this.cnpjDuplicado = !this.isEdit || res.id !== this.empresaId;
+    },
+    error: () => {
+      this.cnpjDuplicado = false; // não encontrou = não é duplicado
+    }
+  });
 }
 
   voltar(): void {

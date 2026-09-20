@@ -133,7 +133,7 @@ interface ItemCarrinho {
       </div>
 
       <!-- MODAL FINALIZAÇÃO -->
-      <div class="modal-overlay" *ngIf="modalFinalizacao" (click)="fecharModalFinalizacao()">
+      <div class="modal-overlay" *ngIf="modalFinalizacao" (click)="!cartaoPagamentoConfirmadoPdv && !pixPagamentoConfirmadoPdv && fecharModalFinalizacao()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <h2>💰 Finalizar Venda</h2>
           
@@ -201,22 +201,26 @@ interface ItemCarrinho {
 
             <!-- ===== NOVO: Cobrar na Maquininha (Cartão) ===== -->
 <div class="campo" *ngIf="formaPagamento === 'CARTAO_CREDITO' || formaPagamento === 'CARTAO_DEBITO'">
-  <button type="button" class="btn-gerar-pix" (click)="gerarCobrancaCartaoPdv()" [disabled]="gerandoCartaoPdv">
-    {{ gerandoCartaoPdv ? '⏳ Acionando maquininha...' : '💳 Cobrar na Maquininha' }}
-  </button>
+  <button type="button" class="btn-gerar-pix" *ngIf="!cartaoCobrancaIdAtualPdv" (click)="gerarCobrancaCartaoPdv()" [disabled]="gerandoCartaoPdv">
+  {{ gerandoCartaoPdv ? '⏳ Acionando maquininha...' : '💳 Cobrar na Maquininha' }}
+</button>
 
-  <div class="pix-resultado" *ngIf="cartaoCobrancaIdAtualPdv">
+ <div class="pix-resultado" *ngIf="cartaoCobrancaIdAtualPdv">
     <div class="pix-confirmado-destaque" *ngIf="cartaoPagamentoConfirmadoPdv">
       ✅ PAGAMENTO CONFIRMADO!
       <p>Pode clicar em "Confirmar Venda" para finalizar.</p>
     </div>
 
-    <div class="cartao-aguardando" *ngIf="!cartaoPagamentoConfirmadoPdv">
+    <div class="cartao-aguardando" *ngIf="!cartaoPagamentoConfirmadoPdv && !mostrarAvisoCancelarCartaoPdv">
       ⏳ Aguardando o cliente inserir/aproximar o cartão na maquininha...
-      <button type="button" class="btn-cancelar-modal" (click)="cancelarCobrancaCartaoPdv()">❌ Cliente desistiu — Cancelar</button>
+    </div>
+
+    <div class="cartao-aguardando" *ngIf="mostrarAvisoCancelarCartaoPdv" style="background: #fff3cd; color: #856404;">
+      ⚠️ Cancele esta cobrança diretamente na maquininha antes de sair.
+      <button type="button" class="btn-cancelar-modal" (click)="confirmarSairAposCancelarCartaoPdv()">Sair da Tela</button>
     </div>
   </div>
-</div>           
+</div>   
 
             <div class="campo" *ngIf="formaPagamento === 'DINHEIRO'">
               <label>Valor Pago</label>
@@ -326,14 +330,12 @@ interface ItemCarrinho {
             <textarea [(ngModel)]="observacao" rows="2"></textarea>
           </div>
 
-          <div class="modal-footer">
-           <button class="btn-cancelar-modal" *ngIf="!cartaoPagamentoConfirmadoPdv && !pixPagamentoConfirmadoPdv" (click)="fecharModalFinalizacao()">Cancelar</button>
-            </button>
-           
-            <button class="btn-confirmar" (click)="confirmarVenda()" [disabled]="loadingVenda">
-              {{ loadingVenda ? '⏳ Processando...' : '✅ Confirmar Venda' }}
-            </button>
-          </div>
+   <div class="modal-footer">
+     <button class="btn-cancelar-modal" *ngIf="!cartaoPagamentoConfirmadoPdv && !pixPagamentoConfirmadoPdv" (click)="cancelarPagamentoPdv()">Cancelar</button>
+     <button class="btn-confirmar" *ngIf="podeConfirmarVenda()" (click)="confirmarVenda()" [disabled]="loadingVenda">
+    {{ loadingVenda ? '⏳ Processando...' : '✅ Confirmar Venda' }}
+  </button>
+</div>
         </div>
       </div>
 
@@ -870,6 +872,8 @@ interface ItemCarrinho {
     
     pixPagamentoConfirmadoPdv = false;
     pixIntervaloVerificacaoPdv: any = null;
+
+    mostrarAvisoCancelarCartaoPdv = false;
 
     // ✅ CARTÃO (Mercado Pago via maquininha) — PDV
      gerandoCartaoPdv = false;
@@ -1745,21 +1749,26 @@ pararVerificacaoCartaoPdv(): void {
   }
 }
 
-cancelarCobrancaCartaoPdv(): void {
-  if (!this.cartaoCobrancaIdAtualPdv) return;
-  if (!confirm('Confirma que o cliente desistiu do pagamento no cartão?')) return;
+cancelarPagamentoPdv(): void {
+  if (this.cartaoCobrancaIdAtualPdv && !this.cartaoPagamentoConfirmadoPdv) {
+    this.mostrarAvisoCancelarCartaoPdv = true;
+  } else {
+    this.fecharModalFinalizacao();
+  }
+}
 
-  this.http.patch(`/api/cartao/${this.cartaoCobrancaIdAtualPdv}/cancelar`, {}).subscribe({
-    next: () => {
-      this.pararVerificacaoCartaoPdv();
-      this.cartaoCobrancaIdAtualPdv = null;
-      this.cartaoPagamentoConfirmadoPdv = false;
-      alert('✅ Cobrança cancelada no sistema.\n\n⚠️ IMPORTANTE: Cancele também manualmente na maquininha física, pois o cancelamento automático nela ainda está em teste.');
-    },
-    error: (err) => {
-      alert('❌ Erro ao cancelar: ' + (err.error?.erro || err.message));
-    }
-  });
+confirmarSairAposCancelarCartaoPdv(): void {
+  if (this.cartaoCobrancaIdAtualPdv) {
+    this.http.patch(`/api/cartao/${this.cartaoCobrancaIdAtualPdv}/cancelar`, {}).subscribe({
+      next: () => {},
+      error: () => {}
+    });
+  }
+  this.pararVerificacaoCartaoPdv();
+  this.cartaoCobrancaIdAtualPdv = null;
+  this.cartaoPagamentoConfirmadoPdv = false;
+  this.mostrarAvisoCancelarCartaoPdv = false;
+  this.fecharModalFinalizacao();
 }
 
 copiarCodigoPixPdv(): void {
@@ -1787,6 +1796,16 @@ imprimirPixPdv(): void {
   janela.focus();
   setTimeout(() => janela.print(), 500);
 } 
+
+  podeConfirmarVenda(): boolean {
+  if (this.formaPagamento === 'CARTAO_CREDITO' || this.formaPagamento === 'CARTAO_DEBITO') {
+    return this.cartaoPagamentoConfirmadoPdv;
+  }
+  if (this.formaPagamento === 'PIX') {
+    return this.pixPagamentoConfirmadoPdv;
+  }
+  return true;
+}
 
   enviarPixWhatsAppPdv(): void {
   if (!this.pixQrCodeImagePdv || !this.pixBrCodePdv) return;

@@ -801,14 +801,14 @@ calcularTotalHospedes(): number {
   if (apt.concluido && apt.status === 'LIMPEZA' && apt.apartamentoId) {
     const confirmacao = confirm(`✅ Confirmar conclusão da limpeza do apartamento ${apt.numeroApartamento}?\n\n(O apartamento será liberado automaticamente)`);
     
-    if (confirmacao) {
+   if (confirmacao) {
       // Chamar endpoint para liberar limpeza
       this.http.patch(`/api/apartamentos/${apt.apartamentoId}/liberar-limpeza`, {})
         .subscribe({
           next: () => {
             console.log('✅ Limpeza liberada no backend!');
             alert(`✅ Apartamento ${apt.numeroApartamento} liberado com sucesso!`);
-            
+
             // Remover da lista após 1 segundo
             setTimeout(() => {
               this.apartamentos = this.apartamentos.filter(a => a.numeroApartamento !== apt.numeroApartamento);
@@ -816,10 +816,30 @@ calcularTotalHospedes(): number {
             }, 1000);
           },
           error: (err) => {
-            console.error('❌ Erro ao liberar limpeza:', err);
-            alert('❌ Erro ao salvar: ' + (err.error?.message || err.message));
-            // Desmarcar o checkbox em caso de erro
-            apt.concluido = false;
+            if (err.error?.requerConfirmacao) {
+              if (confirm(err.error.erro + '\n\nConfirma o check-out?')) {
+                this.http.patch(`/api/apartamentos/${apt.apartamentoId}/liberar-limpeza`, {
+                  confirmarCheckoutAutomatico: true
+                }).subscribe({
+                  next: () => {
+                    alert(`✅ Apartamento ${apt.numeroApartamento} liberado com sucesso!`);
+                    setTimeout(() => {
+                      this.apartamentos = this.apartamentos.filter(a => a.numeroApartamento !== apt.numeroApartamento);
+                    }, 1000);
+                  },
+                  error: (err2) => {
+                    alert('❌ Erro ao salvar: ' + (err2.error?.erro || err2.message));
+                    apt.concluido = false;
+                  }
+                });
+              } else {
+                apt.concluido = false;
+              }
+            } else {
+              console.error('❌ Erro ao liberar limpeza:', err);
+              alert('❌ Erro ao salvar: ' + (err.error?.erro || err.message));
+              apt.concluido = false;
+            }
           }
         });
     } else {

@@ -31,4 +31,8 @@ buscarHistorico(params: { dataInicio?: string; dataFim?: string; reservaId?: num
   return this.http.get<CobrancaPix[]>(`${this.apiUrl}/historico?${query.toString()}`);
 }
 
+confirmarCobranca(id: number): Observable<any> {
+  return this.http.patch(`${this.apiUrl}/${id}/confirmar`, {});
+}
+
 }

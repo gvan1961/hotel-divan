@@ -148,9 +148,78 @@ template: `
           </span>
         </div>
         <button class="btn-pdv" (click)="irParaPDV()" title="PDV - Vendas">💳 PDV</button>
+        <button class="btn-imprimir-apartamentos" (click)="abrirModalImprimirApartamentos()" title="Imprimir Apartamentos">🖨️ Imprimir Apartamentos</button>
         <button class="btn-reconhecimento" (click)="irParaReconhecimento()" title="Reconhecimento Facial">📷 Reconhecimento</button>
         <button class="btn-atualizar" (click)="carregarDados()" title="Atualizar">↻</button>
       </div>
+       
+       <!-- MODAL IMPRIMIR APARTAMENTOS -->
+<div class="modal-overlay" *ngIf="modalImprimirApartamentos" (click)="fecharModalImprimirApartamentos()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <h2>🖨️ Imprimir Apartamentos</h2>
+
+    <div class="campo">
+      <label>
+        <input type="radio" name="filtroTipo" value="todas" [(ngModel)]="filtroRelatorioTipo" />
+        Todos os apartamentos ocupados/reservados
+      </label>
+    </div>
+    <div class="campo">
+      <label>
+        <input type="radio" name="filtroTipo" value="data" [(ngModel)]="filtroRelatorioTipo" />
+        Por data de check-in específica
+      </label>
+      <input type="date" [(ngModel)]="filtroRelatorioData" *ngIf="filtroRelatorioTipo === 'data'" style="margin-top: 8px; width: 100%; padding: 8px;" />
+    </div>
+    <div class="campo">
+      <label>
+        <input type="radio" name="filtroTipo" value="empresa" [(ngModel)]="filtroRelatorioTipo" />
+        Por empresa
+      </label>
+      <select [(ngModel)]="filtroRelatorioEmpresaId" *ngIf="filtroRelatorioTipo === 'empresa'" style="margin-top: 8px; width: 100%; padding: 8px;">
+        <option [ngValue]="null">Selecione uma empresa...</option>
+        <option *ngFor="let emp of empresasParaRelatorio" [ngValue]="emp.id">{{ emp.nomeEmpresa }}</option>
+      </select>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar-modal" (click)="fecharModalImprimirApartamentos()">Cancelar</button>
+      <button class="btn-confirmar" (click)="gerarRelatorioApartamentos()">🖨️ Gerar e Imprimir</button>
+    </div>
+  </div>
+</div>
+
+       <!-- MODAL REALOCAR PRÉ-RESERVA -->
+<div class="modal-overlay" *ngIf="modalRealocarPreReserva" (click)="fecharModalRealocarPreReserva()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <h2>🔄 Realocar Pré-Reserva</h2>
+
+    <p *ngIf="preReservaAtual" style="margin-bottom: 16px; line-height: 1.5;">
+      <strong>{{ preReservaAtual.clienteNome }}</strong> está agendado para o Apto
+      <strong>{{ preReservaAtual.apartamentoAtualNumero }}</strong>, que ainda está ocupado.
+      Escolha outro apartamento disponível para o período de
+      {{ formatarData(preReservaAtual.dataCheckin) }} até {{ formatarData(preReservaAtual.dataCheckout) }}:
+    </p>
+
+    <div *ngIf="carregandoApartamentosDisponiveis">⏳ Buscando apartamentos disponíveis...</div>
+
+    <div class="lista-apartamentos-disponiveis" *ngIf="!carregandoApartamentosDisponiveis" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+      <button *ngFor="let a of apartamentosDisponiveisRealocacao"
+              class="btn-apartamento-disponivel"
+              (click)="confirmarRealocacao(a)"
+              style="text-align: left; padding: 12px; border: 1.5px solid #667eea; border-radius: 6px; background: white; cursor: pointer; font-weight: 600;">
+        Apto {{ a.numeroApartamento }} — {{ a.tipoApartamento?.descricao || a.tipoApartamento?.tipo }} (cap. {{ a.capacidade }})
+      </button>
+      <div *ngIf="apartamentosDisponiveisRealocacao.length === 0" style="text-align: center; padding: 20px; color: #999;">
+        Nenhum apartamento disponível nesse período.
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar-modal" (click)="fecharModalRealocarPreReserva()">Cancelar</button>
+    </div>
+  </div>
+</div>
 
        <!-- TARJA RECONHECIMENTO FACIAL -->
       <div class="face-monitor-bar">
@@ -684,6 +753,17 @@ template: `
   transition: background .15s;
   margin-left: auto;  /* ← já empurra para direita */
 }
+    .btn-imprimir-apartamentos {
+  background: #16a085;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.btn-imprimir-apartamentos:hover { background: #138a72; }
+
     .btn-pdv:hover { background: #6c3483; }
 
     .btn-atualizar {
@@ -1476,6 +1556,10 @@ carregandoFotos = false;
   dividasPendentes: any[] = [];
   mostrarAvisoDivida = true;
      
+  modalRealocarPreReserva = false;
+  preReservaAtual: any = null;
+  apartamentosDisponiveisRealocacao: any[] = [];
+  carregandoApartamentosDisponiveis = false;
 
   mostrarPopupWhatsapp = false;
 solicitacoesPendentes: any[] = [];
@@ -1770,6 +1854,117 @@ if (this.filtroDataCheckin) {
     this.router.navigate(['/pdv'], { queryParams: { origem: 'painel-recepcao' } });
   }
 
+  // ===== RELATÓRIO IMPRIMÍVEL DE APARTAMENTOS =====
+  modalImprimirApartamentos = false;
+  filtroRelatorioTipo: 'data' | 'empresa' | 'todas' = 'todas';
+  filtroRelatorioData = '';
+  filtroRelatorioEmpresaId: number | null = null;
+  empresasParaRelatorio: any[] = [];
+
+  abrirModalImprimirApartamentos(): void {
+    this.modalImprimirApartamentos = true;
+    this.filtroRelatorioTipo = 'todas';
+    this.filtroRelatorioData = '';
+    this.filtroRelatorioEmpresaId = null;
+
+    if (this.empresasParaRelatorio.length === 0) {
+      this.http.get<any[]>('/api/empresas').subscribe({
+        next: (data) => this.empresasParaRelatorio = data,
+        error: () => {}
+      });
+    }
+  }
+
+  fecharModalImprimirApartamentos(): void {
+    this.modalImprimirApartamentos = false;
+  }
+
+  gerarRelatorioApartamentos(): void {
+    const params = new URLSearchParams();
+    if (this.filtroRelatorioTipo === 'data' && this.filtroRelatorioData) {
+      params.set('dataCheckin', this.filtroRelatorioData);
+    }
+    if (this.filtroRelatorioTipo === 'empresa' && this.filtroRelatorioEmpresaId) {
+      params.set('empresaId', this.filtroRelatorioEmpresaId.toString());
+    }
+
+    this.http.get<any[]>(`/api/relatorios/apartamentos-hospedes?${params.toString()}`).subscribe({
+      next: (dados) => {
+        this.imprimirRelatorioApartamentos(dados);
+        this.fecharModalImprimirApartamentos();
+      },
+      error: (err) => {
+        alert('❌ Erro ao gerar relatório: ' + (err.error?.erro || err.message));
+      }
+    });
+  }
+
+  imprimirRelatorioApartamentos(dados: any[]): void {
+    const linhas = dados.map(item => {
+      const hospedesTexto = (item.hospedes || [])
+        .map((h: any) => h.nome + (h.titular ? ' (Titular)' : ''))
+        .join('<br>');
+      return `
+        <tr>
+          <td>${item.numeroApartamento}</td>
+          <td>${item.tipoApartamento || '-'}</td>
+          <td>${hospedesTexto || '-'}</td>
+          <td>${this.formatarDataSimples(item.dataCheckin)}</td>
+          <td>${this.formatarDataSimples(item.dataCheckout)}</td>
+          <td>${item.empresaNome || '-'}</td>
+          <td>${item.status}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const html = `
+      <html>
+      <head>
+        <title>Relatório de Apartamentos</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { font-size: 18px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th, td { border: 1px solid #ccc; padding: 8px; font-size: 12px; text-align: left; vertical-align: top; }
+          th { background: #f0f0f0; }
+        </style>
+      </head>
+      <body>
+        <h1>📋 Relatório de Apartamentos — Hotel Di Van</h1>
+        <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Apto</th>
+              <th>Tipo</th>
+              <th>Hóspedes</th>
+              <th>Check-in</th>
+              <th>Check-out</th>
+              <th>Empresa</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${linhas}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const janela = window.open('', '_blank');
+    if (janela) {
+      janela.document.write(html);
+      janela.document.close();
+      janela.print();
+    }
+  }
+
+  formatarDataSimples(data: string): string {
+    if (!data) return '-';
+    return new Date(data).toLocaleDateString('pt-BR');
+  }
+
   irParaPDVComApartamento(apt: ApartamentoCard): void {
     if (!apt.id || isNaN(Number(apt.id))) {
       alert('Apartamento inválido');
@@ -1859,7 +2054,56 @@ if (this.filtroDataCheckin) {
 
   transferirPreReserva(apt: ApartamentoCard): void {
     if (!apt.reserva?.proximaReserva?.id) return;
-    this.router.navigate(['/reservas', apt.reserva.proximaReserva.id]);
+
+    const proxima = apt.reserva.proximaReserva;
+    this.preReservaAtual = {
+      id: proxima.id,
+      clienteNome: proxima.clienteNome,
+      dataCheckin: proxima.dataCheckin,
+      dataCheckout: proxima.dataCheckout,
+      apartamentoAtualNumero: apt.numero,
+      apartamentoAtualId: apt.id
+    };
+    this.modalRealocarPreReserva = true;
+    this.apartamentosDisponiveisRealocacao = [];
+    this.carregandoApartamentosDisponiveis = true;
+
+    this.http.get<any[]>(`/api/apartamentos/disponiveis-periodo?checkin=${proxima.dataCheckin}T00:00:00&checkout=${proxima.dataCheckout}T23:59:59`).subscribe({
+      next: (lista) => {
+        this.apartamentosDisponiveisRealocacao = lista.filter(a => a.id !== apt.id);
+        this.carregandoApartamentosDisponiveis = false;
+      },
+      error: () => {
+        this.carregandoApartamentosDisponiveis = false;
+      }
+    });
+  }
+
+  fecharModalRealocarPreReserva(): void {
+    this.modalRealocarPreReserva = false;
+    this.preReservaAtual = null;
+    this.apartamentosDisponiveisRealocacao = [];
+  }
+
+  confirmarRealocacao(novoApartamento: any): void {
+    if (!this.preReservaAtual) return;
+    if (!confirm(`Mover a pré-reserva de ${this.preReservaAtual.clienteNome} para o Apto ${novoApartamento.numeroApartamento}?`)) return;
+
+    this.http.post('/api/reservas/transferir-apartamento', {
+      reservaId: this.preReservaAtual.id,
+      novoApartamentoId: novoApartamento.id,
+      dataTransferencia: null,
+      motivo: 'Realocação de pré-reserva via Painel de Recepção'
+    }).subscribe({
+      next: () => {
+        alert('✅ Pré-reserva realocada com sucesso!');
+        this.fecharModalRealocarPreReserva();
+        this.carregarDados();
+      },
+      error: (err: any) => {
+        alert('❌ Erro ao realocar: ' + (err.error?.erro || err.message));
+      }
+    });
   }
 
   labelPreReserva(apt: ApartamentoCard): string {
@@ -1878,13 +2122,25 @@ if (this.filtroDataCheckin) {
       usuarioId: usuario.id,
       motivo: 'Liberação via Painel de Recepção'
     }, { headers }).subscribe({
-      next: (res: any) => {
-  if (res?.checkoutAutomatico) {
-    alert(`⚠️ ATENÇÃO: A reserva #${res.reservaId} de ${res.clienteNome} foi encerrada automaticamente (checkout sem saldo pendente). Verifique o histórico.`);
-  }
-  this.carregarDados();
-},
-error: (err) => alert('Erro: ' + (err.error?.erro || err.message))
+      next: () => {
+        this.carregarDados();
+      },
+      error: (err) => {
+        if (err.error?.requerConfirmacao) {
+          if (confirm(err.error.erro + '\n\nConfirma o check-out?')) {
+            this.http.patch(`/api/apartamentos/${apt.id}/liberar-limpeza`, {
+              usuarioId: usuario.id,
+              motivo: 'Liberação via Painel de Recepção',
+              confirmarCheckoutAutomatico: true
+            }, { headers }).subscribe({
+              next: () => this.carregarDados(),
+              error: (err2) => alert('Erro: ' + (err2.error?.erro || err2.message))
+            });
+          }
+        } else {
+          alert('Erro: ' + (err.error?.erro || err.message));
+        }
+      }
     });
   }
 

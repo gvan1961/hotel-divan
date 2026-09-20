@@ -185,19 +185,26 @@ public class PagamentoController {
                 .findByUsuarioIdAndStatus(usuarioId, FechamentoCaixa.StatusCaixa.ABERTO)
                 .isPresent();
 
-            if (!caixaAberto) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Caixa não aberto. Abra o caixa antes de registrar pagamentos."));
-            }
-
             Long reservaId = Long.parseLong(body.get("reservaId").toString());
             BigDecimal valor = new BigDecimal(body.get("valor").toString());
             String formaPagamentoStr = body.get("formaPagamento").toString();
+
+            // ✅ Só exige caixa aberto para DINHEIRO — Pix/Cartão/etc já foram
+            // confirmados eletronicamente, sem passar por gaveta física
+            boolean exigeCaixaAberto = "DINHEIRO".equals(formaPagamentoStr);
+
+            if (exigeCaixaAberto && !caixaAberto) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("erro", "Caixa não aberto. Abra o caixa antes de registrar pagamentos em dinheiro."));
+            }            
+            
             String observacao = body.containsKey("observacao") && body.get("observacao") != null
                 ? body.get("observacao").toString() : null;
 
             Reserva reserva = reservaRepository.findById(reservaId)
                 .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+            
+            
 
             // ✅ ACEITA PAGAMENTO EM PRÉ-RESERVA E EM ATIVA
             if (reserva.getStatus() != Reserva.StatusReservaEnum.PRE_RESERVA

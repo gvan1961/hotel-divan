@@ -921,14 +921,37 @@ public class ReservaService {
     }
     
     public Reserva alterarDataCheckout(Long id, LocalDateTime novaDataCheckout, String motivo) {
-        Reserva reserva = reservaRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
         
-        if (novaDataCheckout.isBefore(reserva.getDataCheckin())) {
-            throw new RuntimeException("Data de checkout não pode ser antes do checkin");
-        }
+    	Reserva reserva = reservaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+
+            if (novaDataCheckout.isBefore(reserva.getDataCheckin())) {
+                throw new RuntimeException("Data de checkout não pode ser antes do checkin");
+            }
+
+            // ✅ VERIFICAR CONFLITO COM OUTRAS RESERVAS/PRÉ-RESERVAS DO MESMO APARTAMENTO
+            List<Reserva> conflitosProrrogacao = reservaRepository.buscarConflitosApartamento(
+                reserva.getApartamento().getId(),
+                reserva.getDataCheckin(),
+                novaDataCheckout,
+                List.of(Reserva.StatusReservaEnum.ATIVA, Reserva.StatusReservaEnum.PRE_RESERVA),
+                reserva.getId()
+            );
+
+            if (!conflitosProrrogacao.isEmpty()) {
+                Reserva conflito = conflitosProrrogacao.get(0);
+                throw new RuntimeException(String.format(
+                    "Não é possível prorrogar até %s — já existe %s #%d (%s) para este apartamento a partir de %s",
+                    novaDataCheckout.toLocalDate(),
+                    conflito.getStatus() == Reserva.StatusReservaEnum.PRE_RESERVA ? "uma pré-reserva" : "uma reserva ativa",
+                    conflito.getId(),
+                    conflito.getCliente() != null ? conflito.getCliente().getNome() : "-",
+                    conflito.getDataCheckin().toLocalDate()
+                ));
+            }
+
+            LocalDateTime checkoutAnterior = reserva.getDataCheckout();
         
-        LocalDateTime checkoutAnterior = reserva.getDataCheckout();
         BigDecimal totalAnterior = reserva.getTotalDiaria();
         
         long diasNovos = ChronoUnit.DAYS.between(
@@ -1705,13 +1728,26 @@ public class ReservaService {
         // ========== ATUALIZAR STATUS DOS APARTAMENTOS ==========
         
         if (transferenciaImediata) {
-            // Liberar apartamento antigo
-            apartamentoAntigo.setStatus(Apartamento.StatusEnum.LIMPEZA);
-            apartamentoRepository.save(apartamentoAntigo);
-            
+            // ✅ Só marca o apartamento antigo como Limpeza se NÃO existir
+            // outra reserva ATIVA ainda ocupando ele de verdade
+            boolean aindaTemOutraReservaAtiva = reservaRepository
+                .findByApartamentoIdAndStatusIn(apartamentoAntigo.getId(), List.of(Reserva.StatusReservaEnum.ATIVA))
+                .stream()
+                .anyMatch(r -> !r.getId().equals(reserva.getId()));
+
+            if (!aindaTemOutraReservaAtiva) {
+                apartamentoAntigo.setStatus(Apartamento.StatusEnum.LIMPEZA);
+                apartamentoRepository.save(apartamentoAntigo);
+            } else {
+                System.out.println("â„¹ï¸ Apt " + apartamentoAntigo.getNumeroApartamento()
+                    + " NÃ£o foi para limpeza â€” ainda hÃ¡ outra reserva ATIVA ocupando ele");
+            }
+
             // Ocupar novo apartamento
-            novoApartamento.setStatus(Apartamento.StatusEnum.OCUPADO);
-            apartamentoRepository.save(novoApartamento);
+            if (reserva.getStatus() == Reserva.StatusReservaEnum.ATIVA) {
+                novoApartamento.setStatus(Apartamento.StatusEnum.OCUPADO);
+                apartamentoRepository.save(novoApartamento);
+            }
         }
         
         // ========== ATUALIZAR RESERVA ==========
