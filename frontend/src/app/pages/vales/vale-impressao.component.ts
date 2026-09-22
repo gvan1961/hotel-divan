@@ -389,9 +389,14 @@ export class ValeImpressaoComponent implements OnInit {
   }
 
   formatarData(data: any): string {
-    if (!data) return '-';
-    return new Date(data).toLocaleDateString('pt-BR');
-  }
+      if (!data) return '-';
+      const str = typeof data === 'string' ? data : data.toString();
+      const partes = str.split('T')[0].split('-'); // pega só "AAAA-MM-DD", ignora hora se tiver
+      if (partes.length === 3) {
+        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+      }
+      return new Date(data).toLocaleDateString('pt-BR');
+    }
 
   obterDataAtual(): string {
     return new Date().toLocaleDateString('pt-BR', {

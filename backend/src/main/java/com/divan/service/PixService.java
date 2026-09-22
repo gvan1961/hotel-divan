@@ -27,7 +27,15 @@ public class PixService {
     @Autowired
     private com.divan.service.PagamentoService pagamentoService;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = criarRestTemplateComTimeout();
+
+    private static RestTemplate criarRestTemplateComTimeout() {
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory =
+            new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10000); // 10 segundos pra conectar
+        factory.setReadTimeout(15000);    // 15 segundos esperando resposta
+        return new RestTemplate(factory);
+    }
 
     public CobrancaPix gerarCobranca(BigDecimal valorReais, String comentario, Long reservaId, Object itens) {
         String correlationId = "HSP-" + (reservaId != null ? reservaId : "VENDA") + "-" + UUID.randomUUID().toString().substring(0, 8);
@@ -43,13 +51,29 @@ public class PixService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
-        ResponseEntity<Map> response = restTemplate.postForEntity(WEBHOOK_URL, request, Map.class);
+        ResponseEntity<String> response;
+        try {
+            response = restTemplate.postForEntity(WEBHOOK_URL, request, String.class);
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            throw new RuntimeException(
+                "A Woovi/Make está demorando demais ou instável no momento. " +
+                "Não tente gerar novamente agora — aguarde alguns minutos e verifique se a cobrança " +
+                "não foi criada mesmo assim antes de tentar de novo."
+            );
+        }
 
         if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
             throw new RuntimeException("Falha ao gerar cobrança Pix");
         }
 
-        Map<String, Object> resp = response.getBody();
+        Map<String, Object> resp;
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapperResposta = new com.fasterxml.jackson.databind.ObjectMapper();
+            resp = mapperResposta.readValue(response.getBody(), Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Erro ao interpretar resposta do Make: " + e.getMessage()
+                + " | Resposta recebida: " + response.getBody());
+        }
 
         CobrancaPix cobranca = new CobrancaPix();
         cobranca.setCorrelationId(correlationId);
@@ -96,6 +120,19 @@ public class PixService {
         }
 
         cobranca.setStatus(CobrancaPix.StatusPixEnum.PAGO);
+        cobrancaPixRepository.save(cobranca);
+    }
+    
+    public void marcarExpirado(String correlationId) {
+        CobrancaPix cobranca = cobrancaPixRepository.findByCorrelationId(correlationId)
+            .orElseThrow(() -> new RuntimeException("Cobrança não encontrada para correlationID: " + correlationId));
+
+        if (cobranca.getStatus() == CobrancaPix.StatusPixEnum.PAGO
+            || cobranca.getStatus() == CobrancaPix.StatusPixEnum.CONFIRMADO) {
+            return; // já foi pago, nunca sobrescreve com expirado
+        }
+
+        cobranca.setStatus(CobrancaPix.StatusPixEnum.EXPIRADO);
         cobrancaPixRepository.save(cobranca);
     }
     

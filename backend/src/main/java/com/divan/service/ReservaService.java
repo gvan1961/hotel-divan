@@ -1040,7 +1040,8 @@ public class ReservaService {
                 dataInicio,
                 dataFim)
             .stream()
-            .filter(e -> e.getDescricao() != null && e.getDescricao().startsWith("Diária - Dia"))
+            .filter(e -> e.getDescricao() != null &&
+            (e.getDescricao().startsWith("Diária - Dia") || e.getDescricao().startsWith("Diária extra")))
             .collect(Collectors.toList());
  
         BigDecimal acrescimoHospedePorDia = calcularAcrescimoHospedePorDia(reserva);
@@ -2509,7 +2510,8 @@ public class ReservaService {
         for (ExtratoReserva extrato : todosExtratos) {
         	if (extrato.getStatusLancamento() == ExtratoReserva.StatusLancamentoEnum.DIARIA
         		    && extrato.getDescricao() != null
-        		    && extrato.getDescricao().startsWith("Diária - Dia")) {                LocalDateTime dataLancamento = extrato.getDataHoraLancamento();
+        		    		&& (extrato.getDescricao().startsWith("Diária - Dia") || extrato.getDescricao().startsWith("Diária extra"))) { 
+        		LocalDateTime dataLancamento = extrato.getDataHoraLancamento();
                 LocalDateTime dataLancamentoNormalizada = dataLancamento.toLocalDate().atStartOfDay();
 
                 if (!dataLancamentoNormalizada.isBefore(dataInicioNormalizada)) {

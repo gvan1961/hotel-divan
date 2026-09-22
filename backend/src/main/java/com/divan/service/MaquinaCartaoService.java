@@ -22,7 +22,15 @@ public class MaquinaCartaoService {
     @Autowired
     private CobrancaCartaoRepository cobrancaCartaoRepository;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = criarRestTemplateComTimeout();
+
+    private static RestTemplate criarRestTemplateComTimeout() {
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory =
+            new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10000);
+        factory.setReadTimeout(15000);
+        return new RestTemplate(factory);
+    }
 
     public CobrancaCartao gerarCobranca(BigDecimal valor, String formaPagamento, Long reservaId, Object itens) {
         if (!formaPagamento.equals("credit_card") && !formaPagamento.equals("debit_card")) {
@@ -57,10 +65,18 @@ public class MaquinaCartaoService {
         // gravado direto no banco pelo próprio Make (não vem na resposta)
      
         
-        @SuppressWarnings("rawtypes")
-        
-        
-        ResponseEntity<String> response = restTemplate.postForEntity(WEBHOOK_URL, request, String.class);
+        //@SuppressWarnings("rawtypes")
+
+        ResponseEntity<String> response;
+        try {
+            response = restTemplate.postForEntity(WEBHOOK_URL, request, String.class);
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            throw new RuntimeException(
+                "A maquininha/Make está demorando demais ou instável no momento. " +
+                "Não tente cobrar novamente agora — aguarde alguns minutos e verifique se a cobrança " +
+                "não foi criada mesmo assim antes de tentar de novo."
+            );
+        }
 
         if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
             throw new RuntimeException("Falha ao acionar a maquininha de cartão");

@@ -1040,7 +1040,13 @@ import { PixService } from '../../services/pix.service';
     <p>Pode clicar em "Confirmar Pagamento" para finalizar.</p>
   </div>
 
-  <ng-container *ngIf="!pixPagamentoConfirmado">
+  <div class="pix-confirmado-destaque" *ngIf="pixExpirado" style="background: #fff3cd; color: #856404;">
+    ⏱️ TEMPO EXCEDIDO — o Pix expirou sem confirmação de pagamento.
+    <p>Gere um novo QR Code, ou cancele e resolva com o hóspede de outra forma.</p>
+    <button type="button" class="btn-cancelar-modal" (click)="reiniciarPix()">Fechar e Tentar Outra Vez</button>
+  </div>
+
+  <ng-container *ngIf="!pixPagamentoConfirmado && !pixExpirado">
     <img [src]="pixQrCodeImage" alt="QR Code Pix" class="pix-qrcode-img" />
     <div class="pix-codigo">
       <label>Código Pix (copia e cola):</label>
@@ -1052,7 +1058,7 @@ import { PixService } from '../../services/pix.service';
       </div>
   </ng-container>
 </div>
-</div> 
+</div>
             
    <div class="campo" *ngIf="pagFormaPagamento === 'CARTAO_CREDITO' || pagFormaPagamento === 'CARTAO_DEBITO'">
   <button type="button" class="btn-gerar-pix" *ngIf="!cartaoCobrancaIdAtual" (click)="gerarCobrancaCartao()" [disabled]="gerandoCartao">
@@ -3311,6 +3317,7 @@ pixBrCode: string | null = null;
 pixCobrancaIdAtual: number | null = null;
 pixIntervaloVerificacao: any = null;
 pixPagamentoConfirmado = false;
+pixExpirado = false;
 pixAtivoDisponivel: any = null;
 
 
@@ -7241,6 +7248,14 @@ getEmpresaNomeCliente(): string {
     });
   }
 
+  reiniciarPix(): void {
+  this.pixQrCodeImage = null;
+  this.pixBrCode = null;
+  this.pixCobrancaIdAtual = null;
+  this.pixExpirado = false;
+  this.pixPagamentoConfirmado = false;
+}
+
   gerarPix(): void {
   if (this.pagValor <= 0) {
     alert('⚠️ Informe um valor válido antes de gerar o Pix');
@@ -7281,6 +7296,9 @@ iniciarVerificacaoPix(): void {
       next: (cobranca) => {
         if (cobranca.status === 'PAGO') {
           this.pixPagamentoConfirmado = true;
+          this.pararVerificacaoPix();
+        } else if (cobranca.status === 'EXPIRADO') {
+          this.pixExpirado = true;
           this.pararVerificacaoPix();
         }
       },

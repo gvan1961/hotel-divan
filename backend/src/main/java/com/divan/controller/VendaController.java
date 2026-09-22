@@ -46,9 +46,9 @@ public class VendaController {
     @SuppressWarnings("unchecked")
     @PostMapping("/comanda-consumo")
     public ResponseEntity<?> comandaConsumo(@RequestBody Map<String, Object> body) {
-        try {
-        	verificarCaixaAberto();
-            Long reservaId = Long.parseLong(body.get("reservaId").toString());
+    	try {
+            verificarCaixaAberto("DINHEIRO"); // mantém exigência — não envolve forma de pagamento
+        Long reservaId = Long.parseLong(body.get("reservaId").toString());
             String observacao = body.containsKey("observacao") && body.get("observacao") != null
                 ? body.get("observacao").toString() : "";
             List<Map<String, Object>> itens = (List<Map<String, Object>>) body.get("itens");
@@ -168,9 +168,9 @@ public class VendaController {
     @SuppressWarnings("unchecked")
     @PostMapping("/a-vista")
     public ResponseEntity<?> vendaAVista(@RequestBody Map<String, Object> body) {
-        try {
-        	verificarCaixaAberto();
+    	try {
             String formaPagamentoStr = body.get("formaPagamento").toString();
+             verificarCaixaAberto(formaPagamentoStr);
             String observacao = body.containsKey("observacao") && body.get("observacao") != null
                 ? body.get("observacao").toString() : "";
             List<Map<String, Object>> itens = (List<Map<String, Object>>) body.get("itens");
@@ -251,9 +251,9 @@ public class VendaController {
     @PostMapping("/funcionario")
     public ResponseEntity<?> vendaFuncionario(@RequestBody Map<String, Object> body,
                                                @RequestParam(required = false) Long usuarioId) {
-        try {
-            verificarCaixaAberto();
-            
+    	try {
+            verificarCaixaAberto("FATURADO");
+
             Long clienteId = Long.parseLong(body.get("clienteId").toString());
             String observacao = body.containsKey("observacao") && body.get("observacao") != null
                 ? body.get("observacao").toString() : "";
@@ -436,14 +436,20 @@ public class VendaController {
     
     
     
-    private void verificarCaixaAberto() {
+    private void verificarCaixaAberto(String formaPagamento) {
+        // ✅ Só exige caixa aberto para DINHEIRO — as outras formas já são
+        // confirmadas eletronicamente, sem passar por gaveta física
+        if (!"DINHEIRO".equals(formaPagamento)) {
+            return;
+        }
+
         String login = SecurityContextHolder.getContext().getAuthentication().getName();
         usuarioRepository.findByUsername(login).ifPresent(usuario -> {
             boolean caixaAberto = caixaRepository
                 .findByUsuarioIdAndStatus(usuario.getId(), FechamentoCaixa.StatusCaixa.ABERTO)
                 .isPresent();
             if (!caixaAberto) {
-                throw new RuntimeException("Caixa não aberto. Abra o caixa antes de registrar vendas.");
+                throw new RuntimeException("Caixa não aberto. Abra o caixa antes de registrar vendas em dinheiro.");
             }
         });
     }

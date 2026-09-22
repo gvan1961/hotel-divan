@@ -14,6 +14,7 @@ public class MovimentacaoEstoque {
 
     @ManyToOne
     @JoinColumn(name = "produto_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"itensVenda"})
     private Produto produto;
 
     @Enumerated(EnumType.STRING)

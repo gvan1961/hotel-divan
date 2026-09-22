@@ -25,15 +25,25 @@ public class PixPublicoController {
             }
 
             String status = body.get("status") != null ? body.get("status").toString() : null;
-            boolean statusValido = status == null 
-                || status.equalsIgnoreCase("COMPLETED") 
-                || status.equalsIgnoreCase("PAGO");
-            if (!statusValido) {
-                System.out.println("ℹ️ Pix ignorado — status recebido: " + status + " (correlation_id: " + correlationId + ")");
-                return ResponseEntity.ok(Map.of("mensagem", "Status não é COMPLETED/PAGO, ignorado"));
+
+            boolean pago = status != null
+                && (status.equalsIgnoreCase("COMPLETED") || status.equalsIgnoreCase("PAGO"));
+            boolean expirado = status != null && status.equalsIgnoreCase("EXPIRED");
+
+            if (pago) {
+                pixService.confirmarPagamento(correlationId);
+                return ResponseEntity.ok(Map.of("mensagem", "Confirmado"));
             }
-            pixService.confirmarPagamento(correlationId);
-            return ResponseEntity.ok(Map.of("mensagem", "Confirmado"));
+
+            if (expirado) {
+                pixService.marcarExpirado(correlationId);
+                return ResponseEntity.ok(Map.of("mensagem", "Marcado como expirado"));
+            }
+
+            System.out.println("ℹ️ Pix ignorado — status recebido: " + status + " (correlation_id: " + correlationId + ")");
+            return ResponseEntity.ok(Map.of("mensagem", "Status não é COMPLETED/PAGO/EXPIRED, ignorado"));
+            
+            
             
         } catch (Exception e) {
             System.err.println("⚠️ Erro ao confirmar Pix: " + e.getMessage());

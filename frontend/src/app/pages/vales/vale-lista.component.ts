@@ -979,6 +979,11 @@ export class ValeListaComponent implements OnInit {
 
   formatarData(data: any): string {
     if (!data) return '-';
+    const str = typeof data === 'string' ? data : data.toString();
+    const partes = str.split('T')[0].split('-');
+    if (partes.length === 3) {
+      return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
     return new Date(data).toLocaleDateString('pt-BR');
   }
     

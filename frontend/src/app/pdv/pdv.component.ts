@@ -179,13 +179,19 @@ interface ItemCarrinho {
     {{ gerandoPixPdv ? '⏳ Gerando...' : '📱 Gerar QR Code Pix' }}
   </button>
 
-  <div class="pix-resultado" *ngIf="pixQrCodeImagePdv">
+ <div class="pix-resultado" *ngIf="pixQrCodeImagePdv">
   <div class="pix-confirmado-destaque" *ngIf="pixPagamentoConfirmadoPdv">
     ✅ PAGAMENTO CONFIRMADO!
     <p>Pode clicar em "Confirmar Venda" para finalizar.</p>
   </div>
 
-  <ng-container *ngIf="!pixPagamentoConfirmadoPdv">
+  <div class="pix-confirmado-destaque" *ngIf="pixExpiradoPdv" style="background: #fff3cd; color: #856404;">
+    ⏱️ TEMPO EXCEDIDO — o Pix expirou sem confirmação de pagamento.
+    <p>Gere um novo QR Code, ou cancele e resolva com o cliente de outra forma.</p>
+    <button type="button" class="btn-cancelar-modal" (click)="reiniciarPixPdv()">Fechar e Tentar Outra Vez</button>
+  </div>
+
+  <ng-container *ngIf="!pixPagamentoConfirmadoPdv && !pixExpiradoPdv">
     <img [src]="pixQrCodeImagePdv" alt="QR Code Pix" class="pix-qrcode-img" />
     <div class="pix-codigo">
       <label>Código Pix (copia e cola):</label>
@@ -871,6 +877,7 @@ interface ItemCarrinho {
     pixCobrancaIdAtual: number | null = null;
     
     pixPagamentoConfirmadoPdv = false;
+    pixExpiradoPdv = false;
     pixIntervaloVerificacaoPdv: any = null;
 
     mostrarAvisoCancelarCartaoPdv = false;
@@ -1629,6 +1636,14 @@ onKeyDown(event: KeyboardEvent): void {
   }
 }
 
+  reiniciarPixPdv(): void {
+  this.pixQrCodeImagePdv = null;
+  this.pixBrCodePdv = null;
+  this.pixCobrancaIdAtual = null;
+  this.pixExpiradoPdv = false;
+  this.pixPagamentoConfirmadoPdv = false;
+}
+
   gerarPixPdv(): void {
   if (this.totalCarrinho <= 0) {
     alert('⚠️ Carrinho vazio');
@@ -1681,6 +1696,7 @@ salvarPixPendente(): void {
 }
 
 iniciarVerificacaoPixPdv(): void {
+ 
   this.pararVerificacaoPixPdv();
   this.pixIntervaloVerificacaoPdv = setInterval(() => {
     if (!this.pixCobrancaIdAtual) return;
@@ -1688,6 +1704,9 @@ iniciarVerificacaoPixPdv(): void {
       next: (cobranca) => {
         if (cobranca.status === 'PAGO') {
           this.pixPagamentoConfirmadoPdv = true;
+          this.pararVerificacaoPixPdv();
+        } else if (cobranca.status === 'EXPIRADO') {
+          this.pixExpiradoPdv = true;
           this.pararVerificacaoPixPdv();
         }
       },
