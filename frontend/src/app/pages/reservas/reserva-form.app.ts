@@ -201,6 +201,16 @@ import { HostListener } from '@angular/core';
             </div>
           </div>
 
+          <!-- CÓDIGO DE SOLICITAÇÃO (empresa) -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>🏢 Código de Solicitação (opcional)</label>
+              <input type="text" [(ngModel)]="reserva.codigoSolicitacao" name="codigoSolicitacao"
+                placeholder="Ex: 243756" />
+              <small class="field-help">Se a empresa enviar um código de solicitação junto com a leva de hóspedes, digite o mesmo código em todas as reservas dessa leva — facilita gerar o relatório certo depois.</small>
+            </div>
+          </div>
+
           <!-- DATAS -->
           <div class="form-row">
             <div class="form-group">
@@ -1188,6 +1198,7 @@ private enviarReserva(fmt: Function): void {
     dataCheckin: fmt(new Date(this.reserva.dataCheckin.replace('T', ' '))),
     dataCheckout: fmt(new Date(this.reserva.dataCheckout.replace('T', ' '))),
     observacoes: this.reserva.observacoes || null,
+    codigoSolicitacao: this.reserva.codigoSolicitacao || null,
     hospedes: this.hospedes,
     hospedesAdicionaisIds: this.hospedes.slice(1)
       .filter((h: any) => h.clienteId)

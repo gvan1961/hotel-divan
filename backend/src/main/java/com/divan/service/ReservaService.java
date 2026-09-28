@@ -755,6 +755,7 @@ public class ReservaService {
         dto.setTotalApagar(reserva.getTotalApagar());
         dto.setStatus(reserva.getStatus());
         dto.setObservacoes(reserva.getObservacoes() != null ? reserva.getObservacoes() : "");
+        dto.setCodigoSolicitacao(reserva.getCodigoSolicitacao());
      // Controle de consumo de água (convênio empresa)
         if (reserva.getCliente() != null && reserva.getCliente().getEmpresa() != null) {
             controleConsumoAguaService.getLimiteDiario(reserva).ifPresent(limite -> {
@@ -1193,8 +1194,8 @@ public class ReservaService {
 
         // ✅ Controle de consumo de água (convênio empresa)
         boolean isAguaMineral = produto.getNomeProduto() != null 
-            && produto.getNomeProduto().toUpperCase().contains("AGUA");
-        BigDecimal valorTotalItemAgua = produto.getValorVenda().multiply(new BigDecimal(quantidade));
+       		&& produto.getNomeProduto().toUpperCase().replace("Á", "A").contains("AGUA");
+            BigDecimal valorTotalItemAgua = produto.getValorVenda().multiply(new BigDecimal(quantidade));
         if (isAguaMineral && !controleConsumoAguaService.validarLimite(reserva, valorTotalItemAgua)) {
             throw new RuntimeException("Limite diário de água do convênio já atingido para este apartamento.");
         }
@@ -1838,6 +1839,7 @@ public class ReservaService {
         dto.setQuantidadeDiaria(reserva.getQuantidadeDiaria());
         dto.setStatus(reserva.getStatus());
         dto.setObservacoes(reserva.getObservacoes());
+        dto.setCodigoSolicitacao(reserva.getCodigoSolicitacao());
 
         // ✅ VALOR DA DIÁRIA
         dto.setValorDiaria(reserva.getDiaria() != null ? reserva.getDiaria().getValor() : BigDecimal.ZERO);

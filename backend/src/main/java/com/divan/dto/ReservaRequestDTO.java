@@ -24,9 +24,10 @@ public class ReservaRequestDTO {
     
     @NotNull(message = "Data de check-out é obrigatória")
     private LocalDateTime dataCheckout;
-    
+
     private List<Long> hospedesAdicionaisIds;
     private String observacoes;
+    private String codigoSolicitacao;
 
 	public Long getApartamentoId() {
 		return apartamentoId;
@@ -78,10 +79,18 @@ public class ReservaRequestDTO {
 
 	public String getObservacoes() {
 		return observacoes;
-	}
+    }
 
-	public void setObservacoes(String observacoes) {
-		this.observacoes = observacoes;
-	}          
-    
+    public void setObservacoes(String observacoes) {
+            this.observacoes = observacoes;
+    }
+
+    public String getCodigoSolicitacao() {
+            return codigoSolicitacao;
+    }
+
+    public void setCodigoSolicitacao(String codigoSolicitacao) {
+            this.codigoSolicitacao = codigoSolicitacao;
+    }
+
 }

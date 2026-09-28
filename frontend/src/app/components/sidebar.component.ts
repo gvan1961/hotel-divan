@@ -1249,6 +1249,7 @@ setInterval(() => {
       localStorage.removeItem('token');
       localStorage.removeItem('usuario');
       localStorage.removeItem('user');
+      sessionStorage.removeItem('avisoCaixaFechadoMostrado');
       this.router.navigate(['/login']);
     }
   }

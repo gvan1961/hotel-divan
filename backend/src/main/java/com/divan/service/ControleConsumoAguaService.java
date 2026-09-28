@@ -28,6 +28,8 @@ import jakarta.transaction.Transactional;
 
 import com.divan.dto.FaixaConsumoAguaRequestDTO;
 
+import java.time.ZoneId;
+
 @Service
 public class ControleConsumoAguaService {
 
@@ -51,14 +53,15 @@ public class ControleConsumoAguaService {
     }
 
     public BigDecimal getConsumidoHoje(Long reservaId) {
-        return controleRepository.findByReservaIdAndData(reservaId, LocalDate.now())
+    	LocalDate hoje = LocalDate.now(ZoneId.of("America/Fortaleza"));
+        return controleRepository.findByReservaIdAndData(reservaId, hoje)
             .map(ControleConsumoAguaReserva::getValorConsumido)
             .orElse(BigDecimal.ZERO);
     }
 
     @Transactional
     public void registrarConsumo(Reserva reserva, BigDecimal valorVenda) {
-        LocalDate hoje = LocalDate.now();
+        LocalDate hoje = LocalDate.now(ZoneId.of("America/Fortaleza"));
         ControleConsumoAguaReserva controle = controleRepository
             .findByReservaIdAndData(reserva.getId(), hoje)
             .orElseGet(() -> {

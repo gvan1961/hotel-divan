@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 export interface ContaAReceber {
   id: number;
   reservaId: number;
+  codigoSolicitacao?: string;
   clienteNome: string;
   todosHospedes?: string;
   empresaNome?: string;

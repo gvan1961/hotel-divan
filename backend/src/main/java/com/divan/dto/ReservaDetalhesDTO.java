@@ -41,6 +41,8 @@ public class ReservaDetalhesDTO {
     
     private BigDecimal desconto;
     private String observacoes;
+    
+    private String codigoSolicitacao;
    
  //   private ClienteSimples cliente;
  //   private ApartamentoSimples apartamento;
@@ -215,6 +217,16 @@ public class ReservaDetalhesDTO {
 
 	public void setObservacoes(String observacoes) {
 		this.observacoes = observacoes;
+	} 	
+
+
+	public String getCodigoSolicitacao() {
+		return codigoSolicitacao;
+	}
+
+
+	public void setCodigoSolicitacao(String codigoSolicitacao) {
+		this.codigoSolicitacao = codigoSolicitacao;
 	}
 
 

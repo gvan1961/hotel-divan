@@ -21,6 +21,9 @@ public class DepositoProvisorioService {
 	
 	@Autowired
 	private CaixaContextoService caixaContextoService;	
+	
+	@Autowired
+    private com.divan.service.ControleConsumoAguaService controleConsumoAguaService;
 
 	private final DepositoProvisorioRepository depositoRepository;
     private final DepositoProvisorioItemRepository itemRepository;
@@ -108,6 +111,13 @@ public class DepositoProvisorioService {
         BigDecimal valorUnitario = produto.getValorVenda();
         BigDecimal total = valorUnitario.multiply(BigDecimal.valueOf(request.getQuantidade()));
 
+        // ✅ Verificar limite diário de água do convênio (empresa)
+        boolean isAguaMineral = produto.getNomeProduto() != null
+                && produto.getNomeProduto().toUpperCase().replace("Á", "A").contains("AGUA");
+        if (isAguaMineral && !controleConsumoAguaService.validarLimite(reserva, total)) {
+            throw new RuntimeException("Limite diário de água do convênio já atingido para este apartamento.");
+        }
+
         // Cria NotaVenda do tipo APARTAMENTO
         NotaVenda nota = new NotaVenda();
         nota.setCaixa(caixaContextoService.buscarCaixaAbertoDoUsuarioAtual());
@@ -143,6 +153,10 @@ public class DepositoProvisorioService {
         extrato.setDataHoraLancamento(LocalDateTime.now());
         extratoReservaRepository.save(extrato);
 
+        // ✅ Registrar consumo de água (convênio empresa)
+        if (isAguaMineral) {
+            controleConsumoAguaService.registrarConsumo(reserva, total);
+        }
         // Atualiza totais da reserva
         reserva.setTotalProduto(reserva.getTotalProduto().add(total));
         reserva.setTotalHospedagem(reserva.getTotalHospedagem().add(total));

@@ -136,7 +136,8 @@ public class ReservaController {
             reserva.setDataCheckin(dto.getDataCheckin());
             reserva.setDataCheckout(dto.getDataCheckout());
             reserva.setObservacoes(dto.getObservacoes());
-            
+            reserva.setCodigoSolicitacao(dto.getCodigoSolicitacao());
+
             Reserva reservaCriada = reservaService.criarReserva(reserva);
             
             if (dto.getHospedesAdicionaisIds() != null && !dto.getHospedesAdicionaisIds().isEmpty()) {
@@ -1255,7 +1256,20 @@ public class ReservaController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
-    
+
+    @PatchMapping("/{id}/codigo-solicitacao")
+    public ResponseEntity<?> salvarCodigoSolicitacao(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        try {
+            Reserva reserva = reservaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+            reserva.setCodigoSolicitacao(body.get("codigoSolicitacao"));
+            reservaRepository.save(reserva);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+
     @GetMapping("/{id}/bilhetes-sorteio")
     public ResponseEntity<?> getBilhetesSorteio(@PathVariable Long id) {
         try {

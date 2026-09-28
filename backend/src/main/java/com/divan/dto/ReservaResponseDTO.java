@@ -29,6 +29,7 @@ public class ReservaResponseDTO {
     
     private Reserva.StatusReservaEnum status;
     private String observacoes;
+    private String codigoSolicitacao;
     
     
     private LocalDateTime dataCheckin;
@@ -134,6 +135,13 @@ public class ReservaResponseDTO {
 	}
 	public void setObservacoes(String observacoes) {
 		this.observacoes = observacoes;
+	}	
+		
+	public String getCodigoSolicitacao() {
+		return codigoSolicitacao;
+	}
+	public void setCodigoSolicitacao(String codigoSolicitacao) {
+		this.codigoSolicitacao = codigoSolicitacao;
 	}
 	public LocalDateTime getDataCheckin() {
 		return dataCheckin;

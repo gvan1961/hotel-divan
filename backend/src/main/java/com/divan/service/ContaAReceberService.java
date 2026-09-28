@@ -347,11 +347,12 @@ public class ContaAReceberService {
     private ContaAReceberDTO converterParaDTO(ContaAReceber conta,
                                                Map<Long, List<HospedagemHospede>> hospedesPorReserva,
                                                Map<Long, List<ExtratoReserva>> extratosPorReserva) {
-        ContaAReceberDTO dto = new ContaAReceberDTO();
+    	ContaAReceberDTO dto = new ContaAReceberDTO();
         dto.setId(conta.getId());
         dto.setReservaId(conta.getReserva().getId());
+        dto.setCodigoSolicitacao(conta.getReserva().getCodigoSolicitacao());
         dto.setClienteNome(conta.getCliente().getNome());
-
+        
         Long reservaId = conta.getReserva() != null ? conta.getReserva().getId() : null;
 
         if (reservaId != null) {

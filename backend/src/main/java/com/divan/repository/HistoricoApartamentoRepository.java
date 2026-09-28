@@ -16,5 +16,8 @@ public interface HistoricoApartamentoRepository extends JpaRepository<HistoricoA
     	    String acao, LocalDateTime inicio, LocalDateTime fim);
     
     List<HistoricoApartamento> findByAcaoInAndDataHoraBetweenOrderByDataHoraDesc(
-    	    List<String> acoes, LocalDateTime inicio, LocalDateTime fim);
+            List<String> acoes, LocalDateTime inicio, LocalDateTime fim);
+
+    java.util.Optional<HistoricoApartamento> findFirstByApartamentoIdAndAcaoOrderByDataHoraDesc(
+            Long apartamentoId, String acao);
 }

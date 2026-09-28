@@ -547,6 +547,13 @@ public class ApartamentoController {
                     res.put("atrasado",         atrasado);
                     res.put("renovacaoAutomatica", r.getRenovacaoAutomatica() != null && r.getRenovacaoAutomatica());
 
+                 // ✅ Última limpeza diária registrada (camareira)
+                    historicoApartamentoRepository
+                        .findFirstByApartamentoIdAndAcaoOrderByDataHoraDesc(apt.getId(), "LIMPEZA_DIARIA")
+                        .ifPresent(ultimaLimpeza -> {
+                            res.put("ultimaLimpezaDiaria", ultimaLimpeza.getDataHora().toString());
+                        });
+
                  // ✅ Controle de consumo de água (convênio empresa)
                     controleConsumoAguaService.getLimiteDiario(r).ifPresent(limite -> {
                         BigDecimal consumido = controleConsumoAguaService.getConsumidoHoje(r.getId());

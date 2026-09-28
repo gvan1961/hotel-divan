@@ -36,6 +36,7 @@ export interface ReservaRequest {
   dataCheckin: string;
   dataCheckout: string;
   observacoes?: string;
+  codigoSolicitacao?: string;
 }
 
 export interface ReservaResponse {

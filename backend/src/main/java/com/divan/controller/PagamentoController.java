@@ -69,9 +69,13 @@ public class PagamentoController {
                 .findByUsuarioIdAndStatus(usuarioId, FechamentoCaixa.StatusCaixa.ABERTO)
                 .isPresent();
 
-            if (!caixaAberto) {
+            // ✅ Só exige caixa aberto para DINHEIRO
+            boolean exigeCaixaAberto = dto.getFormaPagamento() != null
+                && "DINHEIRO".equals(dto.getFormaPagamento().name());
+
+            if (exigeCaixaAberto && !caixaAberto) {
                 return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Caixa não aberto. Abra o caixa antes de registrar pagamentos."));
+                    .body(Map.of("erro", "Caixa não aberto. Abra o caixa antes de registrar pagamentos em dinheiro."));
             }
 
             // Buscar reserva

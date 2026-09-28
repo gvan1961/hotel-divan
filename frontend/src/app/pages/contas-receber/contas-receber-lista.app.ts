@@ -1,4 +1,3 @@
-//import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -8,9 +7,8 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
 import { CurrencyInputDirective } from '../../directives/currency-input.directive';
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { ExportService } from '../../services/export.service';
-import { forkJoin, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
-
+import { forkJoin, of, from } from 'rxjs';
+import { map, catchError, mergeMap } from 'rxjs/operators';
 
 interface FiltrosAvancados {
   empresaId?: number;
@@ -23,6 +21,7 @@ interface FiltrosAvancados {
   dataCheckOutFim?: string;
   status?: string;
   reservaId?: number;
+  codigoSolicitacao?: string;
 }
 
 @Component({
@@ -151,10 +150,15 @@ interface FiltrosAvancados {
        <h3>📋 Resultados ({{ contasFiltradas.length }})</h3>
 <button class="btn-imprimir" (click)="imprimirRelatorio()" *ngIf="contasFiltradas.length > 0">
   🖨️ Imprimir
+
 </button>
 <button class="btn-imprimir" (click)="imprimirTodasFaturas()"
         *ngIf="(filtrosAplicados.empresaId || filtrosAplicados.clienteNome) && contasComFaturaImprimivel().length > 0">
   🖨️ Imprimir Todas as Faturas ({{ contasComFaturaImprimivel().length }})
+</button>
+<button class="btn-imprimir" (click)="imprimirListaSimples()"
+        *ngIf="filtrosAplicados.empresaId && contasFiltradas.length > 0">
+  🖨️ Imprimir Lista Simples ({{ contasFiltradas.length }})
 </button>
         </div>
 
@@ -165,6 +169,7 @@ interface FiltrosAvancados {
   <th>Apto</th>
   <th>Hóspedes</th>
   <th>Empresa</th>
+  <th>Solicitação</th>
   <th>Check-in/Check-out</th>
   <th>Saldo</th>
   <th>Vencimento</th>
@@ -176,15 +181,20 @@ interface FiltrosAvancados {
             <tr *ngFor="let conta of contasFiltradas" [class]="'linha-' + conta.status.toLowerCase()">
              <td>#{{ conta.reservaId }}</td>
              <td>{{ conta.numeroApartamento || '-' }}</td>
+          
              <td>{{ conta.todosHospedes || conta.clienteNome }}</td>
               <td>
                 <span *ngIf="conta.empresaNome" class="badge-empresa">
                   🏢 {{ conta.empresaNome }}
-                </span>
+
+                  </span>
                 <span *ngIf="!conta.empresaNome" class="sem-empresa">-</span>
               </td>
-            
+
+              <td>{{ conta.codigoSolicitacao || '-' }}</td>
+
               <td class="datas">
+
                <div>✅ {{ formatarData(conta.dataCheckin) }}</div>
                <div>📤 {{ formatarData(conta.dataCheckout) }}</div>
               </td>
@@ -291,10 +301,16 @@ interface FiltrosAvancados {
               </select>
             </div>
 
-            <!-- CÓDIGO DA RESERVA -->
+           <!-- CÓDIGO DA RESERVA -->
               <div class="campo">
               <label>🔢 Código da Reserva</label>
               <input type="number" [(ngModel)]="filtrosTemp.reservaId" placeholder="Ex: 1890" class="filtro-input">
+            </div>
+
+            <!-- CÓDIGO DE SOLICITAÇÃO -->
+              <div class="campo">
+              <label>🏢 Código de Solicitação</label>
+              <input type="text" [(ngModel)]="filtrosTemp.codigoSolicitacao" placeholder="Ex: 243756" class="filtro-input">
             </div>
 
              <!-- PENDÊNCIA EXTRA -->
@@ -1458,6 +1474,11 @@ aplicarFiltrosAvancados(): void {
      resultado = resultado.filter(c => c.reservaId === this.filtrosAplicados.reservaId);
    }
 
+  if (this.filtrosAplicados.codigoSolicitacao) {
+     const termoSolicitacao = this.filtrosAplicados.codigoSolicitacao.toLowerCase();
+     resultado = resultado.filter(c => c.codigoSolicitacao?.toLowerCase().includes(termoSolicitacao));
+   }
+
    if (this.filtrosAplicados.dataCheckInInicio && this.filtrosAplicados.dataCheckInFim) {
   resultado = resultado.filter(c => {
     const dataCheckinRaw = (c as any).dataCheckin;
@@ -1894,29 +1915,43 @@ imprimirTodasFaturas(): void {
   const confirmar = confirm(`🖨️ Imprimir ${contasComReserva.length} fatura(s)?\n\nIsso pode levar alguns segundos.`);
   if (!confirmar) return;
 
-  const requisicoes = contasComReserva.map(conta => {
-    const reservaId = (conta as any).reservaId;
-    return forkJoin({
-      detalhes: this.http.get<any>(`/api/reservas/${reservaId}`).pipe(
-        catchError(() => of(null))
-      ),
-      assinatura: this.http.get<any>(`/api/reservas/${reservaId}/assinatura`).pipe(
-        map((resp: any) => resp?.assinatura || null),
-        catchError(() => of(null))
-      )
-    });
-  });
+ // ✅ Processa em lotes de 5 (em vez de disparar tudo de uma vez),
+// evitando sobrecarregar o navegador/backend com dezenas de requisições simultâneas
+const resultados: any[] = new Array(contasComReserva.length).fill(null);
+  let processados = 0;
 
-  forkJoin(requisicoes).subscribe({
-    next: (resultados: any[]) => {
+  from(contasComReserva).pipe(
+    mergeMap((conta, index) => {
+      const reservaId = (conta as any).reservaId;
+      return forkJoin({
+        detalhes: this.http.get<any>(`/api/reservas/${reservaId}`).pipe(
+          catchError(() => of(null))
+        ),
+        assinatura: this.http.get<any>(`/api/reservas/${reservaId}/assinatura`).pipe(
+          map((resp: any) => resp?.assinatura || null),
+          catchError(() => of(null))
+        )
+      }).pipe(map(r => ({ ...r, index })));
+    }, 5) // ← só 5 por vez
+  ).subscribe({
+    next: (r: any) => {
+      resultados[r.index] = r;
+      processados++;
+    },
+    error: (err) => {
+      alert('❌ Erro ao carregar faturas: ' + (err.error?.erro || err.message));
+    },
+    complete: () => {
       const blocos: string[] = [];
       resultados.forEach((r, i) => {
-        if (r.detalhes) {
+        if (r?.detalhes) {
           blocos.push(this.montarBlocoFaturaHTML(contasComReserva[i], r.detalhes, r.assinatura));
         }
       });
 
-      if (blocos.length === 0) {
+
+
+     if (blocos.length === 0) {
         alert('❌ Não foi possível carregar nenhuma fatura.');
         return;
       }
@@ -1926,11 +1961,127 @@ imprimirTodasFaturas(): void {
       }
 
       this.abrirImpressaoLote(blocos);
-    },
-    error: (err) => {
-      alert('❌ Erro ao carregar faturas: ' + (err.error?.erro || err.message));
     }
   });
+}
+
+imprimirListaSimples(): void {
+  const contas = this.contasFiltradas;
+
+  if (contas.length === 0) {
+    alert('⚠️ Nenhuma conta na lista filtrada.');
+    return;
+  }
+
+  const empresaSelecionada = this.empresas.find(e => e.id === this.filtrosAplicados.empresaId);
+  const nomeEmpresa = empresaSelecionada?.nomeEmpresa || contas[0].empresaNome || 'Empresa não identificada';
+
+  // ✅ Busca só a assinatura de cada reserva (mais leve que buscar a reserva inteira),
+  // processando em lotes de 5 pra não sobrecarregar
+  from(contas).pipe(
+    mergeMap((conta, index) => {
+      const reservaId = (conta as any).reservaId;
+      return this.http.get<any>(`/api/reservas/${reservaId}/assinatura`).pipe(
+        map((resp: any) => ({ index, assinatura: resp?.assinatura || null })),
+        catchError(() => of({ index, assinatura: null }))
+      );
+    }, 5)
+  ).subscribe({
+    next: (r: any) => {
+      (contas[r.index] as any).__assinatura = r.assinatura;
+    },
+    error: (err) => {
+      alert('❌ Erro ao carregar assinaturas: ' + (err.error?.erro || err.message));
+    },
+    complete: () => {
+      this.gerarImpressaoListaSimples(contas, nomeEmpresa);
+    }
+  });
+}
+
+private gerarImpressaoListaSimples(contas: ContaAReceber[], nomeEmpresa: string): void {
+  let somaSaldo = 0;
+
+  const linhas = contas.map(conta => {
+    somaSaldo += conta.saldo || 0;
+    const assinatura = (conta as any).__assinatura;
+
+    return `
+      <tr>
+        <td>#${conta.reservaId}</td>
+        <td>${(conta as any).numeroApartamento || '-'}</td>
+        <td>${conta.todosHospedes || conta.clienteNome}</td>
+        <td style="text-align:center;">${(conta as any).quantidadeHospede ?? '-'}</td>
+        <td style="text-align:center;">${(conta as any).quantidadeDiaria ?? '-'}</td>
+        <td>${this.formatarData((conta as any).dataCheckin)}</td>
+        <td>${this.formatarData((conta as any).dataCheckout)}</td>
+        <td style="text-align:center;">
+          ${assinatura
+            ? `<img src="${assinatura}" style="max-width:120px; max-height:40px; filter: contrast(1.8) brightness(0.7);" />`
+            : '<span style="color:#999;">Sem assinatura</span>'}
+        </td>
+        <td style="text-align:right;">R$ ${(conta.saldo || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const html = `
+    <html>
+    <head>
+      <title>Lista de Contas — ${nomeEmpresa}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .cabecalho-hotel { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .cabecalho-hotel h2 { margin: 0; }
+        .cabecalho-hotel small { color: #555; }
+        h1 { font-size: 16px; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ccc; padding: 8px; font-size: 12px; text-align: left; }
+        th { background: #f0f0f0; }
+        tfoot td { font-weight: bold; background: #f5f5f5; }
+      </style>
+    </head>
+    <body>
+      <div class="cabecalho-hotel">
+        <h2>Hotel Di Van</h2>
+        <small>CNPJ: 07.757.726/0001-12</small>
+      </div>
+
+      <h1>📋 Empresa: ${nomeEmpresa}</h1>
+      <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+
+     <table>
+        <thead>
+          <tr>
+            <th>Reserva</th>
+            <th>Apto</th>
+            <th>Hóspede</th>
+            <th>Qtd. Hóspedes</th>
+            <th>Qtd. Diárias</th>
+            <th>Check-in</th>
+            <th>Check-out</th>
+            <th>Assinatura</th>
+            <th>Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${linhas}
+        </tbody>
+      </table>
+
+      <div style="margin-top: 15px; text-align: right; font-weight: bold; font-size: 14px; border-top: 2px solid #333; padding-top: 10px;">
+        Total de Reservas: ${contas.length} &nbsp;&nbsp;|&nbsp;&nbsp; TOTAL: R$ ${somaSaldo.toLocaleString('pt-BR', {minimumFractionDigits:2})}
+      </div>
+    </body>
+    </html>
+  `;
+
+  const janela = window.open('', '_blank');
+  if (janela) {
+    janela.document.write(html);
+    janela.document.close();
+    janela.print();
+  }
 }
 
 private montarBlocoFaturaHTML(conta: ContaAReceber, reserva: any, assinatura: string | null): string {

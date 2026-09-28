@@ -10,6 +10,7 @@ import java.time.LocalDate;
 public class ContaAReceberDTO {
     private Long id;
     private Long reservaId;
+    private String codigoSolicitacao;
     private String clienteNome;
     private String empresaNome;
     private BigDecimal valor;
@@ -49,6 +50,13 @@ public class ContaAReceberDTO {
 	}
 	public void setReservaId(Long reservaId) {
 		this.reservaId = reservaId;
+	}	
+	
+	public String getCodigoSolicitacao() {
+		return codigoSolicitacao;
+	}
+	public void setCodigoSolicitacao(String codigoSolicitacao) {
+		this.codigoSolicitacao = codigoSolicitacao;
 	}
 	public String getClienteNome() {
 		return clienteNome;

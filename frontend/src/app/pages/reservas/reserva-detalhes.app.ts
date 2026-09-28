@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
+import { FechamentoCaixaService } from '../../services/fechamento-caixa.service';
 import { ReservaService } from '../../services/reserva.service';
 import { TransferirHospedeModalComponent } from '../../components/transferir-hospede-modal/transferir-hospede-modal.component';
 import { CurrencyInputDirective } from '../../directives/currency-input.directive';
@@ -81,6 +82,7 @@ import { PixService } from '../../services/pix.service';
     extratos?: any[];
     historicos?: any[];
     observacoes?: string;
+     codigoSolicitacao?: string;
     criadoPor?: string;
     dataCriacao?: string;
     finalizadoPor?: string;
@@ -223,6 +225,7 @@ import { PixService } from '../../services/pix.service';
   <!-- ✅ OBSERVAÇÃO -->
 <div style="flex-direction: column; align-items: flex-start; padding-top: 10px; border-top: 1px solid #f0f0f0; margin-top: 6px;">
   <span class="label" style="margin-bottom: 6px; font-size: 0.95em;">Observação:</span>
+
   <div style="width: 100%; display: flex; gap: 6px; align-items: flex-start;">
     <textarea
       *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
@@ -244,6 +247,28 @@ import { PixService } from '../../services/pix.service';
       💾
     </button>
   </div>
+
+  <div style="width: 100%; display: flex; gap: 6px; align-items: center; margin-top: 10px;">
+    <span style="font-size: 0.9em; color: #555; white-space: nowrap;">🏢 Código de Solicitação:</span>
+    <input
+      *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
+      type="text"
+      [(ngModel)]="reserva.codigoSolicitacao"
+      style="flex:1; font-size:0.95em; border:1.5px solid #ddd; border-radius:6px; padding:6px 8px;"
+      placeholder="Ex: 243756">
+    <span *ngIf="reserva.status !== 'ATIVA' && reserva.status !== 'PRE_RESERVA'"
+          style="font-size:0.95em; color:#444;">
+      {{ reserva.codigoSolicitacao || '-' }}
+    </span>
+    <button
+      *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
+      class="btn-mini"
+      (click)="salvarCodigoSolicitacao()"
+      title="Salvar código de solicitação">
+      💾
+    </button>
+  </div>
+
 </div>
 </div>
 
@@ -1005,6 +1030,12 @@ import { PixService } from '../../services/pix.service';
         <div class="modal-overlay" *ngIf="modalPagamento" (click)="!cartaoPagamentoConfirmado && !pixPagamentoConfirmado && fecharModalPagamento()">
           <div class="modal-content modal-pagamento" (click)="$event.stopPropagation()">
             <h2>💳 Registrar Pagamento</h2>
+
+            <div class="alerta-credito-aprovado" *ngIf="caixaFechadoAviso" style="background: #fff3cd; color: #856404; border: 1.5px solid #ffc107;">
+              ⚠️ <strong>Seu caixa está fechado.</strong> Você ainda pode receber Pix, Cartão e outras formas eletrônicas normalmente — só pagamentos em <strong>Dinheiro</strong> exigem caixa aberto.
+              <br>
+              <button type="button" (click)="irParaAdministrativo()" style="background:none; border:none; color: #856404; text-decoration: underline; font-weight: 600; cursor: pointer; padding: 0; margin-top: 4px;">Abrir meu caixa agora →</button>
+            </div>
 
             <div class="alerta-credito-aprovado" *ngIf="temCreditoAprovado()">
              ⚠️ Este hóspede tem <strong>crédito aprovado para Débito em Conta</strong> ({{ getEmpresaNomeCliente() }}).
@@ -3152,6 +3183,7 @@ import { PixService } from '../../services/pix.service';
     private route = inject(ActivatedRoute);
     private router = inject(Router);
     private http = inject(HttpClient);
+    private fechamentoCaixaService = inject(FechamentoCaixaService);
     private pixService = inject(PixService);
     private authService = inject(AuthService);  
     private cdr = inject(ChangeDetectorRef); 
@@ -3319,6 +3351,7 @@ pixIntervaloVerificacao: any = null;
 pixPagamentoConfirmado = false;
 pixExpirado = false;
 pixAtivoDisponivel: any = null;
+caixaFechadoAviso = false;
 
 
 // ✅ CARTÃO (Mercado Pago via maquininha)
@@ -4438,8 +4471,22 @@ gerarHtmlFatura(valorTotal: number, pagoAVista: number, valorFaturado: number, s
   this.pagFormaPagamento = '';
   this.pagObs = '';
   this.pixAtivoDisponivel = null;
+  this.caixaFechadoAviso = false;
   this.modalPagamento = true;
 
+  // ✅ Avisa proativamente se o caixa do usuário estiver fechado
+  const usuarioId = this.authService.getUsuarioId();
+  if (usuarioId) {
+    this.fechamentoCaixaService.buscarCaixaAberto(usuarioId).subscribe({
+      next: (caixa) => {
+        this.caixaFechadoAviso = !(caixa && caixa.id);
+      },
+      error: () => {
+        this.caixaFechadoAviso = true;
+      }
+    });
+  }
+    
   // ✅ Verifica se já existe uma cobrança Pix ativa (paga ou pendente) pra essa reserva
   // — só guarda a informação, sem trocar de tela sozinho
   this.http.get<any>(`/api/pix/reserva/${this.reserva.id}/ativa`).subscribe({
@@ -4450,6 +4497,10 @@ gerarHtmlFatura(valorTotal: number, pagoAVista: number, valorFaturado: number, s
     },
     error: () => {} // 204 (sem cobrança) cai aqui também — segue fluxo normal
   });
+}
+ 
+   irParaAdministrativo(): void {
+  this.router.navigate(['/administrativo']);
 }
 
 retomarPixAtivo(): void {
@@ -6695,6 +6746,17 @@ executarCancelamento(): void {
     observacoes: this.reserva.observacoes
   }).subscribe({
     next: () => alert('✅ Observação salva!'),
+    error: (err) => alert('❌ Erro: ' + (err.error?.erro || err.message))
+  });
+}
+
+salvarCodigoSolicitacao(): void {
+  if (!this.reserva) return;
+
+  this.http.patch(`/api/reservas/${this.reserva.id}/codigo-solicitacao`, {
+    codigoSolicitacao: this.reserva.codigoSolicitacao
+  }).subscribe({
+    next: () => alert('✅ Código de solicitação salvo!'),
     error: (err) => alert('❌ Erro: ' + (err.error?.erro || err.message))
   });
 }

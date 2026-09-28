@@ -4,6 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { FaceMonitorService, FaceResultado } from '../../services/face-monitor.service';
+import { AuthService } from '../../services/auth.service';
+import { FechamentoCaixaService } from '../../services/fechamento-caixa.service';
+import { HasPermissionDirective } from '../../directives/has-permission.directive';
 
 interface ProximaReserva {
   id: number;
@@ -30,6 +33,7 @@ interface Reserva {
   consumoAguaHoje?: number;
   limiteAguaExcedido?: boolean;
   itensAguaHoje?: { descricao: string; quantidade: number; horario: string }[];
+  ultimaLimpezaDiaria?: string;
 }
 
 interface ApartamentoCard {
@@ -65,7 +69,7 @@ interface Contadores {
   selector: 'app-painel-recepcao',
   standalone: true,
   providers: [FaceMonitorService],
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HasPermissionDirective],
 template: `
     <div class="painel-wrapper">
 
@@ -217,6 +221,20 @@ template: `
 
     <div class="modal-footer">
       <button class="btn-cancelar-modal" (click)="fecharModalRealocarPreReserva()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- AVISO: CAIXA PRÓPRIO FECHADO -->
+<div class="modal-overlay" *ngIf="modalAvisoCaixaFechado" (click)="modalAvisoCaixaFechado = false">
+  <div class="modal-content" (click)="$event.stopPropagation()" style="border-top: 4px solid #ffc107;">
+    <h2>⚠️ Seu Caixa Está Fechado</h2>
+    <p style="line-height: 1.6; margin: 16px 0;">
+      Você ainda não abriu seu caixa hoje. Pagamentos em <strong>Dinheiro</strong> só podem ser registrados com o caixa aberto — as demais formas (Pix, Cartão, etc.) continuam funcionando normalmente.
+    </p>
+    <div class="modal-footer">
+      <button class="btn-cancelar-modal" (click)="modalAvisoCaixaFechado = false">Continuar sem abrir</button>
+      <button class="btn-confirmar" (click)="fecharAvisoEIrParaAdministrativo()">Abrir Caixa Agora</button>
     </div>
   </div>
 </div>
@@ -565,33 +583,33 @@ template: `
             <button class="btn-icone btn-assinatura-credito"
                     *ngIf="apt.reserva?.mostrarBotaoAssinaturaCredito"
                     (click)="irParaAssinaturaCredito(apt)"
-                    title="Assinatura - Aprovação de Crédito">✍️</button>
-
-           
-
+                    title="Assinatura - Aprovação de Crédito">✍️ Falta Assinar</button>         
 
             <!-- EM LIMPEZA -->
             <ng-container *ngIf="getStatusFinal(apt) === 'LIMPEZA'">
-  <button class="btn-acao btn-liberar" (click)="liberarApartamento(apt)">↩ Liberar UH</button>
+  <button class="btn-acao btn-liberar" (click)="liberarApartamento(apt)">↩ Liberar de Limpeza</button>
   <button class="btn-icone" (click)="irParaReserva(apt)" 
           *ngIf="apt.reserva?.id"
           title="Ver última reserva">📋</button>
 </ng-container>
-            <!-- ATRASADO -->
+           <!-- ATRASADO -->
            <ng-container *ngIf="apt.reserva?.atrasado">
   <div class="aviso-atraso" ...>⚠️ CHECKOUT ATRASADO ...</div>
-  <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒</button>
-  <button class="btn-icone" title="Ver detalhes" (click)="irParaReserva(apt)">📋</button>
-  <button class="btn-icone" title="Gerar senha Wi-Fi" (click)="gerarVoucherWifi(apt)">📶</button>
+  <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒 PDV</button>
+  <button class="btn-icone" title="Ver detalhes" (click)="irParaReserva(apt)">📋 Detalhes da Reserva</button>
+  <button class="btn-icone" title="Gerar senha Wi-Fi" (click)="gerarVoucherWifi(apt)">📶 Gerar Senha Wi-Fi</button>
 </ng-container>
 
             <!-- ATIVA (não atrasado) -->
             <ng-container *ngIf="getStatusFinal(apt) === 'ATIVA' && !apt.reserva?.atrasado">
-  <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒</button>
-  <button class="btn-icone" title="Hóspedes"          (click)="irParaReserva(apt)">👥</button>
-  <button class="btn-icone" title="Transferir"        (click)="irParaReserva(apt)">➜</button>
-  <button class="btn-icone btn-limpeza-diaria" title="Registrar limpeza diária" (click)="registrarLimpezaDiaria(apt)">🧹</button>
-  <button class="btn-icone" title="Gerar senha Wi-Fi" (click)="gerarVoucherWifi(apt)">📶</button>
+  <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒 PDV</button>
+  <button class="btn-icone" title="Ver detalhes" (click)="irParaReserva(apt)">📋 Detalhes da Reserva</button>
+  <button class="btn-icone" title="Hóspedes"          (click)="irParaReserva(apt)">👥 Hóspedes</button>
+  <button class="btn-icone" title="Transferir"        (click)="irParaReserva(apt)">➜ Transferir</button>
+  <button class="btn-icone btn-limpeza-diaria" [title]="apt.reserva?.ultimaLimpezaDiaria ? ('Última limpeza: ' + formatarDataHoraCompleta(apt.reserva!.ultimaLimpezaDiaria!)) : 'Registrar limpeza diária'" (click)="registrarLimpezaDiaria(apt)">
+  🧹 Limpeza{{ apt.reserva?.ultimaLimpezaDiaria ? ' (' + formatarHoraSimples(apt.reserva!.ultimaLimpezaDiaria!) + ')' : '' }}
+</button>
+  <button class="btn-icone" title="Gerar senha Wi-Fi" (click)="gerarVoucherWifi(apt)">📶 Gerar Senha Wi-Fi</button>
 </ng-container>
             <!-- PRÓXIMA RESERVA -->
             <div class="proxima-reserva" *ngIf="apt.reserva?.proximaReserva">
@@ -1561,6 +1579,8 @@ carregandoFotos = false;
   apartamentosDisponiveisRealocacao: any[] = [];
   carregandoApartamentosDisponiveis = false;
 
+  modalAvisoCaixaFechado = false;
+
   mostrarPopupWhatsapp = false;
 solicitacoesPendentes: any[] = [];
 private intervaloWhatsapp: any;
@@ -1571,21 +1591,44 @@ private ultimoTotalSolicitacoes = 0;
   private apiUrl = '/api/apartamentos/painel';
 
     constructor(
-  private http: HttpClient, 
+  private http: HttpClient,
   private router: Router,
-  public faceMonitor: FaceMonitorService
+  public faceMonitor: FaceMonitorService,
+  private authService: AuthService,
+  private fechamentoCaixaService: FechamentoCaixaService
 ) {}
 
   ngOnInit(): void {
     this.carregarDados();
-    this.intervalo = setInterval(() => this.carregarDados(), 60000);    
+    this.intervalo = setInterval(() => this.carregarDados(), 60000);
     this.iniciarPollingWhatsapp();
 
     this.faceMonitor.resultado$.subscribe(r => this.faceResultado = r);
     this.faceMonitor.statusMsg$.subscribe(s => this.faceStatus = s);
     this.faceMonitor.ativo$.subscribe(a => this.faceAtivo = a);
     this.carregarDividasPendentes();
+
+    // ✅ Avisa (uma vez por sessão) se o caixa do usuário estiver fechado
+    if (!sessionStorage.getItem('avisoCaixaFechadoMostrado')) {
+      const usuarioId = this.authService.getUsuarioId();
+      if (usuarioId) {
+        this.fechamentoCaixaService.buscarCaixaAberto(usuarioId).subscribe({
+          next: (caixa) => {
+            if (!(caixa && caixa.id)) {
+              this.modalAvisoCaixaFechado = true;
+              sessionStorage.setItem('avisoCaixaFechadoMostrado', 'true');
+            }
+          },
+          error: () => {}
+        });
+      }
+    }
   }
+
+  fecharAvisoEIrParaAdministrativo(): void {
+  this.modalAvisoCaixaFechado = false;
+  this.router.navigate(['/abertura-caixa']);
+}
 
   trackByApartamentoId(index: number, apt: any): number {
   return apt.id;
@@ -1815,6 +1858,18 @@ if (this.filtroDataCheckin) {
     const [ano, mes, dia] = data.split('-');
     return `${dia}/${mes}/${ano}`;
   }
+
+  formatarHoraSimples(dataHora: string): string {
+  if (!dataHora) return '';
+  const d = new Date(dataHora);
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+formatarDataHoraCompleta(dataHora: string): string {
+  if (!dataHora) return '';
+  const d = new Date(dataHora);
+  return d.toLocaleDateString('pt-BR') + ' às ' + this.formatarHoraSimples(dataHora);
+}
 
   calcularHorasAtraso(dataCheckout: string): string {
     if (!dataCheckout) return '';

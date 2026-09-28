@@ -91,7 +91,7 @@ public class VendaController {
 
                 // ✅ Controle de consumo de água (convênio empresa)
                 boolean isAguaMineral = produto.getNomeProduto() != null
-                    && produto.getNomeProduto().toUpperCase().contains("AGUA");
+                        && produto.getNomeProduto().toUpperCase().replace("Á", "A").contains("AGUA");
                 if (isAguaMineral && !controleConsumoAguaService.validarLimite(reserva, totalItem)) {
                     throw new RuntimeException("Limite diário de água do convênio já atingido para este apartamento.");
                 }

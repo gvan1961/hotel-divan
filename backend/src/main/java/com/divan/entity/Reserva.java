@@ -67,6 +67,9 @@ public class Reserva {
     @Column(length = 500)
     private String observacoes;
     
+    @Column(name = "codigo_solicitacao", length = 50)
+    private String codigoSolicitacao;
+    
     @DecimalMin(value = "0.0", message = "Total de hospedagem não pode ser negativo")
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalHospedagem = BigDecimal.ZERO;
@@ -255,8 +258,16 @@ public class Reserva {
 	public void setObservacoes(String observacoes) {
 		this.observacoes = observacoes;
 	}
+	
+	
 
+	public String getCodigoSolicitacao() {
+		return codigoSolicitacao;
+	}
 
+	public void setCodigoSolicitacao(String codigoSolicitacao) {
+		this.codigoSolicitacao = codigoSolicitacao;
+	}
 
 	public BigDecimal getTotalHospedagem() {
 		return totalHospedagem;
