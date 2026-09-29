@@ -549,10 +549,11 @@ public class ApartamentoController {
 
                  // ✅ Última limpeza diária registrada (camareira)
                     historicoApartamentoRepository
-                        .findFirstByApartamentoIdAndAcaoOrderByDataHoraDesc(apt.getId(), "LIMPEZA_DIARIA")
-                        .ifPresent(ultimaLimpeza -> {
-                            res.put("ultimaLimpezaDiaria", ultimaLimpeza.getDataHora().toString());
-                        });
+                    .findFirstByApartamentoIdAndAcaoAndDataHoraAfterOrderByDataHoraDesc(
+                        apt.getId(), "LIMPEZA_DIARIA", checkin.atStartOfDay())
+                    .ifPresent(ultimaLimpeza -> {
+                        res.put("ultimaLimpezaDiaria", ultimaLimpeza.getDataHora().toString());
+                    });
 
                  // ✅ Controle de consumo de água (convênio empresa)
                     controleConsumoAguaService.getLimiteDiario(r).ifPresent(limite -> {
