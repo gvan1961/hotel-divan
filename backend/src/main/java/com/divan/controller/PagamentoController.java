@@ -53,6 +53,9 @@ public class PagamentoController {
     
     @Autowired
 	private CaixaContextoService caixaContextoService;	
+    
+    @Autowired
+    private com.divan.repository.LogAuditoriaRepository logAuditoriaRepository;
 
     @PostMapping
     public ResponseEntity<?> processarPagamento(@Valid @RequestBody PagamentoRequestDTO dto) {
@@ -286,6 +289,16 @@ public class PagamentoController {
             }
 
             Pagamento estorno = pagamentoService.estornarPagamento(reservaId, valor, motivo);
+
+            // ✅ Registra no log de auditoria
+            com.divan.entity.LogAuditoria log = new com.divan.entity.LogAuditoria();
+            log.setUsuario(usuarioOpt.get());
+            log.setReserva(reservaRepository.findById(reservaId).orElse(null));
+            log.setAcao("ESTORNO_PAGAMENTO");
+            log.setDescricao("Estorno de R$ " + valor + " na reserva #" + reservaId + " — motivo: " + motivo);
+            log.setDataHora(LocalDateTime.now());
+            logAuditoriaRepository.save(log);
+            
             return ResponseEntity.status(HttpStatus.CREATED).body(estorno);
 
         } catch (Exception e) {

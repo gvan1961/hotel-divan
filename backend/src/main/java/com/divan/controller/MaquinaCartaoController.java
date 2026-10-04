@@ -51,12 +51,11 @@ public class MaquinaCartaoController {
             maquinaCartaoService.cancelarCobranca(id);
             return ResponseEntity.ok(Map.of("mensagem", "Cancelado"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage() != null ? e.getMessage() : e.toString()));
         }
     }
-    
-    @GetMapping("/pendentes")
-    public ResponseEntity<?> listarPendentes() {
+
+    @GetMapping("/pendentes")    public ResponseEntity<?> listarPendentes() {
         List<CobrancaCartao> cobrancas = maquinaCartaoService.listarAtivas();
 
         List<Map<String, Object>> resultado = cobrancas.stream().map(c -> {

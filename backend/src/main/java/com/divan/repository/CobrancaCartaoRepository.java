@@ -17,6 +17,8 @@ public interface CobrancaCartaoRepository extends JpaRepository<CobrancaCartao, 
 
     List<CobrancaCartao> findByStatusInOrderByDataCriacaoDesc(List<String> status);
 
+    List<CobrancaCartao> findByStatus(String status);
+
     Optional<CobrancaCartao> findFirstByReservaIdAndStatusInOrderByDataCriacaoDesc(
         Long reservaId, List<String> status);
     

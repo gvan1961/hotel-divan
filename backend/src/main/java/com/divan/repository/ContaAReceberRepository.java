@@ -15,6 +15,10 @@ import java.util.Optional;
 
 @Repository
 public interface ContaAReceberRepository extends JpaRepository<ContaAReceber, Long> {
+	
+	java.util.List<ContaAReceber> findByNumeroNotaFiscal(String numeroNotaFiscal);
+
+    java.util.List<ContaAReceber> findByReservaCodigoSolicitacao(String codigoSolicitacao);
     
 	boolean existsByReservaId(Long reservaId);
 	

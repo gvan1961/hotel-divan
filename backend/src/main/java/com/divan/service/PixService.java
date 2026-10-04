@@ -113,16 +113,55 @@ public class PixService {
     @Transactional
     public void confirmarPagamento(String correlationId) {
         CobrancaPix cobranca = cobrancaPixRepository.findByCorrelationId(correlationId)
-            .orElseThrow(() -> new RuntimeException("Cobrança não encontrada para correlationID: " + correlationId));
+                .orElseThrow(() -> new RuntimeException("Cobrança não encontrada para correlationID: " + correlationId));
 
-        if (cobranca.getStatus() == CobrancaPix.StatusPixEnum.PAGO) {
-            return; // já processado — evita duplicar
-        }
+            if (cobranca.getStatus() == CobrancaPix.StatusPixEnum.PAGO
+                || cobranca.getStatus() == CobrancaPix.StatusPixEnum.CONFIRMADO) {
+                return; // já processado — evita duplicar
+            }
 
-        cobranca.setStatus(CobrancaPix.StatusPixEnum.PAGO);
-        cobrancaPixRepository.save(cobranca);
+            cobranca.setStatus(CobrancaPix.StatusPixEnum.PAGO);
+            cobrancaPixRepository.save(cobranca);
+            lancarPagamentoAutomatico(cobranca);
     }
+
+    // ✅ Verifica a cada 30 segundos se o Make marcou alguma cobrança como PAGA
+    // direto no banco (sem passar pelo webhook) e lança na reserva automaticamente
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 30000)
     
+    public void verificarPixPagosSemLancamento() {
+        List<CobrancaPix> pagos = cobrancaPixRepository.findByStatus(CobrancaPix.StatusPixEnum.PAGO);
+        for (CobrancaPix cobranca : pagos) {
+            lancarPagamentoAutomatico(cobranca);
+        }
+    }
+
+    private void lancarPagamentoAutomatico(CobrancaPix cobranca) {
+        if (cobranca.getReservaId() == null) return;
+        try {
+            com.divan.entity.Pagamento pagamento = new com.divan.entity.Pagamento();
+            com.divan.entity.Reserva reserva = new com.divan.entity.Reserva();
+            reserva.setId(cobranca.getReservaId());
+            pagamento.setReserva(reserva);
+            pagamento.setValor(cobranca.getValor());
+            pagamento.setFormaPagamento(com.divan.entity.Pagamento.FormaPagamentoEnum.PIX);
+            pagamento.setObservacao("Pix confirmado automaticamente — correlationId: " + cobranca.getCorrelationId());
+            pagamentoService.processarPagamento(pagamento);
+            cobranca.setStatus(CobrancaPix.StatusPixEnum.CONFIRMADO);
+            cobrancaPixRepository.save(cobranca);
+        } catch (Exception e) {
+            System.err.println("⚠️ Erro ao lançar automaticamente o Pix na reserva (correlationId: " + cobranca.getCorrelationId() + "): " + e.getMessage());
+            try {
+                CobrancaPix cobrancaAtualizada = cobrancaPixRepository.findById(cobranca.getId()).orElse(null);
+                if (cobrancaAtualizada != null) {
+                    cobrancaAtualizada.setStatus(CobrancaPix.StatusPixEnum.ERRO_LANCAMENTO);
+                    cobrancaPixRepository.save(cobrancaAtualizada);
+                }
+            } catch (Exception e2) {
+                System.err.println("⚠️ Erro ao marcar ERRO_LANCAMENTO (correlationId: " + cobranca.getCorrelationId() + "): " + e2.getMessage());
+            }
+        }
+    }    
     public void marcarExpirado(String correlationId) {
         CobrancaPix cobranca = cobrancaPixRepository.findByCorrelationId(correlationId)
             .orElseThrow(() -> new RuntimeException("Cobrança não encontrada para correlationID: " + correlationId));

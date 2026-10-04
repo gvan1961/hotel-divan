@@ -595,13 +595,14 @@ import { PixService } from '../../services/pix.service';
                 📊 Imprimir Extrato
               </button>
               </ng-container>
+
               <ng-container *hasPermission="'RESERVA_CRIAR'">
-                <button class="btn-acao btn-comanda" 
+                <button class="btn-acao btn-comanda"
                         *ngIf="reserva.status === 'ATIVA'"
-                        (click)="abrirComanda()">
-                  🏨 Comanda de Consumo
+                        (click)="irParaPDVComApartamento()">
+                  🛒 CONSUMO
                 </button>
-              </ng-container>                          
+              </ng-container>                    
 
          <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
   <button class="btn-acao btn-pagamento" 
@@ -618,6 +619,14 @@ import { PixService } from '../../services/pix.service';
           (click)="corrigirParaFaturado()"
           title="Corrigir forma de pagamento para Faturado (empresa)">
     🔁 Corrigir para Faturado
+  </button>
+</ng-container>
+
+            <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
+  <button class="btn-acao"
+          (click)="estornarPagamentoSimples()"
+          title="Estornar um pagamento lançado indevidamente">
+    ❌ Estornar Pagamento
   </button>
 </ng-container>
 
@@ -1068,7 +1077,8 @@ import { PixService } from '../../services/pix.service';
   <div class="pix-resultado" *ngIf="pixQrCodeImage">
   <div class="pix-confirmado-destaque" *ngIf="pixPagamentoConfirmado">
     ✅ PAGAMENTO CONFIRMADO!
-    <p>Pode clicar em "Confirmar Pagamento" para finalizar.</p>
+    <p>O valor já foi lançado automaticamente na reserva.</p>
+    <button type="button" class="btn-confirmar" (click)="fecharPixConfirmado()">Fechar</button>
   </div>
 
   <div class="pix-confirmado-destaque" *ngIf="pixExpirado" style="background: #fff3cd; color: #856404;">
@@ -1097,9 +1107,10 @@ import { PixService } from '../../services/pix.service';
   </button>
 
   <div class="pix-resultado" *ngIf="cartaoCobrancaIdAtual">
-    <div class="pix-confirmado-destaque" *ngIf="cartaoPagamentoConfirmado">
+   <div class="pix-confirmado-destaque" *ngIf="cartaoPagamentoConfirmado">
       ✅ PAGAMENTO CONFIRMADO!
-      <p>Pode clicar em "Confirmar Pagamento" para finalizar.</p>
+      <p>O valor já foi lançado automaticamente na reserva.</p>
+      <button type="button" class="btn-confirmar" (click)="fecharPixConfirmado()">Fechar</button>
     </div>
 
     <div class="cartao-aguardando" *ngIf="!cartaoPagamentoConfirmado && !mostrarAvisoCancelarCartao">
@@ -5919,6 +5930,39 @@ if (!empresaId) {
   });
 }
 
+estornarPagamentoSimples(): void {
+  if (!this.reserva) {
+    alert('❌ Reserva não carregada');
+    return;
+  }
+  const valorDigitado = prompt('Valor a estornar (R$):');
+  if (!valorDigitado) return;
+  const valor = parseFloat(valorDigitado.replace(',', '.'));
+  if (isNaN(valor) || valor <= 0) {
+    alert('⚠️ Valor inválido.');
+    return;
+  }
+  const motivo = prompt('Motivo do estorno:', 'Pagamento lançado indevidamente');
+  if (!motivo) return;
+
+  const confirmar = confirm(`Confirma o estorno de R$ ${valor.toFixed(2)}?`);
+  if (!confirmar) return;
+
+  this.http.post('/api/pagamentos/estornar', {
+    reservaId: this.reserva.id,
+    valor: valor,
+    motivo: motivo
+  }).subscribe({
+    next: () => {
+      alert('✅ Estorno realizado com sucesso!');
+      if (this.reserva) this.carregarReserva(this.reserva.id);
+    },
+    error: (err: any) => {
+      alert('❌ Erro ao estornar: ' + (err.error?.erro || err.message));
+    }
+  });
+}
+
 tratarCreditoAposRemocao(valorCredito: number): void {
   const valorFormatado = valorCredito.toFixed(2).replace('.', ',');
   const registrarAgora = confirm(
@@ -7503,10 +7547,10 @@ podeConfirmarPagamento(): boolean {
     return false; // nenhuma forma selecionada ainda — botão não aparece
   }
   if (this.pagFormaPagamento === 'CARTAO_CREDITO' || this.pagFormaPagamento === 'CARTAO_DEBITO') {
-    return this.cartaoPagamentoConfirmado;
+    return false; // Cartão já lança automaticamente via webhook — nunca precisa desse botão
   }
   if (this.pagFormaPagamento === 'PIX') {
-    return this.pixPagamentoConfirmado;
+    return false; // Pix já lança automaticamente via webhook — nunca precisa desse botão
   }
   return true; // outras formas (Dinheiro, Faturado, Débito em Conta, etc.) não precisam dessa trava
 }
@@ -7526,6 +7570,28 @@ enviarPixWhatsApp(): void {
   }).subscribe({
     next: () => alert('✅ Enviado por WhatsApp com sucesso!'),
     error: (err) => alert('❌ Erro ao enviar: ' + (err.error?.erro || err.message))
+  });
+}
+
+fecharPixConfirmado(): void {
+  this.fecharModalPagamento();
+  if (this.reserva) {
+    this.carregarReserva(this.reserva.id);
+  }
+}
+
+irParaPDVComApartamento(): void {
+  if (!this.reserva?.apartamento?.id) {
+    alert('Apartamento inválido');
+    return;
+  }
+  this.router.navigate(['/pdv'], {
+    queryParams: {
+      origem: 'reserva-detalhes',
+      apartamentoId: this.reserva.apartamento.id,
+      numeroApartamento: this.reserva.apartamento.numeroApartamento,
+      reservaId: this.reserva.id
+    }
   });
 }
 

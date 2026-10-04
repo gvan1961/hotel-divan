@@ -17,6 +17,8 @@ public interface CobrancaPixRepository extends JpaRepository<CobrancaPix, Long> 
 
     List<CobrancaPix> findByStatusInOrderByDataCriacaoDesc(List<CobrancaPix.StatusPixEnum> status);
 
+    List<CobrancaPix> findByStatus(CobrancaPix.StatusPixEnum status);
+
     Optional<CobrancaPix> findFirstByReservaIdAndStatusInOrderByDataCriacaoDesc(
         Long reservaId, List<CobrancaPix.StatusPixEnum> status);
     

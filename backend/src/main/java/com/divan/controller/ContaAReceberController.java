@@ -193,7 +193,81 @@ public class ContaAReceberController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
-        
+
+    @PatchMapping("/atualizar-vencimento-lote")
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<?> atualizarVencimentoLote(@RequestBody Map<String, Object> body) {
+        try {
+            List<Integer> idsInt = (List<Integer>) body.get("ids");
+            if (idsInt == null || idsInt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Informe ao menos um id de conta"));
+            }
+            List<Long> ids = idsInt.stream().map(Integer::longValue).collect(java.util.stream.Collectors.toList());
+
+            if (body.get("dataVencimento") == null) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Informe a nova dataVencimento"));
+            }
+            java.time.LocalDate novaDataVencimento = java.time.LocalDate.parse(body.get("dataVencimento").toString());
+
+            int atualizadas = contaAReceberService.atualizarVencimentoLotePorIds(ids, novaDataVencimento);
+
+            try {
+                String username = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication().getName();
+                LogAuditoria log = new LogAuditoria();
+                log.setAcao("ATUALIZAR_VENCIMENTO_LOTE");
+                log.setDescricao("Vencimento atualizado em lote para " + novaDataVencimento
+                    + " — " + atualizadas + " conta(s) afetada(s) — ids: " + ids);
+                log.setDataHora(LocalDateTime.now());
+                usuarioRepository.findByUsername(username).ifPresent(log::setUsuario);
+                logAuditoriaRepository.save(log);
+            } catch (Exception logEx) {
+                System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+            }
+
+            return ResponseEntity.ok(Map.of("mensagem", "Vencimento atualizado", "quantidadeAtualizada", atualizadas));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/atribuir-nota-fiscal-lote")
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<?> atribuirNotaFiscalLote(@RequestBody Map<String, Object> body) {
+        try {
+            List<Integer> idsInt = (List<Integer>) body.get("ids");
+            if (idsInt == null || idsInt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Informe ao menos um id de conta"));
+            }
+            List<Long> ids = idsInt.stream().map(Integer::longValue).collect(java.util.stream.Collectors.toList());
+
+            String numeroNotaFiscal = body.get("numeroNotaFiscal") != null ? body.get("numeroNotaFiscal").toString() : null;
+            if (numeroNotaFiscal == null || numeroNotaFiscal.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Informe numeroNotaFiscal"));
+            }
+
+            int atualizadas = contaAReceberService.atribuirNotaFiscalLotePorIds(ids, numeroNotaFiscal);
+
+            try {
+                String username = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication().getName();
+                LogAuditoria log = new LogAuditoria();
+                log.setAcao("ATRIBUIR_NF_LOTE");
+                log.setDescricao("NF " + numeroNotaFiscal + " atribuída em lote — "
+                    + atualizadas + " conta(s) afetada(s) — ids: " + ids);
+                log.setDataHora(LocalDateTime.now());
+                usuarioRepository.findByUsername(username).ifPresent(log::setUsuario);
+                logAuditoriaRepository.save(log);
+            } catch (Exception logEx) {
+                System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+            }
+
+            return ResponseEntity.ok(Map.of("mensagem", "NF atribuída", "quantidadeAtualizada", atualizadas));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
+
     @GetMapping("/pendencias-pessoais")
     public ResponseEntity<List<Map<String, Object>>> listarPendenciasPessoais() {
         List<Map<String, Object>> resultado = contaAReceberRepository.findPendenciasPessoais().stream()

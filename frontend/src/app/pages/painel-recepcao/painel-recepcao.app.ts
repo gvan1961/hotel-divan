@@ -151,7 +151,7 @@ template: `
             atrasado: <strong>{{ contadores.atrasado }}</strong>
           </span>
         </div>
-        <button class="btn-pdv" (click)="irParaPDV()" title="PDV - Vendas">💳 PDV</button>
+        <button class="btn-pdv" (click)="irParaPDV()" title="PDV - Vendas">💳 VENDAS</button>
         <button class="btn-imprimir-apartamentos" (click)="abrirModalImprimirApartamentos()" title="Imprimir Apartamentos">🖨️ Imprimir Apartamentos</button>
         <button class="btn-reconhecimento" (click)="irParaReconhecimento()" title="Reconhecimento Facial">📷 Reconhecimento</button>
         <button class="btn-atualizar" (click)="carregarDados()" title="Atualizar">↻</button>
@@ -595,16 +595,16 @@ template: `
            <!-- ATRASADO -->
            <ng-container *ngIf="apt.reserva?.atrasado">
   <div class="aviso-atraso" ...>⚠️ CHECKOUT ATRASADO ...</div>
-  <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒 PDV</button>
+  <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒 CONSUMO</button>
   <button class="btn-icone" title="Ver detalhes" (click)="irParaReserva(apt)">📋 Detalhes da Reserva</button>
   <button class="btn-icone" title="Gerar senha Wi-Fi" (click)="gerarVoucherWifi(apt)">📶 Gerar Senha Wi-Fi</button>
 </ng-container>
 
             <!-- ATIVA (não atrasado) -->
             <ng-container *ngIf="getStatusFinal(apt) === 'ATIVA' && !apt.reserva?.atrasado">
-  <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒 PDV</button>
+  <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒 CONSUMO</button>
   <button class="btn-icone" title="Ver detalhes" (click)="irParaReserva(apt)">📋 Detalhes da Reserva</button>
-  <button class="btn-icone" title="Hóspedes"          (click)="irParaReserva(apt)">👥 Hóspedes</button>
+  <button class="btn-icone" title="Hóspedes"          (click)="abrirHospedesApartamento(apt)">👥 Hóspedes</button>
   <button class="btn-icone" title="Transferir"        (click)="irParaReserva(apt)">➜ Transferir</button>
   <button class="btn-icone btn-limpeza-diaria" [title]="apt.reserva?.ultimaLimpezaDiaria ? ('Última limpeza: ' + formatarDataHoraCompleta(apt.reserva!.ultimaLimpezaDiaria!)) : 'Registrar limpeza diária'" (click)="registrarLimpezaDiaria(apt)">
   🧹 Limpeza{{ apt.reserva?.ultimaLimpezaDiaria ? ' (' + formatarHoraSimples(apt.reserva!.ultimaLimpezaDiaria!) + ')' : '' }}
@@ -698,6 +698,31 @@ template: `
           <span class="foto-hospede-nome">{{ h.nome }}</span>
         </div>
         <div *ngIf="fotosHospedes.length === 0" style="text-align:center; color:#999;">
+          Nenhum hóspede ativo encontrado.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="modalHospedesApto"
+     (click)="modalHospedesApto = false"
+     style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:9999;">
+  <div class="modal-fotos" (click)="$event.stopPropagation()">
+    <div class="modal-fotos-header">
+      <h3>👥 Hóspedes — Apt {{ aptHospedesSelecionado }}</h3>
+      <button (click)="modalHospedesApto = false">✕</button>
+    </div>
+    <div class="modal-fotos-body">
+      <div *ngIf="carregandoHospedesApto" style="text-align:center; padding:20px;">
+        Carregando hóspedes...
+      </div>
+      <div *ngIf="!carregandoHospedesApto">
+        <div *ngFor="let h of hospedesApto" style="padding:10px; border-bottom:1px solid #eee;">
+          <strong>{{ h.nome }}</strong>
+          <div style="color:#666; font-size:0.9em;">CPF: {{ h.cpf }}</div>
+        </div>
+        <div *ngIf="hospedesApto.length === 0" style="text-align:center; color:#999; padding:20px;">
           Nenhum hóspede ativo encontrado.
         </div>
       </div>
@@ -1570,6 +1595,11 @@ mostrarResultadosEmpresa = false;
 fotosHospedes: {nome: string, foto: string | null}[] = [];
 aptFotoSelecionado = '';
 carregandoFotos = false;
+
+modalHospedesApto = false;
+carregandoHospedesApto = false;
+aptHospedesSelecionado = '';
+hospedesApto: {nome: string, cpf: string}[] = [];
 
   dividasPendentes: any[] = [];
   mostrarAvisoDivida = true;
@@ -2608,6 +2638,29 @@ imprimirVouchersWifi(apt: ApartamentoCard, vouchers: any[]): void {
       janela.close();
     }, 500);
   }
+}
+
+abrirHospedesApartamento(apt: ApartamentoCard): void {
+  if (!apt.reserva?.id) return;
+  this.carregandoHospedesApto = true;
+  this.modalHospedesApto = true;
+  this.aptHospedesSelecionado = apt.numero;
+  this.hospedesApto = [];
+
+  this.http.get<any[]>(`/api/reservas/${apt.reserva.id}/hospedes`).subscribe({
+    next: (hospedes) => {
+      this.hospedesApto = hospedes
+        .filter(h => h.status === 'HOSPEDADO')
+        .map(h => ({
+          nome: h.nomeCompleto || h.cliente?.nome || 'Sem nome',
+          cpf: h.cliente?.cpf || h.cpf || 'Sem CPF'
+        }));
+      this.carregandoHospedesApto = false;
+    },
+    error: () => {
+      this.carregandoHospedesApto = false;
+    }
+  });
 }
 
 abrirFotosHospedes(apt: ApartamentoCard): void {

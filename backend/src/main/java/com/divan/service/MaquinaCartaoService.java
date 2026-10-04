@@ -21,6 +21,9 @@ public class MaquinaCartaoService {
 
     @Autowired
     private CobrancaCartaoRepository cobrancaCartaoRepository;
+    
+    @Autowired
+    private com.divan.service.PagamentoService pagamentoService;
 
     private final RestTemplate restTemplate = criarRestTemplateComTimeout();
 
@@ -121,32 +124,87 @@ public class MaquinaCartaoService {
         CobrancaCartao cobranca = cobrancaCartaoRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Cobrança não encontrada"));
 
-        Map<String, Object> body = Map.of(
-            "acao", "cancelar",
-            "Ordem", cobranca.getOrdemMercadoPago()
-        );
+        String ordem = cobranca.getOrdemMercadoPago();
+        if (ordem != null && !ordem.isBlank()) {
+            Map<String, Object> body = new java.util.HashMap<>();
+            body.put("acao", "cancelar");
+            body.put("Ordem", ordem);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
-       restTemplate.postForEntity(WEBHOOK_URL, request, String.class);
+            restTemplate.postForEntity(WEBHOOK_URL, request, String.class);
+        } else {
+            System.err.println("⚠️ Cobrança de cartão id=" + id
+                + " sem ordemMercadoPago — cancelada só no sistema, nada foi enviado ao Mercado Pago");
+        }
 
         cobranca.setStatus("CANCELADO");
         cobrancaCartaoRepository.save(cobranca);
     }
 
+    
+    
     public void confirmarPagamento(String correlationId) {
         CobrancaCartao cobranca = cobrancaCartaoRepository.findByCorrelationId(correlationId)
-            .orElseThrow(() -> new RuntimeException("Cobrança não encontrada para referência: " + correlationId));
+                .orElseThrow(() -> new RuntimeException("Cobrança não encontrada para referência: " + correlationId));
 
-        if ("PAGO".equalsIgnoreCase(cobranca.getStatus())) {
-            return; // já processado
-        }
+            if ("PAGO".equalsIgnoreCase(cobranca.getStatus())
+                || "CONFIRMADO".equalsIgnoreCase(cobranca.getStatus())) {
+                return; // já processado
+            }
 
-        cobranca.setStatus("PAGO");
-        cobrancaCartaoRepository.save(cobranca);
+            cobranca.setStatus("PAGO");
+            cobrancaCartaoRepository.save(cobranca);
+            lancarPagamentoAutomatico(cobranca);
     }
+
+    // ✅ Verifica a cada 30 segundos se o Make marcou alguma cobrança como PAGA
+    // direto no banco (sem passar pelo webhook) e lança na reserva automaticamente
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 30000)
+    public void verificarCartoesPagosSemLancamento() {
+        List<CobrancaCartao> pagos = cobrancaCartaoRepository.findByStatus("PAGO");
+        for (CobrancaCartao cobranca : pagos) {
+            lancarPagamentoAutomatico(cobranca);
+        }
+    }
+
+    private void lancarPagamentoAutomatico(CobrancaCartao cobranca) {
+        if (cobranca.getReservaId() == null) return;
+        try {
+            com.divan.entity.Pagamento pagamento = new com.divan.entity.Pagamento();
+            com.divan.entity.Reserva reserva = new com.divan.entity.Reserva();
+            reserva.setId(cobranca.getReservaId());
+            pagamento.setReserva(reserva);
+            pagamento.setValor(cobranca.getValor());
+
+            boolean debito = cobranca.getFormaPagamento() != null
+                && cobranca.getFormaPagamento().toLowerCase().contains("debit");
+            pagamento.setFormaPagamento(debito
+                ? com.divan.entity.Pagamento.FormaPagamentoEnum.CARTAO_DEBITO
+                : com.divan.entity.Pagamento.FormaPagamentoEnum.CARTAO_CREDITO);
+
+            pagamento.setObservacao("Cartão confirmado automaticamente — referência: " + cobranca.getCorrelationId());
+            pagamentoService.processarPagamento(pagamento);
+            cobranca.setStatus("CONFIRMADO");
+            cobrancaCartaoRepository.save(cobranca);
+        } catch (Exception e) {
+            System.err.println("⚠️ Erro ao lançar automaticamente o Cartão na reserva (referência: " + cobranca.getCorrelationId() + "): " + e.getMessage());
+            try {
+                CobrancaCartao cobrancaAtualizada = cobrancaCartaoRepository.findById(cobranca.getId()).orElse(null);
+                if (cobrancaAtualizada != null) {
+                    cobrancaAtualizada.setStatus("ERRO_LANCAMENTO");
+                    cobrancaCartaoRepository.save(cobrancaAtualizada);
+                }
+            } catch (Exception e2) {
+                System.err.println("⚠️ Erro ao marcar ERRO_LANCAMENTO (referência: " + cobranca.getCorrelationId() + "): " + e2.getMessage());
+            }
+        }
+                
+                
+            }
+        
     
     public CobrancaCartao buscarPorId(Long id) {
         return cobrancaCartaoRepository.findById(id)

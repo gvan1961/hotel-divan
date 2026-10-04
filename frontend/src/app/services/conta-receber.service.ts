@@ -6,6 +6,7 @@ export interface ContaAReceber {
   id: number;
   reservaId: number;
   codigoSolicitacao?: string;
+  numeroNotaFiscal?: string;
   clienteNome: string;
   todosHospedes?: string;
   empresaNome?: string;

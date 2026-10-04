@@ -11,6 +11,7 @@ public class ContaAReceberDTO {
     private Long id;
     private Long reservaId;
     private String codigoSolicitacao;
+    private String numeroNotaFiscal;
     private String clienteNome;
     private String empresaNome;
     private BigDecimal valor;
@@ -57,6 +58,13 @@ public class ContaAReceberDTO {
 	}
 	public void setCodigoSolicitacao(String codigoSolicitacao) {
 		this.codigoSolicitacao = codigoSolicitacao;
+	}	
+		
+	public String getNumeroNotaFiscal() {
+		return numeroNotaFiscal;
+	}
+	public void setNumeroNotaFiscal(String numeroNotaFiscal) {
+		this.numeroNotaFiscal = numeroNotaFiscal;
 	}
 	public String getClienteNome() {
 		return clienteNome;

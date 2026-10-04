@@ -22,6 +22,7 @@ interface FiltrosAvancados {
   status?: string;
   reservaId?: number;
   codigoSolicitacao?: string;
+  numeroNotaFiscal?: string;
 }
 
 @Component({
@@ -160,6 +161,32 @@ interface FiltrosAvancados {
         *ngIf="filtrosAplicados.empresaId && contasFiltradas.length > 0">
   🖨️ Imprimir Lista Simples ({{ contasFiltradas.length }})
 </button>
+
+<button class="btn-imprimir" (click)="abrirModalEdicaoLote()" *ngIf="qtdSelecionadasVisiveis() > 0">
+  ✏️ Editar {{ qtdSelecionadasVisiveis() }} Selecionada(s)
+</button>
+        </div>
+
+        <div class="modal-overlay" *ngIf="modalEdicaoLote"
+             (click)="modalEdicaoLote = false"
+             style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:9999;">
+          <div (click)="$event.stopPropagation()" style="background:white; border-radius:8px; padding:24px; max-width:500px; width:90%;">
+           <h3>✏️ Editar {{ qtdSelecionadasVisiveis() }} Fatura(s) Selecionada(s)</h3>
+
+            <div style="margin-bottom:16px;">
+              <label>Nota Fiscal (deixe em branco para não alterar):</label>
+              <input type="text" [(ngModel)]="loteNumeroNotaFiscal" placeholder="Ex: 1234" style="width:100%; padding:6px;">
+            </div>
+
+            <div style="margin-bottom:16px;">
+              <label>Vencimento (deixe em branco para não alterar):</label>
+              <input type="date" [(ngModel)]="loteNovaDataVencimento" style="width:100%; padding:6px;">
+            </div>
+
+            <button class="btn-confirmar" (click)="confirmarEditarLoteFiscal()" style="margin-bottom:8px;">
+              Aplicar
+            </button>
+          </div>
         </div>
 
         <table class="tabela">
@@ -169,7 +196,9 @@ interface FiltrosAvancados {
   <th>Apto</th>
   <th>Hóspedes</th>
   <th>Empresa</th>
+  <th><input type="checkbox" (change)="toggleSelecionarTodas($event)" [checked]="todasSelecionadas()"></th>
   <th>Solicitação</th>
+  <th>Nota Fiscal</th>
   <th>Check-in/Check-out</th>
   <th>Saldo</th>
   <th>Vencimento</th>
@@ -191,7 +220,9 @@ interface FiltrosAvancados {
                 <span *ngIf="!conta.empresaNome" class="sem-empresa">-</span>
               </td>
 
+              <td><input type="checkbox" [checked]="idsSelecionados.has(conta.id)" (change)="toggleSelecao(conta.id)"></td>
               <td>{{ conta.codigoSolicitacao || '-' }}</td>
+              <td>{{ conta.numeroNotaFiscal || '-' }}</td>
 
               <td class="datas">
 
@@ -311,6 +342,12 @@ interface FiltrosAvancados {
               <div class="campo">
               <label>🏢 Código de Solicitação</label>
               <input type="text" [(ngModel)]="filtrosTemp.codigoSolicitacao" placeholder="Ex: 243756" class="filtro-input">
+            </div>
+
+            <!-- NOTA FISCAL -->
+              <div class="campo">
+              <label>🧾 Nota Fiscal</label>
+              <input type="text" [(ngModel)]="filtrosTemp.numeroNotaFiscal" placeholder="Ex: 1234" class="filtro-input">
             </div>
 
              <!-- PENDÊNCIA EXTRA -->
@@ -1295,6 +1332,35 @@ export class ContasReceberListaApp implements OnInit {
 
   contas: ContaAReceber[] = [];
   contasFiltradas: ContaAReceber[] = [];
+  modalEdicaoLote = false;
+  idsSelecionados = new Set<number>();
+  loteNumeroNotaFiscal = '';
+  loteNovaDataVencimento = '';
+
+  toggleSelecao(id: number): void {
+    if (this.idsSelecionados.has(id)) {
+      this.idsSelecionados.delete(id);
+    } else {
+      this.idsSelecionados.add(id);
+    }
+  }
+
+  todasSelecionadas(): boolean {
+    return this.contasFiltradas.length > 0 &&
+      this.contasFiltradas.every(c => this.idsSelecionados.has((c as any).id));
+  }
+
+  toggleSelecionarTodas(event: any): void {
+    const marcar = event.target.checked;
+    this.contasFiltradas.forEach(c => {
+      const id = (c as any).id;
+      if (marcar) {
+        this.idsSelecionados.add(id);
+      } else {
+        this.idsSelecionados.delete(id);
+      }
+    });
+  }
   reservas: any[] = [];
   loading = false;
 
@@ -1428,6 +1494,7 @@ aplicarFiltrosAvancados(): void {
     this.filtrosTemp.clienteNome = this.filtroClienteTexto.trim();
   }
   this.filtrosAplicados = { ...this.filtrosTemp };
+  this.idsSelecionados.clear();
   this.fecharModalFiltros();
   this.carregarDados(); // agora só carrega quando o filtro é aplicado
 }
@@ -1478,6 +1545,12 @@ aplicarFiltrosAvancados(): void {
      const termoSolicitacao = this.filtrosAplicados.codigoSolicitacao.toLowerCase();
      resultado = resultado.filter(c => c.codigoSolicitacao?.toLowerCase().includes(termoSolicitacao));
    }
+
+   if (this.filtrosAplicados.numeroNotaFiscal) {
+     const termoNF = this.filtrosAplicados.numeroNotaFiscal.toLowerCase();
+     resultado = resultado.filter(c => c.numeroNotaFiscal?.toLowerCase().includes(termoNF));
+   }
+ 
 
    if (this.filtrosAplicados.dataCheckInInicio && this.filtrosAplicados.dataCheckInFim) {
   resultado = resultado.filter(c => {
@@ -1961,6 +2034,62 @@ const resultados: any[] = new Array(contasComReserva.length).fill(null);
       }
 
       this.abrirImpressaoLote(blocos);
+    }
+  });
+}
+
+abrirModalEdicaoLote(): void {
+  this.modalEdicaoLote = true;
+  this.loteNumeroNotaFiscal = '';
+  this.loteNovaDataVencimento = '';
+}
+
+qtdSelecionadasVisiveis(): number {
+  return this.contasFiltradas.filter(c => this.idsSelecionados.has((c as any).id)).length;
+}
+
+confirmarEditarLoteFiscal(): void {
+  const nf = (this.loteNumeroNotaFiscal || '').trim();
+  const venc = this.loteNovaDataVencimento;
+
+  if (!nf && !venc) {
+    alert('⚠️ Informe a nota fiscal, o vencimento ou os dois.');
+    return;
+  }
+
+  // Só as marcadas que estão visíveis na lista atual
+  const selecionadas = this.contasFiltradas.filter(c => this.idsSelecionados.has((c as any).id));
+  if (selecionadas.length === 0) {
+    alert('⚠️ Nenhuma fatura selecionada na lista atual.');
+    return;
+  }
+
+  if (nf) {
+    const jaTemOutraNF = selecionadas.filter(c => c.numeroNotaFiscal && c.numeroNotaFiscal !== nf).length;
+    if (jaTemOutraNF > 0 &&
+        !confirm(`${jaTemOutraNF} fatura(s) já têm outra NF, que será substituída pela ${nf}. Continuar?`)) {
+      return;
+    }
+  }
+
+  const resumo = `Aplicar em ${selecionadas.length} fatura(s)?\n` +
+    (nf ? `NF: ${nf}\n` : '') +
+    (venc ? `Vencimento: ${venc}` : '');
+  if (!confirm(resumo)) return;
+
+  this.http.patch<any>('/api/contas-a-receber/editar-lote-fiscal', {
+    ids: selecionadas.map(c => (c as any).id),
+    numeroNotaFiscal: nf || null,
+    dataVencimento: venc || null
+  }).subscribe({
+    next: (resp) => {
+      alert(`✅ ${resp.quantidadeAtualizada} fatura(s) atualizada(s).`);
+      this.modalEdicaoLote = false;
+      this.idsSelecionados.clear();
+      this.carregarDados();
+    },
+    error: (err) => {
+      alert('❌ Erro: ' + (err.error?.erro || err.message));
     }
   });
 }

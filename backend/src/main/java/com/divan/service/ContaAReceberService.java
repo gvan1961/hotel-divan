@@ -351,6 +351,7 @@ public class ContaAReceberService {
         dto.setId(conta.getId());
         dto.setReservaId(conta.getReserva().getId());
         dto.setCodigoSolicitacao(conta.getReserva().getCodigoSolicitacao());
+        dto.setNumeroNotaFiscal(conta.getNumeroNotaFiscal());
         dto.setClienteNome(conta.getCliente().getNome());
         
         Long reservaId = conta.getReserva() != null ? conta.getReserva().getId() : null;
@@ -554,7 +555,30 @@ public class ContaAReceberService {
         conta = contaAReceberRepository.save(conta);
         return converterParaDTO(conta);
     }
-    
+
+    @Transactional
+    public int atualizarVencimentoLotePorIds(List<Long> ids, LocalDate novaDataVencimento) {
+        List<ContaAReceber> contas = contaAReceberRepository.findAllById(ids);
+        for (ContaAReceber conta : contas) {
+            LocalDate vencimentoAnterior = conta.getDataVencimento();
+            conta.setDataVencimento(novaDataVencimento);
+            conta.setObservacao((conta.getObservacao() != null ? conta.getObservacao() + " | " : "") +
+                "VENCIMENTO ALTERADO EM LOTE em " + LocalDateTime.now() + ": " + vencimentoAnterior + " → " + novaDataVencimento);
+        }
+        contaAReceberRepository.saveAll(contas);
+        return contas.size();
+    }
+
+    @Transactional
+    public int atribuirNotaFiscalLotePorIds(List<Long> ids, String numeroNotaFiscal) {
+        List<ContaAReceber> contas = contaAReceberRepository.findAllById(ids);
+        for (ContaAReceber conta : contas) {
+            conta.setNumeroNotaFiscal(numeroNotaFiscal);
+        }
+        contaAReceberRepository.saveAll(contas);
+        return contas.size();
+    }
+
     @Transactional
     public ContaAReceberDTO corrigirParaFaturado(Long reservaId, BigDecimal valor, Long empresaId,
             LocalDate dataVencimento, String descricao, String motivo) {

@@ -55,6 +55,8 @@ public class ContaAReceber {
     @Column(length = 1000)
     private String observacao;
     
+    private String numeroNotaFiscal;
+    
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusContaEnum status = StatusContaEnum.EM_ABERTO;
@@ -156,6 +158,16 @@ public class ContaAReceber {
 
 	public void setObservacao(String observacao) {
 		this.observacao = observacao;
+	}
+	
+	
+
+	public String getNumeroNotaFiscal() {
+		return numeroNotaFiscal;
+	}
+
+	public void setNumeroNotaFiscal(String numeroNotaFiscal) {
+		this.numeroNotaFiscal = numeroNotaFiscal;
 	}
 
 	public StatusContaEnum getStatus() {

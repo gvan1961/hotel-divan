@@ -1120,9 +1120,9 @@ limparCarrinho(): void {
       this.totalCarrinho = this.carrinho.reduce((sum, item) => sum + item.total, 0);
     }
 
-     abrirModalFinalizacao(): void {
-  // ✅ Só reseta tipoVenda se NÃO veio do Painel Recepção
-  if (this.origem !== 'painel-recepcao') {
+    abrirModalFinalizacao(): void {
+  // ✅ Só reseta tipoVenda se NÃO veio do Painel Recepção nem da Reserva
+  if (this.origem !== 'painel-recepcao' && this.origem !== 'reserva-detalhes') {
     this.tipoVenda = 'VISTA';
     this.clienteSelecionadoId = 0;
   }
@@ -1310,8 +1310,10 @@ limparCarrinho(): void {
       this.valorPago = 0;
       
       // ✅ Volta para o Painel Recepção quando veio de lá
-      if (this.origem === 'painel-recepcao') {
+     if (this.origem === 'painel-recepcao') {
         this.router.navigate(['/painel-recepcao']);
+      } else if (this.origem === 'reserva-detalhes' && this.reservaIdPreSelecionada > 0) {
+        this.router.navigate(['/reservas', this.reservaIdPreSelecionada]);
       }
     }
 
@@ -1572,12 +1574,14 @@ limparCarrinho(): void {
       return valor.toFixed(2).replace('.', ',');
     }
 
-    voltar(): void {
+   voltar(): void {
     if (this.origem === 'painel-recepcao') {
       this.router.navigate(['/painel-recepcao']);
+    } else if (this.origem === 'reserva-detalhes' && this.reservaIdPreSelecionada > 0) {
+      this.router.navigate(['/reservas', this.reservaIdPreSelecionada]);
     } else {
       this.router.navigate(['/dashboard']);
-    }  
+    }
   }
 
    
