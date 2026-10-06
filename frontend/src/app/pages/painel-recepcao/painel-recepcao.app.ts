@@ -1725,14 +1725,16 @@ atenderSolicitacao(id: number): void {
 
   carregarDados(): void {
     
-    this.carregando = true;
+   if (this.apartamentos.length === 0) {
+      this.carregando = true;
+    }
     const token = localStorage.getItem('token');
     const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
     this.http.get<any>(this.apiUrl, { headers }).subscribe({
       next: (resp) => {
         console.log('Tipos encontrados:', resp.apartamentos.map((a: any) => a.tipo));
         this.apartamentos = resp.apartamentos;
-        this.apartamentosFiltradosLocal = resp.apartamentos;
+        this.aplicarFiltroLocal();
         this.contadores   = resp.contadores;
         // ✅ EXTRAIR TIPOS DISPONÍVEIS DINAMICAMENTE
         this.tiposDisponiveis = [...new Set<string>(

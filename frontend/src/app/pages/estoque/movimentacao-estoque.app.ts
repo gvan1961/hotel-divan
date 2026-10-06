@@ -14,7 +14,7 @@ import { FornecedorService, Fornecedor } from '../../services/fornecedor.service
     <div class="container">
       <div class="header">
         <h1>📦 Movimentação de Estoque</h1>
-        <button class="btn-back" (click)="router.navigate(['/produtos'])">← Voltar</button>
+        <button class="btn-back" (click)="router.navigate(['/painel-recepcao'])">← Voltar</button>
       </div>
 
       <!-- ABAS -->
