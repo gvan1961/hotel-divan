@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, NgZone, ChangeDetectionStrategy, HostListener } from '@angular/core';
+﻿import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, NgZone, ChangeDetectionStrategy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FechamentoCaixaService } from '../services/fechamento-caixa.service';
@@ -235,8 +235,7 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
 
         <!-- COMANDAS RÁPIDAS -->
         <a *hasPermission="'JANTAR_COMANDO'"
-           routerLink="/comandas-rapidas" routerLinkActive="active" class="nav-item"
-           style="color: #ffc107 !important; font-weight: 700;">
+           routerLink="/comandas-rapidas" routerLinkActive="active" class="nav-item">
           <span class="icon">🍽️</span>
           <span class="label">Comandas Rápidas</span>
         </a>
@@ -884,7 +883,61 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
   margin: 4px 8px;
   border-radius: 4px;
 }
+    /* ── MENU LATERAL: VISUAL CLARO ─────────────── */
+    .sidebar { background: #ffffff; color: #1f2937; box-shadow: 1px 0 0 #e5e7eb; }
+    .sidebar .sidebar-header { border-bottom: 1px solid #eef0f3; }
+    .sidebar .sidebar-header h2 { color: #1f2937; }
+    .sidebar .sidebar-nav { padding: 10px; }
+    .sidebar .sidebar-nav::-webkit-scrollbar-thumb { background: #d6d9de; }
+    .sidebar .nav-item { padding: 7px 10px; margin-bottom: 2px; border-radius: 10px; color: #374151; border-left: none; }
+    .sidebar .nav-item:hover { background: #f3f4f6; color: #111827; }
+    .sidebar .nav-item.active { background: #e8f0fe; color: #1d4ed8; border-left: none; }
+    .sidebar .nav-item .label { font-size: .9em; font-weight: 600; }
+    .sidebar .nav-divider { background: #eef0f3; margin: 8px 6px; }
+    .sidebar .nav-item-alertas,
+    .sidebar .nav-item-cadastros,
+    .sidebar .nav-item-destaque,
+    .sidebar .nav-item-vale-rapido { background: transparent; font-weight: 600; }
+    .sidebar .caixa-status { background: #f0fdf4; color: #15803d; }
+    .sidebar .nav-caixa.abrir { background: #f0fdf4; color: #15803d; }
+    .sidebar .nav-caixa.visualizar { background: #eff6ff; color: #1d4ed8; }
+    .sidebar .sidebar-footer { border-top: 1px solid #eef0f3; }
+    .sidebar .logout-btn { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+    .sidebar .logout-btn:hover { background: #fee2e2; }
 
+    /* ícones em quadradinhos coloridos */
+    .sidebar .nav-item .icon {
+      width: 30px; height: 30px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; font-size: 1rem; background: #eef2ff;
+    }
+    .sidebar a[href="/painel-recepcao"] .icon,
+    .sidebar a[href="/reservas"] .icon,
+    .sidebar a[href="/reservas/mapa"] .icon { background: #dbeafe; }
+    .sidebar a[href="/alertas"] .icon,
+    .sidebar a[href="/jantar"] .icon,
+    .sidebar a[href="/comandas-rapidas"] .icon,
+    .sidebar a[href="/gestao-comandas"] .icon,
+    .sidebar a[href="/relatorio-comandas"] .icon { background: #fee2e2; }
+    .sidebar a[href="/abertura-caixa"] .icon,
+    .sidebar a[href^="/fechamento-caixa"] .icon,
+    .sidebar .caixa-status .icon { background: #dcfce7; }
+    .sidebar a[href="/clientes"] .icon,
+    .sidebar a[href="/apartamentos"] .icon,
+    .sidebar a[href="/manutencoes"] .icon,
+    .sidebar a[href="/cadastros"] .icon { background: #ede9fe; }
+    .sidebar a[href="/apartamentos/limpeza"] .icon,
+    .sidebar a[href="/contagem-estoque"] .icon,
+    .sidebar a[href="/vales/rapido"] .icon { background: #ffedd5; }
+    .sidebar a[href="/pdv"] .icon,
+    .sidebar a[href="/pix-pendentes"] .icon,
+    .sidebar a[href="/cartao-pendentes"] .icon,
+    .sidebar a[href="/historico-pagamentos"] .icon { background: #ccfbf1; }
+    .sidebar a[href="/relatorio-faturamento"] .icon,
+    .sidebar a[href="/graficos"] .icon { background: #fef9c3; }
+    .sidebar a[href="/administrativo"] .icon { background: #e5e7eb; }
+    .sidebar .btn-menu-mobile { background: #eef2ff; color: #1f2937; }
+    .sidebar .btn-menu-mobile:hover { background: #dbeafe; }
   `]
 })
 export class SidebarComponent implements OnInit, OnDestroy {
