@@ -622,6 +622,15 @@ import { PixService } from '../../services/pix.service';
   </button>
 </ng-container>
 
+            <ng-container *ngIf="reserva.status === 'ATIVA'">
+  <button class="btn-acao"
+          (click)="gerarVoucherWifiReserva()"
+          [disabled]="gerandoWifi"
+          title="Gerar senha de Wi-Fi para o hóspede">
+    🛜 Gerar Senha Wi-Fi
+  </button>
+</ng-container>
+
             <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
   <button class="btn-acao"
           (click)="estornarPagamentoSimples()"
@@ -1034,6 +1043,26 @@ import { PixService } from '../../services/pix.service';
             </div>
           </div>
         </div>
+
+        <div class="modal-overlay" *ngIf="modalVoucherWifi"
+     (click)="modalVoucherWifi = false"
+     style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:9999;">
+  <div (click)="$event.stopPropagation()" style="background:white; border-radius:8px; padding:24px; max-width:420px; width:90%; text-align:center;">
+    <h3>🛜 Acesso Wi-Fi — Apt {{ reserva?.apartamento?.numeroApartamento }}</h3>
+    <p style="color:#666; margin:4px 0 16px;">{{ reserva?.cliente?.nome }}</p>
+
+    <div *ngFor="let v of vouchersWifiGerados"
+         style="font-size:1.6em; font-weight:700; letter-spacing:2px; padding:12px; margin-bottom:8px; background:#f3f6fa; border-radius:6px; user-select:all;">
+      {{ v.codigo }}
+    </div>
+
+    <div style="display:flex; gap:8px; justify-content:center; margin-top:16px;">
+      <button class="btn-confirmar" (click)="copiarVouchersWifi()">📋 Copiar</button>
+      <button class="btn-confirmar" (click)="imprimirVouchersWifiReserva()">🖨️ Imprimir</button>
+      <button class="btn-cancelar-modal" (click)="modalVoucherWifi = false">Fechar</button>
+    </div>
+  </div>
+</div>
 
                <!-- MODAL PAGAMENTO -->
         <div class="modal-overlay" *ngIf="modalPagamento" (click)="!cartaoPagamentoConfirmado && !pixPagamentoConfirmado && fecharModalPagamento()">
@@ -3295,6 +3324,9 @@ import { PixService } from '../../services/pix.service';
     // ESTORNO
     modalEstorno = false;
     extratoParaEstornar: any = null;
+    modalVoucherWifi = false;
+    vouchersWifiGerados: any[] = [];
+    gerandoWifi = false;
     motivoEstorno = '';
     criarLancamentoCorreto = false;
     produtoCorretoId = 0;
@@ -5877,6 +5909,150 @@ this.http.post(`/api/reservas/${this.reserva.id}/hospedes`, request).subscribe({
       alert('❌ Erro ao fazer checkout: ' + erro);
     }
   });
+}
+
+gerarVoucherWifiReserva(): void {
+  if (!this.reserva?.id) {
+    alert('⚠️ Reserva não carregada');
+    return;
+  }
+  if (this.gerandoWifi) return;
+
+  const quantidade = prompt('Quantas senhas Wi-Fi deseja gerar?', '2');
+  if (!quantidade) return;
+
+  const qtd = parseInt(quantidade, 10);
+  if (isNaN(qtd) || qtd < 1) {
+    alert('⚠️ Quantidade inválida');
+    return;
+  }
+
+  this.gerandoWifi = true;
+  this.http.post<any[]>(
+    `/api/voucher-wifi/gerar/${this.reserva.id}?quantidade=${qtd}`,
+    {}
+  ).subscribe({
+    next: (vouchers) => {
+      this.gerandoWifi = false;
+      this.vouchersWifiGerados = vouchers;
+      this.modalVoucherWifi = true;
+    },
+    error: (err) => {
+      this.gerandoWifi = false;
+      alert('❌ Erro ao gerar Wi-Fi: ' + (err.error?.erro || err.message));
+    }
+  });
+}
+
+copiarVouchersWifi(): void {
+  const texto = this.vouchersWifiGerados.map(v => v.codigo).join('\n');
+
+  const copiarAntigo = () => {
+    const area = document.createElement('textarea');
+    area.value = texto;
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(area);
+    alert(ok ? '✅ Senha copiada!' : '⚠️ Não foi possível copiar. Selecione a senha na tela e copie manualmente.');
+  };
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(texto).then(
+      () => alert('✅ Senha copiada!'),
+      () => copiarAntigo()
+    );
+  } else {
+    copiarAntigo();
+  }
+}
+
+imprimirVouchersWifiReserva(): void {
+  const agora = new Date();
+  const dataHora = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR');
+  const numeroApto = this.reserva?.apartamento?.numeroApartamento || '';
+  const nomeHospede = this.reserva?.cliente?.nome || '';
+
+  const senhasHtml = this.vouchersWifiGerados.map(v => `
+  <div class="voucher-item">
+    <div class="separador">- - - - - - - - - - - - - - - -</div>
+    <p class="info-rede">Rede: Hotel Di Van</p>
+    <p class="label-senha">CÓDIGO DE ACESSO WI-FI:</p>
+    <p class="senha">${v.codigo}</p>
+  </div>
+`).join('');
+
+  const htmlImpressao = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Wi-Fi - Apt ${numeroApto}</title>
+      <style>
+        @page { size: 80mm auto; margin: 0; }
+        * {
+          font-family: 'Courier New', monospace !important;
+          font-weight: 700 !important;
+          color: #000 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body { width: 72mm; max-width: 72mm; margin: 0; padding: 1mm 2mm; font-size: 8pt !important; line-height: 1.3; }
+        .cabecalho { text-align: left; margin-bottom: 6px; }
+        .cabecalho h1 { font-size: 16pt !important; font-weight: 900 !important; margin: 0 0 2px 0; letter-spacing: 1px; }
+        .cnpj, .endereco { font-size: 10pt !important; font-weight: 700 !important; margin: 1px 0; }
+        .separador { text-align: center; margin: 5px 0; font-size: 10pt !important; font-weight: 700 !important; }
+        .titulo { font-size: 14pt !important; font-weight: 900 !important; margin: 6px 0 3px 0; }
+        .info-apto { font-size: 11pt !important; font-weight: 900 !important; margin: 3px 0; }
+        .data-emissao { font-size: 10pt !important; font-weight: 700 !important; margin: 2px 0; }
+        .voucher-item { margin: 8px 0; text-align: center; }
+        .label-senha { font-size: 11pt !important; font-weight: 900 !important; margin: 4px 0 2px 0; text-align: center; }
+        .senha { font-size: 32pt !important; font-weight: 900 !important; margin: 4px 0; text-align: center; letter-spacing: 8px; border: 3px solid #000; padding: 4px; }
+        .info-rede { font-size: 10pt !important; font-weight: 700 !important; text-align: center; margin: 2px 0; }
+        .rodape { text-align: left; margin-top: 10px; font-size: 10pt !important; font-weight: 700 !important; border-top: 1px dashed #000; padding-top: 6px; }
+        .rodape p { margin: 2px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="cabecalho">
+        <h1>HOTEL DI VAN</h1>
+        <p class="cnpj">CNPJ: 07.757.726/0001-12</p>
+        <p class="endereco">Arapiraca - AL</p>
+        <div class="separador">================================</div>
+      </div>
+
+      <p class="titulo">ACESSO WI-FI</p>
+      <p class="info-apto">Apartamento: ${numeroApto}</p>
+      <p class="info-apto">Hóspede: ${nomeHospede}</p>
+      <p class="data-emissao">Emitido em: ${dataHora}</p>
+
+      <div class="separador">================================</div>
+
+      ${senhasHtml}
+
+      <div class="separador">================================</div>
+
+      <div class="rodape">
+        <p>⚠️ Uso pessoal e intransferível</p>
+        <p>Válido durante a hospedagem</p>
+        <p>Obrigado pela preferência!</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const janela = window.open('', '_blank', 'width=400,height=600');
+  if (janela) {
+    janela.document.write(htmlImpressao);
+    janela.document.close();
+    janela.focus();
+    setTimeout(() => {
+      janela.print();
+      janela.close();
+    }, 500);
+  }
 }
 
 corrigirParaFaturado(): void {

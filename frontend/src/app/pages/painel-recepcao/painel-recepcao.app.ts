@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+﻿import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -513,7 +513,7 @@ template: `
                 <span class="info-texto truncate">{{ apt.descricao }}</span>
               </div>
               <div class="info-linha" *ngIf="apt.camas">
-                <span class="info-icon">🛏️</span>
+                <span class="camas-icones"><span class="cama-ic" *ngFor="let t of iconesCamas(apt.camas)" [class.casal]="t === 'casal'"></span></span>
                 <span class="info-texto">{{ apt.camas }}</span>
               </div>
               <div class="info-linha" *ngIf="apt.tv">
@@ -562,7 +562,7 @@ template: `
                   <span class="info-texto truncate">{{ apt.descricao }}</span>
                 </div>
                 <div class="info-linha" *ngIf="apt.camas">
-                  <span class="info-icon">🛏️</span>
+                  <span class="camas-icones"><span class="cama-ic" *ngFor="let t of iconesCamas(apt.camas)" [class.casal]="t === 'casal'"></span></span>
                   <span class="info-texto">{{ apt.camas }}</span>
                 </div>
                 <div class="info-linha" *ngIf="apt.tv">
@@ -597,7 +597,7 @@ template: `
   <div class="aviso-atraso" ...>⚠️ CHECKOUT ATRASADO ...</div>
   <button class="btn-icone" title="Adicionar produto no PDV" (click)="irParaPDVComApartamento(apt)">🛒 CONSUMO</button>
   <button class="btn-icone" title="Ver detalhes" (click)="irParaReserva(apt)">📋 Detalhes da Reserva</button>
-  <button class="btn-icone" title="Gerar senha Wi-Fi" (click)="gerarVoucherWifi(apt)">📶 Gerar Senha Wi-Fi</button>
+  <button class="btn-icone" title="Gerar senha Wi-Fi" (click)="gerarVoucherWifi(apt)">🛜 Gerar Senha Wi-Fi</button>
 </ng-container>
 
             <!-- ATIVA (não atrasado) -->
@@ -609,7 +609,7 @@ template: `
   <button class="btn-icone btn-limpeza-diaria" [title]="apt.reserva?.ultimaLimpezaDiaria ? ('Última limpeza: ' + formatarDataHoraCompleta(apt.reserva!.ultimaLimpezaDiaria!)) : 'Registrar limpeza diária'" (click)="registrarLimpezaDiaria(apt)">
   🧹 Limpeza{{ apt.reserva?.ultimaLimpezaDiaria ? ' (' + formatarHoraSimples(apt.reserva!.ultimaLimpezaDiaria!) + ')' : '' }}
 </button>
-  <button class="btn-icone" title="Gerar senha Wi-Fi" (click)="gerarVoucherWifi(apt)">📶 Gerar Senha Wi-Fi</button>
+  <button class="btn-icone" title="Gerar senha Wi-Fi" (click)="gerarVoucherWifi(apt)">🛜 Gerar Senha Wi-Fi</button>
 </ng-container>
             <!-- PRÓXIMA RESERVA -->
             <div class="proxima-reserva" *ngIf="apt.reserva?.proximaReserva">
@@ -729,7 +729,25 @@ template: `
     </div>
   </div>
 </div>
+          <div class="modal-overlay" *ngIf="modalVoucherWifi"
+     (click)="modalVoucherWifi = false"
+     style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:9999;">
+  <div (click)="$event.stopPropagation()" style="background:white; border-radius:8px; padding:24px; max-width:420px; width:90%; text-align:center;">
+    <h3>🛜 Acesso Wi-Fi — Apt {{ aptVoucherWifi?.numero }}</h3>
+    <p style="color:#666; margin:4px 0 16px;">{{ aptVoucherWifi?.reserva?.clienteNome }}</p>
 
+    <div *ngFor="let v of vouchersWifiGerados"
+         style="font-size:1.6em; font-weight:700; letter-spacing:2px; padding:12px; margin-bottom:8px; background:#f3f6fa; border-radius:6px; user-select:all;">
+      {{ v.codigo }}
+    </div>
+
+    <div style="display:flex; gap:8px; justify-content:center; margin-top:16px;">
+      <button class="btn-confirmar" (click)="copiarVouchersWifi()">📋 Copiar</button>
+      <button class="btn-confirmar" (click)="imprimirVouchersDoModal()">🖨️ Imprimir</button>
+      <button class="btn-cancelar-modal" (click)="modalVoucherWifi = false">Fechar</button>
+    </div>
+  </div>
+</div>
     </div>
   `,
   styles: [`
@@ -879,41 +897,60 @@ template: `
       gap: 12px;
     }
 
-    /* ── CARD ───────────────────────────────────── */
+        /* ── CARD (visual novo) ─────────────────────── */
     .apt-card {
-      background: #fff;
-      border-radius: 8px;
+      --t-bg: #fff; --t-borda: #e5e7eb; --t-forte: #333;
+      background: var(--t-bg);
+      border: 1px solid var(--t-borda);
+      border-radius: 14px;
       overflow: hidden;
-      box-shadow: 0 1px 4px rgba(0,0,0,.12);
+      box-shadow: 0 1px 3px rgba(16,24,40,.06);
       display: flex;
       flex-direction: column;
       transition: transform .15s, box-shadow .15s;
     }
     .apt-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,.18);
+      box-shadow: 0 6px 16px rgba(16,24,40,.12);
     }
 
-    .card-header {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 9px 12px;
-  color: #fff;
-  font-family: 'Rajdhani', sans-serif;
-  font-weight: 700;
-  font-size: 0.95rem;
-  min-height: 40px;
-}
-    .card-ocupado    .card-header { background: #c0392b; }
-.card-atrasado   .card-header { background: #6e2222; }
-.card-prereserva .card-header { background: #2980b9; }
-.card-limpeza    .card-header { background: #7f8c8d; }
-.card-disponivel .card-header { background: #117a65; }
-.card-bloqueado  .card-header { background: #626567; }
-.card-manutencao .card-header { background: #e67e22; }
-.card-limpeza    .card-body   { background: #f2f3f4; }
-.card-prereserva .card-body   { background: #d6eaf8; }
+    /* cores por status (fundo suave, borda, cor forte do texto) */
+    .card-disponivel { --t-bg: #dcf1e1; --t-borda: #bfe3ca; --t-forte: #1e6b45; }
+    .card-ocupado    { --t-bg: #f9d3d3; --t-borda: #efb3b3; --t-forte: #9b2c2c; }
+    .card-atrasado   { --t-bg: #f4bcbc; --t-borda: #c0392b; --t-forte: #6e1f1f; }
+    .card-prereserva { --t-bg: #d8e7fb; --t-borda: #b4cdf3; --t-forte: #1d4f91; }
+    .card-limpeza    { --t-bg: #e7e8ea; --t-borda: #d0d3d6; --t-forte: #4a4f55; }
+    .card-bloqueado  { --t-bg: #e3e3e3; --t-borda: #cfcfcf; --t-forte: #555; }
+    .card-manutencao { --t-bg: #fdeeb5; --t-borda: #f3d77a; --t-forte: #8a5a00; }
+
+    .apt-card .card-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 14px 4px;
+      background: transparent;
+      color: var(--t-forte);
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      min-height: 40px;
+    }
+    .apt-card .apt-numero { font-size: 1.6rem; letter-spacing: .5px; }
+    .apt-card .apt-tipo   { background: rgba(0,0,0,.07); color: var(--t-forte); }
+    .apt-card .card-body  { background: transparent; padding-top: 6px; }
+    .apt-card .status-label    { color: var(--t-forte); opacity: .85; }
+    .apt-card .capacidade-info { color: rgba(0,0,0,.55); }
+    .apt-card .card-acoes      { border-top: 1px solid rgba(0,0,0,.06); }
+    .apt-card .btn-icone:not(.btn-limpeza-diaria):not(.btn-assinatura-credito) {
+      background: #fff;
+      border: 1px solid rgba(0,0,0,.08);
+      border-radius: 8px;
+    }
+    .apt-card .btn-icone:not(.btn-limpeza-diaria):not(.btn-assinatura-credito):hover { background: #f4f6f7; }
+    .apt-card .btn-limpeza-diaria,
+    .apt-card .btn-assinatura-credito { border-radius: 8px; }
+    .apt-card .card-header { flex-wrap: wrap; }
+    .apt-card .header-badges { flex-wrap: wrap; min-width: 0; }
 
     .apt-numero { letter-spacing: .5px; font-size: 1rem; font-family: 'Roboto Mono', monospace; }
     .apt-tipo {
@@ -942,6 +979,17 @@ template: `
     }
     .info-icon  { flex-shrink: 0; font-size: 0.75rem; margin-top: 1px; }
     .info-texto { flex: 1; }
+    .camas-icones { display: inline-flex; flex-wrap: wrap; gap: 3px; align-items: center; flex-shrink: 0; color: var(--t-forte, #555); }
+    .cama-ic {
+      --cama-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 3h10a1 1 0 0 1 1 1v6H6V4a1 1 0 0 1 1-1z'/%3E%3Crect x='8.5' y='5.8' width='7' height='3.4' rx='1'/%3E%3Cpath d='M5 10.5h14v8.5H5z'/%3E%3Cpath d='M5 14h14'/%3E%3Cpath d='M6.5 19v2.5M17.5 19v2.5'/%3E%3C/svg%3E");
+      width: 16px; height: 16px; background-color: currentColor; opacity: .75;
+      -webkit-mask: var(--cama-svg) center / contain no-repeat;
+      mask: var(--cama-svg) center / contain no-repeat;
+    }
+    .cama-ic.casal {
+      --cama-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 24' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h20a1 1 0 0 1 1 1v6H5V4a1 1 0 0 1 1-1z'/%3E%3Crect x='7.5' y='5.8' width='7.5' height='3.4' rx='1'/%3E%3Crect x='17' y='5.8' width='7.5' height='3.4' rx='1'/%3E%3Cpath d='M3 10.5h26v8.5H3z'/%3E%3Cpath d='M3 14h26'/%3E%3Cpath d='M5 19v2.5M27 19v2.5'/%3E%3C/svg%3E");
+      width: 21px;
+    }
     .truncate   { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
     .cliente-nome { font-weight: 600; color: #2c3e50; font-size: 0.82rem; font-family: 'Roboto Mono', monospace; }
      
@@ -1597,12 +1645,17 @@ aptFotoSelecionado = '';
 carregandoFotos = false;
 
 modalHospedesApto = false;
+modalVoucherWifi = false;
+vouchersWifiGerados: any[] = [];
+aptVoucherWifi: ApartamentoCard | null = null;
+
 carregandoHospedesApto = false;
 aptHospedesSelecionado = '';
 hospedesApto: {nome: string, cpf: string}[] = [];
 
   dividasPendentes: any[] = [];
   mostrarAvisoDivida = true;
+
      
   modalRealocarPreReserva = false;
   preReservaAtual: any = null;
@@ -1864,6 +1917,18 @@ if (this.filtroDataCheckin) {
   getStatusFinal(apt: ApartamentoCard): string {
     if (apt.reserva) return apt.reserva.status;
     return apt.statusApt || 'DISPONIVEL';
+  }
+
+  iconesCamas(camas?: string | null): Array<'casal' | 'solteiro'> {
+    const icones: Array<'casal' | 'solteiro'> = [];
+    if (!camas) return icones;
+    const re = /(\d+)\s*(?:camas?\s*)?(?:de\s*)?(casal|solteiro)/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(camas)) !== null) {
+      const qtd = Math.min(parseInt(m[1], 10), 6);
+      for (let i = 0; i < qtd; i++) icones.push(m[2].toLowerCase() as 'casal' | 'solteiro');
+    }
+    return icones;
   }
 
   getLabelStatus(apt: ApartamentoCard): string {
@@ -2466,12 +2531,45 @@ gerarVoucherWifi(apt: ApartamentoCard): void {
     {}
   ).subscribe({
     next: (vouchers) => {
-      this.imprimirVouchersWifi(apt, vouchers);
+      this.vouchersWifiGerados = vouchers;
+      this.aptVoucherWifi = apt;
+      this.modalVoucherWifi = true;
     },
     error: (err) => {
       alert('❌ Erro ao gerar Wi-Fi: ' + (err.error?.erro || err.message));
     }
   });
+}
+
+copiarVouchersWifi(): void {
+  const texto = this.vouchersWifiGerados.map(v => v.codigo).join('\n');
+
+  const copiarAntigo = () => {
+    const area = document.createElement('textarea');
+    area.value = texto;
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(area);
+    alert(ok ? '✅ Senha copiada!' : '⚠️ Não foi possível copiar. Selecione a senha na tela e copie manualmente.');
+  };
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(texto).then(
+      () => alert('✅ Senha copiada!'),
+      () => copiarAntigo()
+    );
+  } else {
+    copiarAntigo();
+  }
+}
+
+imprimirVouchersDoModal(): void {
+  if (this.aptVoucherWifi) {
+    this.imprimirVouchersWifi(this.aptVoucherWifi, this.vouchersWifiGerados);
+  }
 }
 
 imprimirVouchersWifi(apt: ApartamentoCard, vouchers: any[]): void {

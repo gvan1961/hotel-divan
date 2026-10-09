@@ -2077,7 +2077,7 @@ confirmarEditarLoteFiscal(): void {
     (venc ? `Vencimento: ${venc}` : '');
   if (!confirm(resumo)) return;
 
-  this.http.patch<any>('/api/contas-a-receber/editar-lote-fiscal', {
+  this.http.patch<any>('/api/contas-receber/editar-lote-fiscal', {
     ids: selecionadas.map(c => (c as any).id),
     numeroNotaFiscal: nf || null,
     dataVencimento: venc || null

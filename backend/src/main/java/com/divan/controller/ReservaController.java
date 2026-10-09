@@ -129,6 +129,14 @@ public class ReservaController {
                     .body("Quantidade de hóspedes excede a capacidade do apartamento");
             }
             
+            // ✅ Impede hóspede adicional já hospedado em outro apartamento (validar ANTES de criar a reserva)
+            if (dto.getHospedesAdicionaisIds() != null) {
+                for (Long hospedeId : dto.getHospedesAdicionaisIds()) {
+                    clienteRepository.findById(hospedeId).ifPresent(c ->
+                        reservaService.validarClienteNaoHospedadoEmOutraReserva(c, dto.getDataCheckin(), null));
+                }
+            }
+                                
             Reserva reserva = new Reserva();
             reserva.setApartamento(apartamento);
             reserva.setCliente(clienteOpt.get());
@@ -706,19 +714,29 @@ public class ReservaController {
                 if (!conflitos.isEmpty()) {
                     HospedagemHospede conflito = conflitos.get(0);
                     Reserva rConflito = conflito.getReserva();
-                    return ResponseEntity.badRequest().body(Map.of(
-                        "erro", String.format(
-                            "⚠️ %s já possui reserva/pré-reserva no Apt %s (Reserva #%d) de %s a %s. " +
-                            "Acesse a reserva e transfira o apartamento antes de adicionar este hóspede.",
-                            cliente.getNome(),
-                            rConflito.getApartamento().getNumeroApartamento(),
-                            rConflito.getId(),
-                            rConflito.getDataCheckin().toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
-                            rConflito.getDataCheckout().toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-                        )
-                    ));
+
+                    java.time.format.DateTimeFormatter fmtData = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                    String periodo = rConflito.getDataCheckin().toLocalDate().format(fmtData)
+                        + " a " + rConflito.getDataCheckout().toLocalDate().format(fmtData);
+                    Object apt = rConflito.getApartamento().getNumeroApartamento();
+
+                    String mensagem;
+                    if (rConflito.getStatus() == Reserva.StatusReservaEnum.PRE_RESERVA) {
+                        mensagem = String.format(
+                            "%s tem pré-reserva no Apt %s (Reserva #%d) de %s. "
+                            + "Cancele ou ajuste a pré-reserva antes de adicioná-lo aqui.",
+                            cliente.getNome(), apt, rConflito.getId(), periodo);
+                    } else {
+                        mensagem = String.format(
+                            "%s já está hospedado no Apt %s (Reserva #%d) de %s. "
+                            + "Faça o checkout dele nessa reserva antes de adicioná-lo aqui.",
+                            cliente.getNome(), apt, rConflito.getId(), periodo);
+                    }
+
+                    return ResponseEntity.badRequest().body(Map.of("erro", mensagem));
                 }
             }
+            
 
             if (body.containsKey("placaCarro") && body.get("placaCarro") != null
                     && !body.get("placaCarro").toString().isBlank()) {
@@ -1493,6 +1511,12 @@ public class ReservaController {
             // ✅ VALIDAÇÃO CENTRALIZADA
             // Ignora a própria reserva para não conflitar com ela mesma
             reservaService.validarConflitosAtivacaoPreReserva(reserva);
+            
+         // ✅ Impede ativar se o titular ou algum hóspede já está hospedado em outro apartamento
+            reservaService.validarClienteNaoHospedadoEmOutraReserva(reserva.getCliente(), reserva.getDataCheckin(), reserva.getId());
+            for (HospedagemHospede hh : hospedagemHospedeRepository.findByReservaId(reserva.getId())) {
+                reservaService.validarClienteNaoHospedadoEmOutraReserva(hh.getCliente(), reserva.getDataCheckin(), reserva.getId());
+            }
 
             // ✅ ATIVAR RESERVA
             reserva.setStatus(Reserva.StatusReservaEnum.ATIVA);

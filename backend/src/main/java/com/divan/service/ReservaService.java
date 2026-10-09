@@ -584,6 +584,41 @@ public class ReservaService {
         }).collect(java.util.stream.Collectors.toList());
     }
     
+    /**
+     * Impede que a mesma pessoa fique hospedada em dois apartamentos ao mesmo tempo.
+     * Bloqueia se o cliente está HOSPEDADO em outra reserva ATIVA cujo checkout
+     * é posterior ao check-in da nova hospedagem.
+     * reservaIgnorarId: id da reserva atual (null quando a reserva ainda não existe).
+     */
+    public void validarClienteNaoHospedadoEmOutraReserva(Cliente cliente, LocalDateTime novoCheckin, Long reservaIgnorarId) {
+        if (cliente == null || cliente.getId() == null || novoCheckin == null) {
+            return;
+        }
+
+        List<HospedagemHospede> ativos = hospedagemHospedeRepository
+            .findByClienteIdAndStatus(cliente.getId(), HospedagemHospede.StatusEnum.HOSPEDADO);
+
+        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+        for (HospedagemHospede h : ativos) {
+            Reserva r = h.getReserva();
+            if (r == null) continue;
+            if (reservaIgnorarId != null && r.getId().equals(reservaIgnorarId)) continue;
+            if (r.getStatus() != Reserva.StatusReservaEnum.ATIVA) continue;
+
+            if (novoCheckin.isBefore(r.getDataCheckout())) {
+                throw new RuntimeException(String.format(
+                    "%s já está hospedado no apartamento %s (Reserva #%d) de %s a %s. Faça o checkout dele antes.",
+                    cliente.getNome(),
+                    r.getApartamento().getNumeroApartamento(),
+                    r.getId(),
+                    r.getDataCheckin().toLocalDate().format(fmt),
+                    r.getDataCheckout().toLocalDate().format(fmt)));
+            }
+        }
+    }
+    
+    
     public List<com.divan.dto.ReservaResumoDTO> buscarCheckinsDoDia(LocalDateTime data) {
         LocalDateTime inicioDia = data.toLocalDate().atStartOfDay();
         LocalDateTime fimDia = inicioDia.plusDays(1);

@@ -193,6 +193,54 @@ public class ContaAReceberController {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
+    
+    @PatchMapping("/editar-lote-fiscal")
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<?> editarLoteFiscal(@RequestBody Map<String, Object> body) {
+        try {
+            List<Number> idsNum = (List<Number>) body.get("ids");
+            if (idsNum == null || idsNum.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Informe ao menos uma conta"));
+            }
+            List<Long> ids = idsNum.stream().map(Number::longValue).collect(java.util.stream.Collectors.toList());
+
+            String numeroNotaFiscal = body.get("numeroNotaFiscal") != null
+                ? body.get("numeroNotaFiscal").toString().trim() : null;
+            if (numeroNotaFiscal != null && numeroNotaFiscal.isEmpty()) {
+                numeroNotaFiscal = null;
+            }
+
+            java.time.LocalDate novaDataVencimento = null;
+            if (body.get("dataVencimento") != null && !body.get("dataVencimento").toString().isBlank()) {
+                novaDataVencimento = java.time.LocalDate.parse(body.get("dataVencimento").toString());
+            }
+
+            if (numeroNotaFiscal == null && novaDataVencimento == null) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Informe a nota fiscal, o vencimento ou os dois"));
+            }
+
+            int atualizadas = contaAReceberService.editarLoteFiscal(ids, numeroNotaFiscal, novaDataVencimento);
+
+            try {
+                String username = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication().getName();
+                LogAuditoria log = new LogAuditoria();
+                log.setAcao("EDITAR_LOTE_FISCAL");
+                log.setDescricao("Lote fiscal — NF: " + (numeroNotaFiscal != null ? numeroNotaFiscal : "(não alterada)")
+                    + " — Vencimento: " + (novaDataVencimento != null ? novaDataVencimento : "(não alterado)")
+                    + " — " + atualizadas + " conta(s) — ids: " + ids);
+                log.setDataHora(LocalDateTime.now());
+                usuarioRepository.findByUsername(username).ifPresent(log::setUsuario);
+                logAuditoriaRepository.save(log);
+            } catch (Exception logEx) {
+                System.err.println("⚠️ Erro ao salvar log: " + logEx.getMessage());
+            }
+
+            return ResponseEntity.ok(Map.of("mensagem", "Lote atualizado", "quantidadeAtualizada", atualizadas));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage() != null ? e.getMessage() : e.toString()));
+        }
+    }
 
     @PatchMapping("/atualizar-vencimento-lote")
     @SuppressWarnings("unchecked")

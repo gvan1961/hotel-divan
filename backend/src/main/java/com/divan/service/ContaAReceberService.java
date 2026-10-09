@@ -557,6 +557,21 @@ public class ContaAReceberService {
     }
 
     @Transactional
+    public int editarLoteFiscal(List<Long> ids, String numeroNotaFiscal, LocalDate novaDataVencimento) {
+        List<ContaAReceber> contas = contaAReceberRepository.findAllById(ids);
+        for (ContaAReceber conta : contas) {
+            if (numeroNotaFiscal != null) {
+                conta.setNumeroNotaFiscal(numeroNotaFiscal);
+            }
+            if (novaDataVencimento != null) {
+                conta.setDataVencimento(novaDataVencimento);
+            }
+        }
+        contaAReceberRepository.saveAll(contas);
+        return contas.size();
+    }
+    
+    @Transactional
     public int atualizarVencimentoLotePorIds(List<Long> ids, LocalDate novaDataVencimento) {
         List<ContaAReceber> contas = contaAReceberRepository.findAllById(ids);
         for (ContaAReceber conta : contas) {
