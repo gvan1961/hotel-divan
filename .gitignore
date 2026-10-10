@@ -48,3 +48,5 @@ Thumbs.db
 *.sql
 lombok.jar 
  
+*.bak*
+*.ps1
