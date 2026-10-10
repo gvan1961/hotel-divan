@@ -1280,19 +1280,8 @@ public class ReservaController {
         try {
             Reserva reserva = reservaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
-            String codigoAnterior = reserva.getCodigoSolicitacao();
-            String codigoNovo = body.get("codigoSolicitacao");
-            reserva.setCodigoSolicitacao(codigoNovo);
+            reserva.setCodigoSolicitacao(body.get("codigoSolicitacao"));
             reservaRepository.save(reserva);
-
-            if (!java.util.Objects.equals(codigoAnterior, codigoNovo)) {
-                logAuditoriaService.registrar(
-                    "ALTERACAO_CODIGO_SOLICITACAO",
-                    "Codigo de solicitacao alterado de '" + (codigoAnterior == null ? "(vazio)" : codigoAnterior)
-                        + "' para '" + (codigoNovo == null ? "(vazio)" : codigoNovo)
-                        + "' (reserva " + String.valueOf(reserva.getStatus()) + ")",
-                    reserva);
-            }
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));

@@ -251,17 +251,17 @@ import { PixService } from '../../services/pix.service';
   <div style="width: 100%; display: flex; gap: 6px; align-items: center; margin-top: 10px;">
     <span style="font-size: 0.9em; color: #555; white-space: nowrap;">🏢 Código de Solicitação:</span>
     <input
-      *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA' || reserva.status === 'FINALIZADA'"
+      *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
       type="text"
       [(ngModel)]="reserva.codigoSolicitacao"
       style="flex:1; font-size:0.95em; border:1.5px solid #ddd; border-radius:6px; padding:6px 8px;"
       placeholder="Ex: 243756">
-    <span *ngIf="reserva.status !== 'ATIVA' && reserva.status !== 'PRE_RESERVA' && reserva.status !== 'FINALIZADA'"
+    <span *ngIf="reserva.status !== 'ATIVA' && reserva.status !== 'PRE_RESERVA'"
           style="font-size:0.95em; color:#444;">
       {{ reserva.codigoSolicitacao || '-' }}
     </span>
     <button
-      *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA' || reserva.status === 'FINALIZADA'"
+      *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
       class="btn-mini"
       (click)="salvarCodigoSolicitacao()"
       title="Salvar código de solicitação">

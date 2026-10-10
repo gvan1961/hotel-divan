@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, NgZone, ChangeDetectionStrategy, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, NgZone, ChangeDetectionStrategy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FechamentoCaixaService } from '../services/fechamento-caixa.service';
@@ -938,6 +938,12 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
     .sidebar a[href="/administrativo"] .icon { background: #e5e7eb; }
     .sidebar .btn-menu-mobile { background: #eef2ff; color: #1f2937; }
     .sidebar .btn-menu-mobile:hover { background: #dbeafe; }
+/* ===== SIDEBAR: destaque legivel ===== */
+.sidebar .nav-item.nav-item-destaque { background: #fff7ed !important; color: #9a3412 !important; font-weight: 700; border: 1px solid #fed7aa; }
+.sidebar .nav-item.nav-item-destaque .label { color: #9a3412 !important; }
+.sidebar .nav-item.nav-item-destaque:hover { background: #ffedd5 !important; }
+.sidebar .nav-item.nav-item-destaque.active { background: #fed7aa !important; }
+/* ===== FIM SIDEBAR destaque ===== */
   `]
 })
 export class SidebarComponent implements OnInit, OnDestroy {

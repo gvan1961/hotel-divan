@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, OnDestroy, ChangeDetectorRef } from '@angular/core';
+﻿import { Component, OnInit, inject, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -138,7 +138,7 @@ import { PixService } from '../../services/pix.service';
         <!-- HEADER -->
         <div class="header">
           <div>
-            <h1>Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong></h1><small class="sub-reserva">Reserva #{{ reserva.id }}</small>
+            <h1>📋 Reserva #{{ reserva.id }} — Apt <strong>{{ reserva.apartamento?.numeroApartamento }}</strong></h1>
             
             <span [class]="'badge-status ' + obterStatusClass()">
               {{ reserva.status }}
@@ -153,7 +153,7 @@ import { PixService } from '../../services/pix.service';
         <div class="grid-quatro-colunas">
           <!-- CLIENTE -->
           <div class="card card-mini">
-            <div class="cli-topo"><div class="avatar-cli">{{ (reserva.cliente?.nome || '?').substring(0,2) }}</div><h2>Cliente</h2></div>
+            <h2>👤 Cliente</h2>
             <div class="info-item-mini">
               <span class="label">Nome:</span>
               <span class="value">{{ reserva.cliente?.nome || 'N/A' }}</span>
@@ -175,7 +175,7 @@ import { PixService } from '../../services/pix.service';
 
           <!-- APARTAMENTO -->
           <div class="card card-mini">
-            <h2>Apartamento</h2>
+            <h2>🏨 Apartamento</h2>
             <div class="info-item-mini">
               <span class="label">Número:</span>
               <span class="value numero-apt">
@@ -194,7 +194,7 @@ import { PixService } from '../../services/pix.service';
 
          <!-- HOSPEDAGEM -->
 <div class="card card-mini">
-  <h2>Hospedagem</h2>
+  <h2>📅 Hospedagem</h2>
   <div class="info-item-mini">
     <span class="label">Check-in:</span>
     <span class="value-pequeno">{{ formatarData(reserva.dataCheckin) }}</span>
@@ -251,17 +251,17 @@ import { PixService } from '../../services/pix.service';
   <div style="width: 100%; display: flex; gap: 6px; align-items: center; margin-top: 10px;">
     <span style="font-size: 0.9em; color: #555; white-space: nowrap;">🏢 Código de Solicitação:</span>
     <input
-      *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA' || reserva.status === 'FINALIZADA'"
+      *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
       type="text"
       [(ngModel)]="reserva.codigoSolicitacao"
       style="flex:1; font-size:0.95em; border:1.5px solid #ddd; border-radius:6px; padding:6px 8px;"
       placeholder="Ex: 243756">
-    <span *ngIf="reserva.status !== 'ATIVA' && reserva.status !== 'PRE_RESERVA' && reserva.status !== 'FINALIZADA'"
+    <span *ngIf="reserva.status !== 'ATIVA' && reserva.status !== 'PRE_RESERVA'"
           style="font-size:0.95em; color:#444;">
       {{ reserva.codigoSolicitacao || '-' }}
     </span>
     <button
-      *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA' || reserva.status === 'FINALIZADA'"
+      *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
       class="btn-mini"
       (click)="salvarCodigoSolicitacao()"
       title="Salvar código de solicitação">
@@ -274,7 +274,7 @@ import { PixService } from '../../services/pix.service';
 
           <!-- FINANCEIRO -->
           <div class="card card-mini">
-            <h2>Financeiro</h2>
+            <h2>💰 Financeiro</h2>
             
             <div class="info-item-mini">
               <span class="label">Diárias:</span>
@@ -430,7 +430,7 @@ import { PixService } from '../../services/pix.service';
                       [class.valor-positivo]="extrato.totalLancamento > 0">
                     R$ {{ formatarMoeda(extrato.totalLancamento) }}
                   </td>
-                  <td *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'">
+                  <td *ngIf="reserva.status === 'ATIVA'">
                     <button 
                       *ngIf="extrato.statusLancamento === 'PRODUTO' && extrato.totalLancamento > 0"
                       [disabled]="jaFoiEstornado(extrato)"
@@ -572,26 +572,27 @@ import { PixService } from '../../services/pix.service';
   ← Voltar ao Painel
 </button>
   </div>
+  <div class="botoes-acoes">
           <div class="botoes-acoes">
             <ng-container *hasPermission="'RESERVA_EDITAR'">
               <button class="btn-acao btn-ativar-reserva" 
                       *ngIf="reserva.status === 'PRE_RESERVA' && podeAtivarPreReserva()"
                       (click)="ativarPreReserva()">
-                <span class="ic ic-ok"></span><span class="tx">Check-in (Ativar)</span>
+                🔓 Fazer Check-in (Ativar Reserva)
               </button>
             </ng-container>
             <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
               <button class="btn-acao btn-checkin" 
                       *ngIf="reserva.status === 'ATIVA'"
                       (click)="imprimirCheckin()">
-                <span class="ic ic-print"></span><span class="tx">Check-in</span>
+                🖨️ Imprimir Check-in
               </button>
             </ng-container>
             <ng-container *hasPermission="'RESERVA_VISUALIZAR'">
               <button class="btn-acao btn-extrato" 
                       *ngIf="reserva.status === 'ATIVA'"
                       (click)="imprimirExtrato()">
-                <span class="ic ic-doc"></span><span class="tx">Extrato</span>
+                📊 Imprimir Extrato
               </button>
               </ng-container>
 
@@ -599,7 +600,7 @@ import { PixService } from '../../services/pix.service';
                 <button class="btn-acao btn-comanda"
                         *ngIf="reserva.status === 'ATIVA'"
                         (click)="irParaPDVComApartamento()">
-                  <span class="ic ic-food"></span><span class="tx">Consumo</span>
+                  🛒 CONSUMO
                 </button>
               </ng-container>                    
 
@@ -607,34 +608,34 @@ import { PixService } from '../../services/pix.service';
   <button class="btn-acao btn-pagamento" 
         *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
         (click)="abrirModalPagamento()">
-  <span class="ic ic-card"></span><span class="tx">Pagamento</span>
+  💳 Registrar Pagamento
 </button>
 </ng-container>
 
             <!-- ===== Corrigir para Faturado ===== -->
 <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
-  <button class="btn-acao btn-corrigir"
+  <button class="btn-acao"
           *ngIf="getEmpresaIdCliente()"
           (click)="corrigirParaFaturado()"
           title="Corrigir forma de pagamento para Faturado (empresa)">
-    <span class="ic ic-refresh"></span><span class="tx">Corrigir p/ Faturado</span>
+    🔁 Corrigir para Faturado
   </button>
 </ng-container>
 
             <ng-container *ngIf="reserva.status === 'ATIVA'">
-  <button class="btn-acao btn-wifi"
+  <button class="btn-acao"
           (click)="gerarVoucherWifiReserva()"
           [disabled]="gerandoWifi"
           title="Gerar senha de Wi-Fi para o hóspede">
-    <span class="ic ic-wifi"></span><span class="tx">Gerar senha</span>
+    🛜 Gerar Senha Wi-Fi
   </button>
 </ng-container>
 
             <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
-  <button class="btn-acao btn-estornar"
+  <button class="btn-acao"
           (click)="estornarPagamentoSimples()"
           title="Estornar um pagamento lançado indevidamente">
-    <span class="ic ic-undo"></span><span class="tx">Estornar valor</span>
+    ❌ Estornar Pagamento
   </button>
 </ng-container>
 
@@ -642,7 +643,7 @@ import { PixService } from '../../services/pix.service';
              <button class="btn-acao btn-transferir"
         *ngIf="reserva.status === 'ATIVA' || reserva.status === 'PRE_RESERVA'"
         (click)="abrirModalTransferencia()">
-                <span class="ic ic-swap"></span><span class="tx">Transferir</span>
+                🔄 Transferir Apartamento
               </button>
             </ng-container>
             <ng-container *hasPermission="'CONTA_RECEBER_PAGAMENTO'">
@@ -657,13 +658,13 @@ import { PixService } from '../../services/pix.service';
   <button class="btn-acao btn-finalizar-paga" 
         *ngIf="reserva.status === 'ATIVA' && (reserva.totalApagar || 0) <= 0"
         (click)="finalizarCheckout()">
-  <span class="ic ic-ok"></span><span class="tx">CheckOut</span>
+  💚 CheckOut
 </button>
 
 <button class="btn-acao btn-assinar-fatura"
   *ngIf="reserva.status === 'ATIVA' && temDebitoSemAssinatura()"
   (click)="reabrirAssinatura()">
-  <span class="ic ic-pen"></span><span class="tx">Assinar Fatura</span>
+  ✍️ Assinar Fatura
 </button>
 
 </ng-container>
@@ -680,7 +681,7 @@ import { PixService } from '../../services/pix.service';
    *ngIf="reserva.status === 'ATIVA' &&
        (pagoAVistaParaRecibo - (reserva.totalReciboEmitido || 0)) > 0"
    (click)="abrirModalReciboFormal()">
-   <span class="ic ic-doc"></span><span class="tx">Recibo Formal</span>
+   📄 Recibo Formal
    </button>
    </ng-container> 
 
@@ -688,7 +689,7 @@ import { PixService } from '../../services/pix.service';
   <button class="btn-acao btn-cancelar"
           *ngIf="podeCancelar"
           (click)="confirmarCancelamento()">
-    <span class="ic ic-ban"></span><span class="tx">Cancelar Reserva</span>
+    🚫 Cancelar Reserva
   </button>
 </ng-container>
 
@@ -697,7 +698,7 @@ import { PixService } from '../../services/pix.service';
   <button class="btn-acao btn-bilhetes" 
           *ngIf="reserva.status === 'FINALIZADA' && temBilhetes"
           (click)="carregarEImprimirBilhetes()">
-    <span class="ic ic-doc"></span><span class="tx">Bilhetes</span>
+    🎟️ Imprimir Bilhetes
   </button>
 </ng-container> 
 
@@ -3215,113 +3216,6 @@ import { PixService } from '../../services/pix.service';
 
 .btn-salvar-pendente-reserva { display: block; width: 100%; padding: 10px; margin-top: 5px; border: none; border-radius: 5px; cursor: pointer; background: #ff9800; color: white; font-weight: 600; }
 
-/* ===== RESERVA/ID: VISUAL NOVO (etapa 1) ===== */
-.header h1 { font-size: 1.5rem; font-weight: 700; color: #1f2937; margin: 0 0 6px; }
-.header .badge-status { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: .78rem; font-weight: 700; letter-spacing: .3px; }
-.header .btn-voltar { background: #fff; color: #374151; border: 1px solid #d1d5db; border-radius: 10px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
-.header .btn-voltar:hover { background: #f3f4f6; }
-.acoes-card { border-radius: 14px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(16,24,40,.06); }
-.acoes-card .acoes-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.acoes-card .btn-voltar-painel { background: #fff; color: #374151; border: 1px solid #d1d5db; border-radius: 10px; padding: 6px 12px; font-weight: 600; cursor: pointer; }
-.acoes-card .botoes-acoes { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.acoes-card .botoes-acoes .btn-acao { --tile-bg: #e5e7eb; --tile-fg: #374151; width: 100%; min-height: 64px; padding: 10px 8px; display: flex; align-items: center; justify-content: center; text-align: center; white-space: normal; line-height: 1.25; background: var(--tile-bg); color: var(--tile-fg); border: 1px solid rgba(0,0,0,.06); border-radius: 12px; font-size: .9rem; font-weight: 700; cursor: pointer; transition: transform .12s, box-shadow .12s; }
-.acoes-card .botoes-acoes .btn-acao:hover:not([disabled]) { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,.12); }
-.acoes-card .botoes-acoes .btn-acao[disabled] { opacity: .5; cursor: not-allowed; }
-.acoes-card .btn-pagamento { --tile-bg:#dcfce7; --tile-fg:#166534; }
-.acoes-card .btn-comanda { --tile-bg:#ffedd5; --tile-fg:#9a3412; }
-.acoes-card .btn-transferir { --tile-bg:#e5e7eb; --tile-fg:#374151; }
-.acoes-card .btn-checkin { --tile-bg:#ede9fe; --tile-fg:#5b21b6; }
-.acoes-card .btn-extrato { --tile-bg:#ccfbf1; --tile-fg:#115e59; }
-.acoes-card .btn-ativar-reserva { --tile-bg:#dbeafe; --tile-fg:#1e40af; }
-.acoes-card .btn-troco { --tile-bg:#fef9c3; --tile-fg:#854d0e; }
-.acoes-card .btn-recibo, .acoes-card .btn-recibo-formal, .acoes-card .btn-bilhetes { --tile-bg:#e0f2fe; --tile-fg:#075985; }
-.acoes-card .btn-assinar-fatura { --tile-bg:#fef3c7; --tile-fg:#92400e; }
-.acoes-card .btn-finalizar-paga { --tile-bg:#16a34a; --tile-fg:#fff; }
-.acoes-card .btn-cancelar { --tile-bg:#fee2e2; --tile-fg:#991b1b; }
-/* ===== FIM RESERVA/ID etapa 1 ===== */
-/* ===== RESERVA/ID: etapa 2 (icones) ===== */
-.acoes-card .botoes-acoes { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
-.acoes-card .botoes-acoes .btn-acao { flex-direction: column; gap: 6px; min-height: 92px; padding: 12px 6px; font-size: .78rem; font-weight: 600; border: none; }
-.acoes-card .btn-acao .ic { width: 28px; height: 28px; background: currentColor; -webkit-mask: var(--svg) center/contain no-repeat; mask: var(--svg) center/contain no-repeat; }
-.acoes-card .botoes-acoes .btn-pagamento { --tile-bg:#1f8a3b; --tile-fg:#fff; }
-.acoes-card .botoes-acoes .btn-comanda { --tile-bg:#ffedd5; --tile-fg:#c2570c; }
-.acoes-card .botoes-acoes .btn-wifi { --tile-bg:#dbeafe; --tile-fg:#1d4ed8; }
-.acoes-card .botoes-acoes .btn-transferir { --tile-bg:#e5e7eb; --tile-fg:#374151; }
-.acoes-card .botoes-acoes .btn-checkin { --tile-bg:#e9e7fb; --tile-fg:#4f46e5; }
-.acoes-card .botoes-acoes .btn-extrato { --tile-bg:#d5f5ef; --tile-fg:#0f766e; }
-.acoes-card .botoes-acoes .btn-estornar { --tile-bg:#fee2e2; --tile-fg:#b91c1c; }
-.acoes-card .botoes-acoes .btn-corrigir { --tile-bg:#fef3c7; --tile-fg:#92400e; }
-.acoes-card .botoes-acoes .btn-ativar-reserva { --tile-bg:#dbeafe; --tile-fg:#1e40af; }
-.acoes-card .botoes-acoes .btn-finalizar-paga { --tile-bg:#16a34a; --tile-fg:#fff; }
-.acoes-card .botoes-acoes .btn-cancelar { --tile-bg:#fee2e2; --tile-fg:#991b1b; }
-.acoes-card .botoes-acoes .btn-assinar-fatura { --tile-bg:#fef3c7; --tile-fg:#92400e; }
-.acoes-card .botoes-acoes .btn-recibo, .acoes-card .botoes-acoes .btn-recibo-formal, .acoes-card .botoes-acoes .btn-bilhetes { --tile-bg:#e0f2fe; --tile-fg:#075985; }
-.acoes-card .botoes-acoes .btn-troco { --tile-bg:#fef9c3; --tile-fg:#854d0e; }
-.ic-card { --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='2'/%3E%3Cpath d='M2 10h20M6 15h4'/%3E%3C/svg%3E"); }
-.ic-food { --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 3v7a3 3 0 0 0 3 3v8M5 3v5M11 3v7a3 3 0 0 1-3 3M17 21V3c-2 1-3.5 3.5-3.5 7 0 2 1 3 3.5 3'/%3E%3C/svg%3E"); }
-.ic-wifi { --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 8.8a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0'/%3E%3Ccircle cx='12' cy='19.5' r='1'/%3E%3C/svg%3E"); }
-.ic-swap { --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 8h15l-3-3M20 16H5l3 3'/%3E%3C/svg%3E"); }
-.ic-print { --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2'/%3E%3Crect x='6' y='14' width='12' height='7'/%3E%3C/svg%3E"); }
-.ic-doc { --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 3v5h5M9 13h6M9 17h6'/%3E%3C/svg%3E"); }
-.ic-undo { --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14L4 9l5-5'/%3E%3Cpath d='M4 9h10a6 6 0 0 1 0 12h-3'/%3E%3C/svg%3E"); }
-.ic-ok { --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8 12l3 3 5-6'/%3E%3C/svg%3E"); }
-.ic-pen { --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h4L19 9l-4-4L4 16z'/%3E%3C/svg%3E"); }
-.ic-ban { --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M5.6 5.6l12.8 12.8'/%3E%3C/svg%3E"); }
-.ic-refresh { --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5'/%3E%3C/svg%3E"); }
-/* ===== FIM RESERVA/ID etapa 2 ===== */
-/* ===== RESERVA/ID: etapa 2b (grade) ===== */
-.acoes-card > .botoes-acoes { display: block !important; }
-.acoes-card .botoes-acoes .botoes-acoes { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
-.acoes-card .botoes-acoes .btn-acao { order: 20; }
-.acoes-card .botoes-acoes .btn-pagamento { order: 1; }
-.acoes-card .botoes-acoes .btn-comanda { order: 2; }
-.acoes-card .botoes-acoes .btn-wifi { order: 3; }
-.acoes-card .botoes-acoes .btn-transferir { order: 4; }
-.acoes-card .botoes-acoes .btn-checkin { order: 5; }
-.acoes-card .botoes-acoes .btn-extrato { order: 6; }
-.acoes-card .botoes-acoes .btn-estornar { order: 7; }
-/* ===== FIM RESERVA/ID etapa 2b ===== */
-/* ===== RESERVA/ID: etapa 4 (2 colunas) ===== */
-.container-detalhes { max-width: 1400px; width: 100%; margin: 0 auto; }
-@media (min-width: 1000px) {
-  .container-detalhes .detalhes { display: grid; grid-template-columns: minmax(0, 1fr) 360px; column-gap: 20px; row-gap: 0; align-items: start; }
-  .container-detalhes .detalhes > .header { grid-column: 1 / -1; }
-  .container-detalhes .detalhes > :not(.header):not(.grid-quatro-colunas) { grid-column: 1; min-width: 0; }
-  .container-detalhes .detalhes > .grid-quatro-colunas { grid-column: 2; grid-row: 2 / span 60; align-self: start; display: flex !important; flex-direction: column; gap: 14px; grid-template-columns: none !important; min-width: 0; }
-}
-.container-detalhes .grid-quatro-colunas .card-mini { margin: 0; width: 100%; box-sizing: border-box; min-width: 0; }
-/* ===== FIM RESERVA/ID etapa 4 ===== */
-/* ===== RESERVA/ID: etapa 3 (topo/cards) ===== */
-.container-detalhes .header { background: #fff; border-radius: 14px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(16,24,40,.06); margin-bottom: 16px; }
-.container-detalhes .header > div:first-child { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
-.container-detalhes .header h1 { margin: 0; font-size: 1.9rem; }
-.container-detalhes .header .sub-reserva { flex-basis: 100%; order: 3; color: #6b7280; font-size: .8rem; }
-.container-detalhes .grid-quatro-colunas .card-mini { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(16,24,40,.06); }
-.container-detalhes .grid-quatro-colunas .card-mini h2 { font-size: .72rem; text-transform: uppercase; letter-spacing: .7px; color: #6b7280; border-bottom: none !important; padding: 0; margin: 0 0 8px; font-weight: 700; }
-.container-detalhes .cli-topo { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.container-detalhes .cli-topo h2 { margin: 0 !important; }
-.container-detalhes .avatar-cli { width: 38px; height: 38px; border-radius: 50%; background: #dbeafe; color: #1d4ed8; font-weight: 700; font-size: .85rem; display: flex; align-items: center; justify-content: center; text-transform: uppercase; flex: 0 0 auto; }
-.container-detalhes .destaque-mini { background: #f8fafc; border-radius: 10px; padding: 8px 10px; }
-.container-detalhes .value-destaque { font-size: 1.5rem; font-weight: 800; }
-.container-detalhes .btn-definir-responsavel { background: none; border: none; color: #1d4ed8; font-weight: 600; padding: 8px 0; cursor: pointer; text-align: left; }
-.container-detalhes .btn-definir-responsavel:hover { text-decoration: underline; }
-/* ===== FIM RESERVA/ID etapa 3 ===== */
-/* ===== RESERVA/ID: etapa 2d (grade unica) ===== */
-.acoes-card > .botoes-acoes { display: grid !important; grid-template-columns: repeat(auto-fill, 118px); justify-content: start; gap: 10px; margin-bottom: 20px; }
-.acoes-card > .botoes-acoes .btn-acao { width: 118px; min-height: 92px; }
-/* ===== FIM RESERVA/ID etapa 2d ===== */
-/* ===== RESERVA/ID: etapa 3b (observacao/codigo) ===== */
-.container-detalhes .card-mini textarea { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; box-sizing: border-box; border: 1px solid #e5e7eb !important; background: #fafafa; }
-.container-detalhes .card-mini input[type="text"] { flex: 1 1 120px !important; min-width: 0 !important; box-sizing: border-box; border: 1px solid #e5e7eb !important; background: #fafafa; }
-.container-detalhes .card-mini div[style*="margin-top: 10px"] { flex-wrap: wrap !important; }
-.container-detalhes .card-mini span[style*="nowrap"] { white-space: normal !important; }
-.container-detalhes .card-mini .btn-mini { flex: 0 0 auto; }
-/* ===== FIM RESERVA/ID etapa 3b ===== */
-/* ===== RESERVA/ID: etapa 4b (ordem coluna direita) ===== */
-.container-detalhes .grid-quatro-colunas .alerta-pendencia-extra { order: -3; }
-.container-detalhes .grid-quatro-colunas .card-mini:has(.destaque-mini) { order: -2; }
-.container-detalhes .grid-quatro-colunas .card-mini:has(.cli-topo) { order: -1; }
-/* ===== FIM RESERVA/ID etapa 4b ===== */
 `]
   })
 
