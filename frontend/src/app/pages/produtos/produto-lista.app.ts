@@ -28,6 +28,9 @@ interface Categoria {
          <button class="btn-imprimir" (click)="imprimirConferencia()">
          🖨️ Imprimir Conferência
         </button>
+         <button class="btn-imprimir" (click)="imprimirPrecos()" title="Imprime os precos dos produtos com estoque, das categorias marcadas">
+         &#128424; Imprimir Pre&ccedil;os
+         </button>
          <button *hasPermission="'PRODUTO_CRIAR'" 
     class="btn-primary" 
     (click)="novo()">+ Novo Produto</button>
@@ -441,6 +444,58 @@ export class ProdutoListaApp implements OnInit {
     }
     
     this.filtrarPorCategorias();
+  }
+
+  imprimirPrecos(): void {
+    const categoriasSelecionadas = this.categorias.filter(c => c.selecionada);
+    const comEstoque = this.produtosFiltrados.filter((p: Produto) => Number(p.quantidade) > 0);
+
+    if (comEstoque.length === 0) {
+      alert('Nenhum produto com estoque para imprimir.');
+      return;
+    }
+
+    const grupos = this.agruparPorCategoria(comEstoque);
+    const nomes = Object.keys(grupos).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const esc = (s: any): string => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const moeda = (v: any): string => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    let total = 0;
+    const blocos = nomes.map(nome => {
+      const itens = [...grupos[nome]].sort((a: Produto, b: Produto) => a.nomeProduto.localeCompare(b.nomeProduto, 'pt-BR'));
+      total += itens.length;
+      const linhas = itens.map((p: Produto) => `<tr><td>${esc(p.nomeProduto)}</td><td class="preco">${moeda(p.valorVenda)}</td></tr>`).join('');
+      return `<h2>${esc(nome)}</h2><table><tbody>${linhas}</tbody></table>`;
+    }).join('');
+
+    const infoCat = categoriasSelecionadas.length > 0
+      ? `<p>Categorias: ${categoriasSelecionadas.map(c => esc(c.nome)).join(', ')}</p>`
+      : '';
+
+    const html = `<html><head><title>Lista de Pre&ccedil;os</title><style>
+      body { font-family: Arial, sans-serif; padding: 20px; color: #111; }
+      .cab { text-align: center; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 12px; }
+      .cab h1 { margin: 0; font-size: 20px; }
+      .cab small { color: #555; }
+      h2 { font-size: 14px; background: #eee; padding: 6px 8px; margin: 16px 0 0; border: 1px solid #ccc; page-break-after: avoid; }
+      table { width: 100%; border-collapse: collapse; }
+      td { border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; }
+      td.preco { text-align: right; width: 110px; font-weight: bold; white-space: nowrap; }
+      tr { page-break-inside: avoid; }
+    </style></head><body>
+      <div class="cab"><h1>Hotel Di Van</h1><small>Lista de Pre&ccedil;os</small></div>
+      ${infoCat}
+      <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+      ${blocos}
+      <p style="text-align:right; font-weight:bold; margin-top:12px;">Total de produtos: ${total}</p>
+    </body></html>`;
+
+    const janela = window.open('', '_blank');
+    if (janela) {
+      janela.document.write(html);
+      janela.document.close();
+      janela.print();
+    }
   }
 
   imprimirConferencia(): void {

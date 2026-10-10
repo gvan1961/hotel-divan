@@ -944,6 +944,16 @@ const TELAS_DISPONIVEIS: TelaComando[] = [
 .sidebar .nav-item.nav-item-destaque:hover { background: #ffedd5 !important; }
 .sidebar .nav-item.nav-item-destaque.active { background: #fed7aa !important; }
 /* ===== FIM SIDEBAR destaque ===== */
+/* ===== SIDEBAR: hover visivel ===== */
+.sidebar .nav-item { background: #f1f5f9 !important; color: #1f2937 !important; border: 1px solid #e2e8f0; transition: background .15s, border-color .15s, transform .15s; }
+.sidebar .nav-item .label { color: #1f2937 !important; }
+.sidebar .nav-item:hover { background: #bfdbfe !important; border-color: #60a5fa; transform: translateX(3px); }
+.sidebar .nav-item:hover .label { color: #1e3a8a !important; font-weight: 700; }
+.sidebar .nav-item.active { background: #2563eb !important; border-color: #1d4ed8; }
+.sidebar .nav-item.active .label { color: #ffffff !important; font-weight: 700; }
+.sidebar .nav-item.nav-item-destaque:hover { background: #fdba74 !important; border-color: #fb923c; }
+.sidebar .nav-item.nav-item-destaque:hover .label { color: #7c2d12 !important; }
+/* ===== FIM SIDEBAR hover visivel ===== */
   `]
 })
 export class SidebarComponent implements OnInit, OnDestroy {

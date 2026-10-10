@@ -2131,6 +2131,12 @@ imprimirListaSimples(): void {
 private gerarImpressaoListaSimples(contas: ContaAReceber[], nomeEmpresa: string): void {
   let somaSaldo = 0;
 
+  const txt = (v: any): string => (v === null || v === undefined) ? '' : String(v).trim();
+  const esc = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const temSolic = contas.some(c => txt((c as any).codigoSolicitacao) !== '');
+  const temNf = contas.some(c => txt((c as any).numeroNotaFiscal) !== '');
+  const solicUnicas = Array.from(new Set(contas.map(c => txt((c as any).codigoSolicitacao)).filter(s => s !== '')));
+  const solicCab = (solicUnicas.length === 1 && contas.every(c => txt((c as any).codigoSolicitacao) === solicUnicas[0])) ? solicUnicas[0] : '';
   const linhas = contas.map(conta => {
     somaSaldo += conta.saldo || 0;
     const assinatura = (conta as any).__assinatura;
@@ -2140,6 +2146,8 @@ private gerarImpressaoListaSimples(contas: ContaAReceber[], nomeEmpresa: string)
         <td>#${conta.reservaId}</td>
         <td>${(conta as any).numeroApartamento || '-'}</td>
         <td>${conta.todosHospedes || conta.clienteNome}</td>
+        ${temSolic ? `<td>${esc(txt((conta as any).codigoSolicitacao))}</td>` : ''}
+        ${temNf ? `<td>${esc(txt((conta as any).numeroNotaFiscal))}</td>` : ''}
         <td style="text-align:center;">${(conta as any).quantidadeHospede ?? '-'}</td>
         <td style="text-align:center;">${(conta as any).quantidadeDiaria ?? '-'}</td>
         <td>${this.formatarData((conta as any).dataCheckin)}</td>
@@ -2178,6 +2186,7 @@ private gerarImpressaoListaSimples(contas: ContaAReceber[], nomeEmpresa: string)
 
       <h1>📋 Empresa: ${nomeEmpresa}</h1>
       <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+      ${solicCab ? `<p><strong>Solicita&ccedil;&atilde;o:</strong> ${esc(solicCab)}</p>` : ''}
 
      <table>
         <thead>
@@ -2185,6 +2194,8 @@ private gerarImpressaoListaSimples(contas: ContaAReceber[], nomeEmpresa: string)
             <th>Reserva</th>
             <th>Apto</th>
             <th>Hóspede</th>
+            ${temSolic ? '<th>Solicita&ccedil;&atilde;o</th>' : ''}
+            ${temNf ? '<th>NF</th>' : ''}
             <th>Qtd. Hóspedes</th>
             <th>Qtd. Diárias</th>
             <th>Check-in</th>
